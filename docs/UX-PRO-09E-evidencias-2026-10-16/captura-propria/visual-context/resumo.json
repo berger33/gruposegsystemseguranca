@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 1,
+  "stage": "UX-PRO-09E",
+  "phase": "antes-contexto-fullPage",
+  "baseMain": "4a4b614b08046f93c59e44f9502218b0d9e47244",
+  "counts": {
+    "captures": 24,
+    "routes": 3,
+    "navigationStatus200": 24
+  },
+  "captures": [
+    {
+      "route": "/contato",
+      "viewport": "320x780",
+      "viewportName": "w320-day",
+      "theme": "day",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-320-day-full.png",
+      "width": 343,
+      "height": 2977,
+      "sha256": "1980af5726ac3d4a494b6c5973a9480e0a9a70a0cf0f92175b833030868fbf81"
+    },
+    {
+      "route": "/contato",
+      "viewport": "320x780",
+      "viewportName": "w320-night",
+      "theme": "night",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-320-night-full.png",
+      "width": 343,
+      "height": 2977,
+      "sha256": "1980af5726ac3d4a494b6c5973a9480e0a9a70a0cf0f92175b833030868fbf81"
+    },
+    {
+      "route": "/contato",
+      "viewport": "390x844",
+      "viewportName": "w390-day",
+      "theme": "day",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-390-day-full.png",
+      "width": 390,
+      "height": 2546,
+      "sha256": "3cc549c1a9807ceda9a472d5d8b60ebd41f989702a48d6c4b67db153ec6a21b7"
+    },
+    {
+      "route": "/contato",
+      "viewport": "390x844",
+      "viewportName": "w390-night",
+      "theme": "night",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-390-night-full.png",
+      "width": 390,
+      "height": 2546,
+      "sha256": "3cc549c1a9807ceda9a472d5d8b60ebd41f989702a48d6c4b67db153ec6a21b7"
+    },
+    {
+      "route": "/contato",
+      "viewport": "768x1024",
+      "viewportName": "w768-day",
+      "theme": "day",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-768-day-full.png",
+      "width": 768,
+      "height": 1752,
+      "sha256": "722cb9f04461768c27dc01b60eef74b2b9f2ae99233d6601f52333394c10dd3e"
+    },
+    {
+      "route": "/contato",
+      "viewport": "768x1024",
+      "viewportName": "w768-night",
+      "theme": "night",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-768-night-full.png",
+      "width": 768,
+      "height": 1752,
+      "sha256": "722cb9f04461768c27dc01b60eef74b2b9f2ae99233d6601f52333394c10dd3e"
+    },
+    {
+      "route": "/contato",
+      "viewport": "1440x900",
+      "viewportName": "w1440-day",
+      "theme": "day",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-1440-day-full.png",
+      "width": 1440,
+      "height": 1730,
+      "sha256": "7f14a6642fb16aaf566fd06d1362e6cef76dfa4577a7b28473ed6435119bcc41"
+    },
+    {
+      "route": "/contato",
+      "viewport": "1440x900",
+      "viewportName": "w1440-night",
+      "theme": "night",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-1440-night-full.png",
+      "width": 1440,
+      "height": 1730,
+      "sha256": "7f14a6642fb16aaf566fd06d1362e6cef76dfa4577a7b28473ed6435119bcc41"
+    },
+    {
+      "route": "/faq",
+      "viewport": "320x780",
+      "viewportName": "w320-day",
+      "theme": "day",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/faq/ux-pro-09e-faq-320-day-full.png",
+      "width": 347,
+      "height": 2389,
+      "sha256": "97dd451d70a2c879ba946804d46e9cae926982f2e9fd58772b622138334afa07"
+    },
+    {
+      "route": "/faq",
+      "viewport": "320x780",
+      "viewportName": "w320-night",
+      "theme": "night",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/faq/ux-pro-09e-faq-320-night-full.png",
+      "width": 347,
+      "height": 2389,
+      "sha256": "97dd451d70a2c879ba946804d46e9cae926982f2e9fd58772b622138334afa07"
+    },
+    {
+      "route": "/faq",
+      "viewport": "390x844",
+      "viewportName": "w390-day",
+      "theme": "day",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/faq/ux-pro-09e-faq-390-day-full.png",
+      "width": 390,
+      "height": 2021,
+      "sha256": "132260356d370df05922d8a951fdd840616efe8bbac18d6dbeb3cbad52d2aa00"
+    },
+    {
+      "route": "/faq",
+      "viewport": "390x844",
+      "viewportName": "w390-night",
+      "theme": "night",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/faq/ux-pro-09e-faq-390-night-full.png",
+      "width": 390,
+      "height": 2021,
+      "sha256": "132260356d370df05922d8a951fdd840616efe8bbac18d6dbeb3cbad52d2aa00"
+    },
+    {
+      "route": "/faq",
+      "viewport": "768x1024",
+      "viewportName": "w768-day",
+      "theme": "day",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/faq/ux-pro-09e-faq-768-day-full.png",
+      "width": 768,
+      "height": 1425,
+      "sha256": "b68e34982f2207d054d3883442fe3dd8ea6a7d2205f9ee324aab28565616021f"
+    },
+    {
+      "route": "/faq",
+      "viewport": "768x1024",
+      "viewportName": "w768-night",
+      "theme": "night",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/faq/ux-pro-09e-faq-768-night-full.png",
+      "width": 768,
+      "height": 1425,
+      "sha256": "b68e34982f2207d054d3883442fe3dd8ea6a7d2205f9ee324aab28565616021f"
+    },
+    {
+      "route": "/faq",
+      "viewport": "1440x900",
+      "viewportName": "w1440-day",
+      "theme": "day",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/faq/ux-pro-09e-faq-1440-day-full.png",
+      "width": 1440,
+      "height": 1365,
+      "sha256": "ebab84fac8b9e6e0bd4b526d0f5fc9809b315d15d9a539b9b9bc9d60cae87731"
+    },
+    {
+      "route": "/faq",
+      "viewport": "1440x900",
+      "viewportName": "w1440-night",
+      "theme": "night",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/faq/ux-pro-09e-faq-1440-night-full.png",
+      "width": 1440,
+      "height": 1365,
+      "sha256": "ebab84fac8b9e6e0bd4b526d0f5fc9809b315d15d9a539b9b9bc9d60cae87731"
+    },
+    {
+      "route": "/simulador",
+      "viewport": "320x780",
+      "viewportName": "w320-day",
+      "theme": "day",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-day-full.png",
+      "width": 320,
+      "height": 1867,
+      "sha256": "6076fa42cb9a74d5b4f451ce229cde6f96de490cdd9ea8ef5042d917da2d8cca"
+    },
+    {
+      "route": "/simulador",
+      "viewport": "320x780",
+      "viewportName": "w320-night",
+      "theme": "night",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-night-full.png",
+      "width": 320,
+      "height": 1867,
+      "sha256": "6076fa42cb9a74d5b4f451ce229cde6f96de490cdd9ea8ef5042d917da2d8cca"
+    },
+    {
+      "route": "/simulador",
+      "viewport": "390x844",
+      "viewportName": "w390-day",
+      "theme": "day",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-day-full.png",
+      "width": 390,
+      "height": 1722,
+      "sha256": "6807d3dca32ea9da068f3360068e27821e0cf233d4fce489ce00a1bd2b22f310"
+    },
+    {
+      "route": "/simulador",
+      "viewport": "390x844",
+      "viewportName": "w390-night",
+      "theme": "night",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-night-full.png",
+      "width": 390,
+      "height": 1722,
+      "sha256": "6807d3dca32ea9da068f3360068e27821e0cf233d4fce489ce00a1bd2b22f310"
+    },
+    {
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "viewportName": "w768-day",
+      "theme": "day",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-day-full.png",
+      "width": 768,
+      "height": 1375,
+      "sha256": "f03fa89da49cfe8818c6b2e2a56038ad1e7799b9d0926ae16349136c42db0500"
+    },
+    {
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "viewportName": "w768-night",
+      "theme": "night",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-night-full.png",
+      "width": 768,
+      "height": 1375,
+      "sha256": "f03fa89da49cfe8818c6b2e2a56038ad1e7799b9d0926ae16349136c42db0500"
+    },
+    {
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "viewportName": "w1440-day",
+      "theme": "day",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-day-full.png",
+      "width": 1440,
+      "height": 972,
+      "sha256": "ec620f6fd75ee9fc48b787ad1d2a9ade78d0573374472c7339649841b21248b3"
+    },
+    {
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "viewportName": "w1440-night",
+      "theme": "night",
+      "captureMode": "fullPage",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-night-full.png",
+      "width": 1440,
+      "height": 972,
+      "sha256": "ec620f6fd75ee9fc48b787ad1d2a9ade78d0573374472c7339649841b21248b3"
+    }
+  ]
+}

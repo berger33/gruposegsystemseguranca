@@ -1,0 +1,3515 @@
+{
+  "schemaVersion": 1,
+  "stage": "UX-PRO-09E",
+  "phase": "correcao-depois",
+  "beforeBase": "4a4b614b08046f93c59e44f9502218b0d9e47244",
+  "correctiveBase": "6866b5019b0fcb12536ca51fcc7061e9b2e538d9",
+  "generatedBy": "crosswalk determinístico a partir das entradas 09E do probe e da lista DOM completa de amostras do after",
+  "method": "Cada registro <4,5:1 do before foi pareado por rota, viewport, tema, tag e texto com uma única amostra DOM do after. A classificação visual é restrita aos sinais revisados; não declara conformidade WCAG.",
+  "counts": {
+    "reviewed": 104,
+    "matchedAfter": 104,
+    "originalCorrectedSignals": 96,
+    "correctedSignalsMeeting4_5": 96,
+    "noDefectDemonstrated": 8,
+    "correctedSignalsStillBelow4_5": 0,
+    "afterAuditUnder45": 8,
+    "byRoute": {
+      "contato": 48,
+      "simulador": 56
+    },
+    "byTarget": {
+      "rag-suggestion": 32,
+      "rag-submit": 8,
+      "rag-title-no-change": 8,
+      "simulator-step-label": 32,
+      "simulator-summary-intro": 8,
+      "simulator-summary-empty": 16
+    }
+  },
+  "observationsOutside104": [
+    {
+      "id": "OUT-1",
+      "route": "/simulador",
+      "sampled": false,
+      "observation": "Os números dos círculos são spans fora das 104 amostras; cor original #8397a8 sobre #eef4fa preservada, sem ampliar esta correção."
+    },
+    {
+      "id": "OUT-2",
+      "route": "/contato",
+      "sampled": false,
+      "observation": "O selo RAG em span não faz parte dos 40 sinais medidos dos quatro botões de sugestão e do CTA; sua cor-base permanece inalterada."
+    }
+  ],
+  "samples": [
+    {
+      "sampleId": "contato-320-day-01",
+      "route": "/contato",
+      "viewport": "320x780",
+      "theme": "day",
+      "tag": "h2",
+      "text": "Assistente de dúvidas",
+      "before": {
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "texto-grande-sem-defeito-demonstrado"
+      },
+      "after": {
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true
+      },
+      "result": "mantido-sem-alteracao",
+      "targetGroup": "rag-title-no-change"
+    },
+    {
+      "sampleId": "contato-320-day-02",
+      "route": "/contato",
+      "viewport": "320x780",
+      "theme": "day",
+      "tag": "button",
+      "text": "Quais serviços vocês oferecem?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-320-day-03",
+      "route": "/contato",
+      "viewport": "320x780",
+      "theme": "day",
+      "tag": "button",
+      "text": "Como solicitar orçamento?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-320-day-04",
+      "route": "/contato",
+      "viewport": "320x780",
+      "theme": "day",
+      "tag": "button",
+      "text": "Contato claro?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-320-day-05",
+      "route": "/contato",
+      "viewport": "320x780",
+      "theme": "day",
+      "tag": "button",
+      "text": "FAQ por categoria?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-320-day-06",
+      "route": "/contato",
+      "viewport": "320x780",
+      "theme": "day",
+      "tag": "button",
+      "text": "Perguntar à base PUBLICO",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          234,
+          88,
+          12
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          194,
+          65,
+          12
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-submit"
+    },
+    {
+      "sampleId": "contato-320-night-01",
+      "route": "/contato",
+      "viewport": "320x780",
+      "theme": "night",
+      "tag": "h2",
+      "text": "Assistente de dúvidas",
+      "before": {
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "texto-grande-sem-defeito-demonstrado"
+      },
+      "after": {
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true
+      },
+      "result": "mantido-sem-alteracao",
+      "targetGroup": "rag-title-no-change"
+    },
+    {
+      "sampleId": "contato-320-night-02",
+      "route": "/contato",
+      "viewport": "320x780",
+      "theme": "night",
+      "tag": "button",
+      "text": "Quais serviços vocês oferecem?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-320-night-03",
+      "route": "/contato",
+      "viewport": "320x780",
+      "theme": "night",
+      "tag": "button",
+      "text": "Como solicitar orçamento?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-320-night-04",
+      "route": "/contato",
+      "viewport": "320x780",
+      "theme": "night",
+      "tag": "button",
+      "text": "Contato claro?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-320-night-05",
+      "route": "/contato",
+      "viewport": "320x780",
+      "theme": "night",
+      "tag": "button",
+      "text": "FAQ por categoria?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-320-night-06",
+      "route": "/contato",
+      "viewport": "320x780",
+      "theme": "night",
+      "tag": "button",
+      "text": "Perguntar à base PUBLICO",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          234,
+          88,
+          12
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          194,
+          65,
+          12
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-submit"
+    },
+    {
+      "sampleId": "contato-390-day-01",
+      "route": "/contato",
+      "viewport": "390x844",
+      "theme": "day",
+      "tag": "h2",
+      "text": "Assistente de dúvidas",
+      "before": {
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "texto-grande-sem-defeito-demonstrado"
+      },
+      "after": {
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true
+      },
+      "result": "mantido-sem-alteracao",
+      "targetGroup": "rag-title-no-change"
+    },
+    {
+      "sampleId": "contato-390-day-02",
+      "route": "/contato",
+      "viewport": "390x844",
+      "theme": "day",
+      "tag": "button",
+      "text": "Quais serviços vocês oferecem?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-390-day-03",
+      "route": "/contato",
+      "viewport": "390x844",
+      "theme": "day",
+      "tag": "button",
+      "text": "Como solicitar orçamento?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-390-day-04",
+      "route": "/contato",
+      "viewport": "390x844",
+      "theme": "day",
+      "tag": "button",
+      "text": "Contato claro?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-390-day-05",
+      "route": "/contato",
+      "viewport": "390x844",
+      "theme": "day",
+      "tag": "button",
+      "text": "FAQ por categoria?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-390-day-06",
+      "route": "/contato",
+      "viewport": "390x844",
+      "theme": "day",
+      "tag": "button",
+      "text": "Perguntar à base PUBLICO",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          234,
+          88,
+          12
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          194,
+          65,
+          12
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-submit"
+    },
+    {
+      "sampleId": "contato-390-night-01",
+      "route": "/contato",
+      "viewport": "390x844",
+      "theme": "night",
+      "tag": "h2",
+      "text": "Assistente de dúvidas",
+      "before": {
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "texto-grande-sem-defeito-demonstrado"
+      },
+      "after": {
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true
+      },
+      "result": "mantido-sem-alteracao",
+      "targetGroup": "rag-title-no-change"
+    },
+    {
+      "sampleId": "contato-390-night-02",
+      "route": "/contato",
+      "viewport": "390x844",
+      "theme": "night",
+      "tag": "button",
+      "text": "Quais serviços vocês oferecem?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-390-night-03",
+      "route": "/contato",
+      "viewport": "390x844",
+      "theme": "night",
+      "tag": "button",
+      "text": "Como solicitar orçamento?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-390-night-04",
+      "route": "/contato",
+      "viewport": "390x844",
+      "theme": "night",
+      "tag": "button",
+      "text": "Contato claro?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-390-night-05",
+      "route": "/contato",
+      "viewport": "390x844",
+      "theme": "night",
+      "tag": "button",
+      "text": "FAQ por categoria?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-390-night-06",
+      "route": "/contato",
+      "viewport": "390x844",
+      "theme": "night",
+      "tag": "button",
+      "text": "Perguntar à base PUBLICO",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          234,
+          88,
+          12
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          194,
+          65,
+          12
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-submit"
+    },
+    {
+      "sampleId": "contato-768-day-01",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "theme": "day",
+      "tag": "h2",
+      "text": "Assistente de dúvidas",
+      "before": {
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "texto-grande-sem-defeito-demonstrado"
+      },
+      "after": {
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true
+      },
+      "result": "mantido-sem-alteracao",
+      "targetGroup": "rag-title-no-change"
+    },
+    {
+      "sampleId": "contato-768-day-02",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "theme": "day",
+      "tag": "button",
+      "text": "Quais serviços vocês oferecem?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-768-day-03",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "theme": "day",
+      "tag": "button",
+      "text": "Como solicitar orçamento?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-768-day-04",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "theme": "day",
+      "tag": "button",
+      "text": "Contato claro?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-768-day-05",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "theme": "day",
+      "tag": "button",
+      "text": "FAQ por categoria?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-768-day-06",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "theme": "day",
+      "tag": "button",
+      "text": "Perguntar à base PUBLICO",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          234,
+          88,
+          12
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          194,
+          65,
+          12
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-submit"
+    },
+    {
+      "sampleId": "contato-768-night-01",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "theme": "night",
+      "tag": "h2",
+      "text": "Assistente de dúvidas",
+      "before": {
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "texto-grande-sem-defeito-demonstrado"
+      },
+      "after": {
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true
+      },
+      "result": "mantido-sem-alteracao",
+      "targetGroup": "rag-title-no-change"
+    },
+    {
+      "sampleId": "contato-768-night-02",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "theme": "night",
+      "tag": "button",
+      "text": "Quais serviços vocês oferecem?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-768-night-03",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "theme": "night",
+      "tag": "button",
+      "text": "Como solicitar orçamento?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-768-night-04",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "theme": "night",
+      "tag": "button",
+      "text": "Contato claro?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-768-night-05",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "theme": "night",
+      "tag": "button",
+      "text": "FAQ por categoria?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-768-night-06",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "theme": "night",
+      "tag": "button",
+      "text": "Perguntar à base PUBLICO",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          234,
+          88,
+          12
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          194,
+          65,
+          12
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-submit"
+    },
+    {
+      "sampleId": "contato-1440-day-01",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "theme": "day",
+      "tag": "h2",
+      "text": "Assistente de dúvidas",
+      "before": {
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "texto-grande-sem-defeito-demonstrado"
+      },
+      "after": {
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true
+      },
+      "result": "mantido-sem-alteracao",
+      "targetGroup": "rag-title-no-change"
+    },
+    {
+      "sampleId": "contato-1440-day-02",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "theme": "day",
+      "tag": "button",
+      "text": "Quais serviços vocês oferecem?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-1440-day-03",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "theme": "day",
+      "tag": "button",
+      "text": "Como solicitar orçamento?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-1440-day-04",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "theme": "day",
+      "tag": "button",
+      "text": "Contato claro?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-1440-day-05",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "theme": "day",
+      "tag": "button",
+      "text": "FAQ por categoria?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-1440-day-06",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "theme": "day",
+      "tag": "button",
+      "text": "Perguntar à base PUBLICO",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          234,
+          88,
+          12
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          194,
+          65,
+          12
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-submit"
+    },
+    {
+      "sampleId": "contato-1440-night-01",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "theme": "night",
+      "tag": "h2",
+      "text": "Assistente de dúvidas",
+      "before": {
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "texto-grande-sem-defeito-demonstrado"
+      },
+      "after": {
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true
+      },
+      "result": "mantido-sem-alteracao",
+      "targetGroup": "rag-title-no-change"
+    },
+    {
+      "sampleId": "contato-1440-night-02",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "theme": "night",
+      "tag": "button",
+      "text": "Quais serviços vocês oferecem?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-1440-night-03",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "theme": "night",
+      "tag": "button",
+      "text": "Como solicitar orçamento?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-1440-night-04",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "theme": "night",
+      "tag": "button",
+      "text": "Contato claro?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-1440-night-05",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "theme": "night",
+      "tag": "button",
+      "text": "FAQ por categoria?",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(194, 65, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-suggestion"
+    },
+    {
+      "sampleId": "contato-1440-night-06",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "theme": "night",
+      "tag": "button",
+      "text": "Perguntar à base PUBLICO",
+      "before": {
+        "ratio": 3.56,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          234,
+          88,
+          12
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.18,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          194,
+          65,
+          12
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "rag-submit"
+    },
+    {
+      "sampleId": "simulador-320-day-01",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "theme": "day",
+      "tag": "li",
+      "text": "01Seu espaço",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-320-day-02",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "theme": "day",
+      "tag": "li",
+      "text": "02O que você precisa",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-320-day-03",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "theme": "day",
+      "tag": "li",
+      "text": "03Seus dados",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-320-day-04",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "theme": "day",
+      "tag": "li",
+      "text": "04Revisão",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-320-day-05",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "theme": "day",
+      "tag": "p",
+      "text": "Resumo do que você está montando.",
+      "before": {
+        "ratio": 3.17,
+        "foreground": "rgb(128, 147, 164)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-intro"
+    },
+    {
+      "sampleId": "simulador-320-day-06",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "theme": "day",
+      "tag": "p",
+      "text": "Escolha o tipo de imóvel para começar.",
+      "before": {
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-empty"
+    },
+    {
+      "sampleId": "simulador-320-day-07",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "theme": "day",
+      "tag": "p",
+      "text": "Nenhum selecionado ainda.",
+      "before": {
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-empty"
+    },
+    {
+      "sampleId": "simulador-320-night-01",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "theme": "night",
+      "tag": "li",
+      "text": "01Seu espaço",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-320-night-02",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "theme": "night",
+      "tag": "li",
+      "text": "02O que você precisa",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-320-night-03",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "theme": "night",
+      "tag": "li",
+      "text": "03Seus dados",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-320-night-04",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "theme": "night",
+      "tag": "li",
+      "text": "04Revisão",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-320-night-05",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "theme": "night",
+      "tag": "p",
+      "text": "Resumo do que você está montando.",
+      "before": {
+        "ratio": 3.17,
+        "foreground": "rgb(128, 147, 164)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-intro"
+    },
+    {
+      "sampleId": "simulador-320-night-06",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "theme": "night",
+      "tag": "p",
+      "text": "Escolha o tipo de imóvel para começar.",
+      "before": {
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-empty"
+    },
+    {
+      "sampleId": "simulador-320-night-07",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "theme": "night",
+      "tag": "p",
+      "text": "Nenhum selecionado ainda.",
+      "before": {
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-empty"
+    },
+    {
+      "sampleId": "simulador-390-day-01",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "theme": "day",
+      "tag": "li",
+      "text": "01Seu espaço",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-390-day-02",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "theme": "day",
+      "tag": "li",
+      "text": "02O que você precisa",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-390-day-03",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "theme": "day",
+      "tag": "li",
+      "text": "03Seus dados",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-390-day-04",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "theme": "day",
+      "tag": "li",
+      "text": "04Revisão",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-390-day-05",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "theme": "day",
+      "tag": "p",
+      "text": "Resumo do que você está montando.",
+      "before": {
+        "ratio": 3.17,
+        "foreground": "rgb(128, 147, 164)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-intro"
+    },
+    {
+      "sampleId": "simulador-390-day-06",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "theme": "day",
+      "tag": "p",
+      "text": "Escolha o tipo de imóvel para começar.",
+      "before": {
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-empty"
+    },
+    {
+      "sampleId": "simulador-390-day-07",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "theme": "day",
+      "tag": "p",
+      "text": "Nenhum selecionado ainda.",
+      "before": {
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-empty"
+    },
+    {
+      "sampleId": "simulador-390-night-01",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "theme": "night",
+      "tag": "li",
+      "text": "01Seu espaço",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-390-night-02",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "theme": "night",
+      "tag": "li",
+      "text": "02O que você precisa",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-390-night-03",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "theme": "night",
+      "tag": "li",
+      "text": "03Seus dados",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-390-night-04",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "theme": "night",
+      "tag": "li",
+      "text": "04Revisão",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-390-night-05",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "theme": "night",
+      "tag": "p",
+      "text": "Resumo do que você está montando.",
+      "before": {
+        "ratio": 3.17,
+        "foreground": "rgb(128, 147, 164)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-intro"
+    },
+    {
+      "sampleId": "simulador-390-night-06",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "theme": "night",
+      "tag": "p",
+      "text": "Escolha o tipo de imóvel para começar.",
+      "before": {
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-empty"
+    },
+    {
+      "sampleId": "simulador-390-night-07",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "theme": "night",
+      "tag": "p",
+      "text": "Nenhum selecionado ainda.",
+      "before": {
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-empty"
+    },
+    {
+      "sampleId": "simulador-768-day-01",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "theme": "day",
+      "tag": "li",
+      "text": "01Seu espaço",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-768-day-02",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "theme": "day",
+      "tag": "li",
+      "text": "02O que você precisa",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-768-day-03",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "theme": "day",
+      "tag": "li",
+      "text": "03Seus dados",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-768-day-04",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "theme": "day",
+      "tag": "li",
+      "text": "04Revisão",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-768-day-05",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "theme": "day",
+      "tag": "p",
+      "text": "Resumo do que você está montando.",
+      "before": {
+        "ratio": 3.17,
+        "foreground": "rgb(128, 147, 164)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-intro"
+    },
+    {
+      "sampleId": "simulador-768-day-06",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "theme": "day",
+      "tag": "p",
+      "text": "Escolha o tipo de imóvel para começar.",
+      "before": {
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-empty"
+    },
+    {
+      "sampleId": "simulador-768-day-07",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "theme": "day",
+      "tag": "p",
+      "text": "Nenhum selecionado ainda.",
+      "before": {
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-empty"
+    },
+    {
+      "sampleId": "simulador-768-night-01",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "theme": "night",
+      "tag": "li",
+      "text": "01Seu espaço",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-768-night-02",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "theme": "night",
+      "tag": "li",
+      "text": "02O que você precisa",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-768-night-03",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "theme": "night",
+      "tag": "li",
+      "text": "03Seus dados",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-768-night-04",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "theme": "night",
+      "tag": "li",
+      "text": "04Revisão",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-768-night-05",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "theme": "night",
+      "tag": "p",
+      "text": "Resumo do que você está montando.",
+      "before": {
+        "ratio": 3.17,
+        "foreground": "rgb(128, 147, 164)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-intro"
+    },
+    {
+      "sampleId": "simulador-768-night-06",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "theme": "night",
+      "tag": "p",
+      "text": "Escolha o tipo de imóvel para começar.",
+      "before": {
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-empty"
+    },
+    {
+      "sampleId": "simulador-768-night-07",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "theme": "night",
+      "tag": "p",
+      "text": "Nenhum selecionado ainda.",
+      "before": {
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-empty"
+    },
+    {
+      "sampleId": "simulador-1440-day-01",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "theme": "day",
+      "tag": "li",
+      "text": "01Seu espaço",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-1440-day-02",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "theme": "day",
+      "tag": "li",
+      "text": "02O que você precisa",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-1440-day-03",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "theme": "day",
+      "tag": "li",
+      "text": "03Seus dados",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-1440-day-04",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "theme": "day",
+      "tag": "li",
+      "text": "04Revisão",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-1440-day-05",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "theme": "day",
+      "tag": "p",
+      "text": "Resumo do que você está montando.",
+      "before": {
+        "ratio": 3.17,
+        "foreground": "rgb(128, 147, 164)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-intro"
+    },
+    {
+      "sampleId": "simulador-1440-day-06",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "theme": "day",
+      "tag": "p",
+      "text": "Escolha o tipo de imóvel para começar.",
+      "before": {
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-empty"
+    },
+    {
+      "sampleId": "simulador-1440-day-07",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "theme": "day",
+      "tag": "p",
+      "text": "Nenhum selecionado ainda.",
+      "before": {
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-empty"
+    },
+    {
+      "sampleId": "simulador-1440-night-01",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "theme": "night",
+      "tag": "li",
+      "text": "01Seu espaço",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-1440-night-02",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "theme": "night",
+      "tag": "li",
+      "text": "02O que você precisa",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-1440-night-03",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "theme": "night",
+      "tag": "li",
+      "text": "03Seus dados",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-1440-night-04",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "theme": "night",
+      "tag": "li",
+      "text": "04Revisão",
+      "before": {
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "measurementBoundary": "O probe lê a cor computada do li; text reproduz textContent concatenado. O span numérico não é amostra/alvo independente e preserva #8397a8; a correção aplica-se ao rótulo do li.",
+      "targetGroup": "simulator-step-label"
+    },
+    {
+      "sampleId": "simulador-1440-night-05",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "theme": "night",
+      "tag": "p",
+      "text": "Resumo do que você está montando.",
+      "before": {
+        "ratio": 3.17,
+        "foreground": "rgb(128, 147, 164)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-intro"
+    },
+    {
+      "sampleId": "simulador-1440-night-06",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "theme": "night",
+      "tag": "p",
+      "text": "Escolha o tipo de imóvel para começar.",
+      "before": {
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-empty"
+    },
+    {
+      "sampleId": "simulador-1440-night-07",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "theme": "night",
+      "tag": "p",
+      "text": "Nenhum selecionado ainda.",
+      "before": {
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "review": {
+        "classification": "sinal-real-de-texto-pequeno-ou-controle"
+      },
+      "after": {
+        "ratio": 5.05,
+        "foreground": "rgb(90, 113, 137)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true
+      },
+      "result": "corrigido-na-amostra",
+      "targetGroup": "simulator-summary-empty"
+    }
+  ],
+  "scopeNotes": [
+    "Os oito registros do h2 de 20px/700 ficam em 3,35:1 antes/depois; a revisão os classifica como texto grande sem defeito demonstrado e a cor-base não muda.",
+    "Nos quatro li do simulador, o campo text preserva o textContent do elemento amostrado, que concatena o número span e o rótulo. O alvo visual da correção é a cor computada do li/rótulo; o span numérico não é uma das 104 amostras e mantém #8397a8.",
+    "Nenhuma amostra com fundo indeterminado foi convertida em defeito; a evidência trata exclusivamente os 104 registros <4,5:1 do diagnóstico."
+  ]
+}

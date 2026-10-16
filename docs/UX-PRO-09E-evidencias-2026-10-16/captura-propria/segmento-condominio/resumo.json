@@ -1,0 +1,392 @@
+{
+  "stage": "ux-pro-09e-antes",
+  "generatedBy": "scripts/ux-evidence-capture.mjs (isolated output copy)",
+  "baseMain": "4a4b614b08046f93c59e44f9502218b0d9e47244",
+  "date": "2026-10-16",
+  "route": "/segmentos/condominio",
+  "limitations": [
+    "Chromium headless Linux; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "segmento-condominio",
+      "viewportName": "w320-day",
+      "route": "/segmentos/condominio",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/segmento-condominio/ux-pro-09e-segmento-condominio-320-day.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Segmento não encontrado",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Segmento não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 44,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos segmentos",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "segmento-condominio",
+      "viewportName": "w320-night",
+      "route": "/segmentos/condominio",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/segmento-condominio/ux-pro-09e-segmento-condominio-320-night.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Segmento não encontrado",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Segmento não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 44,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos segmentos",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "segmento-condominio",
+      "viewportName": "w390-day",
+      "route": "/segmentos/condominio",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/segmento-condominio/ux-pro-09e-segmento-condominio-390-day.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Segmento não encontrado",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Segmento não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 44,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos segmentos",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "segmento-condominio",
+      "viewportName": "w390-night",
+      "route": "/segmentos/condominio",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/segmento-condominio/ux-pro-09e-segmento-condominio-390-night.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Segmento não encontrado",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Segmento não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 44,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos segmentos",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "segmento-condominio",
+      "viewportName": "w768-day",
+      "route": "/segmentos/condominio",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/segmento-condominio/ux-pro-09e-segmento-condominio-768-day.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Segmento não encontrado",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Segmento não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 44,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos segmentos",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "segmento-condominio",
+      "viewportName": "w768-night",
+      "route": "/segmentos/condominio",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/segmento-condominio/ux-pro-09e-segmento-condominio-768-night.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Segmento não encontrado",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Segmento não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 44,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos segmentos",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "segmento-condominio",
+      "viewportName": "w1440-day",
+      "route": "/segmentos/condominio",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/segmento-condominio/ux-pro-09e-segmento-condominio-1440-day.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Segmento não encontrado",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Segmento não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 44,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos segmentos",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "segmento-condominio",
+      "viewportName": "w1440-night",
+      "route": "/segmentos/condominio",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/segmento-condominio/ux-pro-09e-segmento-condominio-1440-night.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Segmento não encontrado",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Segmento não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 44,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos segmentos",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    }
+  ]
+}

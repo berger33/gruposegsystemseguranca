@@ -1,6 +1,8 @@
 # UX-PRO-09E — site público: overflow a 320 px e as 104 amostras de contraste (correções autorizadas do 09B) — escopo antes do código (16/10/2026)
 
-**Status:** documento pré-código obrigatório da subfatia **UX-PRO-09E — site público**, item 1 da fila autorizada pelo proprietário em 16/10/2026. A medição abaixo foi colhida na base intocada (`4a4b614`) **antes** de qualquer edição de produto; a ordem exata está no §1.4. Esta entrega não declara aceite humano, UAT nem conformidade WCAG. Homologação e produção permanecem **NO-GO**.
+**Status histórico:** medição pré-código da subfatia **UX-PRO-09E — site público**, feita em `4a4b614` antes de qualquer edição de produto. **Retificação pós-merge:** a PR #260 foi mergeada em `origin/main` (`6866b501`) e checks verdes, mas mudou além dos limites autorizados: o acento compartilhado também recoloriu o título grande sem defeito demonstrado e o número `.steps li span` fora das 104 amostras. A correção estreita nesta branch fixa `arena/b928ace8-gruposegsystemseguranca` restaura esses papéis (`#ea580c` e `#8397a8`) e mantém somente as correções medidas. A medição histórica e os limites abaixo permanecem; os itens de implementação foram retificados. Sem aceite humano, UAT nem declaração de conformidade WCAG; homologação e produção **NO-GO**.
+
+> **Decisão final de escopo:** corrigir os **40 sinais reais** dos quatro botões de sugestão + CTA público, sem mudar o título grande ou os demais papéis do RAG; corrigir os **56 sinais reais** nos rótulos de etapa e textos pequenos do resumo, sem recolorir os números em `span`. As oito ocorrências do `h2` continuam “sem defeito demonstrado”; os fundos indeterminados continuam sem classificação por suposição.
 
 ## 0. O que está autorizado aqui (decisão item a item do proprietário, 16/10/2026)
 
@@ -57,22 +59,23 @@ LD_LIBRARY_PATH=/tmp/al2023/lib UX_EVIDENCE_09E_DIR='docs/UX-PRO-09E-evidencias-
   npm run ux:evidence -- --stage=ux-pro-09e
 ```
 
-Mesma matriz do diagnóstico: **14 rotas** `site publico` do inventário × **4 larguras** (320/390/768/1440) × **2 preferências de cor** (`day`/`night`) = **112 capturas PNG + `resumo.json` por rota**. Sem cookies, sem sessão, sem submissão de formulário, com PostgreSQL descartável destruído ao fim (`UX_EVIDENCE_PG_TEMP_CLEANED: true`).
+Mesma matriz do diagnóstico: **14 rotas** `site publico` do inventário × **4 larguras** (320/390/768/1440) × **2 preferências de cor** (`day`/`night`) = **112 capturas PNG + `resumo.json` por rota**. Sem cookies, sem sessão, sem submissão de formulário, com PostgreSQL descartável destruído ao fim (`UX_EVIDENCE_PG_TEMP_CLEANED: true`). O output local pre-code foi preservado sem alteração de bytes em [`captura-propria/`](UX-PRO-09E-evidencias-2026-10-16/captura-propria/), junto dos 24 PNGs full-page de contexto; só as referências JSON mudaram para coexistir com o diretório `antes/` já versionado pela #260.
 
 A 09E acrescenta ao harness um probe **opt-in** (`attributeTextOverflow`) que mede cada execução de texto pelo próprio `Range` de linha. É a resposta direta à lacuna do 09B em `/faq` ("probe não atribuiu a elemento"): o laço existente percorre **retângulos de elementos**, e uma palavra mais larga que a coluna estoura o **documento** sem que elemento algum tenha rect além do limite. O 09B e as demais etapas não pedem o flag, logo continuam gerando exatamente a mesma saída.
 
 ### 2.2 A base atual reproduz o 09B
 
-| Grandeza | 09B em `d0ffffb` | 09E-antes em `4a4b614` |
-|---|---|---|
-| HTTP de navegação | 200 em 112/112 | **200 em 112/112** |
-| Amostras de cor colhidas | 2.215 | 2.214 |
-| Com fundo sólido resolvido | 1.246 | **1.246** |
-| Abaixo de 4,5:1 | 104 | **104** |
-| `/contato` a 320 px | documento 343 px (`br@343px`) | **documento 343 px** (`br@343px`) |
-| `/faq` a 320 px | documento 347 px (sem culpado) | **documento 347 px** (agora atribuído) |
+| Grandeza | 09B em `d0ffffb` | Captura própria before em `4a4b614` | Baseline herdado da #260 em `4a4b614` |
+|---|---|---|---|
+| HTTP de navegação | 200 em 112/112 | **200 em 112/112** | **200 em 112/112** |
+| Amostras de cor colhidas | 2.215 | **2.215** | 2.214 |
+| Com fundo sólido resolvido | 1.246 | **1.246** | **1.246** |
+| Fundos indeterminados | 969 | **969** | 968 |
+| Abaixo de 4,5:1 | 104 | **104** | **104** |
+| `/contato` a 320 px | documento 343 px (`br@343px`) | **documento 343 px** | **documento 343 px** + atribuição Range |
+| `/faq` a 320 px | documento 347 px (sem culpado) | **documento 347 px** | **documento 347 px** + atribuição Range |
 
-Confronto chave-a-chave (rota × largura × preferência) entre as duas corridas, 112 chaves: **as únicas divergências são** (i) a linha nova de atribuição de texto, produzida pelo harness acrescido, e (ii) `aceite-token-sintetico-invalido` 320 px `night`, com 3 amostras no 09B e 2 aqui — rota de token sintético **deliberadamente inválido**, onde a página ainda está mudando de estado no instante da captura. Nada mais. Leitura honesta: **o site público não se alterou entre `d0ffffb` e `4a4b614`** (a 09C e a 09D tocaram portal do cliente e o servidor `.mjs`), e as medições do diagnóstico continuam válidas como ponto de partida.
+Confronto chave-a-chave (rota × largura × preferência), 112 chaves: **09B e a captura própria before têm os mesmos totais**. As duas corridas variam apenas na distribuição de amostras indeterminadas da rota diagnóstica de token sintético inválido: `320px/day` tem 2 no 09B e 3 na captura própria; `320px/night` tem 3 no 09B e 2 na captura própria — efeito líquido zero em 2.215/1.246/969 e fora dos 104 sinais. O baseline herdado da #260 registra 2 amostras em ambos os temas a 320 px (2.214/1.246/968); em day/night e fora dessa rota, o universo e os defeitos medidos permanecem iguais. As quatro atribuições Range para `/contato` e `/faq` (320 px, day/night) estão em [`antes/contato/resumo.json`](UX-PRO-09E-evidencias-2026-10-16/antes/contato/resumo.json) e [`antes/faq/resumo.json`](UX-PRO-09E-evidencias-2026-10-16/antes/faq/resumo.json); a captura própria pre-code e seus PNGs full-page preservados estão em [`captura-propria/`](UX-PRO-09E-evidencias-2026-10-16/captura-propria/). Leitura honesta: **o site público não se alterou entre `d0ffffb` e `4a4b614`** (a 09C e a 09D tocaram portal do cliente e o servidor `.mjs`), e as medições do diagnóstico continuam válidas como ponto de partida.
 
 ### 2.3 Preferência de cor: por que "se reproduz nas duas preferências"
 
@@ -80,7 +83,7 @@ Confronto chave-a-chave (rota × largura × preferência) entre as duas corridas
 
 ### 2.4 As 104 amostras são, na verdade, 13 superfícies
 
-104 = 48 registros em `/contato` + 56 em `/simulador` — e são as **mesmas 6 e 7 amostras repetidas nas 8 capturas** de cada rota (4 larguras × 2 preferências): nenhum dos elementos medidos depende de largura ou de preferência de cor. Rever amostra por amostra é, com honestidade, revisar **13 superfícies** — e é isso que a tabela abaixo faz. `sem defeito demonstrado` vale para as outras 1.142 amostras resolvidas; as 969 indeterminadas (gradiente/imagem/camadas) seguem **não medidas**, o que não é aprovação.
+104 = 48 registros em `/contato` + 56 em `/simulador` — as mesmas 6 e 7 superfícies repetidas nas 8 capturas de cada rota (4 larguras × 2 preferências). São **96 sinais reais** (40 em sugestões/CTA e 56 em rótulos/resumo) mais **8 registros do título grande**, sem defeito demonstrado. Revisão final individual: [`correcao/contraste-revisao.json`](UX-PRO-09E-evidencias-2026-10-16/correcao/contraste-revisao.json). O 09B e a captura própria pre-code reportaram 969 fundos indeterminados (2.215 amostras/1.246 resolvidas); o baseline herdado da #260 e o after corrigido reportam 968 (2.214/1.246), com a única diferença na rota de token sintético inválido. Nenhuma amostra de fundo indeterminado foi tratada como defeito.
 
 ## 3. Superfícies inventariadas (medição da base real)
 
@@ -108,20 +111,20 @@ Tamanho de fonte e peso lidos do código vigente; razão medida pelo probe nas 1
 
 | # | Rota | Elemento | Fonte | Razão medida | AA exige | Veredito da revisão |
 |---|---|---|---|---|---|---|
-| A1 | `/contato` | `h2` "Assistente de dúvidas" `#ea580c` sobre `#fff7ed` | 20 px / 700 | **3,35** | 3:1 (texto grande ≥18,66 px bold) | **não é defeito AA** — passa no limiar de texto grande; é o mesmo token dos itens abaixo e melhora junto |
+| A1 | `/contato` | `h2` "Assistente de dúvidas" `#ea580c` sobre `#fff7ed` | 20 px / 700 | **3,35** | 3:1 (texto grande ≥18,66 px bold) | **sem defeito demonstrado** — manter cor e papel exatamente como estavam; não compartilhar a correção dos controles pequenos |
 | A2–A5 | `/contato` | 4 sugestões `button` `#ea580c` sobre `#fff` | 11 px | **3,56** | 4,5:1 | **defeito real** (11 px não é texto grande) |
 | A6 | `/contato` | `button` "Perguntar à base PUBLICO" `#fff` sobre `#ea580c` | 16 px / 600 | **3,56** | 4,5:1 | **defeito real** (16 px < 18,66 px) |
-| B1–B4 | `/simulador` | `li` das 4 etapas ("01Seu espaço"…) `#93a4b4` sobre `#fff` | 11 px / 700 | **2,56** | 4,5:1 | **defeito real**; dentro da amostra está também o número da etapa, `.steps li span` `#8397a8` sobre `#eef4fa` = **2,72** |
+| B1–B4 | `/simulador` | rótulos textuais das 4 etapas, regra-base `.steps li` `#93a4b4` sobre `#fff` | 11 px / 700 | **2,56** | 4,5:1 | **sinal real**; corrigir o texto da etapa. O `span` numérico (`#8397a8` sobre `#eef4fa`) é explicitamente excluído e preservado, apesar de o `textContent` do `<li>` concatenar o número. |
 | B5 | `/simulador` | `p.asideIntro` "Resumo do que você está montando." `#8093a4` sobre `#fff` | 12 px | **3,17** | 4,5:1 | **defeito real** |
 | B6–B7 | `/simulador` | `p.summaryEmpty` "Escolha o tipo de imóvel para começar." / "Nenhum selecionado ainda." `#9aabba` sobre `#fff` | 12 px | **2,36** | 4,5:1 | **defeito real** — as duas menores razões de todo o público |
 
-Nenhuma das 13 é artefato de gradiente, sobreposição ou texto grande (exceto A1, marcada como tal): todas têm fundo sólido resolvido pelo próprio probe.
+As amostras-alvo têm fundo sólido resolvido pelo probe. A1 é texto grande e não tem defeito demonstrado. Os números em `span` do progresso não integram as 104 amostras para efeito desta correção e mantêm `#8397a8`; não são reclassificados a partir do texto concatenado do `<li>`. A captura própria before soma 2.215 amostras (1.246 resolvidas/969 indeterminadas), como o 09B; o baseline herdado da #260 e o after corrigido somam 2.214 (1.246/968), por uma amostra indeterminada a menos na rota de token sintético inválido. A diferença não alcança sinal abaixo de 4,5:1 nem transforma qualquer fundo indeterminado em defeito.
 
 ## 4. Lacunas numeradas
 
 - **PU1 — overflow do documento a 320 px em `/contato` (343 px) e `/faq` (347 px), uma causa.** 4 capturas em 112. Causa medida em §3.1. **Corrigível no escopo autorizado** (quebra de palavra onde o texto não cabe; nada de conteúdo, contrato ou layout muda).
-- **PU2 — 6 amostras de `/contato`, todas o mesmo token `--rag-accent` do escopo `publico`.** 5 defeitos reais (A2–A6) + 1 texto grande não exigível (A1). Uma única mudança de token resolve as 6.
-- **PU3 — 7 amostras de `/simulador`, todas cinzas fixos fora do token `--muted` da própria página.** As 7 são defeitos reais. Detalha medição: corrigir só o `li` deixaria a amostra medindo bem enquanto o número "01" continuaria em 2,72:1 no pixel — por isso o badge entra no mesmo reparo (§5).
+- **PU2 — 40 sinais reais em `/contato`** (4 sugestões + CTA, cinco controles × oito capturas) e oito registros do `h2` grande sem defeito demonstrado. Os controles recebem `--rag-interactive-accent`; `--rag-accent`/`--rag-border` públicos e o título seguem `#ea580c`.
+- **PU3 — 56 sinais reais em `/simulador`** (quatro rótulos × oito capturas + três textos de resumo × oito). `.steps li`, `.asideIntro` e `.summaryEmpty` usam `--muted`; `.steps li span` continua `#8397a8` e fora do escopo. PU5 (especificidade dos estados ativo/concluído) permanece sem mudança, conforme limite original.
 - **PU4 — o conjunto amostrado não é a página inteira (limitação do método do 09B, registrada, não corrigida).** O probe percorre só `h1,h2,h3,p,a,button,label,li`. Fora dele ficaram, entre outros, `.review dt` e `.summaryBlock > span` (`#8093a4` = 3,17:1), `.field span` e `.footer` (`#8c9cab` = 2,82/2,63:1), `.doneNote` — verificados por mim à mão, **não medidos pelo probe** — além de tudo que só existe em estado posterior (`/simulador` foi capturado na etapa 1; `.hint` = 3,42:1 e o bloco `.error` não chegaram a renderizar). Regra da subfatia: **sem medição ≠ aprovado**, e o que não foi medido não é sinal demonstrado, logo **não se corrige aqui**. Vira decisão do proprietário (ampliar o probe do stage para todas as tags de texto + varrer os estados).
 - **PU5 — achado de leitura, sem defeito de contraste: os estados da trilha do simulador não se distinguem por cor.** `.steps li` (especificidade 0,1,1) vence `.stepActive`/`.stepDone` (0,1,0), e `.steps li span` (0,1,2) vence `.stepActive span`/`.stepDone span` (0,1,1): hoje a etapa ativa e as concluídas herdam o cinza da regra-base e ficam iguais às pendentes. Não é lacuna autorizada (nenhuma amostra <4,5:1 depende disso) e **não é tocado nesta subfatia**; registrado com as seletores e as especificidades para decisão.
 - **PU6 — ruído do método fora do escopo:** a rota de aceite com token sintético inválido variou 1 amostra entre as duas corridas (§2.2) e 3 rotas têm par `day`/`night` não-idêntico por pintura do navegador (§2.3). Nenhum dos dois é defeito de produto demonstrado; nenhum reparo é proposto.
@@ -131,8 +134,8 @@ Nenhuma das 13 é artefato de gradiente, sobreposição ou texto grande (exceto 
 | # | Arquivo | Mudança | Razão antes → alvo |
 |---|---|---|---|
 | C1 | `src/app/contato/page.tsx` (bloco de endereço) e `src/app/faq/page.tsx` (parágrafo "Contato claro") | acrescentar `overflowWrap: "break-word"` no elemento que carrega o texto medido | overflow 343/347 → **documento sem rolagem horizontal** em 320/390/768/1440 |
-| C2 | `src/components/RagWidget.tsx` — **apenas** `RAG_COLORS.publico` | `accent`/`border` `#ea580c` → **`#c2410c`** (mesma família de laranja, uma etapa abaixo); `bg` `#fff7ed` e `light` `#ffedd5` permanecem | A1 3,35→**4,88**; A2–A5 3,56→**5,18**; A6 3,56→**5,18**; pílula de escopo (accent sobre `light`) 3,11→**4,52** — os quatro papéis do widget ficam ≥4,5:1 |
-| C3 | `src/app/simulador/Simulator.module.css` | `.steps li`, `.asideIntro` e `.summaryEmpty` passam a `var(--muted)`; `.steps li span` idem (mesmo papel de cor, só mais escuro — sem recolorir ícone nenhum) | B1–B4 2,56→**5,05**; B5 3,17→**5,05**; B6–B7 2,36→**5,05**; número da etapa 2,72→**4,56** sobre `#eef4fa` |
+| C2 | `src/components/RagWidget.tsx` | acrescentar `--rag-interactive-accent: #c2410c` **somente** ao texto das quatro sugestões e ao fundo do CTA de `ragKey="publico"`; manter `RAG_COLORS.publico.accent` e `.border` em `#ea580c` | 40/40 sinais de sugestões/CTA passam de 3,56 para **5,18:1**; o título grande permanece **3,35:1**, sem alteração ou defeito demonstrado; pílula, selo e demais papéis não mudam |
+| C3 | `src/app/simulador/Simulator.module.css` | `.steps li` (texto do rótulo), `.asideIntro` e `.summaryEmpty` passam a `var(--muted)`; `.steps li span` restaura/mantém `#8397a8` | 56/56 sinais textuais passam de 2,36–3,17 para **5,05:1**; números em `span` ficam fora das 104 e não são recoloridos |
 
 Escolhas deliberadas de projeto: `break-word` (não `anywhere`) porque não altera o tamanho mínimo do contêenedor — só quebra o que não cabe; `var(--muted)` (token **já existente** da própria página, 5,05:1) em vez de inventar um cinza novo, alinhando com o critério 2 do plano mestre ("tokens semânticos existentes, não valores arbitrários locais").
 
@@ -140,10 +143,10 @@ Escolhas deliberadas de projeto: `break-word` (não `anywhere`) porque não alte
 
 ## 6. Plano de evidência e gates
 
-1. **Evidência:** `docs/UX-PRO-09E-evidencias-2026-10-16/` (depois) e `.../antes/`, cada uma com 14 subpastas de rota, **112 PNGs + `resumo.json` por pasta**, geradas pelo mesmo comando do §2.1 mudando só `UX_EVIDENCE_09E_DIR`. Conferência obrigatória: contagem, **dimensões PNG = viewport declarado**, byte-comparação dos nomes de captura contra `entries[].screenshot` **nos dois sentidos** (`missing=[]`, `orphans=[]`), e o par `day`/`night` das rotas em escopo idêntico antes e depois.
-2. **Antes/depois por amostra:** relatório com as 13 superfícies e a razão medida de cada uma nas duas corridas, mais o confronto com o 09B (§2.2) e a matriz 112×2 de problemas.
-3. **Regressão nova:** `tests/ux-pro-09e-public-site.test.mjs` (staticamente lido do código vigente, sem navegador): razão WCAG real ≥4,5:1 nos quatro papéis do `publico` e nas quatro regras do simulador; invariância literal dos três escopos privados; presença da regra de quebra nos dois blocos com o e-mail **e** do e-mail/conteúdo intactos; e consistência da matriz de evidência versionada (contagem, dimensões, órfãos, e o sinal de que `antes` tinha 104 registros/4 overflow e `depois` tem 0/0). Entra na lista `test:unit` do `package.json`.
-4. **Gates da família nesta base:** `LD_LIBRARY_PATH=/tmp/al2023/lib npm run ux:evidence -- --stage=ux-pro-09e` (depois), `npm run test:unit` (949 + os novos), `node --test tests/ux-portal-vocabulary.test.mjs` 17/17, `UX_PORTAL_09D_EVIDENCE_DIR=… npm run test:ux-portal:pg` 22/22 (`UX_PORTAL_TEST_EXIT: 0`) para provar que a 09D não regrediu, `npm run typecheck`, `node scripts/qa-wave0-static.mjs` 5/5, `node scripts/ux-pro-00-inventory.mjs` + `--check` (após tocar `src/app`; diff aditivo conferido antes de versionar), `git diff --check`, `npm run build` (roda no CI da PR). Restaurar `next-env.d.ts` por MD5 antes de commitar.
+1. **Evidência:** `captura-propria/` preserva o baseline local pre-code (112 PNGs de viewport + 24 full-page, resumos por rota, 104 revisões e manifesto SHA-256); `antes/` mantém, sem alteração, a referência já versionada pela #260, cujos quatro resumos de `/contato` e `/faq` registram a atribuição do overflow por `Range`; `correcao/` contém o after corrigido, 14 rotas × 8 combinações = 112 PNGs e listas DOM completas de contraste por amostra. `correcao/contraste-revisao.json` cruza os 104 sinais originais; `correcao/integridade.json` cobre as 112 referências herdadas antes e 112 depois. Os testes conferem referências e PNGs nos dois sentidos, dimensões, hashes, pares day/night e a integridade da captura própria.
+2. **Resultado revisado:** 96/96 sinais reais corrigidos ≥4,5:1; oito h2 grandes permanecem em 3,35:1 sem alteração e são registrados como “sem defeito demonstrado”; 8 amostras abaixo de 4,5 no after correspondem somente a esses h2. Overflow documental: quatro capturas antes, zero depois.
+3. **Regressão:** `tests/ux-pro-09e-public-site.test.mjs` valida a variável separada do RAG, os três grupos de texto medidos do simulador, a preservação do número `#8397a8`, dos escopos privados e dos fluxos, mais o cruzamento detalhado e a integridade das evidências. A razão calculada é triagem automatizada, não uma declaração de conformidade WCAG.
+4. **Gates da família nesta base:** `LD_LIBRARY_PATH=/tmp/al2023/lib npm run ux:evidence -- --stage=ux-pro-09e` (depois), `npm test` **956/956** (inclui os sete testes 09E), `node --test tests/ux-portal-vocabulary.test.mjs` 17/17, `UX_PORTAL_09D_EVIDENCE_DIR=… npm run test:ux-portal:pg` 22/22 (`UX_PORTAL_TEST_EXIT: 0`) para provar que a 09D não regrediu, `npm run typecheck`, `node scripts/qa-wave0-static.mjs` 5/5, `node scripts/ux-pro-00-inventory.mjs` + `--check` (após tocar `src/app`; diff aditivo conferido antes de versionar), `git diff --check`, `npm run build` (roda no CI da PR). Restaurar `next-env.d.ts` por MD5 antes de commitar.
 5. **PR única pequena**; merge só com todos os checks SUCCESS e base confirmada (`gh pr merge <n> --merge`, sem `--auto`); depois, relatório, resíduos numerados, limites e prompt da próxima pendência.
 
 ## 7. Limites deste documento

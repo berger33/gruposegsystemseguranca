@@ -1,0 +1,2438 @@
+{
+  "stage": "ux-pro-09e",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "route": "/servicos",
+  "limitations": [
+    "Chromium headless Linux; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servicos/w320-day-servicos.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Serviços — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviços"
+          },
+          {
+            "level": 2,
+            "text": "Segurança Desarmada"
+          },
+          {
+            "level": 2,
+            "text": "Monitoramento 24 Horas"
+          },
+          {
+            "level": 2,
+            "text": "Câmeras e CFTV"
+          },
+          {
+            "level": 2,
+            "text": "Portaria e Controle de Acesso"
+          },
+          {
+            "level": 2,
+            "text": "Limpeza e Conservação"
+          },
+          {
+            "level": 2,
+            "text": "Supervisão e Ronda"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1579,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 29,
+          "resolvedCount": 0,
+          "indeterminateCount": 29,
+          "under45": [],
+          "lowest": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Serviços",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Conheça as opções do catálogo usado pelo formulário de pedidos. Escopo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Segurança Desarmada",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Presença preventiva, rondas e proteção patrimonial com profissionais p",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Como é hoje a circulação de pessoas ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Monitoramento 24 Horas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Acompanhamento contínuo e apoio operacional na resposta a ocorrências.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Existe algum ponto que precisa de at",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Câmeras e CFTV",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Projetos e instalação de sistemas de câmeras dimensionados para seu es",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quais áreas você gostaria de cobrir ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Portaria e Controle de Acesso",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Rotinas de entrada, saída, identificação e atendimento para cada opera",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quantas entradas e saídas recebem ma",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Limpeza e Conservação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Equipes para ambientes corporativos, condomínios e áreas comerciais.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quais ambientes precisam de manutenç",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Supervisão e Ronda",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Acompanhamento dos postos, visitas programadas e apoio às equipes.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Você já tem equipes operando e quer ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Quer conversar com a equipe? Solicite uma avaliação ou entre em contat",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Solicite uma avaliação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "entre em contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 8
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Conhecer este serviço",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servicos/w320-night-servicos.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Serviços — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviços"
+          },
+          {
+            "level": 2,
+            "text": "Segurança Desarmada"
+          },
+          {
+            "level": 2,
+            "text": "Monitoramento 24 Horas"
+          },
+          {
+            "level": 2,
+            "text": "Câmeras e CFTV"
+          },
+          {
+            "level": 2,
+            "text": "Portaria e Controle de Acesso"
+          },
+          {
+            "level": 2,
+            "text": "Limpeza e Conservação"
+          },
+          {
+            "level": 2,
+            "text": "Supervisão e Ronda"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1579,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 29,
+          "resolvedCount": 0,
+          "indeterminateCount": 29,
+          "under45": [],
+          "lowest": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Serviços",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Conheça as opções do catálogo usado pelo formulário de pedidos. Escopo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Segurança Desarmada",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Presença preventiva, rondas e proteção patrimonial com profissionais p",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Como é hoje a circulação de pessoas ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Monitoramento 24 Horas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Acompanhamento contínuo e apoio operacional na resposta a ocorrências.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Existe algum ponto que precisa de at",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Câmeras e CFTV",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Projetos e instalação de sistemas de câmeras dimensionados para seu es",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quais áreas você gostaria de cobrir ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Portaria e Controle de Acesso",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Rotinas de entrada, saída, identificação e atendimento para cada opera",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quantas entradas e saídas recebem ma",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Limpeza e Conservação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Equipes para ambientes corporativos, condomínios e áreas comerciais.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quais ambientes precisam de manutenç",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Supervisão e Ronda",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Acompanhamento dos postos, visitas programadas e apoio às equipes.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Você já tem equipes operando e quer ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Quer conversar com a equipe? Solicite uma avaliação ou entre em contat",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Solicite uma avaliação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "entre em contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 8
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Conhecer este serviço",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servicos/w390-day-servicos.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Serviços — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviços"
+          },
+          {
+            "level": 2,
+            "text": "Segurança Desarmada"
+          },
+          {
+            "level": 2,
+            "text": "Monitoramento 24 Horas"
+          },
+          {
+            "level": 2,
+            "text": "Câmeras e CFTV"
+          },
+          {
+            "level": 2,
+            "text": "Portaria e Controle de Acesso"
+          },
+          {
+            "level": 2,
+            "text": "Limpeza e Conservação"
+          },
+          {
+            "level": 2,
+            "text": "Supervisão e Ronda"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1579,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 29,
+          "resolvedCount": 0,
+          "indeterminateCount": 29,
+          "under45": [],
+          "lowest": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Serviços",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Conheça as opções do catálogo usado pelo formulário de pedidos. Escopo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Segurança Desarmada",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Presença preventiva, rondas e proteção patrimonial com profissionais p",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Como é hoje a circulação de pessoas ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Monitoramento 24 Horas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Acompanhamento contínuo e apoio operacional na resposta a ocorrências.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Existe algum ponto que precisa de at",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Câmeras e CFTV",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Projetos e instalação de sistemas de câmeras dimensionados para seu es",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quais áreas você gostaria de cobrir ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Portaria e Controle de Acesso",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Rotinas de entrada, saída, identificação e atendimento para cada opera",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quantas entradas e saídas recebem ma",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Limpeza e Conservação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Equipes para ambientes corporativos, condomínios e áreas comerciais.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quais ambientes precisam de manutenç",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Supervisão e Ronda",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Acompanhamento dos postos, visitas programadas e apoio às equipes.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Você já tem equipes operando e quer ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Quer conversar com a equipe? Solicite uma avaliação ou entre em contat",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Solicite uma avaliação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "entre em contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 8
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Conhecer este serviço",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servicos/w390-night-servicos.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Serviços — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviços"
+          },
+          {
+            "level": 2,
+            "text": "Segurança Desarmada"
+          },
+          {
+            "level": 2,
+            "text": "Monitoramento 24 Horas"
+          },
+          {
+            "level": 2,
+            "text": "Câmeras e CFTV"
+          },
+          {
+            "level": 2,
+            "text": "Portaria e Controle de Acesso"
+          },
+          {
+            "level": 2,
+            "text": "Limpeza e Conservação"
+          },
+          {
+            "level": 2,
+            "text": "Supervisão e Ronda"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1579,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 29,
+          "resolvedCount": 0,
+          "indeterminateCount": 29,
+          "under45": [],
+          "lowest": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Serviços",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Conheça as opções do catálogo usado pelo formulário de pedidos. Escopo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Segurança Desarmada",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Presença preventiva, rondas e proteção patrimonial com profissionais p",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Como é hoje a circulação de pessoas ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Monitoramento 24 Horas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Acompanhamento contínuo e apoio operacional na resposta a ocorrências.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Existe algum ponto que precisa de at",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Câmeras e CFTV",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Projetos e instalação de sistemas de câmeras dimensionados para seu es",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quais áreas você gostaria de cobrir ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Portaria e Controle de Acesso",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Rotinas de entrada, saída, identificação e atendimento para cada opera",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quantas entradas e saídas recebem ma",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Limpeza e Conservação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Equipes para ambientes corporativos, condomínios e áreas comerciais.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quais ambientes precisam de manutenç",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Supervisão e Ronda",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Acompanhamento dos postos, visitas programadas e apoio às equipes.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Você já tem equipes operando e quer ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Quer conversar com a equipe? Solicite uma avaliação ou entre em contat",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Solicite uma avaliação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "entre em contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 8
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Conhecer este serviço",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servicos/w768-day-servicos.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Serviços — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviços"
+          },
+          {
+            "level": 2,
+            "text": "Segurança Desarmada"
+          },
+          {
+            "level": 2,
+            "text": "Monitoramento 24 Horas"
+          },
+          {
+            "level": 2,
+            "text": "Câmeras e CFTV"
+          },
+          {
+            "level": 2,
+            "text": "Portaria e Controle de Acesso"
+          },
+          {
+            "level": 2,
+            "text": "Limpeza e Conservação"
+          },
+          {
+            "level": 2,
+            "text": "Supervisão e Ronda"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1579,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 29,
+          "resolvedCount": 0,
+          "indeterminateCount": 29,
+          "under45": [],
+          "lowest": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Serviços",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Conheça as opções do catálogo usado pelo formulário de pedidos. Escopo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Segurança Desarmada",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Presença preventiva, rondas e proteção patrimonial com profissionais p",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Como é hoje a circulação de pessoas ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Monitoramento 24 Horas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Acompanhamento contínuo e apoio operacional na resposta a ocorrências.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Existe algum ponto que precisa de at",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Câmeras e CFTV",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Projetos e instalação de sistemas de câmeras dimensionados para seu es",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quais áreas você gostaria de cobrir ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Portaria e Controle de Acesso",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Rotinas de entrada, saída, identificação e atendimento para cada opera",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quantas entradas e saídas recebem ma",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Limpeza e Conservação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Equipes para ambientes corporativos, condomínios e áreas comerciais.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quais ambientes precisam de manutenç",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Supervisão e Ronda",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Acompanhamento dos postos, visitas programadas e apoio às equipes.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Você já tem equipes operando e quer ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Quer conversar com a equipe? Solicite uma avaliação ou entre em contat",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Solicite uma avaliação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "entre em contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 8
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Conhecer este serviço",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servicos/w768-night-servicos.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Serviços — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviços"
+          },
+          {
+            "level": 2,
+            "text": "Segurança Desarmada"
+          },
+          {
+            "level": 2,
+            "text": "Monitoramento 24 Horas"
+          },
+          {
+            "level": 2,
+            "text": "Câmeras e CFTV"
+          },
+          {
+            "level": 2,
+            "text": "Portaria e Controle de Acesso"
+          },
+          {
+            "level": 2,
+            "text": "Limpeza e Conservação"
+          },
+          {
+            "level": 2,
+            "text": "Supervisão e Ronda"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1579,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 29,
+          "resolvedCount": 0,
+          "indeterminateCount": 29,
+          "under45": [],
+          "lowest": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Serviços",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Conheça as opções do catálogo usado pelo formulário de pedidos. Escopo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Segurança Desarmada",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Presença preventiva, rondas e proteção patrimonial com profissionais p",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Como é hoje a circulação de pessoas ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Monitoramento 24 Horas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Acompanhamento contínuo e apoio operacional na resposta a ocorrências.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Existe algum ponto que precisa de at",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Câmeras e CFTV",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Projetos e instalação de sistemas de câmeras dimensionados para seu es",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quais áreas você gostaria de cobrir ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Portaria e Controle de Acesso",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Rotinas de entrada, saída, identificação e atendimento para cada opera",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quantas entradas e saídas recebem ma",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Limpeza e Conservação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Equipes para ambientes corporativos, condomínios e áreas comerciais.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quais ambientes precisam de manutenç",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Supervisão e Ronda",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Acompanhamento dos postos, visitas programadas e apoio às equipes.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Você já tem equipes operando e quer ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Quer conversar com a equipe? Solicite uma avaliação ou entre em contat",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Solicite uma avaliação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "entre em contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 8
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Conhecer este serviço",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servicos/w1440-day-servicos.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Serviços — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviços"
+          },
+          {
+            "level": 2,
+            "text": "Segurança Desarmada"
+          },
+          {
+            "level": 2,
+            "text": "Monitoramento 24 Horas"
+          },
+          {
+            "level": 2,
+            "text": "Câmeras e CFTV"
+          },
+          {
+            "level": 2,
+            "text": "Portaria e Controle de Acesso"
+          },
+          {
+            "level": 2,
+            "text": "Limpeza e Conservação"
+          },
+          {
+            "level": 2,
+            "text": "Supervisão e Ronda"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1579,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 29,
+          "resolvedCount": 0,
+          "indeterminateCount": 29,
+          "under45": [],
+          "lowest": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Serviços",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Conheça as opções do catálogo usado pelo formulário de pedidos. Escopo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Segurança Desarmada",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Presença preventiva, rondas e proteção patrimonial com profissionais p",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Como é hoje a circulação de pessoas ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Monitoramento 24 Horas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Acompanhamento contínuo e apoio operacional na resposta a ocorrências.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Existe algum ponto que precisa de at",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Câmeras e CFTV",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Projetos e instalação de sistemas de câmeras dimensionados para seu es",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quais áreas você gostaria de cobrir ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Portaria e Controle de Acesso",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Rotinas de entrada, saída, identificação e atendimento para cada opera",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quantas entradas e saídas recebem ma",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Limpeza e Conservação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Equipes para ambientes corporativos, condomínios e áreas comerciais.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quais ambientes precisam de manutenç",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Supervisão e Ronda",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Acompanhamento dos postos, visitas programadas e apoio às equipes.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Você já tem equipes operando e quer ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Quer conversar com a equipe? Solicite uma avaliação ou entre em contat",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Solicite uma avaliação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "entre em contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 8
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Conhecer este serviço",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servicos/w1440-night-servicos.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Serviços — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviços"
+          },
+          {
+            "level": 2,
+            "text": "Segurança Desarmada"
+          },
+          {
+            "level": 2,
+            "text": "Monitoramento 24 Horas"
+          },
+          {
+            "level": 2,
+            "text": "Câmeras e CFTV"
+          },
+          {
+            "level": 2,
+            "text": "Portaria e Controle de Acesso"
+          },
+          {
+            "level": 2,
+            "text": "Limpeza e Conservação"
+          },
+          {
+            "level": 2,
+            "text": "Supervisão e Ronda"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1579,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 29,
+          "resolvedCount": 0,
+          "indeterminateCount": 29,
+          "under45": [],
+          "lowest": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Serviços",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Conheça as opções do catálogo usado pelo formulário de pedidos. Escopo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Segurança Desarmada",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Presença preventiva, rondas e proteção patrimonial com profissionais p",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Como é hoje a circulação de pessoas ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Monitoramento 24 Horas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Acompanhamento contínuo e apoio operacional na resposta a ocorrências.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Existe algum ponto que precisa de at",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Câmeras e CFTV",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Projetos e instalação de sistemas de câmeras dimensionados para seu es",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quais áreas você gostaria de cobrir ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Portaria e Controle de Acesso",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Rotinas de entrada, saída, identificação e atendimento para cada opera",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quantas entradas e saídas recebem ma",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Limpeza e Conservação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Equipes para ambientes corporativos, condomínios e áreas comerciais.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Quais ambientes precisam de manutenç",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "h2",
+              "text": "Supervisão e Ronda",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Acompanhamento dos postos, visitas programadas e apoio às equipes.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Para entendermos sua necessidade: Você já tem equipes operando e quer ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Conhecer este serviço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Quer conversar com a equipe? Solicite uma avaliação ou entre em contat",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Solicite uma avaliação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "entre em contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 8
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Conhecer este serviço",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    }
+  ]
+}

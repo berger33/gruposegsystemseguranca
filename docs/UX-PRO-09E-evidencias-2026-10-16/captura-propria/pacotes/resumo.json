@@ -1,0 +1,2208 @@
+{
+  "stage": "ux-pro-09e-antes",
+  "generatedBy": "scripts/ux-evidence-capture.mjs (isolated output copy)",
+  "baseMain": "4a4b614b08046f93c59e44f9502218b0d9e47244",
+  "date": "2026-10-16",
+  "route": "/pacotes",
+  "limitations": [
+    "Chromium headless Linux; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "pacotes",
+      "viewportName": "w320-day",
+      "route": "/pacotes",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/pacotes/ux-pro-09e-pacotes-320-day.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Pacotes de serviços | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Pacotes de serviços"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 232,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 9,
+          "resolvedCount": 9,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 24,
+                "width": 40,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 80,
+                "y": 24,
+                "width": 61,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 157,
+                "y": 24,
+                "width": 81,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 62,
+                "width": 58,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 98,
+                "y": 62,
+                "width": 161,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "h1",
+              "text": "Pacotes de serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "46px",
+              "fontWeight": "800",
+              "lineHeight": "49.91px",
+              "letterSpacing": "-3.036px",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 110,
+                "width": 272,
+                "height": 100
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 232,
+                "width": 272,
+                "height": 44
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "p",
+              "text": "Compare os serviços incluídos. Preço, cobertura e prazo dependem de av",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 292,
+                "width": 272,
+                "height": 66
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 374,
+                "width": 160,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            }
+          ]
+        },
+        "focusables": 6
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "pacotes",
+      "viewportName": "w320-night",
+      "route": "/pacotes",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/pacotes/ux-pro-09e-pacotes-320-night.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Pacotes de serviços | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Pacotes de serviços"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 232,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 9,
+          "resolvedCount": 9,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 24,
+                "width": 40,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 80,
+                "y": 24,
+                "width": 61,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 157,
+                "y": 24,
+                "width": 81,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 62,
+                "width": 58,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 98,
+                "y": 62,
+                "width": 161,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "h1",
+              "text": "Pacotes de serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "46px",
+              "fontWeight": "800",
+              "lineHeight": "49.91px",
+              "letterSpacing": "-3.036px",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 110,
+                "width": 272,
+                "height": 100
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 232,
+                "width": 272,
+                "height": 44
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "p",
+              "text": "Compare os serviços incluídos. Preço, cobertura e prazo dependem de av",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 292,
+                "width": 272,
+                "height": 66
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 374,
+                "width": 160,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            }
+          ]
+        },
+        "focusables": 6
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "pacotes",
+      "viewportName": "w390-day",
+      "route": "/pacotes",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/pacotes/ux-pro-09e-pacotes-390-day.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Pacotes de serviços | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Pacotes de serviços"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 232,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 9,
+          "resolvedCount": 9,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 24,
+                "width": 40,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 80,
+                "y": 24,
+                "width": 61,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 157,
+                "y": 24,
+                "width": 81,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 254,
+                "y": 24,
+                "width": 58,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 62,
+                "width": 161,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "h1",
+              "text": "Pacotes de serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "46px",
+              "fontWeight": "800",
+              "lineHeight": "49.91px",
+              "letterSpacing": "-3.036px",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 110,
+                "width": 342,
+                "height": 100
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 232,
+                "width": 342,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "p",
+              "text": "Compare os serviços incluídos. Preço, cobertura e prazo dependem de av",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 270,
+                "width": 342,
+                "height": 66
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 352,
+                "width": 160,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            }
+          ]
+        },
+        "focusables": 6
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "pacotes",
+      "viewportName": "w390-night",
+      "route": "/pacotes",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/pacotes/ux-pro-09e-pacotes-390-night.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Pacotes de serviços | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Pacotes de serviços"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 232,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 9,
+          "resolvedCount": 9,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 24,
+                "width": 40,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 80,
+                "y": 24,
+                "width": 61,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 157,
+                "y": 24,
+                "width": 81,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 254,
+                "y": 24,
+                "width": 58,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 62,
+                "width": 161,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "h1",
+              "text": "Pacotes de serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "46px",
+              "fontWeight": "800",
+              "lineHeight": "49.91px",
+              "letterSpacing": "-3.036px",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 110,
+                "width": 342,
+                "height": 100
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 232,
+                "width": 342,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "p",
+              "text": "Compare os serviços incluídos. Preço, cobertura e prazo dependem de av",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 270,
+                "width": 342,
+                "height": 66
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 352,
+                "width": 160,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            }
+          ]
+        },
+        "focusables": 6
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "pacotes",
+      "viewportName": "w768-day",
+      "route": "/pacotes",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/pacotes/ux-pro-09e-pacotes-768-day.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Pacotes de serviços | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Pacotes de serviços"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 232,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 9,
+          "resolvedCount": 9,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 24,
+                "width": 40,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 80,
+                "y": 24,
+                "width": 61,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 157,
+                "y": 24,
+                "width": 81,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 254,
+                "y": 24,
+                "width": 58,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 328,
+                "y": 24,
+                "width": 161,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "h1",
+              "text": "Pacotes de serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "46px",
+              "fontWeight": "800",
+              "lineHeight": "49.91px",
+              "letterSpacing": "-3.036px",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 72,
+                "width": 660,
+                "height": 50
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 144,
+                "width": 720,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "p",
+              "text": "Compare os serviços incluídos. Preço, cobertura e prazo dependem de av",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 182,
+                "width": 720,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 220,
+                "width": 160,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            }
+          ]
+        },
+        "focusables": 6
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "pacotes",
+      "viewportName": "w768-night",
+      "route": "/pacotes",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/pacotes/ux-pro-09e-pacotes-768-night.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Pacotes de serviços | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Pacotes de serviços"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 232,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 9,
+          "resolvedCount": 9,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 24,
+                "width": 40,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 80,
+                "y": 24,
+                "width": 61,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 157,
+                "y": 24,
+                "width": 81,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 254,
+                "y": 24,
+                "width": 58,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 328,
+                "y": 24,
+                "width": 161,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "h1",
+              "text": "Pacotes de serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "46px",
+              "fontWeight": "800",
+              "lineHeight": "49.91px",
+              "letterSpacing": "-3.036px",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 72,
+                "width": 660,
+                "height": 50
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 144,
+                "width": 720,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "p",
+              "text": "Compare os serviços incluídos. Preço, cobertura e prazo dependem de av",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 182,
+                "width": 720,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 24,
+                "y": 220,
+                "width": 160,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            }
+          ]
+        },
+        "focusables": 6
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "pacotes",
+      "viewportName": "w1440-day",
+      "route": "/pacotes",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/pacotes/ux-pro-09e-pacotes-1440-day.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Pacotes de serviços | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Pacotes de serviços"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 232,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 9,
+          "resolvedCount": 9,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 244,
+                "y": 24,
+                "width": 40,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 300,
+                "y": 24,
+                "width": 61,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 377,
+                "y": 24,
+                "width": 81,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 474,
+                "y": 24,
+                "width": 58,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 548,
+                "y": 24,
+                "width": 161,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "h1",
+              "text": "Pacotes de serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "74px",
+              "fontWeight": "800",
+              "lineHeight": "80.29px",
+              "letterSpacing": "-4.884px",
+              "opacity": "1",
+              "rect": {
+                "x": 244,
+                "y": 72,
+                "width": 660,
+                "height": 80
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 244,
+                "y": 174,
+                "width": 952,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "p",
+              "text": "Compare os serviços incluídos. Preço, cobertura e prazo dependem de av",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 244,
+                "y": 212,
+                "width": 952,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 244,
+                "y": 250,
+                "width": 160,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            }
+          ]
+        },
+        "focusables": 6
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e-antes",
+      "scenarioId": "pacotes",
+      "viewportName": "w1440-night",
+      "route": "/pacotes",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/pacotes/ux-pro-09e-pacotes-1440-night.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Pacotes de serviços | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Pacotes de serviços"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 232,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 9,
+          "resolvedCount": 9,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 244,
+                "y": 24,
+                "width": 40,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 300,
+                "y": 24,
+                "width": 61,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 377,
+                "y": 24,
+                "width": 81,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 474,
+                "y": 24,
+                "width": 58,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 548,
+                "y": 24,
+                "width": 161,
+                "height": 22
+              },
+              "classes": "",
+              "context": "nav"
+            },
+            {
+              "tag": "h1",
+              "text": "Pacotes de serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "74px",
+              "fontWeight": "800",
+              "lineHeight": "80.29px",
+              "letterSpacing": "-4.884px",
+              "opacity": "1",
+              "rect": {
+                "x": 244,
+                "y": 72,
+                "width": 660,
+                "height": 80
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 244,
+                "y": 174,
+                "width": 952,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "p",
+              "text": "Compare os serviços incluídos. Preço, cobertura e prazo dependem de av",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 244,
+                "y": 212,
+                "width": 952,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true,
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "normal",
+              "letterSpacing": "normal",
+              "opacity": "1",
+              "rect": {
+                "x": 244,
+                "y": 250,
+                "width": 160,
+                "height": 22
+              },
+              "classes": "",
+              "context": null
+            }
+          ]
+        },
+        "focusables": 6
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    }
+  ]
+}

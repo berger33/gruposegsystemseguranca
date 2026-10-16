@@ -1,0 +1,4296 @@
+{
+  "schemaVersion": 1,
+  "stage": "UX-PRO-09E",
+  "phase": "antes",
+  "baseMain": "4a4b614b08046f93c59e44f9502218b0d9e47244",
+  "reviewMethod": "Revisão humana visual das capturas full-page, com os dados computados do probe e contexto de tema/estado. A razão é sinal automatizado, não conclusão de conformidade WCAG.",
+  "counts": {
+    "reviewed": 104,
+    "correctedSignals": 96,
+    "noDefectDemonstrated": 8,
+    "byRoute": {
+      "contato": 48,
+      "simulador": 56
+    }
+  },
+  "observationsOutside104": [
+    {
+      "id": "OUT-1",
+      "route": "/contato",
+      "sampled": false,
+      "observation": "Pequenos textos em spans do selo de escopo/RAG público não entram no seletor de amostras 09B. Permanecem fora do escopo medido desta correção; não foram alterados."
+    },
+    {
+      "id": "OUT-2",
+      "route": "/simulador",
+      "sampled": false,
+      "observation": "Números dos círculos de progresso são spans, não fazem parte das 104 amostras. Seu estilo existente foi mantido e está fora do escopo desta correção."
+    }
+  ],
+  "samples": [
+    {
+      "sampleId": "contato-320-day-01",
+      "route": "/contato",
+      "viewport": "320x780",
+      "viewportName": "w320-day",
+      "theme": "day",
+      "signal": {
+        "tag": "h2",
+        "text": "Assistente de dúvidas",
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true,
+        "fontSize": "20px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1607,
+          "width": 196,
+          "height": 54
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-320-day-full.png",
+        "captureMode": "fullPage",
+        "state": "título estático do widget público; sem overlay no texto",
+        "actualTextRun": "20px; font-weight 700"
+      },
+      "review": {
+        "decision": "sem-defeito-demonstrado",
+        "classification": "texto-grande",
+        "rationale": "A amostra é o título do widget, 20px/700, medido em 3,35:1 sobre #fff7ed. Para esta triagem visual, 3,35 supera o limiar de sinal 3:1 adotado para texto grande; o contexto full-page não mostra estado de erro, desabilitação ou sobreposição sobre o título. Manter a cor; isto não é declaração de conformidade WCAG."
+      }
+    },
+    {
+      "sampleId": "contato-320-day-02",
+      "route": "/contato",
+      "viewport": "320x780",
+      "viewportName": "w320-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "Quais serviços vocês oferecem?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1809,
+          "width": 184,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-320-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-320-day-03",
+      "route": "/contato",
+      "viewport": "320x780",
+      "viewportName": "w320-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "Como solicitar orçamento?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1842,
+          "width": 159,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-320-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-320-day-04",
+      "route": "/contato",
+      "viewport": "320x780",
+      "viewportName": "w320-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "Contato claro?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1875,
+          "width": 96,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-320-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-320-day-05",
+      "route": "/contato",
+      "viewport": "320x780",
+      "viewportName": "w320-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "FAQ por categoria?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1908,
+          "width": 119,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-320-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-320-day-06",
+      "route": "/contato",
+      "viewport": "320x780",
+      "viewportName": "w320-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "Perguntar à base PUBLICO",
+        "ratio": 3.56,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          234,
+          88,
+          12
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 2160,
+          "width": 196,
+          "height": 64
+        },
+        "context": "form"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-320-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de envio da pergunta, habilitado; não foi acionado",
+        "actualTextRun": "16px; font-weight 600"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "CTA habilitada no estado inicial: texto branco 16px/600 em #ea580c, razão 3,56:1. O texto não atinge o limiar visual de texto grande (18,67px em negrito ou 24px normal); é um sinal real em botão primário, sem estado desabilitado/overlay."
+      }
+    },
+    {
+      "sampleId": "contato-320-night-01",
+      "route": "/contato",
+      "viewport": "320x780",
+      "viewportName": "w320-night",
+      "theme": "night",
+      "signal": {
+        "tag": "h2",
+        "text": "Assistente de dúvidas",
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true,
+        "fontSize": "20px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1607,
+          "width": 196,
+          "height": 54
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-320-night-full.png",
+        "captureMode": "fullPage",
+        "state": "título estático do widget público; sem overlay no texto",
+        "actualTextRun": "20px; font-weight 700"
+      },
+      "review": {
+        "decision": "sem-defeito-demonstrado",
+        "classification": "texto-grande",
+        "rationale": "A amostra é o título do widget, 20px/700, medido em 3,35:1 sobre #fff7ed. Para esta triagem visual, 3,35 supera o limiar de sinal 3:1 adotado para texto grande; o contexto full-page não mostra estado de erro, desabilitação ou sobreposição sobre o título. Manter a cor; isto não é declaração de conformidade WCAG."
+      }
+    },
+    {
+      "sampleId": "contato-320-night-02",
+      "route": "/contato",
+      "viewport": "320x780",
+      "viewportName": "w320-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "Quais serviços vocês oferecem?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1809,
+          "width": 184,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-320-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-320-night-03",
+      "route": "/contato",
+      "viewport": "320x780",
+      "viewportName": "w320-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "Como solicitar orçamento?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1842,
+          "width": 159,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-320-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-320-night-04",
+      "route": "/contato",
+      "viewport": "320x780",
+      "viewportName": "w320-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "Contato claro?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1875,
+          "width": 96,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-320-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-320-night-05",
+      "route": "/contato",
+      "viewport": "320x780",
+      "viewportName": "w320-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "FAQ por categoria?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1908,
+          "width": 119,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-320-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-320-night-06",
+      "route": "/contato",
+      "viewport": "320x780",
+      "viewportName": "w320-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "Perguntar à base PUBLICO",
+        "ratio": 3.56,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          234,
+          88,
+          12
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 2160,
+          "width": 196,
+          "height": 64
+        },
+        "context": "form"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-320-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de envio da pergunta, habilitado; não foi acionado",
+        "actualTextRun": "16px; font-weight 600"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "CTA habilitada no estado inicial: texto branco 16px/600 em #ea580c, razão 3,56:1. O texto não atinge o limiar visual de texto grande (18,67px em negrito ou 24px normal); é um sinal real em botão primário, sem estado desabilitado/overlay."
+      }
+    },
+    {
+      "sampleId": "contato-390-day-01",
+      "route": "/contato",
+      "viewport": "390x844",
+      "viewportName": "w390-day",
+      "theme": "day",
+      "signal": {
+        "tag": "h2",
+        "text": "Assistente de dúvidas",
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true,
+        "fontSize": "20px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1467,
+          "width": 259,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-390-day-full.png",
+        "captureMode": "fullPage",
+        "state": "título estático do widget público; sem overlay no texto",
+        "actualTextRun": "20px; font-weight 700"
+      },
+      "review": {
+        "decision": "sem-defeito-demonstrado",
+        "classification": "texto-grande",
+        "rationale": "A amostra é o título do widget, 20px/700, medido em 3,35:1 sobre #fff7ed. Para esta triagem visual, 3,35 supera o limiar de sinal 3:1 adotado para texto grande; o contexto full-page não mostra estado de erro, desabilitação ou sobreposição sobre o título. Manter a cor; isto não é declaração de conformidade WCAG."
+      }
+    },
+    {
+      "sampleId": "contato-390-day-02",
+      "route": "/contato",
+      "viewport": "390x844",
+      "viewportName": "w390-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "Quais serviços vocês oferecem?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1610,
+          "width": 184,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-390-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-390-day-03",
+      "route": "/contato",
+      "viewport": "390x844",
+      "viewportName": "w390-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "Como solicitar orçamento?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1643,
+          "width": 159,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-390-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-390-day-04",
+      "route": "/contato",
+      "viewport": "390x844",
+      "viewportName": "w390-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "Contato claro?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 227,
+          "y": 1643,
+          "width": 96,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-390-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-390-day-05",
+      "route": "/contato",
+      "viewport": "390x844",
+      "viewportName": "w390-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "FAQ por categoria?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1676,
+          "width": 119,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-390-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-390-day-06",
+      "route": "/contato",
+      "viewport": "390x844",
+      "viewportName": "w390-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "Perguntar à base PUBLICO",
+        "ratio": 3.56,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          234,
+          88,
+          12
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1895,
+          "width": 246,
+          "height": 42
+        },
+        "context": "form"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-390-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de envio da pergunta, habilitado; não foi acionado",
+        "actualTextRun": "16px; font-weight 600"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "CTA habilitada no estado inicial: texto branco 16px/600 em #ea580c, razão 3,56:1. O texto não atinge o limiar visual de texto grande (18,67px em negrito ou 24px normal); é um sinal real em botão primário, sem estado desabilitado/overlay."
+      }
+    },
+    {
+      "sampleId": "contato-390-night-01",
+      "route": "/contato",
+      "viewport": "390x844",
+      "viewportName": "w390-night",
+      "theme": "night",
+      "signal": {
+        "tag": "h2",
+        "text": "Assistente de dúvidas",
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true,
+        "fontSize": "20px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1467,
+          "width": 259,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-390-night-full.png",
+        "captureMode": "fullPage",
+        "state": "título estático do widget público; sem overlay no texto",
+        "actualTextRun": "20px; font-weight 700"
+      },
+      "review": {
+        "decision": "sem-defeito-demonstrado",
+        "classification": "texto-grande",
+        "rationale": "A amostra é o título do widget, 20px/700, medido em 3,35:1 sobre #fff7ed. Para esta triagem visual, 3,35 supera o limiar de sinal 3:1 adotado para texto grande; o contexto full-page não mostra estado de erro, desabilitação ou sobreposição sobre o título. Manter a cor; isto não é declaração de conformidade WCAG."
+      }
+    },
+    {
+      "sampleId": "contato-390-night-02",
+      "route": "/contato",
+      "viewport": "390x844",
+      "viewportName": "w390-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "Quais serviços vocês oferecem?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1610,
+          "width": 184,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-390-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-390-night-03",
+      "route": "/contato",
+      "viewport": "390x844",
+      "viewportName": "w390-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "Como solicitar orçamento?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1643,
+          "width": 159,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-390-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-390-night-04",
+      "route": "/contato",
+      "viewport": "390x844",
+      "viewportName": "w390-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "Contato claro?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 227,
+          "y": 1643,
+          "width": 96,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-390-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-390-night-05",
+      "route": "/contato",
+      "viewport": "390x844",
+      "viewportName": "w390-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "FAQ por categoria?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1676,
+          "width": 119,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-390-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-390-night-06",
+      "route": "/contato",
+      "viewport": "390x844",
+      "viewportName": "w390-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "Perguntar à base PUBLICO",
+        "ratio": 3.56,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          234,
+          88,
+          12
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1895,
+          "width": 246,
+          "height": 42
+        },
+        "context": "form"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-390-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de envio da pergunta, habilitado; não foi acionado",
+        "actualTextRun": "16px; font-weight 600"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "CTA habilitada no estado inicial: texto branco 16px/600 em #ea580c, razão 3,56:1. O texto não atinge o limiar visual de texto grande (18,67px em negrito ou 24px normal); é um sinal real em botão primário, sem estado desabilitado/overlay."
+      }
+    },
+    {
+      "sampleId": "contato-768-day-01",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "viewportName": "w768-day",
+      "theme": "day",
+      "signal": {
+        "tag": "h2",
+        "text": "Assistente de dúvidas",
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true,
+        "fontSize": "20px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1112,
+          "width": 259,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-768-day-full.png",
+        "captureMode": "fullPage",
+        "state": "título estático do widget público; sem overlay no texto",
+        "actualTextRun": "20px; font-weight 700"
+      },
+      "review": {
+        "decision": "sem-defeito-demonstrado",
+        "classification": "texto-grande",
+        "rationale": "A amostra é o título do widget, 20px/700, medido em 3,35:1 sobre #fff7ed. Para esta triagem visual, 3,35 supera o limiar de sinal 3:1 adotado para texto grande; o contexto full-page não mostra estado de erro, desabilitação ou sobreposição sobre o título. Manter a cor; isto não é declaração de conformidade WCAG."
+      }
+    },
+    {
+      "sampleId": "contato-768-day-02",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "viewportName": "w768-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "Quais serviços vocês oferecem?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1205,
+          "width": 184,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-768-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-768-day-03",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "viewportName": "w768-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "Como solicitar orçamento?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 252,
+          "y": 1205,
+          "width": 159,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-768-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-768-day-04",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "viewportName": "w768-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "Contato claro?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 417,
+          "y": 1205,
+          "width": 96,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-768-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-768-day-05",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "viewportName": "w768-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "FAQ por categoria?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 518,
+          "y": 1205,
+          "width": 119,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-768-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-768-day-06",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "viewportName": "w768-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "Perguntar à base PUBLICO",
+        "ratio": 3.56,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          234,
+          88,
+          12
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1394,
+          "width": 246,
+          "height": 42
+        },
+        "context": "form"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-768-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de envio da pergunta, habilitado; não foi acionado",
+        "actualTextRun": "16px; font-weight 600"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "CTA habilitada no estado inicial: texto branco 16px/600 em #ea580c, razão 3,56:1. O texto não atinge o limiar visual de texto grande (18,67px em negrito ou 24px normal); é um sinal real em botão primário, sem estado desabilitado/overlay."
+      }
+    },
+    {
+      "sampleId": "contato-768-night-01",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "viewportName": "w768-night",
+      "theme": "night",
+      "signal": {
+        "tag": "h2",
+        "text": "Assistente de dúvidas",
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true,
+        "fontSize": "20px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1112,
+          "width": 259,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-768-night-full.png",
+        "captureMode": "fullPage",
+        "state": "título estático do widget público; sem overlay no texto",
+        "actualTextRun": "20px; font-weight 700"
+      },
+      "review": {
+        "decision": "sem-defeito-demonstrado",
+        "classification": "texto-grande",
+        "rationale": "A amostra é o título do widget, 20px/700, medido em 3,35:1 sobre #fff7ed. Para esta triagem visual, 3,35 supera o limiar de sinal 3:1 adotado para texto grande; o contexto full-page não mostra estado de erro, desabilitação ou sobreposição sobre o título. Manter a cor; isto não é declaração de conformidade WCAG."
+      }
+    },
+    {
+      "sampleId": "contato-768-night-02",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "viewportName": "w768-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "Quais serviços vocês oferecem?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1205,
+          "width": 184,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-768-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-768-night-03",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "viewportName": "w768-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "Como solicitar orçamento?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 252,
+          "y": 1205,
+          "width": 159,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-768-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-768-night-04",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "viewportName": "w768-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "Contato claro?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 417,
+          "y": 1205,
+          "width": 96,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-768-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-768-night-05",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "viewportName": "w768-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "FAQ por categoria?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 518,
+          "y": 1205,
+          "width": 119,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-768-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-768-night-06",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "viewportName": "w768-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "Perguntar à base PUBLICO",
+        "ratio": 3.56,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          234,
+          88,
+          12
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 62,
+          "y": 1394,
+          "width": 246,
+          "height": 42
+        },
+        "context": "form"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-768-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de envio da pergunta, habilitado; não foi acionado",
+        "actualTextRun": "16px; font-weight 600"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "CTA habilitada no estado inicial: texto branco 16px/600 em #ea580c, razão 3,56:1. O texto não atinge o limiar visual de texto grande (18,67px em negrito ou 24px normal); é um sinal real em botão primário, sem estado desabilitado/overlay."
+      }
+    },
+    {
+      "sampleId": "contato-1440-day-01",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "viewportName": "w1440-day",
+      "theme": "day",
+      "signal": {
+        "tag": "h2",
+        "text": "Assistente de dúvidas",
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true,
+        "fontSize": "20px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 332,
+          "y": 1090,
+          "width": 259,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-1440-day-full.png",
+        "captureMode": "fullPage",
+        "state": "título estático do widget público; sem overlay no texto",
+        "actualTextRun": "20px; font-weight 700"
+      },
+      "review": {
+        "decision": "sem-defeito-demonstrado",
+        "classification": "texto-grande",
+        "rationale": "A amostra é o título do widget, 20px/700, medido em 3,35:1 sobre #fff7ed. Para esta triagem visual, 3,35 supera o limiar de sinal 3:1 adotado para texto grande; o contexto full-page não mostra estado de erro, desabilitação ou sobreposição sobre o título. Manter a cor; isto não é declaração de conformidade WCAG."
+      }
+    },
+    {
+      "sampleId": "contato-1440-day-02",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "viewportName": "w1440-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "Quais serviços vocês oferecem?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 332,
+          "y": 1183,
+          "width": 184,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-1440-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-1440-day-03",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "viewportName": "w1440-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "Como solicitar orçamento?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 522,
+          "y": 1183,
+          "width": 159,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-1440-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-1440-day-04",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "viewportName": "w1440-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "Contato claro?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 687,
+          "y": 1183,
+          "width": 96,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-1440-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-1440-day-05",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "viewportName": "w1440-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "FAQ por categoria?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 788,
+          "y": 1183,
+          "width": 119,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-1440-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-1440-day-06",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "viewportName": "w1440-day",
+      "theme": "day",
+      "signal": {
+        "tag": "button",
+        "text": "Perguntar à base PUBLICO",
+        "ratio": 3.56,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          234,
+          88,
+          12
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 332,
+          "y": 1372,
+          "width": 246,
+          "height": 42
+        },
+        "context": "form"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-1440-day-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de envio da pergunta, habilitado; não foi acionado",
+        "actualTextRun": "16px; font-weight 600"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "CTA habilitada no estado inicial: texto branco 16px/600 em #ea580c, razão 3,56:1. O texto não atinge o limiar visual de texto grande (18,67px em negrito ou 24px normal); é um sinal real em botão primário, sem estado desabilitado/overlay."
+      }
+    },
+    {
+      "sampleId": "contato-1440-night-01",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "viewportName": "w1440-night",
+      "theme": "night",
+      "signal": {
+        "tag": "h2",
+        "text": "Assistente de dúvidas",
+        "ratio": 3.35,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          247,
+          237
+        ],
+        "backgroundResolved": true,
+        "fontSize": "20px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 332,
+          "y": 1090,
+          "width": 259,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-1440-night-full.png",
+        "captureMode": "fullPage",
+        "state": "título estático do widget público; sem overlay no texto",
+        "actualTextRun": "20px; font-weight 700"
+      },
+      "review": {
+        "decision": "sem-defeito-demonstrado",
+        "classification": "texto-grande",
+        "rationale": "A amostra é o título do widget, 20px/700, medido em 3,35:1 sobre #fff7ed. Para esta triagem visual, 3,35 supera o limiar de sinal 3:1 adotado para texto grande; o contexto full-page não mostra estado de erro, desabilitação ou sobreposição sobre o título. Manter a cor; isto não é declaração de conformidade WCAG."
+      }
+    },
+    {
+      "sampleId": "contato-1440-night-02",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "viewportName": "w1440-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "Quais serviços vocês oferecem?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 332,
+          "y": 1183,
+          "width": 184,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-1440-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-1440-night-03",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "viewportName": "w1440-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "Como solicitar orçamento?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 522,
+          "y": 1183,
+          "width": 159,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-1440-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-1440-night-04",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "viewportName": "w1440-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "Contato claro?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 687,
+          "y": 1183,
+          "width": 96,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-1440-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-1440-night-05",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "viewportName": "w1440-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "FAQ por categoria?",
+        "ratio": 3.56,
+        "foreground": "rgb(234, 88, 12)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "11px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 788,
+          "y": 1183,
+          "width": 119,
+          "height": 27
+        },
+        "context": "section.rag-widget"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-1440-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de sugestão RAG, habilitado; nenhum envio foi feito",
+        "actualTextRun": "11px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "Botão de sugestão habilitado no estado inicial; rótulo 11px/400, texto #ea580c em branco, razão 3,56:1. Não é texto grande, estado desabilitado nem elemento coberto por overlay; sinal real para esta superfície."
+      }
+    },
+    {
+      "sampleId": "contato-1440-night-06",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "viewportName": "w1440-night",
+      "theme": "night",
+      "signal": {
+        "tag": "button",
+        "text": "Perguntar à base PUBLICO",
+        "ratio": 3.56,
+        "foreground": "rgb(255, 255, 255)",
+        "background": [
+          234,
+          88,
+          12
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "600",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 332,
+          "y": 1372,
+          "width": 246,
+          "height": 42
+        },
+        "context": "form"
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/contato/ux-pro-09e-contato-1440-night-full.png",
+        "captureMode": "fullPage",
+        "state": "botão de envio da pergunta, habilitado; não foi acionado",
+        "actualTextRun": "16px; font-weight 600"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "controle-interativo-texto-pequeno",
+        "rationale": "CTA habilitada no estado inicial: texto branco 16px/600 em #ea580c, razão 3,56:1. O texto não atinge o limiar visual de texto grande (18,67px em negrito ou 24px normal); é um sinal real em botão primário, sem estado desabilitado/overlay."
+      }
+    },
+    {
+      "sampleId": "simulador-320-day-01",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "viewportName": "w320-day",
+      "theme": "day",
+      "signal": {
+        "tag": "li",
+        "text": "01Seu espaço",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 17,
+          "y": 436,
+          "width": 286,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-day-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa atual; aria-current=step",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É a etapa atual (aria-current=\"step\"); a regra geral .steps li vence em especificidade e mantém a cor clara apesar da intenção de .stepActive. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-320-day-02",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "viewportName": "w320-day",
+      "theme": "day",
+      "signal": {
+        "tag": "li",
+        "text": "02O que você precisa",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 17,
+          "y": 500,
+          "width": 286,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-day-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-320-day-03",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "viewportName": "w320-day",
+      "theme": "day",
+      "signal": {
+        "tag": "li",
+        "text": "03Seus dados",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 17,
+          "y": 564,
+          "width": 286,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-day-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-320-day-04",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "viewportName": "w320-day",
+      "theme": "day",
+      "signal": {
+        "tag": "li",
+        "text": "04Revisão",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 17,
+          "y": 628,
+          "width": 286,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-day-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-320-day-05",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "viewportName": "w320-day",
+      "theme": "day",
+      "signal": {
+        "tag": "p",
+        "text": "Resumo do que você está montando.",
+        "ratio": 3.17,
+        "foreground": "rgb(128, 147, 164)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 42,
+          "y": 757,
+          "width": 243,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-day-full.png",
+        "captureMode": "fullPage",
+        "state": "texto introdutório persistente do resumo, em repouso",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "texto-secundario",
+        "rationale": "Texto de resumo visível a 12px/400, #8093a4 em branco, 3,17:1. Está no cartão de resumo e não é placeholder, estado desabilitado nem texto coberto; sinal real."
+      }
+    },
+    {
+      "sampleId": "simulador-320-day-06",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "viewportName": "w320-day",
+      "theme": "day",
+      "signal": {
+        "tag": "p",
+        "text": "Escolha o tipo de imóvel para começar.",
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 42,
+          "y": 792,
+          "width": 243,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-day-full.png",
+        "captureMode": "fullPage",
+        "state": "instrução inicial do resumo",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "instrucao-inicial",
+        "rationale": "Texto de 12px / 400 em #9aabba sobre branco, razão 2,36:1. É a orientação para iniciar o fluxo; não é placeholder de campo. Está no cartão de resumo em repouso, sem overlay."
+      }
+    },
+    {
+      "sampleId": "simulador-320-day-07",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "viewportName": "w320-day",
+      "theme": "day",
+      "signal": {
+        "tag": "p",
+        "text": "Nenhum selecionado ainda.",
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 42,
+          "y": 845,
+          "width": 243,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-day-full.png",
+        "captureMode": "fullPage",
+        "state": "estado vazio do resumo",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "estado-vazio",
+        "rationale": "Texto de 12px / 400 em #9aabba sobre branco, razão 2,36:1. É a mensagem explícita de seleção ainda vazia. Está no cartão de resumo em repouso, sem overlay."
+      }
+    },
+    {
+      "sampleId": "simulador-320-night-01",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "viewportName": "w320-night",
+      "theme": "night",
+      "signal": {
+        "tag": "li",
+        "text": "01Seu espaço",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 17,
+          "y": 436,
+          "width": 286,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-night-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa atual; aria-current=step",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É a etapa atual (aria-current=\"step\"); a regra geral .steps li vence em especificidade e mantém a cor clara apesar da intenção de .stepActive. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-320-night-02",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "viewportName": "w320-night",
+      "theme": "night",
+      "signal": {
+        "tag": "li",
+        "text": "02O que você precisa",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 17,
+          "y": 500,
+          "width": 286,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-night-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-320-night-03",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "viewportName": "w320-night",
+      "theme": "night",
+      "signal": {
+        "tag": "li",
+        "text": "03Seus dados",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 17,
+          "y": 564,
+          "width": 286,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-night-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-320-night-04",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "viewportName": "w320-night",
+      "theme": "night",
+      "signal": {
+        "tag": "li",
+        "text": "04Revisão",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 17,
+          "y": 628,
+          "width": 286,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-night-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-320-night-05",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "viewportName": "w320-night",
+      "theme": "night",
+      "signal": {
+        "tag": "p",
+        "text": "Resumo do que você está montando.",
+        "ratio": 3.17,
+        "foreground": "rgb(128, 147, 164)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 42,
+          "y": 757,
+          "width": 243,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-night-full.png",
+        "captureMode": "fullPage",
+        "state": "texto introdutório persistente do resumo, em repouso",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "texto-secundario",
+        "rationale": "Texto de resumo visível a 12px/400, #8093a4 em branco, 3,17:1. Está no cartão de resumo e não é placeholder, estado desabilitado nem texto coberto; sinal real."
+      }
+    },
+    {
+      "sampleId": "simulador-320-night-06",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "viewportName": "w320-night",
+      "theme": "night",
+      "signal": {
+        "tag": "p",
+        "text": "Escolha o tipo de imóvel para começar.",
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 42,
+          "y": 792,
+          "width": 243,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-night-full.png",
+        "captureMode": "fullPage",
+        "state": "instrução inicial do resumo",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "instrucao-inicial",
+        "rationale": "Texto de 12px / 400 em #9aabba sobre branco, razão 2,36:1. É a orientação para iniciar o fluxo; não é placeholder de campo. Está no cartão de resumo em repouso, sem overlay."
+      }
+    },
+    {
+      "sampleId": "simulador-320-night-07",
+      "route": "/simulador",
+      "viewport": "320x780",
+      "viewportName": "w320-night",
+      "theme": "night",
+      "signal": {
+        "tag": "p",
+        "text": "Nenhum selecionado ainda.",
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 42,
+          "y": 845,
+          "width": 243,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-320-night-full.png",
+        "captureMode": "fullPage",
+        "state": "estado vazio do resumo",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "estado-vazio",
+        "rationale": "Texto de 12px / 400 em #9aabba sobre branco, razão 2,36:1. É a mensagem explícita de seleção ainda vazia. Está no cartão de resumo em repouso, sem overlay."
+      }
+    },
+    {
+      "sampleId": "simulador-390-day-01",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "viewportName": "w390-day",
+      "theme": "day",
+      "signal": {
+        "tag": "li",
+        "text": "01Seu espaço",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 17,
+          "y": 378,
+          "width": 356,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-day-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa atual; aria-current=step",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É a etapa atual (aria-current=\"step\"); a regra geral .steps li vence em especificidade e mantém a cor clara apesar da intenção de .stepActive. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-390-day-02",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "viewportName": "w390-day",
+      "theme": "day",
+      "signal": {
+        "tag": "li",
+        "text": "02O que você precisa",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 17,
+          "y": 442,
+          "width": 356,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-day-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-390-day-03",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "viewportName": "w390-day",
+      "theme": "day",
+      "signal": {
+        "tag": "li",
+        "text": "03Seus dados",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 17,
+          "y": 506,
+          "width": 356,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-day-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-390-day-04",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "viewportName": "w390-day",
+      "theme": "day",
+      "signal": {
+        "tag": "li",
+        "text": "04Revisão",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 17,
+          "y": 570,
+          "width": 356,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-day-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-390-day-05",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "viewportName": "w390-day",
+      "theme": "day",
+      "signal": {
+        "tag": "p",
+        "text": "Resumo do que você está montando.",
+        "ratio": 3.17,
+        "foreground": "rgb(128, 147, 164)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 42,
+          "y": 700,
+          "width": 306,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-day-full.png",
+        "captureMode": "fullPage",
+        "state": "texto introdutório persistente do resumo, em repouso",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "texto-secundario",
+        "rationale": "Texto de resumo visível a 12px/400, #8093a4 em branco, 3,17:1. Está no cartão de resumo e não é placeholder, estado desabilitado nem texto coberto; sinal real."
+      }
+    },
+    {
+      "sampleId": "simulador-390-day-06",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "viewportName": "w390-day",
+      "theme": "day",
+      "signal": {
+        "tag": "p",
+        "text": "Escolha o tipo de imóvel para começar.",
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 42,
+          "y": 735,
+          "width": 306,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-day-full.png",
+        "captureMode": "fullPage",
+        "state": "instrução inicial do resumo",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "instrucao-inicial",
+        "rationale": "Texto de 12px / 400 em #9aabba sobre branco, razão 2,36:1. É a orientação para iniciar o fluxo; não é placeholder de campo. Está no cartão de resumo em repouso, sem overlay."
+      }
+    },
+    {
+      "sampleId": "simulador-390-day-07",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "viewportName": "w390-day",
+      "theme": "day",
+      "signal": {
+        "tag": "p",
+        "text": "Nenhum selecionado ainda.",
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 42,
+          "y": 788,
+          "width": 306,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-day-full.png",
+        "captureMode": "fullPage",
+        "state": "estado vazio do resumo",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "estado-vazio",
+        "rationale": "Texto de 12px / 400 em #9aabba sobre branco, razão 2,36:1. É a mensagem explícita de seleção ainda vazia. Está no cartão de resumo em repouso, sem overlay."
+      }
+    },
+    {
+      "sampleId": "simulador-390-night-01",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "viewportName": "w390-night",
+      "theme": "night",
+      "signal": {
+        "tag": "li",
+        "text": "01Seu espaço",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 17,
+          "y": 378,
+          "width": 356,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-night-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa atual; aria-current=step",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É a etapa atual (aria-current=\"step\"); a regra geral .steps li vence em especificidade e mantém a cor clara apesar da intenção de .stepActive. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-390-night-02",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "viewportName": "w390-night",
+      "theme": "night",
+      "signal": {
+        "tag": "li",
+        "text": "02O que você precisa",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 17,
+          "y": 442,
+          "width": 356,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-night-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-390-night-03",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "viewportName": "w390-night",
+      "theme": "night",
+      "signal": {
+        "tag": "li",
+        "text": "03Seus dados",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 17,
+          "y": 506,
+          "width": 356,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-night-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-390-night-04",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "viewportName": "w390-night",
+      "theme": "night",
+      "signal": {
+        "tag": "li",
+        "text": "04Revisão",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 17,
+          "y": 570,
+          "width": 356,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-night-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-390-night-05",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "viewportName": "w390-night",
+      "theme": "night",
+      "signal": {
+        "tag": "p",
+        "text": "Resumo do que você está montando.",
+        "ratio": 3.17,
+        "foreground": "rgb(128, 147, 164)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 42,
+          "y": 700,
+          "width": 306,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-night-full.png",
+        "captureMode": "fullPage",
+        "state": "texto introdutório persistente do resumo, em repouso",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "texto-secundario",
+        "rationale": "Texto de resumo visível a 12px/400, #8093a4 em branco, 3,17:1. Está no cartão de resumo e não é placeholder, estado desabilitado nem texto coberto; sinal real."
+      }
+    },
+    {
+      "sampleId": "simulador-390-night-06",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "viewportName": "w390-night",
+      "theme": "night",
+      "signal": {
+        "tag": "p",
+        "text": "Escolha o tipo de imóvel para começar.",
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 42,
+          "y": 735,
+          "width": 306,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-night-full.png",
+        "captureMode": "fullPage",
+        "state": "instrução inicial do resumo",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "instrucao-inicial",
+        "rationale": "Texto de 12px / 400 em #9aabba sobre branco, razão 2,36:1. É a orientação para iniciar o fluxo; não é placeholder de campo. Está no cartão de resumo em repouso, sem overlay."
+      }
+    },
+    {
+      "sampleId": "simulador-390-night-07",
+      "route": "/simulador",
+      "viewport": "390x844",
+      "viewportName": "w390-night",
+      "theme": "night",
+      "signal": {
+        "tag": "p",
+        "text": "Nenhum selecionado ainda.",
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 42,
+          "y": 788,
+          "width": 306,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-390-night-full.png",
+        "captureMode": "fullPage",
+        "state": "estado vazio do resumo",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "estado-vazio",
+        "rationale": "Texto de 12px / 400 em #9aabba sobre branco, razão 2,36:1. É a mensagem explícita de seleção ainda vazia. Está no cartão de resumo em repouso, sem overlay."
+      }
+    },
+    {
+      "sampleId": "simulador-768-day-01",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "viewportName": "w768-day",
+      "theme": "day",
+      "signal": {
+        "tag": "li",
+        "text": "01Seu espaço",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 24,
+          "y": 328,
+          "width": 355,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-day-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa atual; aria-current=step",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É a etapa atual (aria-current=\"step\"); a regra geral .steps li vence em especificidade e mantém a cor clara apesar da intenção de .stepActive. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-768-day-02",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "viewportName": "w768-day",
+      "theme": "day",
+      "signal": {
+        "tag": "li",
+        "text": "02O que você precisa",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 389,
+          "y": 328,
+          "width": 355,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-day-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-768-day-03",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "viewportName": "w768-day",
+      "theme": "day",
+      "signal": {
+        "tag": "li",
+        "text": "03Seus dados",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 24,
+          "y": 392,
+          "width": 355,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-day-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-768-day-04",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "viewportName": "w768-day",
+      "theme": "day",
+      "signal": {
+        "tag": "li",
+        "text": "04Revisão",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 389,
+          "y": 392,
+          "width": 355,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-day-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-768-day-05",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "viewportName": "w768-day",
+      "theme": "day",
+      "signal": {
+        "tag": "p",
+        "text": "Resumo do que você está montando.",
+        "ratio": 3.17,
+        "foreground": "rgb(128, 147, 164)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 49,
+          "y": 522,
+          "width": 670,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-day-full.png",
+        "captureMode": "fullPage",
+        "state": "texto introdutório persistente do resumo, em repouso",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "texto-secundario",
+        "rationale": "Texto de resumo visível a 12px/400, #8093a4 em branco, 3,17:1. Está no cartão de resumo e não é placeholder, estado desabilitado nem texto coberto; sinal real."
+      }
+    },
+    {
+      "sampleId": "simulador-768-day-06",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "viewportName": "w768-day",
+      "theme": "day",
+      "signal": {
+        "tag": "p",
+        "text": "Escolha o tipo de imóvel para começar.",
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 49,
+          "y": 557,
+          "width": 670,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-day-full.png",
+        "captureMode": "fullPage",
+        "state": "instrução inicial do resumo",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "instrucao-inicial",
+        "rationale": "Texto de 12px / 400 em #9aabba sobre branco, razão 2,36:1. É a orientação para iniciar o fluxo; não é placeholder de campo. Está no cartão de resumo em repouso, sem overlay."
+      }
+    },
+    {
+      "sampleId": "simulador-768-day-07",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "viewportName": "w768-day",
+      "theme": "day",
+      "signal": {
+        "tag": "p",
+        "text": "Nenhum selecionado ainda.",
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 49,
+          "y": 610,
+          "width": 670,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-day-full.png",
+        "captureMode": "fullPage",
+        "state": "estado vazio do resumo",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "estado-vazio",
+        "rationale": "Texto de 12px / 400 em #9aabba sobre branco, razão 2,36:1. É a mensagem explícita de seleção ainda vazia. Está no cartão de resumo em repouso, sem overlay."
+      }
+    },
+    {
+      "sampleId": "simulador-768-night-01",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "viewportName": "w768-night",
+      "theme": "night",
+      "signal": {
+        "tag": "li",
+        "text": "01Seu espaço",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 24,
+          "y": 328,
+          "width": 355,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-night-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa atual; aria-current=step",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É a etapa atual (aria-current=\"step\"); a regra geral .steps li vence em especificidade e mantém a cor clara apesar da intenção de .stepActive. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-768-night-02",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "viewportName": "w768-night",
+      "theme": "night",
+      "signal": {
+        "tag": "li",
+        "text": "02O que você precisa",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 389,
+          "y": 328,
+          "width": 355,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-night-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-768-night-03",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "viewportName": "w768-night",
+      "theme": "night",
+      "signal": {
+        "tag": "li",
+        "text": "03Seus dados",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 24,
+          "y": 392,
+          "width": 355,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-night-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-768-night-04",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "viewportName": "w768-night",
+      "theme": "night",
+      "signal": {
+        "tag": "li",
+        "text": "04Revisão",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 389,
+          "y": 392,
+          "width": 355,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-night-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-768-night-05",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "viewportName": "w768-night",
+      "theme": "night",
+      "signal": {
+        "tag": "p",
+        "text": "Resumo do que você está montando.",
+        "ratio": 3.17,
+        "foreground": "rgb(128, 147, 164)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 49,
+          "y": 522,
+          "width": 670,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-night-full.png",
+        "captureMode": "fullPage",
+        "state": "texto introdutório persistente do resumo, em repouso",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "texto-secundario",
+        "rationale": "Texto de resumo visível a 12px/400, #8093a4 em branco, 3,17:1. Está no cartão de resumo e não é placeholder, estado desabilitado nem texto coberto; sinal real."
+      }
+    },
+    {
+      "sampleId": "simulador-768-night-06",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "viewportName": "w768-night",
+      "theme": "night",
+      "signal": {
+        "tag": "p",
+        "text": "Escolha o tipo de imóvel para começar.",
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 49,
+          "y": 557,
+          "width": 670,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-night-full.png",
+        "captureMode": "fullPage",
+        "state": "instrução inicial do resumo",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "instrucao-inicial",
+        "rationale": "Texto de 12px / 400 em #9aabba sobre branco, razão 2,36:1. É a orientação para iniciar o fluxo; não é placeholder de campo. Está no cartão de resumo em repouso, sem overlay."
+      }
+    },
+    {
+      "sampleId": "simulador-768-night-07",
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "viewportName": "w768-night",
+      "theme": "night",
+      "signal": {
+        "tag": "p",
+        "text": "Nenhum selecionado ainda.",
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 49,
+          "y": 610,
+          "width": 670,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-768-night-full.png",
+        "captureMode": "fullPage",
+        "state": "estado vazio do resumo",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "estado-vazio",
+        "rationale": "Texto de 12px / 400 em #9aabba sobre branco, razão 2,36:1. É a mensagem explícita de seleção ainda vazia. Está no cartão de resumo em repouso, sem overlay."
+      }
+    },
+    {
+      "sampleId": "simulador-1440-day-01",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "viewportName": "w1440-day",
+      "theme": "day",
+      "signal": {
+        "tag": "li",
+        "text": "01Seu espaço",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 154,
+          "y": 362,
+          "width": 276,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-day-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa atual; aria-current=step",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É a etapa atual (aria-current=\"step\"); a regra geral .steps li vence em especificidade e mantém a cor clara apesar da intenção de .stepActive. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-1440-day-02",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "viewportName": "w1440-day",
+      "theme": "day",
+      "signal": {
+        "tag": "li",
+        "text": "02O que você precisa",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 440,
+          "y": 362,
+          "width": 276,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-day-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-1440-day-03",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "viewportName": "w1440-day",
+      "theme": "day",
+      "signal": {
+        "tag": "li",
+        "text": "03Seus dados",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 725,
+          "y": 362,
+          "width": 276,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-day-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-1440-day-04",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "viewportName": "w1440-day",
+      "theme": "day",
+      "signal": {
+        "tag": "li",
+        "text": "04Revisão",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 1011,
+          "y": 362,
+          "width": 276,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-day-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-1440-day-05",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "viewportName": "w1440-day",
+      "theme": "day",
+      "signal": {
+        "tag": "p",
+        "text": "Resumo do que você está montando.",
+        "ratio": 3.17,
+        "foreground": "rgb(128, 147, 164)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 887,
+          "y": 492,
+          "width": 374,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-day-full.png",
+        "captureMode": "fullPage",
+        "state": "texto introdutório persistente do resumo, em repouso",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "texto-secundario",
+        "rationale": "Texto de resumo visível a 12px/400, #8093a4 em branco, 3,17:1. Está no cartão de resumo e não é placeholder, estado desabilitado nem texto coberto; sinal real."
+      }
+    },
+    {
+      "sampleId": "simulador-1440-day-06",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "viewportName": "w1440-day",
+      "theme": "day",
+      "signal": {
+        "tag": "p",
+        "text": "Escolha o tipo de imóvel para começar.",
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 887,
+          "y": 527,
+          "width": 374,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-day-full.png",
+        "captureMode": "fullPage",
+        "state": "instrução inicial do resumo",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "instrucao-inicial",
+        "rationale": "Texto de 12px / 400 em #9aabba sobre branco, razão 2,36:1. É a orientação para iniciar o fluxo; não é placeholder de campo. Está no cartão de resumo em repouso, sem overlay."
+      }
+    },
+    {
+      "sampleId": "simulador-1440-day-07",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "viewportName": "w1440-day",
+      "theme": "day",
+      "signal": {
+        "tag": "p",
+        "text": "Nenhum selecionado ainda.",
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 887,
+          "y": 580,
+          "width": 374,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-day-full.png",
+        "captureMode": "fullPage",
+        "state": "estado vazio do resumo",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "estado-vazio",
+        "rationale": "Texto de 12px / 400 em #9aabba sobre branco, razão 2,36:1. É a mensagem explícita de seleção ainda vazia. Está no cartão de resumo em repouso, sem overlay."
+      }
+    },
+    {
+      "sampleId": "simulador-1440-night-01",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "viewportName": "w1440-night",
+      "theme": "night",
+      "signal": {
+        "tag": "li",
+        "text": "01Seu espaço",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 154,
+          "y": 362,
+          "width": 276,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-night-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa atual; aria-current=step",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É a etapa atual (aria-current=\"step\"); a regra geral .steps li vence em especificidade e mantém a cor clara apesar da intenção de .stepActive. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-1440-night-02",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "viewportName": "w1440-night",
+      "theme": "night",
+      "signal": {
+        "tag": "li",
+        "text": "02O que você precisa",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 440,
+          "y": 362,
+          "width": 276,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-night-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-1440-night-03",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "viewportName": "w1440-night",
+      "theme": "night",
+      "signal": {
+        "tag": "li",
+        "text": "03Seus dados",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 725,
+          "y": 362,
+          "width": 276,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-night-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-1440-night-04",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "viewportName": "w1440-night",
+      "theme": "night",
+      "signal": {
+        "tag": "li",
+        "text": "04Revisão",
+        "ratio": 2.56,
+        "foreground": "rgb(147, 164, 180)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 1011,
+          "y": 362,
+          "width": 276,
+          "height": 54
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-night-full.png",
+        "captureMode": "fullPage",
+        "state": "etapa futura; não desabilitada",
+        "actualTextRun": "small 11px; font-weight 700"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "rotulo-de-etapa",
+        "rationale": "Item do indicador de progresso medido em 2,56:1 sobre branco. O texto visível é um rótulo pequeno (small 11px/700; o container li computa 16px/400), sem estado desabilitado. É uma etapa futura, ainda informativa e não desabilitada. Os números em span do círculo não fazem parte desta amostra nem das 104 ocorrências; a correção não altera seu estilo."
+      }
+    },
+    {
+      "sampleId": "simulador-1440-night-05",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "viewportName": "w1440-night",
+      "theme": "night",
+      "signal": {
+        "tag": "p",
+        "text": "Resumo do que você está montando.",
+        "ratio": 3.17,
+        "foreground": "rgb(128, 147, 164)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 887,
+          "y": 492,
+          "width": 374,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-night-full.png",
+        "captureMode": "fullPage",
+        "state": "texto introdutório persistente do resumo, em repouso",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "texto-secundario",
+        "rationale": "Texto de resumo visível a 12px/400, #8093a4 em branco, 3,17:1. Está no cartão de resumo e não é placeholder, estado desabilitado nem texto coberto; sinal real."
+      }
+    },
+    {
+      "sampleId": "simulador-1440-night-06",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "viewportName": "w1440-night",
+      "theme": "night",
+      "signal": {
+        "tag": "p",
+        "text": "Escolha o tipo de imóvel para começar.",
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 887,
+          "y": 527,
+          "width": 374,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-night-full.png",
+        "captureMode": "fullPage",
+        "state": "instrução inicial do resumo",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "instrucao-inicial",
+        "rationale": "Texto de 12px / 400 em #9aabba sobre branco, razão 2,36:1. É a orientação para iniciar o fluxo; não é placeholder de campo. Está no cartão de resumo em repouso, sem overlay."
+      }
+    },
+    {
+      "sampleId": "simulador-1440-night-07",
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "viewportName": "w1440-night",
+      "theme": "night",
+      "signal": {
+        "tag": "p",
+        "text": "Nenhum selecionado ainda.",
+        "ratio": 2.36,
+        "foreground": "rgb(154, 171, 186)",
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "backgroundResolved": true,
+        "fontSize": "12px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "opacity": "1",
+        "rect": {
+          "x": 887,
+          "y": 580,
+          "width": 374,
+          "height": 17
+        },
+        "context": null
+      },
+      "visualContext": {
+        "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/captura-propria/visual-context/simulador/ux-pro-09e-simulador-1440-night-full.png",
+        "captureMode": "fullPage",
+        "state": "estado vazio do resumo",
+        "actualTextRun": "12px; font-weight 400"
+      },
+      "review": {
+        "decision": "corrigir",
+        "classification": "estado-vazio",
+        "rationale": "Texto de 12px / 400 em #9aabba sobre branco, razão 2,36:1. É a mensagem explícita de seleção ainda vazia. Está no cartão de resumo em repouso, sem overlay."
+      }
+    }
+  ]
+}

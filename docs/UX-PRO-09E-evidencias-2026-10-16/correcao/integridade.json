@@ -1,0 +1,2027 @@
+{
+  "schemaVersion": 1,
+  "algorithm": "SHA-256",
+  "files": [
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/home/w320-day-home.png",
+      "sha256": "34831002c10afe83e2fd8b267bd7ca3c9d15522b69f51b795daa55ba0ed909d2",
+      "bytes": 59068,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/home/w320-night-home.png",
+      "sha256": "34831002c10afe83e2fd8b267bd7ca3c9d15522b69f51b795daa55ba0ed909d2",
+      "bytes": 59068,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/home/w390-day-home.png",
+      "sha256": "c168238a7e0b5918db267c1115b46ce2b536771dc21add7c1b4dce8e4eb10723",
+      "bytes": 134944,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/home/w390-night-home.png",
+      "sha256": "c168238a7e0b5918db267c1115b46ce2b536771dc21add7c1b4dce8e4eb10723",
+      "bytes": 134944,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/home/w768-day-home.png",
+      "sha256": "58da68a604f30f9c986f800e1e1b20e765b2849e19291a24b7c22fa07d41cc04",
+      "bytes": 508159,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/home/w768-night-home.png",
+      "sha256": "58da68a604f30f9c986f800e1e1b20e765b2849e19291a24b7c22fa07d41cc04",
+      "bytes": 508159,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/home/w1440-day-home.png",
+      "sha256": "676512a6669fbeda7da06a600c97bfc56bddeedc04ca80d4a53ca9fa1975c0c2",
+      "bytes": 604502,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/home/w1440-night-home.png",
+      "sha256": "676512a6669fbeda7da06a600c97bfc56bddeedc04ca80d4a53ca9fa1975c0c2",
+      "bytes": 604502,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/contato/w320-day-contato.png",
+      "sha256": "8f83ee751d37287aac1469602775ccbe183e93a9fb105c29f5ff125137b7c9ee",
+      "bytes": 54703,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/contato"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/contato/w320-night-contato.png",
+      "sha256": "8f83ee751d37287aac1469602775ccbe183e93a9fb105c29f5ff125137b7c9ee",
+      "bytes": 54703,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/contato"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/contato/w390-day-contato.png",
+      "sha256": "6a28c8dbf8f658e9af40a37c6e990b502a0618e020e99ea6b367e9c3f5b928f5",
+      "bytes": 58394,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/contato"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/contato/w390-night-contato.png",
+      "sha256": "6a28c8dbf8f658e9af40a37c6e990b502a0618e020e99ea6b367e9c3f5b928f5",
+      "bytes": 58394,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/contato"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/contato/w768-day-contato.png",
+      "sha256": "2870fad7e0b3698ff96958e9141ae476f7c61090cbdebd5a07788b9630497bb4",
+      "bytes": 87958,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/contato"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/contato/w768-night-contato.png",
+      "sha256": "2870fad7e0b3698ff96958e9141ae476f7c61090cbdebd5a07788b9630497bb4",
+      "bytes": 87958,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/contato"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/contato/w1440-day-contato.png",
+      "sha256": "7e142106f5dc3e410422f12c06c7654323d46176bc52dc46a8bdb28ec2348273",
+      "bytes": 83771,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/contato"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/contato/w1440-night-contato.png",
+      "sha256": "7e142106f5dc3e410422f12c06c7654323d46176bc52dc46a8bdb28ec2348273",
+      "bytes": 83771,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/contato"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/conteudos/w320-day-conteudos.png",
+      "sha256": "be18fd9fe2dfb4e4631c61c31b1574c68d104192af6109647b10420e001c686c",
+      "bytes": 28203,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/conteudos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/conteudos/w320-night-conteudos.png",
+      "sha256": "100c1ba58ef5b9f4d026fd80f8a29b2862c338ff8f79c091ad3342539823d349",
+      "bytes": 27827,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/conteudos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/conteudos/w390-day-conteudos.png",
+      "sha256": "7eb08b261b6ad5cc33eb7bfc23f694b606b9a1a6f009256cf0d257a7f8e49f5a",
+      "bytes": 28799,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/conteudos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/conteudos/w390-night-conteudos.png",
+      "sha256": "1fd81dc0fd87be04bcf6ab18b5f9035e19004193d5632a88c9bbe6015771cf5f",
+      "bytes": 28494,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/conteudos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/conteudos/w768-day-conteudos.png",
+      "sha256": "1aa83e22f15c531140c2e7f334ce0f864ccc6af4ac5ee11bcdc0d8d4d9615fb4",
+      "bytes": 29057,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/conteudos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/conteudos/w768-night-conteudos.png",
+      "sha256": "3146c70ddcb9d014d014ecea79eae40e7773c581da6240dcc67c52493f6ef13e",
+      "bytes": 28713,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/conteudos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/conteudos/w1440-day-conteudos.png",
+      "sha256": "f18d544cf5f8ebe2570a780d41d079a84fcf985452a2d2065b0bc128b1de614c",
+      "bytes": 39789,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/conteudos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/conteudos/w1440-night-conteudos.png",
+      "sha256": "d337b9458ad0dc43d48c719fdaef41b28ca25ebe8eec0b60fa721e59b291e774",
+      "bytes": 39825,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/conteudos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/conteudo-dinamico/w320-day-conteudo-dinamico.png",
+      "sha256": "fca4133f9eb7af731195f117f9d8f8407bf2710db6d77a407e96833be4aeb5d9",
+      "bytes": 21856,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/conteudos/diagnostico-sem-conteudo"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/conteudo-dinamico/w320-night-conteudo-dinamico.png",
+      "sha256": "c7d5a835b37b5f02064194992a53cdecc0f9717a567c8a24ef31d7042a843dca",
+      "bytes": 21513,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/conteudos/diagnostico-sem-conteudo"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/conteudo-dinamico/w390-day-conteudo-dinamico.png",
+      "sha256": "c1aaa93049d901d4d5ce83682c65c9749e7411447589b5835a9d916c7b2bea4b",
+      "bytes": 22622,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/conteudos/diagnostico-sem-conteudo"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/conteudo-dinamico/w390-night-conteudo-dinamico.png",
+      "sha256": "8f776fd43b809c50871ac7c6e8501e9788fa482300cde48da0cb65095e1c83e5",
+      "bytes": 22300,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/conteudos/diagnostico-sem-conteudo"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/conteudo-dinamico/w768-day-conteudo-dinamico.png",
+      "sha256": "bec6aada828ef0988f083883ba047ba1a523f8593d4544b74031c616ae8919b1",
+      "bytes": 24753,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/conteudos/diagnostico-sem-conteudo"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/conteudo-dinamico/w768-night-conteudo-dinamico.png",
+      "sha256": "cf5e54e2276790a2566f7f8f1698592da8d5e08142a7638c272b00d0528e1e8f",
+      "bytes": 24390,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/conteudos/diagnostico-sem-conteudo"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/conteudo-dinamico/w1440-day-conteudo-dinamico.png",
+      "sha256": "6e7d237becf698b2347f6e33ba67dcf4a81d35451d5fa7885d8e9ba4b6f91792",
+      "bytes": 29752,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/conteudos/diagnostico-sem-conteudo"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/conteudo-dinamico/w1440-night-conteudo-dinamico.png",
+      "sha256": "7b37aedf4d026baf5acc033ce165dd5a92f1e366bcb9d9a30001afc663b956d2",
+      "bytes": 29828,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/conteudos/diagnostico-sem-conteudo"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/faq/w320-day-faq.png",
+      "sha256": "e2933c003e0ce1a6b99d34e5fe771cba983665d9f366a5ab95dea577708aba12",
+      "bytes": 50266,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/faq"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/faq/w320-night-faq.png",
+      "sha256": "e2933c003e0ce1a6b99d34e5fe771cba983665d9f366a5ab95dea577708aba12",
+      "bytes": 50266,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/faq"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/faq/w390-day-faq.png",
+      "sha256": "e9a745b5ba388112376abec46cf788fe64c5a6d3f923f76dab20b1dad7616aff",
+      "bytes": 52822,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/faq"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/faq/w390-night-faq.png",
+      "sha256": "e9a745b5ba388112376abec46cf788fe64c5a6d3f923f76dab20b1dad7616aff",
+      "bytes": 52822,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/faq"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/faq/w768-day-faq.png",
+      "sha256": "fa8c8c3610cdaa9cf70aa211985f600c740a095916853bd7039e1eb781602ab2",
+      "bytes": 100735,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/faq"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/faq/w768-night-faq.png",
+      "sha256": "fa8c8c3610cdaa9cf70aa211985f600c740a095916853bd7039e1eb781602ab2",
+      "bytes": 100735,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/faq"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/faq/w1440-day-faq.png",
+      "sha256": "61c8deabe3fc077fd261f15a711c12f183402f75897c0e96161b46cc3ed786e9",
+      "bytes": 105547,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/faq"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/faq/w1440-night-faq.png",
+      "sha256": "61c8deabe3fc077fd261f15a711c12f183402f75897c0e96161b46cc3ed786e9",
+      "bytes": 105547,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/faq"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/orcamento/w320-day-orcamento.png",
+      "sha256": "6cfdd04659d233d6ec310f41e19e85edb1a420fb5d041cfe5f897abeca87c926",
+      "bytes": 52642,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/orcamento"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/orcamento/w320-night-orcamento.png",
+      "sha256": "6cfdd04659d233d6ec310f41e19e85edb1a420fb5d041cfe5f897abeca87c926",
+      "bytes": 52642,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/orcamento"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/orcamento/w390-day-orcamento.png",
+      "sha256": "c7a54bfb8290e29ce6d60e87c59bb6b737da4656e7924c7439ae57bc6f3c8911",
+      "bytes": 70050,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/orcamento"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/orcamento/w390-night-orcamento.png",
+      "sha256": "c7a54bfb8290e29ce6d60e87c59bb6b737da4656e7924c7439ae57bc6f3c8911",
+      "bytes": 70050,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/orcamento"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/orcamento/w768-day-orcamento.png",
+      "sha256": "cf7929ef2d1676c5825a0f084b4d0a5b2747598f3c97ad01cfb58b54cd250e58",
+      "bytes": 95913,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/orcamento"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/orcamento/w768-night-orcamento.png",
+      "sha256": "cf7929ef2d1676c5825a0f084b4d0a5b2747598f3c97ad01cfb58b54cd250e58",
+      "bytes": 95913,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/orcamento"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/orcamento/w1440-day-orcamento.png",
+      "sha256": "16b8e233e46e579fc8585821a31e33f70e8a63dfab6629a23b910bfdc613274d",
+      "bytes": 93173,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/orcamento"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/orcamento/w1440-night-orcamento.png",
+      "sha256": "16b8e233e46e579fc8585821a31e33f70e8a63dfab6629a23b910bfdc613274d",
+      "bytes": 93173,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/orcamento"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/pacotes/w320-day-pacotes.png",
+      "sha256": "c4f91f0e06d9d3e0591d836dffcad099eeb87e68888599319663b2ef7cdd2393",
+      "bytes": 35456,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/pacotes"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/pacotes/w320-night-pacotes.png",
+      "sha256": "333bb9adc375bcbac50a548b2625a5f2549504c47f3b03adb62cfa0bd23bc4d4",
+      "bytes": 35413,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/pacotes"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/pacotes/w390-day-pacotes.png",
+      "sha256": "ed62357b6de101b5d94a53e254b713dca5197d692dc56632a13e0914620a98cd",
+      "bytes": 35905,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/pacotes"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/pacotes/w390-night-pacotes.png",
+      "sha256": "eceb5cc4c9b594c0b628646443465471d633a7359adf8bca4621a11b356dfd92",
+      "bytes": 35774,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/pacotes"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/pacotes/w768-day-pacotes.png",
+      "sha256": "b23f70da72d27c51cc88c09eef92573e2edaccc8f295dc08b276024512ddd5f9",
+      "bytes": 36133,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/pacotes"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/pacotes/w768-night-pacotes.png",
+      "sha256": "caddbd547a202ed98b4da694dda2b32f6b2271a4f665df25633f8162ac6a2a27",
+      "bytes": 35931,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/pacotes"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/pacotes/w1440-day-pacotes.png",
+      "sha256": "8961db85995eea086dad5f0d5b59674ee7cdd00fa1d1cb9d5f73dff0b385601e",
+      "bytes": 42974,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/pacotes"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/pacotes/w1440-night-pacotes.png",
+      "sha256": "e726885c3ab844b268b2266d08afb400af7ad49e3cc74416da07e9b2163f8c97",
+      "bytes": 43103,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/pacotes"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/privacidade/w320-day-privacidade.png",
+      "sha256": "af1bef1a2e18f3e9b24dcfeac3d9100b0bce3422eb84a919d243e4ad4df92a57",
+      "bytes": 56091,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/privacidade"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/privacidade/w320-night-privacidade.png",
+      "sha256": "af1bef1a2e18f3e9b24dcfeac3d9100b0bce3422eb84a919d243e4ad4df92a57",
+      "bytes": 56091,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/privacidade"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/privacidade/w390-day-privacidade.png",
+      "sha256": "b15995aafd8bdbaae7bc65bae81b2526f12b9380ba17de41145733c348ce36b0",
+      "bytes": 53494,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/privacidade"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/privacidade/w390-night-privacidade.png",
+      "sha256": "b15995aafd8bdbaae7bc65bae81b2526f12b9380ba17de41145733c348ce36b0",
+      "bytes": 53494,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/privacidade"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/privacidade/w768-day-privacidade.png",
+      "sha256": "2b879ffb27c39651b5eb99c065b402c60ea5434ccf776918e799c00521bb7581",
+      "bytes": 56885,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/privacidade"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/privacidade/w768-night-privacidade.png",
+      "sha256": "2b879ffb27c39651b5eb99c065b402c60ea5434ccf776918e799c00521bb7581",
+      "bytes": 56885,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/privacidade"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/privacidade/w1440-day-privacidade.png",
+      "sha256": "4657a3b0daa57f6a074b8128566d432e2d7792cb1c3481f2a173a4df259cae73",
+      "bytes": 65967,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/privacidade"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/privacidade/w1440-night-privacidade.png",
+      "sha256": "4657a3b0daa57f6a074b8128566d432e2d7792cb1c3481f2a173a4df259cae73",
+      "bytes": 65967,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/privacidade"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/aceite-token-sintetico-invalido/w320-day-aceite-token-sintetico-invalido.png",
+      "sha256": "2f77a05b5cef656e8bd777b92052e169a373073651d756cc9fd512298d4ffe13",
+      "bytes": 27365,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/proposta/aceite/diagnostico-token-invalido"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/aceite-token-sintetico-invalido/w320-night-aceite-token-sintetico-invalido.png",
+      "sha256": "2f77a05b5cef656e8bd777b92052e169a373073651d756cc9fd512298d4ffe13",
+      "bytes": 27365,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/proposta/aceite/diagnostico-token-invalido"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/aceite-token-sintetico-invalido/w390-day-aceite-token-sintetico-invalido.png",
+      "sha256": "d99c7ebcce1954317ee6408c082dc6f87234a7b711f5bd7ce4905196fc0c056a",
+      "bytes": 28170,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/proposta/aceite/diagnostico-token-invalido"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/aceite-token-sintetico-invalido/w390-night-aceite-token-sintetico-invalido.png",
+      "sha256": "d99c7ebcce1954317ee6408c082dc6f87234a7b711f5bd7ce4905196fc0c056a",
+      "bytes": 28170,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/proposta/aceite/diagnostico-token-invalido"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/aceite-token-sintetico-invalido/w768-day-aceite-token-sintetico-invalido.png",
+      "sha256": "8ac87773957a79343d74f0f91947f74276f1e6c01f894320ffb68f7f132eee73",
+      "bytes": 30978,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/proposta/aceite/diagnostico-token-invalido"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/aceite-token-sintetico-invalido/w768-night-aceite-token-sintetico-invalido.png",
+      "sha256": "8ac87773957a79343d74f0f91947f74276f1e6c01f894320ffb68f7f132eee73",
+      "bytes": 30978,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/proposta/aceite/diagnostico-token-invalido"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/aceite-token-sintetico-invalido/w1440-day-aceite-token-sintetico-invalido.png",
+      "sha256": "56095fb855eadee9bf98744c5f42916169ea2582883034ff8a7e080cd9275ff0",
+      "bytes": 33761,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/proposta/aceite/diagnostico-token-invalido"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/aceite-token-sintetico-invalido/w1440-night-aceite-token-sintetico-invalido.png",
+      "sha256": "56095fb855eadee9bf98744c5f42916169ea2582883034ff8a7e080cd9275ff0",
+      "bytes": 33761,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/proposta/aceite/diagnostico-token-invalido"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/segmentos/w320-day-segmentos.png",
+      "sha256": "a95237d2071545dfe28e9633f4ca3e9a948cc3458028c7738da09fe65355d53c",
+      "bytes": 48759,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/segmentos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/segmentos/w320-night-segmentos.png",
+      "sha256": "a95237d2071545dfe28e9633f4ca3e9a948cc3458028c7738da09fe65355d53c",
+      "bytes": 48759,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/segmentos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/segmentos/w390-day-segmentos.png",
+      "sha256": "ac193ebfaea3080557a331ed80c816f2fcc8d61da62d2bdec3b3d50678f13195",
+      "bytes": 51893,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/segmentos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/segmentos/w390-night-segmentos.png",
+      "sha256": "ac193ebfaea3080557a331ed80c816f2fcc8d61da62d2bdec3b3d50678f13195",
+      "bytes": 51893,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/segmentos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/segmentos/w768-day-segmentos.png",
+      "sha256": "ff08aa85c783de984b327ffdb9df8a9e434489452b20c8507a32db44106f5c1d",
+      "bytes": 52813,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/segmentos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/segmentos/w768-night-segmentos.png",
+      "sha256": "ff08aa85c783de984b327ffdb9df8a9e434489452b20c8507a32db44106f5c1d",
+      "bytes": 52813,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/segmentos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/segmentos/w1440-day-segmentos.png",
+      "sha256": "4903a6508bdb33bf57b2876a814fddf65c4ceee71cd2488faaf3e520a6514b93",
+      "bytes": 65065,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/segmentos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/segmentos/w1440-night-segmentos.png",
+      "sha256": "4903a6508bdb33bf57b2876a814fddf65c4ceee71cd2488faaf3e520a6514b93",
+      "bytes": 65065,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/segmentos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/segmento-condominio/w320-day-segmento-condominio.png",
+      "sha256": "0f45402927735bf4d4dead28863a5b588aa62eaed6f9273a94d1db52888628f7",
+      "bytes": 17450,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/segmentos/condominio"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/segmento-condominio/w320-night-segmento-condominio.png",
+      "sha256": "0f45402927735bf4d4dead28863a5b588aa62eaed6f9273a94d1db52888628f7",
+      "bytes": 17450,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/segmentos/condominio"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/segmento-condominio/w390-day-segmento-condominio.png",
+      "sha256": "9a694278235ea5bb633f9857050f9d426fcf39a9931711d59e0440e0c0034972",
+      "bytes": 17844,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/segmentos/condominio"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/segmento-condominio/w390-night-segmento-condominio.png",
+      "sha256": "9a694278235ea5bb633f9857050f9d426fcf39a9931711d59e0440e0c0034972",
+      "bytes": 17844,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/segmentos/condominio"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/segmento-condominio/w768-day-segmento-condominio.png",
+      "sha256": "7cb4eb83614ebdafbe3f18c4dee5d940e6fc44bb20ecc72553c43fa7489f29fa",
+      "bytes": 18929,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/segmentos/condominio"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/segmento-condominio/w768-night-segmento-condominio.png",
+      "sha256": "7cb4eb83614ebdafbe3f18c4dee5d940e6fc44bb20ecc72553c43fa7489f29fa",
+      "bytes": 18929,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/segmentos/condominio"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/segmento-condominio/w1440-day-segmento-condominio.png",
+      "sha256": "cb05df5a88ec0f99782694f2ba9c4e1bfae153dfb59c568d5923c85a372ee1a7",
+      "bytes": 29441,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/segmentos/condominio"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/segmento-condominio/w1440-night-segmento-condominio.png",
+      "sha256": "cb05df5a88ec0f99782694f2ba9c4e1bfae153dfb59c568d5923c85a372ee1a7",
+      "bytes": 29441,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/segmentos/condominio"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servicos/w320-day-servicos.png",
+      "sha256": "f9f476fa52983003298a1f5027c8c20f7542695798d81da3fff25696fcea2781",
+      "bytes": 49578,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/servicos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servicos/w320-night-servicos.png",
+      "sha256": "f9f476fa52983003298a1f5027c8c20f7542695798d81da3fff25696fcea2781",
+      "bytes": 49578,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/servicos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servicos/w390-day-servicos.png",
+      "sha256": "896acf011a7bacca92b2293a0e95f697478b3a7232fd37c06cfe98b1c0afde72",
+      "bytes": 61644,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/servicos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servicos/w390-night-servicos.png",
+      "sha256": "896acf011a7bacca92b2293a0e95f697478b3a7232fd37c06cfe98b1c0afde72",
+      "bytes": 61644,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/servicos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servicos/w768-day-servicos.png",
+      "sha256": "7ae6134acc50d74ff59ec19a88df69847dfdec964c351a573a2c2ff8c565f43a",
+      "bytes": 130598,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/servicos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servicos/w768-night-servicos.png",
+      "sha256": "7ae6134acc50d74ff59ec19a88df69847dfdec964c351a573a2c2ff8c565f43a",
+      "bytes": 130598,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/servicos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servicos/w1440-day-servicos.png",
+      "sha256": "7b03fda21130816cef18566aec84d4668f85ee6e4d0e7735a27a9f9eede66390",
+      "bytes": 159117,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/servicos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servicos/w1440-night-servicos.png",
+      "sha256": "7b03fda21130816cef18566aec84d4668f85ee6e4d0e7735a27a9f9eede66390",
+      "bytes": 159117,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/servicos"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servico-seguranca-desarmada/w320-day-servico-seguranca-desarmada.png",
+      "sha256": "72e88270ba726a3c242094de878c6a9b83567990d31e75ad234cbeb286050d6f",
+      "bytes": 16163,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/servicos/Segurança%20Desarmada"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servico-seguranca-desarmada/w320-night-servico-seguranca-desarmada.png",
+      "sha256": "72e88270ba726a3c242094de878c6a9b83567990d31e75ad234cbeb286050d6f",
+      "bytes": 16163,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/servicos/Segurança%20Desarmada"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servico-seguranca-desarmada/w390-day-servico-seguranca-desarmada.png",
+      "sha256": "8e149e31f0d46b67b2183e40cd13ace9b90e617d9505aeac0dd090641f05bc2e",
+      "bytes": 17085,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/servicos/Segurança%20Desarmada"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servico-seguranca-desarmada/w390-night-servico-seguranca-desarmada.png",
+      "sha256": "8e149e31f0d46b67b2183e40cd13ace9b90e617d9505aeac0dd090641f05bc2e",
+      "bytes": 17085,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/servicos/Segurança%20Desarmada"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servico-seguranca-desarmada/w768-day-servico-seguranca-desarmada.png",
+      "sha256": "f8d1e8f911c508dbc8e305b6d371e2d5810ad520a9aba81baa88fee79dd5a3f8",
+      "bytes": 18644,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/servicos/Segurança%20Desarmada"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servico-seguranca-desarmada/w768-night-servico-seguranca-desarmada.png",
+      "sha256": "f8d1e8f911c508dbc8e305b6d371e2d5810ad520a9aba81baa88fee79dd5a3f8",
+      "bytes": 18644,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/servicos/Segurança%20Desarmada"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servico-seguranca-desarmada/w1440-day-servico-seguranca-desarmada.png",
+      "sha256": "c30d62325e42f6e981e41b5eb2259420dd5b5dd9705bdd9fe61ced4b01417ae5",
+      "bytes": 27729,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/servicos/Segurança%20Desarmada"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servico-seguranca-desarmada/w1440-night-servico-seguranca-desarmada.png",
+      "sha256": "c30d62325e42f6e981e41b5eb2259420dd5b5dd9705bdd9fe61ced4b01417ae5",
+      "bytes": 27729,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/servicos/Segurança%20Desarmada"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/simulador/w320-day-simulador.png",
+      "sha256": "f7ec605c690ad59b60c22a299134633f7c292a99dada70d6b5498c8c61ed654a",
+      "bytes": 50485,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/simulador"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/simulador/w320-night-simulador.png",
+      "sha256": "f7ec605c690ad59b60c22a299134633f7c292a99dada70d6b5498c8c61ed654a",
+      "bytes": 50485,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/simulador"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/simulador/w390-day-simulador.png",
+      "sha256": "cba58abaafe354ea0c602c7e61299db448f5524d7a38bc5a7264de81346225dd",
+      "bytes": 56307,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/simulador"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/simulador/w390-night-simulador.png",
+      "sha256": "cba58abaafe354ea0c602c7e61299db448f5524d7a38bc5a7264de81346225dd",
+      "bytes": 56307,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/simulador"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/simulador/w768-day-simulador.png",
+      "sha256": "a5743877b471458109c6bb5130a5ac0353fed21fbf02a85ba1c5a31df1c3aeb4",
+      "bytes": 85800,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/simulador"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/simulador/w768-night-simulador.png",
+      "sha256": "a5743877b471458109c6bb5130a5ac0353fed21fbf02a85ba1c5a31df1c3aeb4",
+      "bytes": 85800,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/simulador"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/simulador/w1440-day-simulador.png",
+      "sha256": "6f08d939830ef4a3a237a727cd0824cb54564de47ec8e76acfdccbc01c19fea4",
+      "bytes": 105747,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/simulador"
+    },
+    {
+      "phase": "before",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/simulador/w1440-night-simulador.png",
+      "sha256": "6f08d939830ef4a3a237a727cd0824cb54564de47ec8e76acfdccbc01c19fea4",
+      "bytes": 105747,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/simulador"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/home/w320-day-home.png",
+      "sha256": "34831002c10afe83e2fd8b267bd7ca3c9d15522b69f51b795daa55ba0ed909d2",
+      "bytes": 59068,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/home/w320-night-home.png",
+      "sha256": "34831002c10afe83e2fd8b267bd7ca3c9d15522b69f51b795daa55ba0ed909d2",
+      "bytes": 59068,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/home/w390-day-home.png",
+      "sha256": "c168238a7e0b5918db267c1115b46ce2b536771dc21add7c1b4dce8e4eb10723",
+      "bytes": 134944,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/home/w390-night-home.png",
+      "sha256": "c168238a7e0b5918db267c1115b46ce2b536771dc21add7c1b4dce8e4eb10723",
+      "bytes": 134944,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/home/w768-day-home.png",
+      "sha256": "58da68a604f30f9c986f800e1e1b20e765b2849e19291a24b7c22fa07d41cc04",
+      "bytes": 508159,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/home/w768-night-home.png",
+      "sha256": "58da68a604f30f9c986f800e1e1b20e765b2849e19291a24b7c22fa07d41cc04",
+      "bytes": 508159,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/home/w1440-day-home.png",
+      "sha256": "676512a6669fbeda7da06a600c97bfc56bddeedc04ca80d4a53ca9fa1975c0c2",
+      "bytes": 604502,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/home/w1440-night-home.png",
+      "sha256": "676512a6669fbeda7da06a600c97bfc56bddeedc04ca80d4a53ca9fa1975c0c2",
+      "bytes": 604502,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/contato/w320-day-contato.png",
+      "sha256": "89fd03b1b9481044445940f1fc57a15bc1b34119abaf4d19ee024b419921db2a",
+      "bytes": 55260,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/contato"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/contato/w320-night-contato.png",
+      "sha256": "89fd03b1b9481044445940f1fc57a15bc1b34119abaf4d19ee024b419921db2a",
+      "bytes": 55260,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/contato"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/contato/w390-day-contato.png",
+      "sha256": "2277b487f2538494a01a54f07bad40ab36756f2e4f6cabac0c4e9a0e8a68964f",
+      "bytes": 57541,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/contato"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/contato/w390-night-contato.png",
+      "sha256": "2277b487f2538494a01a54f07bad40ab36756f2e4f6cabac0c4e9a0e8a68964f",
+      "bytes": 57541,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/contato"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/contato/w768-day-contato.png",
+      "sha256": "2870fad7e0b3698ff96958e9141ae476f7c61090cbdebd5a07788b9630497bb4",
+      "bytes": 87958,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/contato"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/contato/w768-night-contato.png",
+      "sha256": "2870fad7e0b3698ff96958e9141ae476f7c61090cbdebd5a07788b9630497bb4",
+      "bytes": 87958,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/contato"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/contato/w1440-day-contato.png",
+      "sha256": "7e142106f5dc3e410422f12c06c7654323d46176bc52dc46a8bdb28ec2348273",
+      "bytes": 83771,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/contato"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/contato/w1440-night-contato.png",
+      "sha256": "7e142106f5dc3e410422f12c06c7654323d46176bc52dc46a8bdb28ec2348273",
+      "bytes": 83771,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/contato"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/conteudos/w320-day-conteudos.png",
+      "sha256": "be18fd9fe2dfb4e4631c61c31b1574c68d104192af6109647b10420e001c686c",
+      "bytes": 28203,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/conteudos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/conteudos/w320-night-conteudos.png",
+      "sha256": "100c1ba58ef5b9f4d026fd80f8a29b2862c338ff8f79c091ad3342539823d349",
+      "bytes": 27827,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/conteudos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/conteudos/w390-day-conteudos.png",
+      "sha256": "7eb08b261b6ad5cc33eb7bfc23f694b606b9a1a6f009256cf0d257a7f8e49f5a",
+      "bytes": 28799,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/conteudos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/conteudos/w390-night-conteudos.png",
+      "sha256": "1fd81dc0fd87be04bcf6ab18b5f9035e19004193d5632a88c9bbe6015771cf5f",
+      "bytes": 28494,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/conteudos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/conteudos/w768-day-conteudos.png",
+      "sha256": "1aa83e22f15c531140c2e7f334ce0f864ccc6af4ac5ee11bcdc0d8d4d9615fb4",
+      "bytes": 29057,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/conteudos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/conteudos/w768-night-conteudos.png",
+      "sha256": "3146c70ddcb9d014d014ecea79eae40e7773c581da6240dcc67c52493f6ef13e",
+      "bytes": 28713,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/conteudos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/conteudos/w1440-day-conteudos.png",
+      "sha256": "f18d544cf5f8ebe2570a780d41d079a84fcf985452a2d2065b0bc128b1de614c",
+      "bytes": 39789,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/conteudos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/conteudos/w1440-night-conteudos.png",
+      "sha256": "d337b9458ad0dc43d48c719fdaef41b28ca25ebe8eec0b60fa721e59b291e774",
+      "bytes": 39825,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/conteudos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/conteudo-dinamico/w320-day-conteudo-dinamico.png",
+      "sha256": "fca4133f9eb7af731195f117f9d8f8407bf2710db6d77a407e96833be4aeb5d9",
+      "bytes": 21856,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/conteudos/diagnostico-sem-conteudo"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/conteudo-dinamico/w320-night-conteudo-dinamico.png",
+      "sha256": "c7d5a835b37b5f02064194992a53cdecc0f9717a567c8a24ef31d7042a843dca",
+      "bytes": 21513,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/conteudos/diagnostico-sem-conteudo"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/conteudo-dinamico/w390-day-conteudo-dinamico.png",
+      "sha256": "c1aaa93049d901d4d5ce83682c65c9749e7411447589b5835a9d916c7b2bea4b",
+      "bytes": 22622,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/conteudos/diagnostico-sem-conteudo"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/conteudo-dinamico/w390-night-conteudo-dinamico.png",
+      "sha256": "8f776fd43b809c50871ac7c6e8501e9788fa482300cde48da0cb65095e1c83e5",
+      "bytes": 22300,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/conteudos/diagnostico-sem-conteudo"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/conteudo-dinamico/w768-day-conteudo-dinamico.png",
+      "sha256": "bec6aada828ef0988f083883ba047ba1a523f8593d4544b74031c616ae8919b1",
+      "bytes": 24753,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/conteudos/diagnostico-sem-conteudo"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/conteudo-dinamico/w768-night-conteudo-dinamico.png",
+      "sha256": "cf5e54e2276790a2566f7f8f1698592da8d5e08142a7638c272b00d0528e1e8f",
+      "bytes": 24390,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/conteudos/diagnostico-sem-conteudo"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/conteudo-dinamico/w1440-day-conteudo-dinamico.png",
+      "sha256": "6e7d237becf698b2347f6e33ba67dcf4a81d35451d5fa7885d8e9ba4b6f91792",
+      "bytes": 29752,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/conteudos/diagnostico-sem-conteudo"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/conteudo-dinamico/w1440-night-conteudo-dinamico.png",
+      "sha256": "7b37aedf4d026baf5acc033ce165dd5a92f1e366bcb9d9a30001afc663b956d2",
+      "bytes": 29828,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/conteudos/diagnostico-sem-conteudo"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/faq/w320-day-faq.png",
+      "sha256": "e2933c003e0ce1a6b99d34e5fe771cba983665d9f366a5ab95dea577708aba12",
+      "bytes": 50266,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/faq"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/faq/w320-night-faq.png",
+      "sha256": "e2933c003e0ce1a6b99d34e5fe771cba983665d9f366a5ab95dea577708aba12",
+      "bytes": 50266,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/faq"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/faq/w390-day-faq.png",
+      "sha256": "e9a745b5ba388112376abec46cf788fe64c5a6d3f923f76dab20b1dad7616aff",
+      "bytes": 52822,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/faq"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/faq/w390-night-faq.png",
+      "sha256": "e9a745b5ba388112376abec46cf788fe64c5a6d3f923f76dab20b1dad7616aff",
+      "bytes": 52822,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/faq"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/faq/w768-day-faq.png",
+      "sha256": "fa8c8c3610cdaa9cf70aa211985f600c740a095916853bd7039e1eb781602ab2",
+      "bytes": 100735,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/faq"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/faq/w768-night-faq.png",
+      "sha256": "fa8c8c3610cdaa9cf70aa211985f600c740a095916853bd7039e1eb781602ab2",
+      "bytes": 100735,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/faq"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/faq/w1440-day-faq.png",
+      "sha256": "61c8deabe3fc077fd261f15a711c12f183402f75897c0e96161b46cc3ed786e9",
+      "bytes": 105547,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/faq"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/faq/w1440-night-faq.png",
+      "sha256": "61c8deabe3fc077fd261f15a711c12f183402f75897c0e96161b46cc3ed786e9",
+      "bytes": 105547,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/faq"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/orcamento/w320-day-orcamento.png",
+      "sha256": "6cfdd04659d233d6ec310f41e19e85edb1a420fb5d041cfe5f897abeca87c926",
+      "bytes": 52642,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/orcamento"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/orcamento/w320-night-orcamento.png",
+      "sha256": "6cfdd04659d233d6ec310f41e19e85edb1a420fb5d041cfe5f897abeca87c926",
+      "bytes": 52642,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/orcamento"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/orcamento/w390-day-orcamento.png",
+      "sha256": "c7a54bfb8290e29ce6d60e87c59bb6b737da4656e7924c7439ae57bc6f3c8911",
+      "bytes": 70050,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/orcamento"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/orcamento/w390-night-orcamento.png",
+      "sha256": "c7a54bfb8290e29ce6d60e87c59bb6b737da4656e7924c7439ae57bc6f3c8911",
+      "bytes": 70050,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/orcamento"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/orcamento/w768-day-orcamento.png",
+      "sha256": "cf7929ef2d1676c5825a0f084b4d0a5b2747598f3c97ad01cfb58b54cd250e58",
+      "bytes": 95913,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/orcamento"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/orcamento/w768-night-orcamento.png",
+      "sha256": "cf7929ef2d1676c5825a0f084b4d0a5b2747598f3c97ad01cfb58b54cd250e58",
+      "bytes": 95913,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/orcamento"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/orcamento/w1440-day-orcamento.png",
+      "sha256": "16b8e233e46e579fc8585821a31e33f70e8a63dfab6629a23b910bfdc613274d",
+      "bytes": 93173,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/orcamento"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/orcamento/w1440-night-orcamento.png",
+      "sha256": "16b8e233e46e579fc8585821a31e33f70e8a63dfab6629a23b910bfdc613274d",
+      "bytes": 93173,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/orcamento"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/pacotes/w320-day-pacotes.png",
+      "sha256": "c4f91f0e06d9d3e0591d836dffcad099eeb87e68888599319663b2ef7cdd2393",
+      "bytes": 35456,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/pacotes"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/pacotes/w320-night-pacotes.png",
+      "sha256": "333bb9adc375bcbac50a548b2625a5f2549504c47f3b03adb62cfa0bd23bc4d4",
+      "bytes": 35413,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/pacotes"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/pacotes/w390-day-pacotes.png",
+      "sha256": "ed62357b6de101b5d94a53e254b713dca5197d692dc56632a13e0914620a98cd",
+      "bytes": 35905,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/pacotes"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/pacotes/w390-night-pacotes.png",
+      "sha256": "eceb5cc4c9b594c0b628646443465471d633a7359adf8bca4621a11b356dfd92",
+      "bytes": 35774,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/pacotes"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/pacotes/w768-day-pacotes.png",
+      "sha256": "b23f70da72d27c51cc88c09eef92573e2edaccc8f295dc08b276024512ddd5f9",
+      "bytes": 36133,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/pacotes"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/pacotes/w768-night-pacotes.png",
+      "sha256": "caddbd547a202ed98b4da694dda2b32f6b2271a4f665df25633f8162ac6a2a27",
+      "bytes": 35931,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/pacotes"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/pacotes/w1440-day-pacotes.png",
+      "sha256": "8961db85995eea086dad5f0d5b59674ee7cdd00fa1d1cb9d5f73dff0b385601e",
+      "bytes": 42974,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/pacotes"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/pacotes/w1440-night-pacotes.png",
+      "sha256": "e726885c3ab844b268b2266d08afb400af7ad49e3cc74416da07e9b2163f8c97",
+      "bytes": 43103,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/pacotes"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/privacidade/w320-day-privacidade.png",
+      "sha256": "af1bef1a2e18f3e9b24dcfeac3d9100b0bce3422eb84a919d243e4ad4df92a57",
+      "bytes": 56091,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/privacidade"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/privacidade/w320-night-privacidade.png",
+      "sha256": "af1bef1a2e18f3e9b24dcfeac3d9100b0bce3422eb84a919d243e4ad4df92a57",
+      "bytes": 56091,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/privacidade"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/privacidade/w390-day-privacidade.png",
+      "sha256": "b15995aafd8bdbaae7bc65bae81b2526f12b9380ba17de41145733c348ce36b0",
+      "bytes": 53494,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/privacidade"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/privacidade/w390-night-privacidade.png",
+      "sha256": "b15995aafd8bdbaae7bc65bae81b2526f12b9380ba17de41145733c348ce36b0",
+      "bytes": 53494,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/privacidade"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/privacidade/w768-day-privacidade.png",
+      "sha256": "2b879ffb27c39651b5eb99c065b402c60ea5434ccf776918e799c00521bb7581",
+      "bytes": 56885,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/privacidade"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/privacidade/w768-night-privacidade.png",
+      "sha256": "2b879ffb27c39651b5eb99c065b402c60ea5434ccf776918e799c00521bb7581",
+      "bytes": 56885,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/privacidade"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/privacidade/w1440-day-privacidade.png",
+      "sha256": "4657a3b0daa57f6a074b8128566d432e2d7792cb1c3481f2a173a4df259cae73",
+      "bytes": 65967,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/privacidade"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/privacidade/w1440-night-privacidade.png",
+      "sha256": "4657a3b0daa57f6a074b8128566d432e2d7792cb1c3481f2a173a4df259cae73",
+      "bytes": 65967,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/privacidade"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/aceite-token-sintetico-invalido/w320-day-aceite-token-sintetico-invalido.png",
+      "sha256": "2f77a05b5cef656e8bd777b92052e169a373073651d756cc9fd512298d4ffe13",
+      "bytes": 27365,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/proposta/aceite/diagnostico-token-invalido"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/aceite-token-sintetico-invalido/w320-night-aceite-token-sintetico-invalido.png",
+      "sha256": "2f77a05b5cef656e8bd777b92052e169a373073651d756cc9fd512298d4ffe13",
+      "bytes": 27365,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/proposta/aceite/diagnostico-token-invalido"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/aceite-token-sintetico-invalido/w390-day-aceite-token-sintetico-invalido.png",
+      "sha256": "d99c7ebcce1954317ee6408c082dc6f87234a7b711f5bd7ce4905196fc0c056a",
+      "bytes": 28170,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/proposta/aceite/diagnostico-token-invalido"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/aceite-token-sintetico-invalido/w390-night-aceite-token-sintetico-invalido.png",
+      "sha256": "d99c7ebcce1954317ee6408c082dc6f87234a7b711f5bd7ce4905196fc0c056a",
+      "bytes": 28170,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/proposta/aceite/diagnostico-token-invalido"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/aceite-token-sintetico-invalido/w768-day-aceite-token-sintetico-invalido.png",
+      "sha256": "8ac87773957a79343d74f0f91947f74276f1e6c01f894320ffb68f7f132eee73",
+      "bytes": 30978,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/proposta/aceite/diagnostico-token-invalido"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/aceite-token-sintetico-invalido/w768-night-aceite-token-sintetico-invalido.png",
+      "sha256": "8ac87773957a79343d74f0f91947f74276f1e6c01f894320ffb68f7f132eee73",
+      "bytes": 30978,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/proposta/aceite/diagnostico-token-invalido"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/aceite-token-sintetico-invalido/w1440-day-aceite-token-sintetico-invalido.png",
+      "sha256": "56095fb855eadee9bf98744c5f42916169ea2582883034ff8a7e080cd9275ff0",
+      "bytes": 33761,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/proposta/aceite/diagnostico-token-invalido"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/aceite-token-sintetico-invalido/w1440-night-aceite-token-sintetico-invalido.png",
+      "sha256": "56095fb855eadee9bf98744c5f42916169ea2582883034ff8a7e080cd9275ff0",
+      "bytes": 33761,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/proposta/aceite/diagnostico-token-invalido"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/segmentos/w320-day-segmentos.png",
+      "sha256": "a95237d2071545dfe28e9633f4ca3e9a948cc3458028c7738da09fe65355d53c",
+      "bytes": 48759,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/segmentos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/segmentos/w320-night-segmentos.png",
+      "sha256": "a95237d2071545dfe28e9633f4ca3e9a948cc3458028c7738da09fe65355d53c",
+      "bytes": 48759,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/segmentos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/segmentos/w390-day-segmentos.png",
+      "sha256": "ac193ebfaea3080557a331ed80c816f2fcc8d61da62d2bdec3b3d50678f13195",
+      "bytes": 51893,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/segmentos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/segmentos/w390-night-segmentos.png",
+      "sha256": "ac193ebfaea3080557a331ed80c816f2fcc8d61da62d2bdec3b3d50678f13195",
+      "bytes": 51893,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/segmentos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/segmentos/w768-day-segmentos.png",
+      "sha256": "ff08aa85c783de984b327ffdb9df8a9e434489452b20c8507a32db44106f5c1d",
+      "bytes": 52813,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/segmentos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/segmentos/w768-night-segmentos.png",
+      "sha256": "ff08aa85c783de984b327ffdb9df8a9e434489452b20c8507a32db44106f5c1d",
+      "bytes": 52813,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/segmentos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/segmentos/w1440-day-segmentos.png",
+      "sha256": "4903a6508bdb33bf57b2876a814fddf65c4ceee71cd2488faaf3e520a6514b93",
+      "bytes": 65065,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/segmentos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/segmentos/w1440-night-segmentos.png",
+      "sha256": "4903a6508bdb33bf57b2876a814fddf65c4ceee71cd2488faaf3e520a6514b93",
+      "bytes": 65065,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/segmentos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/segmento-condominio/w320-day-segmento-condominio.png",
+      "sha256": "0f45402927735bf4d4dead28863a5b588aa62eaed6f9273a94d1db52888628f7",
+      "bytes": 17450,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/segmentos/condominio"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/segmento-condominio/w320-night-segmento-condominio.png",
+      "sha256": "0f45402927735bf4d4dead28863a5b588aa62eaed6f9273a94d1db52888628f7",
+      "bytes": 17450,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/segmentos/condominio"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/segmento-condominio/w390-day-segmento-condominio.png",
+      "sha256": "9a694278235ea5bb633f9857050f9d426fcf39a9931711d59e0440e0c0034972",
+      "bytes": 17844,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/segmentos/condominio"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/segmento-condominio/w390-night-segmento-condominio.png",
+      "sha256": "9a694278235ea5bb633f9857050f9d426fcf39a9931711d59e0440e0c0034972",
+      "bytes": 17844,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/segmentos/condominio"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/segmento-condominio/w768-day-segmento-condominio.png",
+      "sha256": "7cb4eb83614ebdafbe3f18c4dee5d940e6fc44bb20ecc72553c43fa7489f29fa",
+      "bytes": 18929,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/segmentos/condominio"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/segmento-condominio/w768-night-segmento-condominio.png",
+      "sha256": "7cb4eb83614ebdafbe3f18c4dee5d940e6fc44bb20ecc72553c43fa7489f29fa",
+      "bytes": 18929,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/segmentos/condominio"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/segmento-condominio/w1440-day-segmento-condominio.png",
+      "sha256": "cb05df5a88ec0f99782694f2ba9c4e1bfae153dfb59c568d5923c85a372ee1a7",
+      "bytes": 29441,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/segmentos/condominio"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/segmento-condominio/w1440-night-segmento-condominio.png",
+      "sha256": "cb05df5a88ec0f99782694f2ba9c4e1bfae153dfb59c568d5923c85a372ee1a7",
+      "bytes": 29441,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/segmentos/condominio"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servicos/w320-day-servicos.png",
+      "sha256": "f9f476fa52983003298a1f5027c8c20f7542695798d81da3fff25696fcea2781",
+      "bytes": 49578,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/servicos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servicos/w320-night-servicos.png",
+      "sha256": "f9f476fa52983003298a1f5027c8c20f7542695798d81da3fff25696fcea2781",
+      "bytes": 49578,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/servicos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servicos/w390-day-servicos.png",
+      "sha256": "896acf011a7bacca92b2293a0e95f697478b3a7232fd37c06cfe98b1c0afde72",
+      "bytes": 61644,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/servicos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servicos/w390-night-servicos.png",
+      "sha256": "896acf011a7bacca92b2293a0e95f697478b3a7232fd37c06cfe98b1c0afde72",
+      "bytes": 61644,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/servicos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servicos/w768-day-servicos.png",
+      "sha256": "7ae6134acc50d74ff59ec19a88df69847dfdec964c351a573a2c2ff8c565f43a",
+      "bytes": 130598,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/servicos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servicos/w768-night-servicos.png",
+      "sha256": "7ae6134acc50d74ff59ec19a88df69847dfdec964c351a573a2c2ff8c565f43a",
+      "bytes": 130598,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/servicos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servicos/w1440-day-servicos.png",
+      "sha256": "7b03fda21130816cef18566aec84d4668f85ee6e4d0e7735a27a9f9eede66390",
+      "bytes": 159117,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/servicos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servicos/w1440-night-servicos.png",
+      "sha256": "7b03fda21130816cef18566aec84d4668f85ee6e4d0e7735a27a9f9eede66390",
+      "bytes": 159117,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/servicos"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servico-seguranca-desarmada/w320-day-servico-seguranca-desarmada.png",
+      "sha256": "72e88270ba726a3c242094de878c6a9b83567990d31e75ad234cbeb286050d6f",
+      "bytes": 16163,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/servicos/Segurança%20Desarmada"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servico-seguranca-desarmada/w320-night-servico-seguranca-desarmada.png",
+      "sha256": "72e88270ba726a3c242094de878c6a9b83567990d31e75ad234cbeb286050d6f",
+      "bytes": 16163,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/servicos/Segurança%20Desarmada"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servico-seguranca-desarmada/w390-day-servico-seguranca-desarmada.png",
+      "sha256": "8e149e31f0d46b67b2183e40cd13ace9b90e617d9505aeac0dd090641f05bc2e",
+      "bytes": 17085,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/servicos/Segurança%20Desarmada"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servico-seguranca-desarmada/w390-night-servico-seguranca-desarmada.png",
+      "sha256": "8e149e31f0d46b67b2183e40cd13ace9b90e617d9505aeac0dd090641f05bc2e",
+      "bytes": 17085,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/servicos/Segurança%20Desarmada"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servico-seguranca-desarmada/w768-day-servico-seguranca-desarmada.png",
+      "sha256": "f8d1e8f911c508dbc8e305b6d371e2d5810ad520a9aba81baa88fee79dd5a3f8",
+      "bytes": 18644,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/servicos/Segurança%20Desarmada"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servico-seguranca-desarmada/w768-night-servico-seguranca-desarmada.png",
+      "sha256": "f8d1e8f911c508dbc8e305b6d371e2d5810ad520a9aba81baa88fee79dd5a3f8",
+      "bytes": 18644,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/servicos/Segurança%20Desarmada"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servico-seguranca-desarmada/w1440-day-servico-seguranca-desarmada.png",
+      "sha256": "c30d62325e42f6e981e41b5eb2259420dd5b5dd9705bdd9fe61ced4b01417ae5",
+      "bytes": 27729,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/servicos/Segurança%20Desarmada"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/servico-seguranca-desarmada/w1440-night-servico-seguranca-desarmada.png",
+      "sha256": "c30d62325e42f6e981e41b5eb2259420dd5b5dd9705bdd9fe61ced4b01417ae5",
+      "bytes": 27729,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/servicos/Segurança%20Desarmada"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/simulador/w320-day-simulador.png",
+      "sha256": "ec0cd750415ed549be8a0418c69179f3fd813c6487215d00d7f0ee8312113083",
+      "bytes": 50943,
+      "viewport": "320x780",
+      "theme": "day",
+      "route": "/simulador"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/simulador/w320-night-simulador.png",
+      "sha256": "ec0cd750415ed549be8a0418c69179f3fd813c6487215d00d7f0ee8312113083",
+      "bytes": 50943,
+      "viewport": "320x780",
+      "theme": "night",
+      "route": "/simulador"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/simulador/w390-day-simulador.png",
+      "sha256": "8cd2e2cada774e4f5bb7dc4ffc88a74c919310d35b25dd0e6203f869574e8713",
+      "bytes": 57003,
+      "viewport": "390x844",
+      "theme": "day",
+      "route": "/simulador"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/simulador/w390-night-simulador.png",
+      "sha256": "8cd2e2cada774e4f5bb7dc4ffc88a74c919310d35b25dd0e6203f869574e8713",
+      "bytes": 57003,
+      "viewport": "390x844",
+      "theme": "night",
+      "route": "/simulador"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/simulador/w768-day-simulador.png",
+      "sha256": "12542403e7b7520d9d730f0d79459b1b38045586297f2fdf40bd2ce4e5c439d2",
+      "bytes": 86430,
+      "viewport": "768x1024",
+      "theme": "day",
+      "route": "/simulador"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/simulador/w768-night-simulador.png",
+      "sha256": "12542403e7b7520d9d730f0d79459b1b38045586297f2fdf40bd2ce4e5c439d2",
+      "bytes": 86430,
+      "viewport": "768x1024",
+      "theme": "night",
+      "route": "/simulador"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/simulador/w1440-day-simulador.png",
+      "sha256": "6983cd9c48dbfe9516db81cc436e17c53f9c83ba164e0fe7db7daa177df3ad6a",
+      "bytes": 106272,
+      "viewport": "1440x900",
+      "theme": "day",
+      "route": "/simulador"
+    },
+    {
+      "phase": "corrective-after",
+      "path": "docs/UX-PRO-09E-evidencias-2026-10-16/correcao/simulador/w1440-night-simulador.png",
+      "sha256": "6983cd9c48dbfe9516db81cc436e17c53f9c83ba164e0fe7db7daa177df3ad6a",
+      "bytes": 106272,
+      "viewport": "1440x900",
+      "theme": "night",
+      "route": "/simulador"
+    }
+  ],
+  "counts": {
+    "before": 112,
+    "correctiveAfter": 112,
+    "total": 224
+  }
+}
