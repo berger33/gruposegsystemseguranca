@@ -11,6 +11,11 @@
 //    cliente. Carregando, vazio, falha e negado são quatro estados distintos;
 //  - as abas do portal do funcionário são um tablist de verdade, com teclado;
 //  - todo campo tem rótulo visível e associado;
+//  - nos formulários públicos de entrada (pedido manual de recuperação e
+//    reenvio de confirmação), falha real de serviço (503 produzido no
+//    PostgreSQL descartável) e rejeição de rede nunca aparecem como sucesso:
+//    o erro recebe foco, o formulário permanece para repetição e a resposta
+//    pública continua genérica (202) para endereço elegível e desconhecido;
 //  - 390px não produz transbordo horizontal.
 //
 // O que este gate NÃO prova: aceite humano, homologação de Marcelo/Andreia,
@@ -223,7 +228,7 @@ before(async () => {
   clientCookie = clientLogin.setCookie.map(item => item.split(';')[0]).join('; ');
   assert.ok(clientCookie, 'o login do cliente precisa emitir cookie de sessão');
 
-  for (const route of ['/funcionario', '/cliente/app', '/cliente/redefinir-senha']) {
+  for (const route of ['/funcionario', '/cliente/app', '/cliente/redefinir-senha', '/cliente/confirmar-email']) {
     const deadline = Date.now() + 240_000;
     for (;;) {
       try {
@@ -915,6 +920,503 @@ test('browser: pedido manual de recuperação distingue falha real, mantém 202 
           'Somente tema claro, o único oferecido por esta superfície. Sem SMTP/provedor real, sessão/cookie, dados reais, UAT, aceite humano ou alegação WCAG/produção.',
           'A busca externa de Google Fonts foi bloqueada pelo sandbox (ERR_CONNECTION_CLOSED); navegador usou fallback, sem erro de execução da página. O diagnóstico é separado do 503 reproduzido.',
           'Overflow medido por viewport; esta subfatia altera somente o estado de falha da solicitação manual.',
+        ],
+      };
+      await mkdir(evidenceDir, { recursive: true });
+      await writeFile(path.join(evidenceDir, 'resumo.json'), `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+    }
+  } finally {
+    await cleanup();
+  }
+});
+
+test('browser: reenvio de confirmação distingue falha real, mantém 202 genérico e preserva o limite de reenvio', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  const RESEND_PATH = '/api/auth/confirm-email/resend';
+  const CONFIRM_PATH = '/api/auth/confirm-email';
+  const eligibleEmail = 'qa09a2@example.invalid';
+  const httpEligibleEmail = 'qa09a2-http@example.invalid';
+  const unknownEmail = 'missing09a2@example.invalid';
+  const syntheticEmails = [eligibleEmail, httpEligibleEmail, unknownEmail];
+  const identityId = randomUUID();
+  const httpIdentityId = randomUUID();
+  const syntheticIdentityIds = [identityId, httpIdentityId];
+  const resendStatuses = [];
+  const confirmStatuses = [];
+  const consoleErrors = [];
+  const pageErrors = [];
+  const evidenceDir = process.env.UX_PORTAL_EVIDENCE_DIR || '';
+  const failureTable = 'qa_ux_pro09a2_audit_failure';
+  const triggerName = 'qa_ux_pro09a2_reject_access_audit';
+  const functionName = 'qa_ux_pro09a2_reject_access_audit_fn';
+  let context, page;
+  let keyboardPath = [];
+  let focusedErrorStyle = null;
+  let networkFailure = null;
+  let nativeValidation = null;
+  let tokenEvidence = null;
+  const viewportEvidence = [];
+  const errorScreenshots = [];
+  const safeDiagnostic = value => String(value)
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[address]')
+    .replace(/([?&](?:token|email)=)[^&\s]+/gi, '$1[redacted]')
+    .replace(/(authorization|cookie)[:=]\s*[^\s;]+/gi, '$1=[redacted]')
+    .slice(0, 240);
+  const focusName = () => page.evaluate(() => {
+    const element = document.activeElement;
+    if (!(element instanceof HTMLElement)) return 'none';
+    if (element instanceof HTMLInputElement) {
+      return element.labels?.[0]?.innerText.trim().replace(/\s+/g, ' ') || element.id || 'input';
+    }
+    // O cartão também tem o aviso permanente de link inválido; só o erro do
+    // formulário de reenvio conta como "mensagem de erro" deste percurso.
+    if (element.getAttribute('role') === 'alert' && element.closest('form')) return 'Mensagem de erro';
+    return (element.getAttribute('aria-label') || element.innerText || element.id || element.tagName)
+      .trim().replace(/\s+/g, ' ').slice(0, 80);
+  });
+  const errorIsFocused = () => page.evaluate(() => Boolean(
+    document.activeElement?.matches('section[aria-labelledby="confirmar-title"] form [role="alert"]')));
+  const cleanup = async () => {
+    await context?.close().catch(() => {});
+    await browser.close().catch(() => {});
+    await pool.query(`DROP TRIGGER IF EXISTS ${triggerName} ON auth_access_audit`).catch(() => {});
+    await pool.query(`DROP FUNCTION IF EXISTS ${functionName}()`).catch(() => {});
+    await pool.query(`DROP TABLE IF EXISTS ${failureTable}`).catch(() => {});
+    await pool.query('DELETE FROM auth_access_audit WHERE actor_id = ANY($1::text[])', [syntheticIdentityIds]).catch(() => {});
+    await pool.query('DELETE FROM auth_email_tokens WHERE email = ANY($1::varchar[])', [syntheticEmails]).catch(() => {});
+    await pool.query('DELETE FROM auth_identities WHERE id = ANY($1::uuid[])', [syntheticIdentityIds]).catch(() => {});
+  };
+
+  try {
+    // Massa sintética em banco descartável: o reenvio de confirmação só é
+    // elegível para identidade 'client' com status 'pending_email'.
+    for (const [id, email] of [[identityId, eligibleEmail], [httpIdentityId, httpEligibleEmail]]) {
+      await pool.query(
+        `INSERT INTO auth_identities (id, kind, email, display_name, status)
+         VALUES ($1,'client',$2,'QA Sintético UX-PRO-09A-2','pending_email')`,
+        [id, email],
+      );
+    }
+    // 503 REAL: a auditoria obrigatória do reenvio é recusada por trigger no
+    // PostgreSQL descartável, a transação reverte e a API responde 503 de
+    // verdade (mesmo padrão de tests/client-access.integration.test.mjs).
+    // Servidor, rota, HTTP e Chromium permanecem reais; nada é enfraquecido.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ${failureTable} (action TEXT PRIMARY KEY);
+      CREATE OR REPLACE FUNCTION ${functionName}() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM ${failureTable} f WHERE f.action = NEW.action) THEN
+          RAISE EXCEPTION 'qa_synthetic_audit_failure:%', NEW.action;
+        END IF;
+        RETURN NEW;
+      END;
+      $$;
+      DROP TRIGGER IF EXISTS ${triggerName} ON auth_access_audit;
+      CREATE TRIGGER ${triggerName} BEFORE INSERT ON auth_access_audit
+        FOR EACH ROW EXECUTE FUNCTION ${functionName}();
+    `);
+    await pool.query(`INSERT INTO ${failureTable} (action) VALUES ('email_confirm_resend') ON CONFLICT DO NOTHING`);
+
+    const opened = await openPage(browser, '/cliente/confirmar-email', null, {
+      width: 390,
+      height: 844,
+      onPage: candidate => {
+        candidate.on('response', response => {
+          try {
+            const pathname = new URL(response.url()).pathname;
+            if (pathname === RESEND_PATH) resendStatuses.push(response.status());
+            if (pathname === CONFIRM_PATH) confirmStatuses.push(response.status());
+          } catch { /* URL inválida não entra na evidência */ }
+        });
+        candidate.on('console', message => {
+          if (message.type() !== 'error') return;
+          let source = 'unknown';
+          try {
+            const url = new URL(message.location().url);
+            source = `${url.origin}${url.pathname}`;
+          } catch { /* mensagem sem URL */ }
+          consoleErrors.push({ message: safeDiagnostic(message.text()), source });
+        });
+        candidate.on('pageerror', error => pageErrors.push(safeDiagnostic(error.message)));
+      },
+    });
+    context = opened.context;
+    page = opened.page;
+    page.setDefaultTimeout(45_000);
+    await page.waitForLoadState('networkidle');
+    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+    assert.equal(opened.navigationResponse?.status(), 200);
+    assert.equal(new URL(page.url()).pathname, '/cliente/confirmar-email');
+    assert.deepEqual(await context.cookies(), [], 'a rota pública é testada sem cookie ou sessão');
+
+    const card = page.locator('section[aria-labelledby="confirmar-title"]');
+    const form = card.locator('form');
+    const emailField = form.getByRole('textbox', { name: 'Seu e-mail' });
+    const linkAlert = card.getByRole('alert').filter({ hasText: 'Este link de confirmação não é mais válido' });
+    const error = form.getByRole('alert');
+    const success = card.getByRole('status');
+    await card.getByRole('heading', { name: 'Não foi possível confirmar' }).waitFor();
+    assert.equal(await form.count(), 1);
+    assert.equal(await emailField.count(), 1);
+    assert.equal(await form.getByRole('button', { name: 'Pedir novo link de confirmação' }).count(), 1);
+    assert.equal(await error.count(), 0);
+    assert.equal(await success.count(), 0);
+    assert.equal(await linkAlert.count(), 1, 'o aviso de link inválido já existente permanece');
+    assert.deepEqual(resendStatuses, [], 'abrir a rota sem token não chama o reenvio');
+    assert.deepEqual(confirmStatuses, [], 'sem token a página não emite POST /api/auth/confirm-email');
+    const theme = await page.evaluate(() => ({
+      mode: 'light-default-only',
+      themeTogglePresent: Boolean(document.querySelector('[data-admin-theme-toggle="true"]')),
+      themeAttribute: document.documentElement.getAttribute('data-admin-theme'),
+    }));
+    assert.equal(theme.themeTogglePresent, false);
+    assert.equal(theme.themeAttribute, null);
+    if (evidenceDir) await capture(page, 'ux-pro-09a2-reenvio-inicial-390-claro');
+
+    await page.locator('header a').first().focus();
+    keyboardPath.push(await focusName());
+    for (let step = 0; step < 2; step += 1) {
+      await page.keyboard.press('Tab');
+      keyboardPath.push(await focusName());
+    }
+    assert.deepEqual(keyboardPath, ['GRUPO SEG System', 'Sobre o portal', 'SEU E-MAIL']);
+    await page.keyboard.press('Tab');
+    keyboardPath.push(await focusName());
+    assert.equal(keyboardPath.at(-1), 'Pedir novo link de confirmação');
+
+    await emailField.fill('endereco-invalido');
+    const malformedEmail = await emailField.evaluate(element => ({
+      typeMismatch: element.validity.typeMismatch,
+      valueMissing: element.validity.valueMissing,
+    }));
+    await emailField.press('Enter');
+    assert.equal(malformedEmail.typeMismatch, true);
+    await emailField.fill('');
+    const emptyEmail = await emailField.evaluate(element => ({
+      typeMismatch: element.validity.typeMismatch,
+      valueMissing: element.validity.valueMissing,
+    }));
+    await emailField.press('Enter');
+    assert.equal(emptyEmail.valueMissing, true);
+    assert.deepEqual(resendStatuses, [], 'validação nativa não dispara HTTP');
+    nativeValidation = { malformedEmail, emptyEmail, httpRequestsBeforeValidSubmit: resendStatuses.length };
+
+    // Segura apenas a resolução da resposta real para capturar o estado de envio.
+    await page.evaluate(() => {
+      const nativeFetch = window.fetch.bind(window);
+      let holdFirst = true;
+      window.__uxPro09a2Release = null;
+      window.fetch = async (input, init) => {
+        const response = await nativeFetch(input, init);
+        const url = typeof input === 'string' ? input : input.url;
+        if (holdFirst && new URL(url, window.location.href).pathname === '/api/auth/confirm-email/resend') {
+          holdFirst = false;
+          await new Promise(resolve => { window.__uxPro09a2Release = resolve; });
+        }
+        return response;
+      };
+    });
+    await emailField.fill(eligibleEmail);
+    await page.keyboard.press('Tab');
+    assert.equal(await focusName(), 'Pedir novo link de confirmação');
+    const failureResponsePromise = page.waitForResponse(response => {
+      try { return new URL(response.url()).pathname === '/api/auth/confirm-email/resend'; }
+      catch { return false; }
+    });
+    await page.keyboard.press('Enter');
+    const failureResponse = await failureResponsePromise;
+    assert.equal(failureResponse.status(), 503, 'a falha de serviço reproduzida no banco chega como 503');
+    await page.waitForFunction(() => typeof window.__uxPro09a2Release === 'function');
+    const busyButton = page.getByRole('button', { name: 'Enviando…' });
+    await busyButton.waitFor();
+    assert.equal(await busyButton.isDisabled(), true);
+    if (evidenceDir) await capture(page, 'ux-pro-09a2-reenvio-enviando-390-claro');
+    await page.evaluate(() => window.__uxPro09a2Release?.());
+
+    await error.waitFor();
+    await page.waitForFunction(() => document.activeElement?.matches('section[aria-labelledby="confirmar-title"] form [role="alert"]'));
+    const errorText = await error.innerText();
+    assert.match(errorText, /Não foi possível registrar o pedido de novo link/i);
+    assert.doesNotMatch(errorText, /audit_unavailable|auth_unavailable|503|example\.invalid|@/i);
+    assert.equal(await success.count(), 0, '503 nunca deve parecer sucesso');
+    assert.equal(await form.count(), 1, 'o formulário permanece para nova tentativa');
+    assert.equal(await emailField.inputValue(), eligibleEmail, 'o valor permanece para nova tentativa');
+    assert.equal(await form.getByRole('button', { name: 'Pedir novo link de confirmação' }).isEnabled(), true);
+    assert.equal(await linkAlert.count(), 1, 'o aviso de link inválido continua presente depois da falha');
+    assert.equal(await focusName(), 'Mensagem de erro');
+    assert.equal(await errorIsFocused(), true);
+    focusedErrorStyle = await page.evaluate(() => {
+      const style = getComputedStyle(document.activeElement);
+      return { outlineStyle: style.outlineStyle, outlineWidth: style.outlineWidth };
+    });
+    assert.deepEqual(focusedErrorStyle, { outlineStyle: 'solid', outlineWidth: '3px' });
+    const rolledBack = await pool.query(
+      'SELECT COUNT(*)::int AS total FROM auth_email_tokens WHERE email = $1 AND kind = $2',
+      [eligibleEmail, 'confirm_email'],
+    );
+    assert.equal(rolledBack.rows[0].total, 0, 'o 503 reverteu a transação: nenhum link foi emitido');
+
+    keyboardPath.push('Mensagem de erro');
+    await page.keyboard.press('Tab');
+    keyboardPath.push(await focusName());
+    assert.equal(keyboardPath.at(-1), 'Pedir novo link de confirmação');
+    // tabindex="-1" mantém o erro fora da ordem sequencial (o foco é
+    // programático); Shift+Tab devolve ao campo, que é o alvo útil da repetição.
+    await page.keyboard.press('Shift+Tab');
+    keyboardPath.push(await focusName());
+    assert.equal(keyboardPath.at(-1), 'SEU E-MAIL');
+    await page.keyboard.press('Tab');
+    keyboardPath.push(await focusName());
+    assert.equal(keyboardPath.at(-1), 'Pedir novo link de confirmação');
+    await error.focus();
+
+    for (const width of [320, 390, 768, 1440]) {
+      const height = width < 768 ? 844 : 900;
+      await page.setViewportSize({ width, height });
+      const metrics = await page.evaluate(() => {
+        const root = document.documentElement;
+        return {
+          viewport: { width: innerWidth, height: innerHeight },
+          horizontalOverflowPx: Math.max(root.scrollWidth, document.body.scrollWidth) - root.clientWidth,
+          focusedTarget: document.activeElement?.matches('section[aria-labelledby="confirmar-title"] form [role="alert"]')
+            ? 'Mensagem de erro' : 'outro',
+          themeAttribute: root.getAttribute('data-admin-theme'),
+        };
+      });
+      assert.deepEqual(metrics.viewport, { width, height });
+      assert.equal(metrics.horizontalOverflowPx, 0);
+      assert.equal(metrics.focusedTarget, 'Mensagem de erro');
+      const screenshot = `ux-pro-09a2-reenvio-falha-503-${width}-claro.png`;
+      errorScreenshots.push(screenshot);
+      if (evidenceDir) await capture(page, screenshot.slice(0, -4));
+      viewportEvidence.push(metrics);
+    }
+
+    // SIMULAÇÃO declarada: a rejeição de fetch é produzida dentro da página para
+    // cobrir falha de transporte. Não interrompe o transporte real e nenhum HTTP
+    // é emitido; por isso fica registrada como simulação na evidência.
+    await page.evaluate(() => {
+      const originalFetch = window.fetch.bind(window);
+      window.__uxPro09a2NetworkFailureTriggered = false;
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : (input?.url || '');
+        if (new URL(url, window.location.href).pathname === '/api/auth/confirm-email/resend') {
+          window.fetch = originalFetch;
+          window.__uxPro09a2NetworkFailureTriggered = true;
+          throw new TypeError('Failed to fetch');
+        }
+        return originalFetch(input, init);
+      };
+    });
+    await page.keyboard.press('Tab');
+    assert.equal(await focusName(), 'Pedir novo link de confirmação');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => window.__uxPro09a2NetworkFailureTriggered === true);
+    await page.waitForFunction(() => document.activeElement?.matches('section[aria-labelledby="confirmar-title"] form [role="alert"]'));
+    assert.match(await error.innerText(), /Não foi possível registrar o pedido de novo link/i);
+    assert.equal(await emailField.inputValue(), eligibleEmail);
+    assert.equal(await success.count(), 0, 'falha de rede não deve parecer sucesso');
+    assert.equal(await form.count(), 1, 'a repetição continua disponível depois da falha de rede');
+    assert.equal(await form.getByRole('button', { name: 'Pedir novo link de confirmação' }).isEnabled(), true);
+    assert.equal(await focusName(), 'Mensagem de erro');
+    assert.deepEqual(resendStatuses, [503], 'a rejeição simulada ocorre antes de qualquer resposta HTTP');
+    await page.setViewportSize({ width: 390, height: 844 });
+    const networkViewport = await page.evaluate(() => ({
+      viewport: { width: innerWidth, height: innerHeight },
+      horizontalOverflowPx: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - document.documentElement.clientWidth,
+      focusedTarget: document.activeElement?.matches('section[aria-labelledby="confirmar-title"] form [role="alert"]')
+        ? 'Mensagem de erro' : 'outro',
+    }));
+    assert.deepEqual(networkViewport.viewport, { width: 390, height: 844 });
+    assert.equal(networkViewport.horizontalOverflowPx, 0);
+    assert.equal(networkViewport.focusedTarget, 'Mensagem de erro');
+    const networkFailureScreenshot = 'ux-pro-09a2-reenvio-falha-rede-simulada-390-claro.png';
+    if (evidenceDir) await capture(page, networkFailureScreenshot.slice(0, -4));
+    await page.setViewportSize({ width: 1440, height: 900 });
+    networkFailure = {
+      screenshot: networkFailureScreenshot,
+      viewport: networkViewport.viewport,
+      horizontalOverflowPx: networkViewport.horizontalOverflowPx,
+      simulatedFetchRejection: true,
+      simulationDeclaredInEvidence: true,
+      httpStatus: null,
+      formRetainedForRetry: true,
+      falseSuccessStatusShown: false,
+      errorReceivesFocus: true,
+      retryButtonEnabled: true,
+      httpRequestIssued: false,
+    };
+
+    // Repetição com o serviço restabelecido: o mesmo formulário, o mesmo endereço
+    // e o mesmo percurso de teclado agora recebem 202 genérico de verdade.
+    await pool.query(`DELETE FROM ${failureTable} WHERE action = 'email_confirm_resend'`);
+    await emailField.fill(eligibleEmail);
+    await page.keyboard.press('Tab');
+    assert.equal(await focusName(), 'Pedir novo link de confirmação');
+    const successResponsePromise = page.waitForResponse(response => {
+      try { return new URL(response.url()).pathname === '/api/auth/confirm-email/resend'; }
+      catch { return false; }
+    });
+    await page.keyboard.press('Enter');
+    const successResponse = await successResponsePromise;
+    assert.equal(successResponse.status(), 202);
+    await success.waitFor();
+    const successText = await success.innerText();
+    assert.match(successText, /Se houver um cadastro aguardando confirmação/i);
+    assert.match(successText, /não confirmamos se o e-mail existe/i);
+    assert.doesNotMatch(successText, /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+    assert.equal(await form.count(), 0, 'o estado posterior ao pedido substitui o formulário, como antes');
+    assert.equal(await linkAlert.count(), 1, 'o aviso de link inválido continua presente no sucesso');
+    assert.deepEqual(resendStatuses, [503, 202]);
+    assert.deepEqual(confirmStatuses, [], 'o fluxo de token de confirmação não foi tocado por esta subfatia');
+    if (evidenceDir) await capture(page, 'ux-pro-09a2-reenvio-sucesso-202-claro');
+
+    // Tokens e limites preservados: um único link, hash no banco, 7 dias, uso
+    // único ainda disponível e auditoria transacional gravada.
+    const tokens = await pool.query(
+      `SELECT token_hash, expires_at, used_at, superseded_at FROM auth_email_tokens
+       WHERE email = $1 AND kind = $2 ORDER BY created_at`,
+      [eligibleEmail, 'confirm_email'],
+    );
+    assert.equal(tokens.rowCount, 1, 'o reenvio aceito emite exatamente um link de confirmação');
+    assert.equal(tokens.rows[0].used_at, null);
+    assert.equal(tokens.rows[0].superseded_at, null);
+    assert.match(String(tokens.rows[0].token_hash).trim(), /^[0-9a-f]{64}$/, 'o banco guarda apenas o hash do token');
+    const ttlHours = (new Date(tokens.rows[0].expires_at).getTime() - Date.now()) / 3_600_000;
+    assert.ok(ttlHours > 167 && ttlHours <= 168.1, `validade de 7 dias preservada (medido ${ttlHours.toFixed(2)} h)`);
+    const allowedAudit = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM auth_access_audit
+       WHERE actor_id = $1 AND action = 'email_confirm_resend' AND result = 'allowed'`,
+      [identityId],
+    );
+    assert.equal(allowedAudit.rows[0].total, 1, 'a auditoria do reenvio aceito permanece obrigatória');
+    tokenEvidence = {
+      confirmEmailTokensForEligibleAddress: tokens.rowCount,
+      tokenStoredAsHashOnly: true,
+      ttlHoursMeasured: Math.round(ttlHours * 100) / 100,
+      usedAt: null,
+      supersededAt: null,
+      allowedAuditRows: allowedAudit.rows[0].total,
+    };
+
+    // Anti-enumeração por HTTP: endereço elegível e endereço desconhecido recebem
+    // exatamente a mesma resposta pública.
+    const [eligibleApi, unknownApi] = await Promise.all([
+      api(RESEND_PATH, { method: 'POST', body: { email: httpEligibleEmail } }),
+      api(RESEND_PATH, { method: 'POST', body: { email: unknownEmail } }),
+    ]);
+    assert.equal(eligibleApi.status, 202);
+    assert.equal(unknownApi.status, 202);
+    assert.deepEqual(eligibleApi.body, { ok: true }, 'o payload público do reenvio não mudou');
+    assert.deepEqual(eligibleApi.body, unknownApi.body, 'respostas públicas não enumeram e-mails');
+    const unknownTokens = await pool.query(
+      'SELECT COUNT(*)::int AS total FROM auth_email_tokens WHERE email = $1', [unknownEmail],
+    );
+    assert.equal(unknownTokens.rows[0].total, 0, 'endereço desconhecido não gera link nem mensagem');
+
+    // Limite de reenvio preservado: repetir dentro do intervalo mínimo continua
+    // 202 genérico, não emite segundo link e audita a negação.
+    const throttledRepeat = await api(RESEND_PATH, { method: 'POST', body: { email: eligibleEmail } });
+    assert.equal(throttledRepeat.status, 202, 'o intervalo mínimo continua respondendo 202 genérico');
+    assert.deepEqual(throttledRepeat.body, eligibleApi.body, 'a resposta não revela que o pedido foi limitado');
+    const tokensAfterRepeat = await pool.query(
+      'SELECT COUNT(*)::int AS total FROM auth_email_tokens WHERE email = $1 AND kind = $2',
+      [eligibleEmail, 'confirm_email'],
+    );
+    assert.equal(tokensAfterRepeat.rows[0].total, 1, 'nenhum segundo link é emitido dentro do intervalo mínimo');
+    const throttledAudit = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM auth_access_audit
+       WHERE actor_id = $1 AND action = 'email_confirm_resend' AND result = 'denied' AND detail_category = 'throttled'`,
+      [identityId],
+    );
+    assert.equal(throttledAudit.rows[0].total, 1, 'o limite de reenvio continua auditado como negação silenciosa');
+    tokenEvidence = {
+      ...tokenEvidence,
+      tokensAfterImmediateRepeat: tokensAfterRepeat.rows[0].total,
+      throttledAuditRows: throttledAudit.rows[0].total,
+      throttledRepeatHttpStatus: throttledRepeat.status,
+      tokensForUnknownAddress: unknownTokens.rows[0].total,
+    };
+
+    assert.deepEqual(pageErrors, []);
+    const expected503Diagnostics = consoleErrors.filter(entry =>
+      /503/.test(entry.message) && entry.source.endsWith(RESEND_PATH));
+    const blockedFontDiagnostics = consoleErrors.filter(entry =>
+      /ERR_CONNECTION_CLOSED/.test(entry.message) && entry.source === 'https://fonts.googleapis.com/css2');
+    const unexpectedConsoleErrors = consoleErrors.filter(entry =>
+      !expected503Diagnostics.includes(entry) && !blockedFontDiagnostics.includes(entry));
+    assert.equal(expected503Diagnostics.length, 1, 'o 503 real chegou ao navegador uma única vez');
+    assert.deepEqual(unexpectedConsoleErrors, [], 'nenhum erro de console fora dos diagnósticos esperados');
+
+    if (evidenceDir) {
+      const summary = {
+        schemaVersion: 1,
+        task: 'UX-PRO-09A-2 — reenvio de confirmação de e-mail',
+        stage: 'UX-PRO-09A-2',
+        date: '2026-10-16',
+        entries: viewportEvidence.map((item, index) => ({
+          route: '/cliente/confirmar-email',
+          viewport: `${item.viewport.width}x${item.viewport.height}`,
+          screenshot: errorScreenshots[index],
+          firstFocus: false,
+          percursoTeclado: keyboardPath,
+        })),
+        baseSha: 'c6682c11dd51fd98ceb480e59a2f8b5beafa5cfe',
+        branch: 'arena/ccb60b64-gruposegsystemseguranca',
+        route: '/cliente/confirmar-email',
+        role: 'visitante anônimo; sem cookie ou sessão',
+        routeHttpStatus: opened.navigationResponse?.status() ?? null,
+        apiHttp: [
+          ...resendStatuses.map(status => ({ path: RESEND_PATH, status, source: 'browser' })),
+          { path: RESEND_PATH, status: eligibleApi.status, source: 'HTTP test client', case: 'endereço elegível' },
+          { path: RESEND_PATH, status: unknownApi.status, source: 'HTTP test client', case: 'endereço desconhecido' },
+          { path: RESEND_PATH, status: throttledRepeat.status, source: 'HTTP test client', case: 'repetição dentro do intervalo mínimo' },
+          { path: CONFIRM_PATH, statusesObserved: confirmStatuses, source: 'browser', note: 'sem token a página não consome link algum' },
+        ],
+        states: [
+          { name: 'initial', screenshot: 'ux-pro-09a2-reenvio-inicial-390-claro.png', invalidLinkAlertPreserved: true },
+          { name: 'loading', screenshot: 'ux-pro-09a2-reenvio-enviando-390-claro.png', buttonDisabled: true },
+          {
+            name: 'service_failure', httpStatus: 503, screenshot: errorScreenshots,
+            failureProducedIn: 'PostgreSQL descartável (auditoria obrigatória recusada por trigger)',
+            formRetainedForRetry: true, falseSuccessStatusShown: false, tokenEmitted: false,
+            userMessage: 'Não foi possível registrar o pedido de novo link. Tente novamente em instantes; por segurança, não confirmamos se o e-mail existe.',
+          },
+          { name: 'network_failure', ...networkFailure },
+          {
+            name: 'success', httpStatus: 202, screenshot: 'ux-pro-09a2-reenvio-sucesso-202-claro.png',
+            genericMessageUnchangedForEligibleAndUnknownAddress: true, responseBodiesEqual: true,
+            formReplacedByStatusMessageAsBefore: true,
+          },
+          { name: 'native_validation', ...nativeValidation },
+        ],
+        keyboard: {
+          focusOrder: keyboardPath,
+          errorReceivesFocus: true,
+          errorFocusVisible: focusedErrorStyle,
+          // O erro recebe foco programático (tabindex="-1") e não entra na ordem
+          // sequencial do Tab; a repetição continua alcançável por teclado.
+          errorInSequentialTabOrder: false,
+          retryReachableByKeyboard: true,
+        },
+        theme,
+        viewports: viewportEvidence,
+        tokensAndLimits: tokenEvidence,
+        console: {
+          errorCount: consoleErrors.length,
+          expectedHttp503DiagnosticCount: expected503Diagnostics.length,
+          blockedExternalFontDiagnosticCount: blockedFontDiagnostics.length,
+          unexpectedErrorCount: unexpectedConsoleErrors.length,
+          errors: consoleErrors,
+          pageErrorCount: pageErrors.length,
+        },
+        limitations: [
+          '503 reproduzido por trigger no PostgreSQL temporário e descartável (auditoria obrigatória recusada, transação revertida); HTTP, servidor, rota e Chromium reais, sem mock da resposta HTTP. Separadamente, uma rejeição de fetch foi SIMULADA no navegador para cobrir falha de rede; não equivale a interromper o transporte real.',
+          '202 genérico exercitado no navegador e por HTTP para identidade sintética elegível e endereço desconhecido; os corpos são comparados em memória, não salvos. Nenhum hash, token ou link é gravado na evidência.',
+          'Limite de reenvio (5 por endereço em 24 h, intervalo mínimo de 2 min) verificado pela repetição imediata: 202 genérico, nenhum segundo link e auditoria denied/throttled. O teto de 5 em 24 h não foi percorrido por completo nesta subfatia; continua coberto pela regra pura em tests/client-auth-core.test.mjs.',
+          'Somente tema claro, o único oferecido por esta superfície. Sem SMTP/provedor real (MAIL_HOST vazio: nenhuma mensagem é entregue), sem sessão/cookie, sem dados reais, sem UAT, aceite humano ou alegação WCAG/produção.',
+          'A busca externa de Google Fonts foi bloqueada pelo sandbox (ERR_CONNECTION_CLOSED); o navegador usou fallback, sem erro de execução da página. O diagnóstico é separado do 503 reproduzido.',
+          'Overflow medido por viewport; esta subfatia altera somente o estado de falha do formulário de reenvio em /cliente/confirmar-email.',
         ],
       };
       await mkdir(evidenceDir, { recursive: true });

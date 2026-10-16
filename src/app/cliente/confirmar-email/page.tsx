@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, CircleAlert, MailCheck } from "lucide-react";
@@ -79,22 +79,44 @@ function ConfirmEmailInner() {
   );
 }
 
+// Pedido de novo link de confirmação. O endpoint responde 202 genérico
+// (anti-enumeração) quando registra ou aceita o pedido, e 503 quando o serviço
+// ou a auditoria obrigatória falham e NADA foi registrado. Por isso o sucesso só
+// pode ser declarado com resposta 2xx: falha de serviço ou de rede mantém o
+// formulário para nova tentativa, com foco no erro e sem revelar se o endereço
+// existe, qual foi o status ou o código interno.
+const RESEND_FAILURE_MESSAGE =
+  "Não foi possível registrar o pedido de novo link. Tente novamente em instantes; por segurança, não confirmamos se o e-mail existe.";
+
 function ConfirmResendForm() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const errorRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError("");
     setBusy(true);
     try {
-      await fetch("/api/auth/confirm-email/resend", {
+      const response = await fetch("/api/auth/confirm-email/resend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-    } finally {
+      if (!response.ok) {
+        setError(RESEND_FAILURE_MESSAGE);
+        return;
+      }
       setSent(true);
+    } catch {
+      setError(RESEND_FAILURE_MESSAGE);
+    } finally {
       setBusy(false);
     }
   }
@@ -123,6 +145,17 @@ function ConfirmResendForm() {
           onChange={event => setEmail(event.target.value)}
         />
       </div>
+      {error ? (
+        <p
+          ref={errorRef}
+          className={`${styles.message} ${styles.messageError}`}
+          role="alert"
+          tabIndex={-1}
+        >
+          <CircleAlert size={16} aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }} />
+          <span>{error}</span>
+        </p>
+      ) : null}
       <button className={styles.submit} type="submit" disabled={busy}>
         {busy ? "Enviando…" : "Pedir novo link de confirmação"}
       </button>

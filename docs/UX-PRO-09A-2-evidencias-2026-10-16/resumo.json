@@ -1,0 +1,276 @@
+{
+  "schemaVersion": 1,
+  "task": "UX-PRO-09A-2 — reenvio de confirmação de e-mail",
+  "stage": "UX-PRO-09A-2",
+  "date": "2026-10-16",
+  "entries": [
+    {
+      "route": "/cliente/confirmar-email",
+      "viewport": "320x844",
+      "screenshot": "ux-pro-09a2-reenvio-falha-503-320-claro.png",
+      "firstFocus": false,
+      "percursoTeclado": [
+        "GRUPO SEG System",
+        "Sobre o portal",
+        "SEU E-MAIL",
+        "Pedir novo link de confirmação",
+        "Mensagem de erro",
+        "Pedir novo link de confirmação",
+        "SEU E-MAIL",
+        "Pedir novo link de confirmação"
+      ]
+    },
+    {
+      "route": "/cliente/confirmar-email",
+      "viewport": "390x844",
+      "screenshot": "ux-pro-09a2-reenvio-falha-503-390-claro.png",
+      "firstFocus": false,
+      "percursoTeclado": [
+        "GRUPO SEG System",
+        "Sobre o portal",
+        "SEU E-MAIL",
+        "Pedir novo link de confirmação",
+        "Mensagem de erro",
+        "Pedir novo link de confirmação",
+        "SEU E-MAIL",
+        "Pedir novo link de confirmação"
+      ]
+    },
+    {
+      "route": "/cliente/confirmar-email",
+      "viewport": "768x900",
+      "screenshot": "ux-pro-09a2-reenvio-falha-503-768-claro.png",
+      "firstFocus": false,
+      "percursoTeclado": [
+        "GRUPO SEG System",
+        "Sobre o portal",
+        "SEU E-MAIL",
+        "Pedir novo link de confirmação",
+        "Mensagem de erro",
+        "Pedir novo link de confirmação",
+        "SEU E-MAIL",
+        "Pedir novo link de confirmação"
+      ]
+    },
+    {
+      "route": "/cliente/confirmar-email",
+      "viewport": "1440x900",
+      "screenshot": "ux-pro-09a2-reenvio-falha-503-1440-claro.png",
+      "firstFocus": false,
+      "percursoTeclado": [
+        "GRUPO SEG System",
+        "Sobre o portal",
+        "SEU E-MAIL",
+        "Pedir novo link de confirmação",
+        "Mensagem de erro",
+        "Pedir novo link de confirmação",
+        "SEU E-MAIL",
+        "Pedir novo link de confirmação"
+      ]
+    }
+  ],
+  "baseSha": "c6682c11dd51fd98ceb480e59a2f8b5beafa5cfe",
+  "branch": "arena/ccb60b64-gruposegsystemseguranca",
+  "route": "/cliente/confirmar-email",
+  "role": "visitante anônimo; sem cookie ou sessão",
+  "routeHttpStatus": 200,
+  "apiHttp": [
+    {
+      "path": "/api/auth/confirm-email/resend",
+      "status": 503,
+      "source": "browser"
+    },
+    {
+      "path": "/api/auth/confirm-email/resend",
+      "status": 202,
+      "source": "browser"
+    },
+    {
+      "path": "/api/auth/confirm-email/resend",
+      "status": 202,
+      "source": "HTTP test client",
+      "case": "endereço elegível"
+    },
+    {
+      "path": "/api/auth/confirm-email/resend",
+      "status": 202,
+      "source": "HTTP test client",
+      "case": "endereço desconhecido"
+    },
+    {
+      "path": "/api/auth/confirm-email/resend",
+      "status": 202,
+      "source": "HTTP test client",
+      "case": "repetição dentro do intervalo mínimo"
+    },
+    {
+      "path": "/api/auth/confirm-email",
+      "statusesObserved": [],
+      "source": "browser",
+      "note": "sem token a página não consome link algum"
+    }
+  ],
+  "states": [
+    {
+      "name": "initial",
+      "screenshot": "ux-pro-09a2-reenvio-inicial-390-claro.png",
+      "invalidLinkAlertPreserved": true
+    },
+    {
+      "name": "loading",
+      "screenshot": "ux-pro-09a2-reenvio-enviando-390-claro.png",
+      "buttonDisabled": true
+    },
+    {
+      "name": "service_failure",
+      "httpStatus": 503,
+      "screenshot": [
+        "ux-pro-09a2-reenvio-falha-503-320-claro.png",
+        "ux-pro-09a2-reenvio-falha-503-390-claro.png",
+        "ux-pro-09a2-reenvio-falha-503-768-claro.png",
+        "ux-pro-09a2-reenvio-falha-503-1440-claro.png"
+      ],
+      "failureProducedIn": "PostgreSQL descartável (auditoria obrigatória recusada por trigger)",
+      "formRetainedForRetry": true,
+      "falseSuccessStatusShown": false,
+      "tokenEmitted": false,
+      "userMessage": "Não foi possível registrar o pedido de novo link. Tente novamente em instantes; por segurança, não confirmamos se o e-mail existe."
+    },
+    {
+      "name": "network_failure",
+      "screenshot": "ux-pro-09a2-reenvio-falha-rede-simulada-390-claro.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "horizontalOverflowPx": 0,
+      "simulatedFetchRejection": true,
+      "simulationDeclaredInEvidence": true,
+      "httpStatus": null,
+      "formRetainedForRetry": true,
+      "falseSuccessStatusShown": false,
+      "errorReceivesFocus": true,
+      "retryButtonEnabled": true,
+      "httpRequestIssued": false
+    },
+    {
+      "name": "success",
+      "httpStatus": 202,
+      "screenshot": "ux-pro-09a2-reenvio-sucesso-202-claro.png",
+      "genericMessageUnchangedForEligibleAndUnknownAddress": true,
+      "responseBodiesEqual": true,
+      "formReplacedByStatusMessageAsBefore": true
+    },
+    {
+      "name": "native_validation",
+      "malformedEmail": {
+        "typeMismatch": true,
+        "valueMissing": false
+      },
+      "emptyEmail": {
+        "typeMismatch": false,
+        "valueMissing": true
+      },
+      "httpRequestsBeforeValidSubmit": 0
+    }
+  ],
+  "keyboard": {
+    "focusOrder": [
+      "GRUPO SEG System",
+      "Sobre o portal",
+      "SEU E-MAIL",
+      "Pedir novo link de confirmação",
+      "Mensagem de erro",
+      "Pedir novo link de confirmação",
+      "SEU E-MAIL",
+      "Pedir novo link de confirmação"
+    ],
+    "errorReceivesFocus": true,
+    "errorFocusVisible": {
+      "outlineStyle": "solid",
+      "outlineWidth": "3px"
+    },
+    "errorInSequentialTabOrder": false,
+    "retryReachableByKeyboard": true
+  },
+  "theme": {
+    "mode": "light-default-only",
+    "themeTogglePresent": false,
+    "themeAttribute": null
+  },
+  "viewports": [
+    {
+      "viewport": {
+        "width": 320,
+        "height": 844
+      },
+      "horizontalOverflowPx": 0,
+      "focusedTarget": "Mensagem de erro",
+      "themeAttribute": null
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "horizontalOverflowPx": 0,
+      "focusedTarget": "Mensagem de erro",
+      "themeAttribute": null
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "horizontalOverflowPx": 0,
+      "focusedTarget": "Mensagem de erro",
+      "themeAttribute": null
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "horizontalOverflowPx": 0,
+      "focusedTarget": "Mensagem de erro",
+      "themeAttribute": null
+    }
+  ],
+  "tokensAndLimits": {
+    "confirmEmailTokensForEligibleAddress": 1,
+    "tokenStoredAsHashOnly": true,
+    "ttlHoursMeasured": 168,
+    "usedAt": null,
+    "supersededAt": null,
+    "allowedAuditRows": 1,
+    "tokensAfterImmediateRepeat": 1,
+    "throttledAuditRows": 1,
+    "throttledRepeatHttpStatus": 202,
+    "tokensForUnknownAddress": 0
+  },
+  "console": {
+    "errorCount": 2,
+    "expectedHttp503DiagnosticCount": 1,
+    "blockedExternalFontDiagnosticCount": 1,
+    "unexpectedErrorCount": 0,
+    "errors": [
+      {
+        "message": "Failed to load resource: net::ERR_CONNECTION_CLOSED",
+        "source": "https://fonts.googleapis.com/css2"
+      },
+      {
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+        "source": "http://127.0.0.1:3565/api/auth/confirm-email/resend"
+      }
+    ],
+    "pageErrorCount": 0
+  },
+  "limitations": [
+    "503 reproduzido por trigger no PostgreSQL temporário e descartável (auditoria obrigatória recusada, transação revertida); HTTP, servidor, rota e Chromium reais, sem mock da resposta HTTP. Separadamente, uma rejeição de fetch foi SIMULADA no navegador para cobrir falha de rede; não equivale a interromper o transporte real.",
+    "202 genérico exercitado no navegador e por HTTP para identidade sintética elegível e endereço desconhecido; os corpos são comparados em memória, não salvos. Nenhum hash, token ou link é gravado na evidência.",
+    "Limite de reenvio (5 por endereço em 24 h, intervalo mínimo de 2 min) verificado pela repetição imediata: 202 genérico, nenhum segundo link e auditoria denied/throttled. O teto de 5 em 24 h não foi percorrido por completo nesta subfatia; continua coberto pela regra pura em tests/client-auth-core.test.mjs.",
+    "Somente tema claro, o único oferecido por esta superfície. Sem SMTP/provedor real (MAIL_HOST vazio: nenhuma mensagem é entregue), sem sessão/cookie, sem dados reais, sem UAT, aceite humano ou alegação WCAG/produção.",
+    "A busca externa de Google Fonts foi bloqueada pelo sandbox (ERR_CONNECTION_CLOSED); o navegador usou fallback, sem erro de execução da página. O diagnóstico é separado do 503 reproduzido.",
+    "Overflow medido por viewport; esta subfatia altera somente o estado de falha do formulário de reenvio em /cliente/confirmar-email."
+  ]
+}
