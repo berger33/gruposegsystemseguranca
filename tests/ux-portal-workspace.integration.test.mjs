@@ -31,7 +31,7 @@ import pg from 'pg';
 import { chromium as playwrightChromium } from 'playwright';
 import packagedChromium from '@sparticuz/chromium';
 import { provisionStaff, STAFF_TEST_PASSWORD } from './helpers/staff-login.mjs';
-import { hashPassword } from '../src/lib/client-auth-core.mjs';
+import { hashToken, hashPassword } from '../src/lib/client-auth-core.mjs';
 
 const RUN = process.env.RUN_DATABASE_INTEGRATION === '1' && process.env.DATABASE_URL;
 const root = path.resolve(import.meta.dirname, '..');
@@ -1457,4 +1457,113 @@ test('browser: em 390px os dois portais não produzem transbordo horizontal', { 
     await capture(cliente, 'ux-06-cliente-390px');
     await clienteContexto.close();
   } finally { await browserCliente.close(); }
+});
+
+
+// G4: fixtures expiradas no banco descartável; não simula emissão nem resposta HTTP.
+test('browser: erro de link de redefinição não afirma prazo fixo para nenhuma origem', { skip: !RUN }, async () => {
+  const g4EvidenceDir = process.env.UX_PORTAL_G4_EVIDENCE_DIR || '';
+  const expected = 'Este link de redefinição não é mais válido. Ele tem prazo de validade, uso único e é substituído quando um novo é emitido. Peça outro link.';
+  const entries = [];
+  const observed = [];
+  const ids = [];
+  try {
+    for (const [origin, minutes] of [['recover', 60], ['manual_ti', 15]]) {
+      const identityId = randomUUID();
+      ids.push(identityId);
+      const raw = randomUUID() + randomUUID();
+      await pool.query(`INSERT INTO auth_identities(id,kind,email,display_name,status)
+        VALUES($1,'client',$2,'QA Sintético G4','active')`, [identityId, `g4-${identityId}@example.invalid`]);
+      await pool.query(`INSERT INTO auth_email_tokens(id,identity_id,kind,email,token_hash,created_at,expires_at)
+        VALUES($1,$2,'password_reset',$3,$4,NOW()-($5::int+1)*INTERVAL '1 minute',NOW()-INTERVAL '1 minute')`,
+      [randomUUID(), identityId, `g4-${identityId}@example.invalid`, hashToken(raw), minutes]);
+      const ttl = await pool.query(`SELECT EXTRACT(EPOCH FROM (expires_at-created_at))::int AS seconds
+        FROM auth_email_tokens WHERE identity_id=$1`, [identityId]);
+      assert.equal(ttl.rows[0].seconds, minutes * 60);
+      const browser = await launchBrowser();
+      try {
+        const { context, page, navigationResponse } = await openPage(browser, `/cliente/redefinir-senha?token=${raw}`, null);
+        assert.equal(navigationResponse.status(), 200);
+        await page.getByRole('heading', { name: 'Definir nova senha' }).waitFor();
+        await page.waitForLoadState('networkidle');
+        await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+        for (const [width, height] of [[320,844],[390,844],[768,900],[1440,900]]) {
+          await page.setViewportSize({ width, height });
+          const password = page.getByLabel('Nova senha', { exact: true });
+          const repeat = page.getByLabel('Repita a nova senha');
+          const button = page.getByRole('button', { name: 'Redefinir senha', exact: true });
+          // Percurso real além do primeiro Tab: campos -> envio -> erro -> repetição.
+          await password.focus();
+          const keyboard = [];
+          const recordFocus = async action => keyboard.push({ action, target: await page.evaluate(() => {
+            const e = document.activeElement;
+            if (e === document.body) return 'BODY (foco perdido ao desabilitar botão; comportamento anterior)';
+            return e?.id || e?.textContent?.trim().slice(0, 60) || e?.tagName;
+          }) });
+          await recordFocus('focus campo');
+          await password.fill('Frase sintetica para percurso G4!');
+          await page.keyboard.press('Tab');
+          await recordFocus('Tab');
+          assert.ok(await repeat.evaluate(e => e === document.activeElement));
+          await repeat.fill('Frase sintetica para percurso G4!');
+          await page.keyboard.press('Tab');
+          await recordFocus('Tab');
+          assert.ok(await button.evaluate(e => e === document.activeElement));
+          const submit = async () => {
+            const pending = page.waitForResponse(r => new URL(r.url()).pathname === '/api/auth/reset' && r.request().method() === 'POST');
+            await page.keyboard.press('Enter');
+            const response = await pending;
+            assert.equal(response.status(), 400);
+            assert.deepEqual(await response.json(), { error: 'reset_link_invalid' });
+            await page.locator('section[aria-labelledby="redefinir-title"] [role="alert"]').waitFor();
+            await button.waitFor({ state: 'visible' });
+            await page.waitForFunction(() => !document.querySelector('button[type="submit"]')?.disabled);
+          };
+          await submit();
+          await recordFocus('Enter / 400');
+          // A repetição mantém o comportamento existente do ResetForm, sem novo foco programático.
+          await page.keyboard.press('Shift+Tab');
+          await recordFocus('Shift+Tab');
+          assert.ok(await repeat.evaluate(e => e === document.activeElement));
+          await page.keyboard.press('Tab');
+          await recordFocus('Tab / repetir');
+          await submit();
+          await recordFocus('Enter / segundo 400');
+          observed.push(await page.locator('section[aria-labelledby="redefinir-title"] [role="alert"]').innerText());
+          assert.equal(await password.inputValue(), 'Frase sintetica para percurso G4!');
+          assert.equal(await repeat.inputValue(), 'Frase sintetica para percurso G4!');
+          await password.fill('');
+          await repeat.fill('');
+          // URL nunca entra na imagem ou no JSON. Campos limpos antes da captura.
+          const overflow = await page.evaluate(() => document.documentElement.scrollWidth-document.documentElement.clientWidth);
+          assert.ok(overflow <= 1, `G4: overflow ${overflow} em ${width}`);
+          const screenshot = `g4-${origin}-${width}-claro.png`;
+          if (g4EvidenceDir) {
+            await mkdir(g4EvidenceDir, { recursive: true });
+            await page.screenshot({ path: path.join(g4EvidenceDir, screenshot), fullPage: true });
+          }
+          entries.push({ route: '/cliente/redefinir-senha', origin, originalTtlSeconds: minutes*60,
+            fixture: 'token expirado inserido no PostgreSQL descartável; emissão não exercitada',
+            viewport: `${width}x${height}`, theme: 'claro (único suportado)', screenshot,
+            percursoTeclado: keyboard, overflow, routeHttpStatus: 200, resetHttpStatuses: [400,400] });
+        }
+        assert.deepEqual(await context.cookies(), []);
+        const unchanged = await pool.query(`SELECT used_at,superseded_at FROM auth_email_tokens WHERE identity_id=$1`, [identityId]);
+        assert.equal(unchanged.rows[0].used_at, null);
+        assert.equal(unchanged.rows[0].superseded_at, null);
+        await context.close();
+      } finally { await browser.close().catch(() => {}); }
+    }
+    if (g4EvidenceDir) await writeFile(path.join(g4EvidenceDir, 'resumo.json'), JSON.stringify({
+      schemaVersion: 1, stage: 'UX-PRO-09A-3', date: '2026-10-16',
+      baseSha: '091a878eb804720360c75f1b1d26bcf99ecb5233', entries,
+      messagesObserved: observed, simulatedFetchRejection: false, mockedHttp: false,
+      limitations: ['Fixtures de expiração, não emissão por SMTP/TI', 'Tema claro único',
+        'Sem aceite humano, WCAG, UAT ou produção; NO-GO', 'Campos limpos antes de capturar; foco do ResetForm não alterado'],
+    }, null, 2) + '\n');
+    assert.deepEqual(observed, Array(8).fill(expected));
+  } finally {
+    await pool.query('DELETE FROM auth_email_tokens WHERE identity_id=ANY($1::uuid[])', [ids]);
+    await pool.query('DELETE FROM auth_identities WHERE id=ANY($1::uuid[])', [ids]);
+  }
 });

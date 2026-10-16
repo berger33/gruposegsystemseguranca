@@ -1,0 +1,104 @@
+{
+  "pngCount": 16,
+  "before": 8,
+  "after": 8,
+  "checked": "PNG signature + IHDR; width asserted against filename; fullPage height recorded",
+  "files": [
+    {
+      "file": "antes/g4-manual_ti-1440-claro.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 75540
+    },
+    {
+      "file": "antes/g4-manual_ti-320-claro.png",
+      "width": 320,
+      "height": 850,
+      "bytes": 67227
+    },
+    {
+      "file": "antes/g4-manual_ti-390-claro.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 58469
+    },
+    {
+      "file": "antes/g4-manual_ti-768-claro.png",
+      "width": 768,
+      "height": 900,
+      "bytes": 72235
+    },
+    {
+      "file": "antes/g4-recover-1440-claro.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 75540
+    },
+    {
+      "file": "antes/g4-recover-320-claro.png",
+      "width": 320,
+      "height": 850,
+      "bytes": 67279
+    },
+    {
+      "file": "antes/g4-recover-390-claro.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 58469
+    },
+    {
+      "file": "antes/g4-recover-768-claro.png",
+      "width": 768,
+      "height": 900,
+      "bytes": 72235
+    },
+    {
+      "file": "g4-manual_ti-1440-claro.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 76308
+    },
+    {
+      "file": "g4-manual_ti-320-claro.png",
+      "width": 320,
+      "height": 850,
+      "bytes": 67283
+    },
+    {
+      "file": "g4-manual_ti-390-claro.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 59216
+    },
+    {
+      "file": "g4-manual_ti-768-claro.png",
+      "width": 768,
+      "height": 900,
+      "bytes": 72857
+    },
+    {
+      "file": "g4-recover-1440-claro.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 76239
+    },
+    {
+      "file": "g4-recover-320-claro.png",
+      "width": 320,
+      "height": 850,
+      "bytes": 67329
+    },
+    {
+      "file": "g4-recover-390-claro.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 59259
+    },
+    {
+      "file": "g4-recover-768-claro.png",
+      "width": 768,
+      "height": 900,
+      "bytes": 72845
+    }
+  ]
+}

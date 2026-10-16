@@ -9,7 +9,7 @@ import styles from "../RealAccess.module.css";
 
 // Dois modos em uma rota:
 // - sem ?token: pedido de recuperação (resposta sempre genérica, sem revelar se a conta existe);
-// - com ?token: definição da nova senha (link de uso único, válido por 1 hora).
+// - com ?token: definição da nova senha (link de uso único, com prazo definido na emissão).
 function PasswordRecoveryInner() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -139,7 +139,7 @@ function ResetForm({ token }: { token: string }) {
       const messages: Record<string, string> = {
         password_too_short: "A senha precisa ter pelo menos 12 caracteres.",
         password_common: "Essa senha é muito comum. Escolha uma frase-senha mais segura.",
-        reset_link_invalid: "Este link de redefinição não é mais válido. Ele vale 1 hora, tem uso único e é substituído quando um novo é emitido. Peça outro link.",
+        reset_link_invalid: "Este link de redefinição não é mais válido. Ele tem prazo de validade, uso único e é substituído quando um novo é emitido. Peça outro link.",
       };
       setError(messages[data.error] || "Não foi possível redefinir agora. Tente novamente mais tarde.");
     } catch {
