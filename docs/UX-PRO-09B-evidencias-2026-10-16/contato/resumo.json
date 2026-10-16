@@ -1,0 +1,1962 @@
+{
+  "stage": "ux-pro-09b",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "route": "/contato",
+  "limitations": [
+    "Chromium headless Linux; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09b",
+      "route": "/contato",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09B-evidencias-2026-10-16/contato/w320-day-contato.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Contato claro — PUB-02 / PUB-03"
+          },
+          {
+            "level": 2,
+            "text": "Assistente de dúvidas"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 2429,
+        "states": {
+          "loading": false,
+          "empty": true,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 26,
+          "resolvedCount": 10,
+          "indeterminateCount": 16,
+          "under45": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Enviar pedido (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Respostas baseadas apenas em conteúdo público aprovado.",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "label",
+              "text": "Pergunta para Assistente de dúvidas",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Entre 5 e 500 caracteres — o mesmo limite aceito pelo servidor. Pergun",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "input",
+        "text": "",
+        "outline": "auto"
+      },
+      "problems": [
+        "rolagem horizontal do documento: 343 > 320 (br@343px)"
+      ],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09b",
+      "route": "/contato",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09B-evidencias-2026-10-16/contato/w320-night-contato.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Contato claro — PUB-02 / PUB-03"
+          },
+          {
+            "level": 2,
+            "text": "Assistente de dúvidas"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 2429,
+        "states": {
+          "loading": false,
+          "empty": true,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 26,
+          "resolvedCount": 10,
+          "indeterminateCount": 16,
+          "under45": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Enviar pedido (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Respostas baseadas apenas em conteúdo público aprovado.",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "label",
+              "text": "Pergunta para Assistente de dúvidas",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Entre 5 e 500 caracteres — o mesmo limite aceito pelo servidor. Pergun",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "input",
+        "text": "",
+        "outline": "auto"
+      },
+      "problems": [
+        "rolagem horizontal do documento: 343 > 320 (br@343px)"
+      ],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09b",
+      "route": "/contato",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09B-evidencias-2026-10-16/contato/w390-day-contato.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Contato claro — PUB-02 / PUB-03"
+          },
+          {
+            "level": 2,
+            "text": "Assistente de dúvidas"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 2429,
+        "states": {
+          "loading": false,
+          "empty": true,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 26,
+          "resolvedCount": 10,
+          "indeterminateCount": 16,
+          "under45": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Enviar pedido (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Respostas baseadas apenas em conteúdo público aprovado.",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "label",
+              "text": "Pergunta para Assistente de dúvidas",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Entre 5 e 500 caracteres — o mesmo limite aceito pelo servidor. Pergun",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "input",
+        "text": "",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09b",
+      "route": "/contato",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09B-evidencias-2026-10-16/contato/w390-night-contato.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Contato claro — PUB-02 / PUB-03"
+          },
+          {
+            "level": 2,
+            "text": "Assistente de dúvidas"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 2429,
+        "states": {
+          "loading": false,
+          "empty": true,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 26,
+          "resolvedCount": 10,
+          "indeterminateCount": 16,
+          "under45": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Enviar pedido (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Respostas baseadas apenas em conteúdo público aprovado.",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "label",
+              "text": "Pergunta para Assistente de dúvidas",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Entre 5 e 500 caracteres — o mesmo limite aceito pelo servidor. Pergun",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "input",
+        "text": "",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09b",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09B-evidencias-2026-10-16/contato/w768-day-contato.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Contato claro — PUB-02 / PUB-03"
+          },
+          {
+            "level": 2,
+            "text": "Assistente de dúvidas"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 2429,
+        "states": {
+          "loading": false,
+          "empty": true,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 26,
+          "resolvedCount": 10,
+          "indeterminateCount": 16,
+          "under45": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Enviar pedido (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Respostas baseadas apenas em conteúdo público aprovado.",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "label",
+              "text": "Pergunta para Assistente de dúvidas",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Entre 5 e 500 caracteres — o mesmo limite aceito pelo servidor. Pergun",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "input",
+        "text": "",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09b",
+      "route": "/contato",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09B-evidencias-2026-10-16/contato/w768-night-contato.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Contato claro — PUB-02 / PUB-03"
+          },
+          {
+            "level": 2,
+            "text": "Assistente de dúvidas"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 2429,
+        "states": {
+          "loading": false,
+          "empty": true,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 26,
+          "resolvedCount": 10,
+          "indeterminateCount": 16,
+          "under45": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Enviar pedido (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Respostas baseadas apenas em conteúdo público aprovado.",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "label",
+              "text": "Pergunta para Assistente de dúvidas",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Entre 5 e 500 caracteres — o mesmo limite aceito pelo servidor. Pergun",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "input",
+        "text": "",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09b",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09B-evidencias-2026-10-16/contato/w1440-day-contato.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Contato claro — PUB-02 / PUB-03"
+          },
+          {
+            "level": 2,
+            "text": "Assistente de dúvidas"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 2429,
+        "states": {
+          "loading": false,
+          "empty": true,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 26,
+          "resolvedCount": 10,
+          "indeterminateCount": 16,
+          "under45": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Enviar pedido (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Respostas baseadas apenas em conteúdo público aprovado.",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "label",
+              "text": "Pergunta para Assistente de dúvidas",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Entre 5 e 500 caracteres — o mesmo limite aceito pelo servidor. Pergun",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "input",
+        "text": "",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09b",
+      "route": "/contato",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09B-evidencias-2026-10-16/contato/w1440-night-contato.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Contato claro — PUB-02 / PUB-03"
+          },
+          {
+            "level": 2,
+            "text": "Assistente de dúvidas"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 2429,
+        "states": {
+          "loading": false,
+          "empty": true,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 26,
+          "resolvedCount": 10,
+          "indeterminateCount": 16,
+          "under45": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "lowest": [
+            {
+              "tag": "h2",
+              "text": "Assistente de dúvidas",
+              "ratio": 3.35,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Quais serviços vocês oferecem?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Como solicitar orçamento?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Contato claro?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "FAQ por categoria?",
+              "ratio": 3.56,
+              "foreground": "rgb(234, 88, 12)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Perguntar à base PUBLICO",
+              "ratio": 3.56,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                234,
+                88,
+                12
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Enviar pedido (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Respostas baseadas apenas em conteúdo público aprovado.",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "label",
+              "text": "Pergunta para Assistente de dúvidas",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Entre 5 e 500 caracteres — o mesmo limite aceito pelo servidor. Pergun",
+              "ratio": 19.78,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                247,
+                237
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "input",
+        "text": "",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    }
+  ]
+}

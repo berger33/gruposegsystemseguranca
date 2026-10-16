@@ -285,6 +285,24 @@ const STAGES = {
       waitFor: 'Plano fictício publicado na evidência de continuidade',
     }],
   },
+  // UX-PRO-09B — diagnóstico visual público, sem sessão e sem alteração de produto.
+  'ux-pro-09b': {
+    outputDir: 'docs/UX-PRO-09B-evidencias-2026-10-16',
+    publicDiagnostic: true,
+    viewports: [320, 390, 768, 1440].flatMap(width => ['day', 'night'].map(theme => ({
+      name: `w${width}-${theme}`, width, height: width >= 768 ? (width === 768 ? 1024 : 900) : (width === 320 ? 780 : 844), theme,
+    }))),
+    targets: [
+      { route: '/', slug: 'home' }, { route: '/contato', slug: 'contato' },
+      { route: '/conteudos', slug: 'conteudos' }, { route: '/conteudos/diagnostico-sem-conteudo', slug: 'conteudo-dinamico' },
+      { route: '/faq', slug: 'faq' }, { route: '/orcamento', slug: 'orcamento' },
+      { route: '/pacotes', slug: 'pacotes' }, { route: '/privacidade', slug: 'privacidade' },
+      { route: '/proposta/aceite/diagnostico-token-invalido', slug: 'aceite-token-sintetico-invalido' },
+      { route: '/segmentos', slug: 'segmentos' }, { route: '/segmentos/condominio', slug: 'segmento-condominio' },
+      { route: '/servicos', slug: 'servicos' }, { route: '/servicos/Segurança%20Desarmada', slug: 'servico-seguranca-desarmada' },
+      { route: '/simulador', slug: 'simulador' },
+    ].map(target => ({ ...target, outputDir: `docs/UX-PRO-09B-evidencias-2026-10-16/${target.slug}` })),
+  },
   // UX-PRO-08C — aparência do site e prévias: painel TI, prévia comparada,
   // prévia individual e parâmetro inválido. A faixa "Prévia interna"
   // (SitePreviewNotice) é o marco visual esperado nas três últimas.
@@ -482,6 +500,7 @@ try {
   const cookieByRole = new Map();
   const cookieByTarget = new Map();
   for (const target of plan.targets) {
+    if (plan.publicDiagnostic) continue;
     if (target.clientContinuity) {
       cookieByTarget.set(target.slug, await prepareClientContinuityTarget());
       continue;
@@ -518,10 +537,10 @@ try {
         const context = await browser.newContext({
           viewport: { width: viewport.width, height: viewport.height },
           locale: 'pt-BR',
-          ...(viewport.theme ? { colorScheme: viewport.theme === 'escuro' ? 'dark' : 'light' } : {}),
+          ...(viewport.theme ? { colorScheme: ['escuro', 'night'].includes(viewport.theme) ? 'dark' : 'light' } : {}),
           ...(target.timezoneId ? { timezoneId: target.timezoneId } : {}),
         });
-        if (viewport.theme) await context.addInitScript(theme => {
+        if (viewport.theme && !plan.publicDiagnostic) await context.addInitScript(theme => {
           localStorage.setItem('seg-color-mode', theme);
           localStorage.setItem('segsystem.admin.appearance.v1', theme === 'escuro' ? 'night' : 'day');
           document.addEventListener('DOMContentLoaded', () => {
@@ -530,10 +549,12 @@ try {
           }, { once: true });
         }, viewport.theme);
         const cookie = cookieByTarget.get(target.slug) || cookieByRole.get(target.role);
-        if (!cookie) throw new Error(`capture_cookie_missing_${target.slug}`);
-        const pair = cookie.split('; ')[0];
-        const separator = pair.indexOf('=');
-        await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+        if (!plan.publicDiagnostic) {
+          if (!cookie) throw new Error(`capture_cookie_missing_${target.slug}`);
+          const pair = cookie.split('; ')[0];
+          const separator = pair.indexOf('=');
+          await context.addCookies([{ name: pair.slice(0, separator), value: pair.slice(separator + 1), url: baseUrl }]);
+        }
         const page = await context.newPage();
         const startedAt = Date.now();
         console.log(`UX_EVIDENCE_CAPTURING ${target.route} ${viewport.name}`);
@@ -562,8 +583,10 @@ try {
           else externalBlocked.push(`recurso externo bloqueado: ${entry}`);
         });
 
+        let navigationStatus = null;
         try {
-          await page.goto(`${baseUrl}${target.route}`, { waitUntil: 'domcontentloaded' });
+          const response = await page.goto(`${baseUrl}${target.route}`, { waitUntil: 'domcontentloaded' });
+          navigationStatus = response?.status() ?? null;
         } catch (cause) {
           problems.push(`navegação falhou: ${String(cause?.message || cause).slice(0, 120)}`);
         }
@@ -575,8 +598,8 @@ try {
             problems.push(`texto esperado ausente: ${target.waitFor}`);
           });
         }
-        await page.waitForLoadState('networkidle', { timeout: 20_000 }).catch(() => {});
-        await page.waitForTimeout(600);
+        await page.waitForLoadState('networkidle', { timeout: plan.publicDiagnostic ? 3_000 : 20_000 }).catch(() => {});
+        await page.waitForTimeout(plan.publicDiagnostic ? 250 : 600);
 
         const overflow = await page.evaluate(() => ({
           scrollWidth: document.documentElement.scrollWidth,
@@ -620,6 +643,34 @@ try {
         });
         if (!focus) problems.push('Tab não moveu o foco para nenhum elemento');
 
+        const publicAudit = plan.publicDiagnostic ? await page.evaluate(() => {
+          const visible = el => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none'; };
+          const color = value => { const m = value.match(/[\d.]+/g); return m && m.length >= 3 ? {rgb:m.slice(0,3).map(Number), alpha:m.length > 3 ? Number(m[3]) : 1} : null; };
+          const luminance = c => { const v = c.map(x => { x /= 255; return x <= .04045 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4; }); return .2126*v[0]+.7152*v[1]+.0722*v[2]; };
+          const composite = (front, back, alpha) => front.map((x,i) => x*alpha+back[i]*(1-alpha));
+          const ratios = [];
+          for (const el of document.querySelectorAll('h1,h2,h3,p,a,button,label,li')) {
+            if (!visible(el) || !(el.textContent || '').trim()) continue;
+            const st = getComputedStyle(el), fg = color(st.color);
+            if (!fg || Number(st.opacity) < .1) continue;
+            let bg = [255,255,255], node = el, bgFound = false, complexBackground = false;
+            const layers = [];
+            while (node && node.nodeType === 1) { layers.push(node); node = node.parentElement; }
+            for (const layer of layers.reverse()) {
+              const nodeStyle = getComputedStyle(layer);
+              if (nodeStyle.backgroundImage !== 'none') complexBackground = true;
+              const candidate = color(nodeStyle.backgroundColor);
+              if (candidate && candidate.alpha > 0) { bg = composite(candidate.rgb, bg, candidate.alpha); bgFound ||= candidate.alpha === 1; }
+            }
+            const resolved = bgFound && !complexBackground;
+            const finalFg = composite(fg.rgb, bg, fg.alpha), L1 = luminance(finalFg), L2 = luminance(bg);
+            ratios.push({tag:el.tagName.toLowerCase(), text:(el.textContent||'').trim().replace(/\s+/g,' ').slice(0,70), ratio:resolved ? Math.round((Math.max(L1,L2)+.05)/(Math.min(L1,L2)+.05)*100)/100 : null, foreground:st.color, background:resolved ? bg.map(Math.round) : 'complex/indeterminate', backgroundResolved:resolved});
+          }
+          const text = (document.body?.innerText || '').slice(0,12000);
+          const headings = [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].filter(visible).map(e=>({level:Number(e.tagName.slice(1)),text:(e.innerText||'').trim().slice(0,120)}));
+          const landmarks = [...document.querySelectorAll('main,nav,header,footer,[role=main],[role=navigation]')].filter(visible).map(e=>e.tagName.toLowerCase()+(e.getAttribute('aria-label') ? `[aria-label=${e.getAttribute('aria-label')}]` : ''));
+          return {title:document.title, headings, landmarks, visibleTextLength:text.trim().length, states:{loading:/carregando|loading/i.test(text),empty:/nenhum(a)? .*encontrad|sem .*publicad|nenhum conteúdo|nenhum resultado/i.test(text),failure:/erro ao|falha ao|indisponível|não foi possível/i.test(text)}, contrast:{sampleCount:ratios.length,resolvedCount:ratios.filter(x=>x.ratio!==null).length,indeterminateCount:ratios.filter(x=>x.ratio===null).length,under45:ratios.filter(x=>x.ratio!==null && x.ratio<4.5).slice(0,30),lowest:ratios.filter(x=>x.ratio!==null).sort((a,b)=>a.ratio-b.ratio).slice(0,10)}, focusables:document.querySelectorAll('a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])').length};
+        }) : null;
         const measurements = plan.measurements ? {
           ...await measureKeyboard(page, target),
           theme: await measureTheme(page, target, viewport.theme),
@@ -636,13 +687,14 @@ try {
           viewport: `${viewport.width}x${viewport.height}`,
           screenshot: path.relative(root, file),
           gateEvidence: target.gateEvidence || null,
+          ...(plan.publicDiagnostic ? { navigationStatus, theme: viewport.theme, audit: publicAudit } : {}),
           firstFocus: focus,
           ...measurements,
           problems,
           externalBlocked,
         });
         console.log(`UX_EVIDENCE_CAPTURED ${target.route} ${viewport.name} em ${Math.round((Date.now() - startedAt) / 1000)}s`);
-        if (problems.length) exitCode = 1;
+        if (problems.length && !plan.publicDiagnostic) exitCode = 1;
         await context.close();
       } finally {
         await browser.close();
@@ -651,7 +703,7 @@ try {
   }
 
   // A 08D complementa, nunca sobrescreve evidências/metadados das 08A/B/C.
-  const directories = plan.measurements
+  const directories = plan.measurements || plan.publicDiagnostic
     ? [...new Set(plan.targets.map(target => target.outputDir))]
     : [plan.outputDir];
   for (const directory of directories) {
@@ -662,6 +714,15 @@ try {
       ...previous,
       measurements08d: { stage, generatedBy: 'scripts/ux-evidence-capture.mjs', baseMain: '3d807a420db6c63c3f754ae02144053e29da1469', date: new Date().toISOString().slice(0, 10) },
       entries: [...(previous.entries || []).filter(entry => entry.stage !== stage), ...entries],
+    } : plan.publicDiagnostic ? {
+      stage, generatedBy: 'scripts/ux-evidence-capture.mjs', route: entries[0]?.route || null,
+      limitations: [
+        'Chromium headless Linux; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.',
+        'Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.',
+        'Rede externa bloqueada no sandbox; recursos externos podem divergir.',
+        'Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.',
+        'Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real.',
+      ], entries,
     } : { stage, generatedBy: 'scripts/ux-evidence-capture.mjs', entries };
     await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
     console.log(`UX_EVIDENCE_SUMMARY: ${path.relative(root, summaryPath)}`);

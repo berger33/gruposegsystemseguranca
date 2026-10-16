@@ -1,0 +1,766 @@
+{
+  "stage": "ux-pro-09b",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "route": "/privacidade",
+  "limitations": [
+    "Chromium headless Linux; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09b",
+      "route": "/privacidade",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09B-evidencias-2026-10-16/privacidade/w320-day-privacidade.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Privacidade — minuta para revisão"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 521,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 4,
+          "resolvedCount": 4,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "contato",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09b",
+      "route": "/privacidade",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09B-evidencias-2026-10-16/privacidade/w320-night-privacidade.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Privacidade — minuta para revisão"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 521,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 4,
+          "resolvedCount": 4,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "contato",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09b",
+      "route": "/privacidade",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09B-evidencias-2026-10-16/privacidade/w390-day-privacidade.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Privacidade — minuta para revisão"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 521,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 4,
+          "resolvedCount": 4,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "contato",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09b",
+      "route": "/privacidade",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09B-evidencias-2026-10-16/privacidade/w390-night-privacidade.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Privacidade — minuta para revisão"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 521,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 4,
+          "resolvedCount": 4,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "contato",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09b",
+      "route": "/privacidade",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09B-evidencias-2026-10-16/privacidade/w768-day-privacidade.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Privacidade — minuta para revisão"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 521,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 4,
+          "resolvedCount": 4,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "contato",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09b",
+      "route": "/privacidade",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09B-evidencias-2026-10-16/privacidade/w768-night-privacidade.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Privacidade — minuta para revisão"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 521,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 4,
+          "resolvedCount": 4,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "contato",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09b",
+      "route": "/privacidade",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09B-evidencias-2026-10-16/privacidade/w1440-day-privacidade.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Privacidade — minuta para revisão"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 521,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 4,
+          "resolvedCount": 4,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "contato",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09b",
+      "route": "/privacidade",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09B-evidencias-2026-10-16/privacidade/w1440-night-privacidade.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Privacidade — minuta para revisão"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 521,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 4,
+          "resolvedCount": 4,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "contato",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    }
+  ]
+}
