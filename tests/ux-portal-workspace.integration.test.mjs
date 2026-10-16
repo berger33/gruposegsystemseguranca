@@ -2536,3 +2536,289 @@ test('browser: /cliente/app/seguranca descreve falhas e sucessos sem mentir (ID1
   assert.deepEqual(c.unhandled, [],
     `ID1c: nenhuma rejeição não tratada é aceita; veio ${JSON.stringify(c.unhandled)}`);
 });
+
+// ============================================================================
+// UX-PRO-09D (ID6) — contrato de erro do POST /api/client/security/email-change.
+//
+// Registrado como resíduo ID6 na UX-PRO-09C: as recusas de regra de negócio
+// lançadas com status explícito DENTRO da transação (email_change_pending e
+// email_already_in_use, {status: 409}) colapsavam em 503 security_unavailable,
+// porque o catch de handleEmailChangeRequest não tinha o ramo `if(e?.status)`
+// que os handlers irmãos (setup/activate/disable/confirm) têm. Medido no
+// cenário ID1d da 09C (HTTP real): segundo pedido → 503.
+//
+// O proprietário AUTORIZOU explicitamente a mudança de contrato nesta sessão
+// (16/10/2026): o endpoint passa a honrar o 409 pretendido. Este gate mede e
+// asseriona o novo contrato EXATAMENTE — sem afrouxar nenhuma asserção:
+//   ID6a — segundo pedido com pendente real → 409 email_change_pending (servidor
+//          real, sem injeção); a UI nomeia o motivo e o banco comprova a
+//          rejeição transacional (exatamente 1 linha pendente, sem duplicata);
+//   ID6b — pedido para e-mail de outra conta → 409 email_already_in_use
+//          (servidor real, sem injeção); o e-mail do dono permanece intacto;
+//   ID6c — indisponibilidade real continua descrita com honestidade:
+//          503 security_unavailable injetado APENAS em window.fetch (mesmo
+//          padrão declarado dos ID1a/ID1f da 09C) — a UI não pode voltar a
+//          mentir "erro de conexão".
+//
+// A evidência é gravada ANTES das asserções: a execução RED, com o servidor
+// ainda não corrigido, preserva o "antes" (503 medido) na pasta indicada por
+// UX_PORTAL_09D_EVIDENCE_DIR; a execução GREEN, com o reparo, grava o "depois".
+// Nenhum servidor é enfraquecido; nenhuma senha, token ou cookie entra em
+// PNG ou JSON.
+test('browser: email-change honra os 409 do contrato e descreve o 503 sem mentir (ID6 — UX-PRO-09D)', { skip: !RUN }, async () => {
+  const evidenceDir = process.env.UX_PORTAL_09D_EVIDENCE_DIR || '';
+  const suffix = randomUUID().slice(0, 8);
+  const entries = [];
+  const identities = [];
+  const windowFetchInjection = [];
+
+  async function makeClient(label) {
+    const email = `09d-${label}-${suffix}@exemplo.invalid`;
+    const password = `Cliente-${randomUUID()}!`;
+    const identityId = randomUUID();
+    await pool.query(
+      `INSERT INTO auth_identities (id, kind, email, display_name, status, verification_method, verified_at)
+       VALUES ($1,'client',$2,$3,'active','email_link',NOW())`,
+      [identityId, email, `Cliente Sintetico 09D ${label} ${suffix}`],
+    );
+    await pool.query('INSERT INTO auth_credentials (identity_id, password_hash) VALUES ($1,$2)',
+      [identityId, await hashPassword(password)]);
+    const login = await api('/api/auth/login', { method: 'POST', body: { email, password } });
+    assert.equal(login.status, 200, `login 09D/${label} deveria ser 200, veio ${login.status} ${JSON.stringify(login.body)}`);
+    const cookie = login.setCookie.map(item => item.split(';')[0]).join('; ');
+    assert.ok(cookie, `o login 09D/${label} precisa emitir cookie de sessão`);
+    identities.push(identityId);
+    return { identityId, email, password, cookie };
+  }
+
+  /**
+   * Sonda de rejeições não tratadas, com opcional injeção de falha APENAS no
+   * método POST de email-change (para medir o caminho de indisponibilidade sem
+   * enfraquecer o servidor — resposta sintética em window.fetch, declarada no
+   * resumo). Nada de outro endpoint é tocado.
+   */
+  async function installProbe(page, { failEmailChangePost = false } = {}) {
+    await page.addInitScript(inject => {
+      window.__ux09d = { unhandled: [], injections: [] };
+      window.addEventListener('unhandledrejection', event => {
+        window.__ux09d.unhandled.push(String(event.reason?.message || event.reason));
+      });
+      if (inject.failEmailChangePost) {
+        const original = window.fetch.bind(window);
+        window.fetch = (input, init) => {
+          const url = typeof input === 'string' ? input : (input?.url || '');
+          const method = ((init && init.method) || 'GET').toUpperCase();
+          if (method === 'POST' && url.includes('/api/client/security/email-change')) {
+            window.__ux09d.injections.push('POST /api/client/security/email-change → 503 security_unavailable');
+            return Promise.resolve(new Response(JSON.stringify({ error: 'security_unavailable' }),
+              { status: 503, headers: { 'content-type': 'application/json' } }));
+          }
+          return original(input, init);
+        };
+      }
+    }, { failEmailChangePost });
+  }
+
+  async function readState(page) {
+    return page.evaluate(() => ({
+      notices: [...document.querySelectorAll('p[role="status"], p[role="alert"]')]
+        .map(node => node.textContent.trim()).filter(Boolean),
+      unhandled: (window.__ux09d && window.__ux09d.unhandled) || [],
+      injections: (window.__ux09d && window.__ux09d.injections) || [],
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    }));
+  }
+
+  async function snap(page, scenarioId, viewport) {
+    if (!evidenceDir) return;
+    await mkdir(evidenceDir, { recursive: true });
+    await page.screenshot({ path: path.join(evidenceDir, `ux-pro-09d-${scenarioId}-${viewport}.png`), fullPage: true });
+  }
+
+  try {
+    // --- ID6a: segundo pedido com pendente real → 409 email_change_pending ---
+    {
+      const client = await makeClient('a');
+      const pendingEmail = `09d-pendente-${suffix}@exemplo.invalid`;
+      const first = await api('/api/client/security/email-change', {
+        method: 'POST', cookie: client.cookie, body: { newEmail: pendingEmail } });
+      assert.equal(first.status, 202, `o pedido inicial de troca deveria ser 202, veio ${first.status}`);
+      const browser = await launchBrowser();
+      try {
+        const { context, page, navigationResponse } = await openPage(browser, '/cliente/app/seguranca', client.cookie,
+          { width: 390, height: 844, onPage: installProbe });
+        assert.equal(navigationResponse.status(), 200, 'a área protegida deveria responder 200');
+        await page.getByRole('heading', { name: 'Trocar e-mail' }).waitFor();
+        await page.getByLabel('Novo e-mail', { exact: true }).fill(`09d-outro-${randomUUID().slice(0, 8)}@exemplo.invalid`);
+        const postPending = page.waitForResponse(response =>
+          response.url().includes('/api/client/security/email-change') && response.request().method() === 'POST');
+        await page.getByRole('button', { name: 'Solicitar troca', exact: true }).click();
+        const refused = await postPending;
+        const refusedBody = await refused.json().catch(() => null);
+        await page.locator('p[role="status"]').first().waitFor({ timeout: 30_000 });
+        const state = await readState(page);
+        const pendingRows = await pool.query(
+          'SELECT count(*) AS n FROM auth_email_change WHERE identity_id=$1 AND used_at IS NULL AND cancelled_at IS NULL AND expires_at>NOW()',
+          [client.identityId]);
+        state.pendingRows = Number(pendingRows.rows[0].n);
+        await snap(page, 'id6a-segundo-pedido-409', '390');
+        entries.push({
+          scenario: `ID6a — segundo pedido com pendente real (HTTP ${refused.status()} real, code ${refusedBody?.error ?? 'sem corpo'})`,
+          route: '/cliente/app/seguranca', viewport: '390x844', theme: 'claro (único suportado)',
+          screenshot: 'ux-pro-09d-id6a-segundo-pedido-409-390.png',
+          httpStatus: refused.status(), serverCode: refusedBody?.error ?? null, ...state,
+        });
+        await context.close();
+      } finally { await browser.close().catch(() => {}); }
+    }
+
+    // --- ID6b: pedido para e-mail de outra conta → 409 email_already_in_use --
+    {
+      const owner = await makeClient('b-owner');
+      const requester = await makeClient('b-req');
+      const browser = await launchBrowser();
+      try {
+        const { context, page, navigationResponse } = await openPage(browser, '/cliente/app/seguranca', requester.cookie,
+          { width: 390, height: 844, onPage: installProbe });
+        assert.equal(navigationResponse.status(), 200, 'a área protegida deveria responder 200');
+        await page.getByRole('heading', { name: 'Trocar e-mail' }).waitFor();
+        await page.getByLabel('Novo e-mail', { exact: true }).fill(owner.email);
+        const postBusy = page.waitForResponse(response =>
+          response.url().includes('/api/client/security/email-change') && response.request().method() === 'POST');
+        await page.getByRole('button', { name: 'Solicitar troca', exact: true }).click();
+        const refused = await postBusy;
+        const refusedBody = await refused.json().catch(() => null);
+        await page.locator('p[role="status"]').first().waitFor({ timeout: 30_000 });
+        const state = await readState(page);
+        const ownerRow = (await pool.query('SELECT email FROM auth_identities WHERE id=$1', [owner.identityId])).rows[0];
+        const requesterRows = (await pool.query(
+          'SELECT count(*) AS n FROM auth_email_change WHERE identity_id=$1', [requester.identityId])).rows[0];
+        state.ownerEmailUntouched = ownerRow.email === owner.email;
+        state.requesterPendingRows = Number(requesterRows.n);
+        await snap(page, 'id6b-email-em-uso-409', '390');
+        entries.push({
+          scenario: `ID6b — pedido para e-mail de outra conta (HTTP ${refused.status()} real, code ${refusedBody?.error ?? 'sem corpo'})`,
+          route: '/cliente/app/seguranca', viewport: '390x844', theme: 'claro (único suportado)',
+          screenshot: 'ux-pro-09d-id6b-email-em-uso-409-390.png',
+          httpStatus: refused.status(), serverCode: refusedBody?.error ?? null, ...state,
+        });
+        await context.close();
+      } finally { await browser.close().catch(() => {}); }
+    }
+
+    // --- ID6c: indisponibilidade real (503) descrita com honestidade --------
+    // A resposta 503 é SINTÉTICA e existe apenas em window.fetch (nenhum
+    // pacote chega ao servidor): serve para garantir que o caminho de
+    // indisponibilidade continua descrito sem voltar a "erro de conexão".
+    {
+      const client = await makeClient('c');
+      windowFetchInjection.push('POST /api/client/security/email-change → 503 security_unavailable (somente window.fetch)');
+      const browser = await launchBrowser();
+      try {
+        const { context, page, navigationResponse } = await openPage(browser, '/cliente/app/seguranca', client.cookie, {
+          width: 390, height: 844,
+          onPage: pageArg => installProbe(pageArg, { failEmailChangePost: true }),
+        });
+        assert.equal(navigationResponse.status(), 200, 'a área protegida deveria responder 200');
+        await page.getByRole('heading', { name: 'Trocar e-mail' }).waitFor();
+        await page.getByLabel('Novo e-mail', { exact: true }).fill(`09d-c-${suffix}@exemplo.invalid`);
+        await page.getByRole('button', { name: 'Solicitar troca', exact: true }).click();
+        await page.locator('p[role="status"]').first().waitFor({ timeout: 30_000 });
+        await page.waitForTimeout(600);
+        const state = await readState(page);
+        assert.ok(state.injections.some(item => item.startsWith('POST /api/client/security/email-change')),
+          `a injeção de falha no POST de email-change precisa ter disparado; veio ${JSON.stringify(state.injections)}`);
+        await snap(page, 'id6c-indisponivel-503', '390');
+        entries.push({
+          scenario: 'ID6c — indisponibilidade do serviço (503 security_unavailable injetado em window.fetch)',
+          route: '/cliente/app/seguranca', viewport: '390x844', theme: 'claro (único suportado)',
+          screenshot: 'ux-pro-09d-id6c-indisponivel-503-390.png', httpStatus: 503, ...state,
+        });
+        await context.close();
+      } finally { await browser.close().catch(() => {}); }
+    }
+  } finally {
+    // Evidência gravada ANTES das asserções: a execução RED preserva o "antes".
+    if (evidenceDir) {
+      await mkdir(evidenceDir, { recursive: true });
+      await writeFile(path.join(evidenceDir, 'resumo.json'), `${JSON.stringify({
+        schemaVersion: 1, stage: 'UX-PRO-09D', date: '2026-10-16', gap: 'ID6',
+        route: '/cliente/app/seguranca',
+        authorization: 'mudança de contrato autorizada explicitamente pelo proprietário em 2026-10-16 (resíduo ID6 da UX-PRO-09C); antes do reparo o 409 pretendido colapsava em 503 security_unavailable, medido no ID1d da 09C',
+        entries,
+        windowFetchInjection,
+        realHttpRefusals: [
+          '202 (pedido inicial de troca — caminho feliz, real)',
+          'recusa real do segundo pedido com pendente (HTTP medido: 409 email_change_pending após o reparo; 503 security_unavailable antes)',
+          'recusa real de e-mail de outra conta (HTTP medido: 409 email_already_in_use após o reparo; 503 security_unavailable antes)',
+        ],
+        serverIntegrity: 'apenas o status/código de erro das recusas de regra de negócio do POST /api/client/security/email-change muda (503 → 409 com código canônico, mesmo formato de corpo); sessões, cookies, MFA, rate limit, auditoria, grants e isolamento intactos',
+        limitations: [
+          'Capturas no Chromium empacotado em Linux, tema claro (único suportado na área do cliente)',
+          'Identidades, sessões e endereços sintéticos em PostgreSQL descartável; nada é versionado com senha ou token',
+          'ID6c usa resposta sintética em window.fetch (sem tráfego real) para cobrir o caminho de indisponibilidade; ID6a/ID6b usam HTTP real do servidor',
+          'Sem leitores de tela, zoom 200%, Windows ou outros navegadores',
+          'Sem aceite humano, UAT, certificação WCAG ou produção; NO-GO',
+        ],
+      }, null, 2)}\n`, 'utf8');
+    }
+    // Limpeza real das identidades sintéticas desta fatia.
+    for (const identityId of identities) {
+      await pool.query('DELETE FROM auth_access_audit WHERE actor_id=$1', [identityId]).catch(() => {});
+      await pool.query('DELETE FROM auth_sessions WHERE identity_id=$1', [identityId]).catch(() => {});
+      await pool.query('DELETE FROM auth_email_change WHERE identity_id=$1', [identityId]).catch(() => {});
+      await pool.query('DELETE FROM auth_credentials WHERE identity_id=$1', [identityId]).catch(() => {});
+      await pool.query('DELETE FROM auth_identities WHERE id=$1', [identityId]).catch(() => {});
+    }
+    await pool.query(`DELETE FROM local_outbox_messages WHERE recipient_address LIKE '09d-%'`).catch(() => {});
+  }
+
+  // ---- Asserções de contrato (a execução RED falha AQUI, depois de gravar) ----
+  const pick = scenarioId => {
+    const entry = entries.find(item => item.scenario.startsWith(scenarioId));
+    assert.ok(entry, `o cenário ${scenarioId} precisa ter rodado`);
+    assert.ok(!entry.error, `${scenarioId}: ${entry.error || 'sem erro de execução'}`);
+    return entry;
+  };
+
+  const a = pick('ID6a');
+  assert.equal(a.httpStatus, 409,
+    `ID6a: o contrato corrigido precisa recusar o segundo pedido com pendente real com 409; veio ${a.httpStatus}`);
+  assert.equal(a.serverCode, 'email_change_pending',
+    `ID6a: o corpo precisa trazer o código canônico email_change_pending; veio ${a.serverCode}`);
+  assert.equal(a.pendingRows, 1,
+    `ID6a: a recusa é transacional — exatamente 1 linha pendente no banco; veio ${a.pendingRows}`);
+  assert.ok(a.notices.join(' '), 'ID6a: a recusa real do servidor precisa produzir um aviso visível');
+  assert.match(a.notices.join(' '), /andamento|em uso|diferente/i,
+    `ID6a: o aviso precisa nomear o motivo (troca em andamento); veio "${a.notices.join(' | ')}"`);
+  assert.doesNotMatch(a.notices.join(' '), /conex/i,
+    `ID6a: recusa real do servidor não pode aparecer como erro de conexão; veio "${a.notices.join(' | ')}"`);
+  assert.deepEqual(a.unhandled, [],
+    `ID6a: nenhuma rejeição não tratada é aceita; veio ${JSON.stringify(a.unhandled)}`);
+
+  const b = pick('ID6b');
+  assert.equal(b.httpStatus, 409,
+    `ID6b: o contrato corrigido precisa recusar e-mail de outra conta com 409; veio ${b.httpStatus}`);
+  assert.equal(b.serverCode, 'email_already_in_use',
+    `ID6b: o corpo precisa trazer o código canônico email_already_in_use; veio ${b.serverCode}`);
+  assert.ok(b.ownerEmailUntouched, 'ID6b: o e-mail da outra conta precisa permanecer intacto');
+  assert.equal(b.requesterPendingRows, 0,
+    `ID6b: a recusa é transacional — nenhum pedido novo gravado; veio ${b.requesterPendingRows}`);
+  assert.ok(b.notices.join(' '), 'ID6b: a recusa real do servidor precisa produzir um aviso visível');
+  assert.match(b.notices.join(' '), /já pertence a outra conta|em uso/i,
+    `ID6b: o aviso precisa nomear o motivo (e-mail em uso); veio "${b.notices.join(' | ')}"`);
+  assert.doesNotMatch(b.notices.join(' '), /conex/i,
+    `ID6b: recusa real do servidor não pode aparecer como erro de conexão; veio "${b.notices.join(' | ')}"`);
+  assert.deepEqual(b.unhandled, [],
+    `ID6b: nenhuma rejeição não tratada é aceita; veio ${JSON.stringify(b.unhandled)}`);
+
+  const c = pick('ID6c');
+  assert.equal(c.httpStatus, 503, `ID6c: o cenário de indisponibilidade mede 503; veio ${c.httpStatus}`);
+  assert.ok(c.notices.join(' '), 'ID6c: a indisponibilidade precisa produzir um aviso visível');
+  assert.match(c.notices.join(' '), /indisponível|HTTP 503/i,
+    `ID6c: o aviso precisa nomear a indisponibilidade real; veio "${c.notices.join(' | ')}"`);
+  assert.doesNotMatch(c.notices.join(' '), /conex/i,
+    `ID6c: indisponibilidade não pode aparecer como erro de conexão; veio "${c.notices.join(' | ')}"`);
+  assert.deepEqual(c.unhandled, [],
+    `ID6c: nenhuma rejeição não tratada é aceita; veio ${JSON.stringify(c.unhandled)}`);
+});
