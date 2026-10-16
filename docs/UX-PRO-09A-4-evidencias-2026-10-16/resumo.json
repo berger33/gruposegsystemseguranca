@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "stage": "UX-PRO-09A-4",
+  "date": "2026-10-16",
+  "gap": "G3",
+  "route": "/cliente/app/seguranca",
+  "entries": [
+    {
+      "route": "/cliente/app/seguranca",
+      "role": "cliente autenticado (sessão sintética)",
+      "viewport": "320x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09a4-troca-email-320-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus campo novo e-mail",
+          "target": "new-email"
+        },
+        {
+          "action": "Tab",
+          "target": "Solicitar troca"
+        },
+        {
+          "action": "Tab",
+          "target": "email-token"
+        },
+        {
+          "action": "Tab",
+          "target": "Confirmar troca"
+        },
+        {
+          "action": "Shift+Tab",
+          "target": "email-token"
+        }
+      ],
+      "labels": [
+        "Novo e-mail",
+        "Token da URL manual"
+      ],
+      "overflow": 0,
+      "routeHttpStatus": 200,
+      "camposNasCapturas": "vazios (token não exibido)"
+    },
+    {
+      "route": "/cliente/app/seguranca",
+      "role": "cliente autenticado (sessão sintética)",
+      "viewport": "390x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09a4-troca-email-390-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus campo novo e-mail",
+          "target": "new-email"
+        },
+        {
+          "action": "Tab",
+          "target": "Solicitar troca"
+        },
+        {
+          "action": "Tab",
+          "target": "email-token"
+        },
+        {
+          "action": "Tab",
+          "target": "Confirmar troca"
+        },
+        {
+          "action": "Shift+Tab",
+          "target": "email-token"
+        }
+      ],
+      "labels": [
+        "Novo e-mail",
+        "Token da URL manual"
+      ],
+      "overflow": 0,
+      "routeHttpStatus": 200,
+      "camposNasCapturas": "vazios (token não exibido)"
+    },
+    {
+      "route": "/cliente/app/seguranca",
+      "role": "cliente autenticado (sessão sintética)",
+      "viewport": "768x900",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09a4-troca-email-768-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus campo novo e-mail",
+          "target": "new-email"
+        },
+        {
+          "action": "Tab",
+          "target": "Solicitar troca"
+        },
+        {
+          "action": "Tab",
+          "target": "email-token"
+        },
+        {
+          "action": "Tab",
+          "target": "Confirmar troca"
+        },
+        {
+          "action": "Shift+Tab",
+          "target": "email-token"
+        }
+      ],
+      "labels": [
+        "Novo e-mail",
+        "Token da URL manual"
+      ],
+      "overflow": 0,
+      "routeHttpStatus": 200,
+      "camposNasCapturas": "vazios (token não exibido)"
+    },
+    {
+      "route": "/cliente/app/seguranca",
+      "role": "cliente autenticado (sessão sintética)",
+      "viewport": "1440x900",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09a4-troca-email-1440-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus campo novo e-mail",
+          "target": "new-email"
+        },
+        {
+          "action": "Tab",
+          "target": "Solicitar troca"
+        },
+        {
+          "action": "Tab",
+          "target": "email-token"
+        },
+        {
+          "action": "Tab",
+          "target": "Confirmar troca"
+        },
+        {
+          "action": "Shift+Tab",
+          "target": "email-token"
+        }
+      ],
+      "labels": [
+        "Novo e-mail",
+        "Token da URL manual"
+      ],
+      "overflow": 0,
+      "routeHttpStatus": 200,
+      "camposNasCapturas": "vazios (token não exibido)"
+    }
+  ],
+  "delivery": {
+    "channel": "local_outbox (sem SMTP; nada foi enviado)",
+    "template": "client_email_change",
+    "bodyMentionsRealSurface": true,
+    "bodyMentionsPublicConfirmRoute": false,
+    "tokenInEvidence": "redigido (nunca versionado, capturado ou registrado)",
+    "windowSeconds": 86400,
+    "storedValueIsHash": true
+  },
+  "defectReproduced": {
+    "publicRouteStatus": 400,
+    "publicRouteError": "confirmation_link_invalid",
+    "tokenStillUnusedAfterPublicAttempt": true
+  },
+  "confirmation": {
+    "putStatus": 200,
+    "sessionRevoked": true,
+    "identityEmailUpdated": true,
+    "tokenSingleUse": true,
+    "previousSessionRefused": true,
+    "audit": [
+      "email_change_confirm/allowed",
+      "email_change_request/allowed"
+    ]
+  },
+  "simulatedFetchRejection": false,
+  "mockedHttp": false,
+  "limitations": [
+    "Caixa local: sem SMTP/provedor real, nada é enviado de fato",
+    "Tema claro único nesta superfície; sem alternador noturno",
+    "Identidade e dados sintéticos em PostgreSQL descartável",
+    "Sem aceite humano, UAT, certificação WCAG ou produção; NO-GO"
+  ]
+}
