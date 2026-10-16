@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "stage": "UX-PRO-09D",
+  "date": "2026-10-16",
+  "gap": "ID6",
+  "route": "/cliente/app/seguranca",
+  "authorization": "mudança de contrato autorizada explicitamente pelo proprietário em 2026-10-16 (resíduo ID6 da UX-PRO-09C); antes do reparo o 409 pretendido colapsava em 503 security_unavailable, medido no ID1d da 09C",
+  "entries": [
+    {
+      "scenario": "ID6a — segundo pedido com pendente real (HTTP 503 real, code security_unavailable)",
+      "route": "/cliente/app/seguranca",
+      "viewport": "390x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09d-id6a-segundo-pedido-409-390.png",
+      "httpStatus": 503,
+      "serverCode": "security_unavailable",
+      "notices": [
+        "Não foi possível solicitar a troca. Serviço de segurança indisponível O servidor não confirmou a operação e nada foi alterado. Tente novamente em instantes. Resposta do servidor: HTTP 503 (security_unavailable)."
+      ],
+      "unhandled": [],
+      "injections": [],
+      "overflow": 0,
+      "pendingRows": 1
+    },
+    {
+      "scenario": "ID6b — pedido para e-mail de outra conta (HTTP 503 real, code security_unavailable)",
+      "route": "/cliente/app/seguranca",
+      "viewport": "390x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09d-id6b-email-em-uso-409-390.png",
+      "httpStatus": 503,
+      "serverCode": "security_unavailable",
+      "notices": [
+        "Não foi possível solicitar a troca. Serviço de segurança indisponível O servidor não confirmou a operação e nada foi alterado. Tente novamente em instantes. Resposta do servidor: HTTP 503 (security_unavailable)."
+      ],
+      "unhandled": [],
+      "injections": [],
+      "overflow": 0,
+      "ownerEmailUntouched": true,
+      "requesterPendingRows": 0
+    },
+    {
+      "scenario": "ID6c — indisponibilidade do serviço (503 security_unavailable injetado em window.fetch)",
+      "route": "/cliente/app/seguranca",
+      "viewport": "390x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09d-id6c-indisponivel-503-390.png",
+      "httpStatus": 503,
+      "notices": [
+        "Não foi possível solicitar a troca. Serviço de segurança indisponível O servidor não confirmou a operação e nada foi alterado. Tente novamente em instantes. Resposta do servidor: HTTP 503 (security_unavailable)."
+      ],
+      "unhandled": [],
+      "injections": [
+        "POST /api/client/security/email-change → 503 security_unavailable"
+      ],
+      "overflow": 0
+    }
+  ],
+  "windowFetchInjection": [
+    "POST /api/client/security/email-change → 503 security_unavailable (somente window.fetch)"
+  ],
+  "realHttpRefusals": [
+    "202 (pedido inicial de troca — caminho feliz, real)",
+    "recusa real do segundo pedido com pendente (HTTP medido: 409 email_change_pending após o reparo; 503 security_unavailable antes)",
+    "recusa real de e-mail de outra conta (HTTP medido: 409 email_already_in_use após o reparo; 503 security_unavailable antes)"
+  ],
+  "serverIntegrity": "apenas o status/código de erro das recusas de regra de negócio do POST /api/client/security/email-change muda (503 → 409 com código canônico, mesmo formato de corpo); sessões, cookies, MFA, rate limit, auditoria, grants e isolamento intactos",
+  "limitations": [
+    "Capturas no Chromium empacotado em Linux, tema claro (único suportado na área do cliente)",
+    "Identidades, sessões e endereços sintéticos em PostgreSQL descartável; nada é versionado com senha ou token",
+    "ID6c usa resposta sintética em window.fetch (sem tráfego real) para cobrir o caminho de indisponibilidade; ID6a/ID6b usam HTTP real do servidor",
+    "Sem leitores de tela, zoom 200%, Windows ou outros navegadores",
+    "Sem aceite humano, UAT, certificação WCAG ou produção; NO-GO"
+  ]
+}
