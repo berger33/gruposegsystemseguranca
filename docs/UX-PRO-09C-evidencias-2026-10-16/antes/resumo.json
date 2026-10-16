@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "stage": "UX-PRO-09C",
+  "date": "2026-10-16",
+  "gap": "ID1",
+  "route": "/cliente/app/seguranca",
+  "entries": [
+    {
+      "scenario": "ID1a — senha recusada no preparo do MFA (403 injetado em window.fetch)",
+      "route": "/cliente/app/seguranca",
+      "viewport": "390x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09c-id1a-setup-senha-recusada-390.png",
+      "notices": [
+        "Erro de conexão ao iniciar o MFA."
+      ],
+      "unhandled": [],
+      "injections": [],
+      "overflow": 0
+    },
+    {
+      "scenario": "ID1d — segundo pedido de troca recusado pelo servidor (HTTP 503 real)",
+      "route": "/cliente/app/seguranca",
+      "viewport": "390x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09c-id1d-segundo-pedido-recusado-390.png",
+      "httpStatus": 503,
+      "notices": [
+        "Erro de conexão."
+      ],
+      "unhandled": [],
+      "injections": [],
+      "overflow": 0
+    },
+    {
+      "scenario": "ID1e — token inválido no PUT (HTTP 400 real) em 320px",
+      "route": "/cliente/app/seguranca",
+      "viewport": "320x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09c-id1e-token-invalido-320.png",
+      "httpStatus": 400,
+      "notices": [],
+      "unhandled": [
+        "Confira os dados informados. (HTTP 400, invalid_or_expired_token)"
+      ],
+      "injections": [],
+      "overflow": 0
+    },
+    {
+      "scenario": "ID1e — token inválido no PUT (HTTP 400 real) em 390px",
+      "route": "/cliente/app/seguranca",
+      "viewport": "390x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09c-id1e-token-invalido-390.png",
+      "httpStatus": 400,
+      "notices": [],
+      "unhandled": [
+        "Confira os dados informados. (HTTP 400, invalid_or_expired_token)"
+      ],
+      "injections": [],
+      "overflow": 0
+    },
+    {
+      "scenario": "ID1e — token inválido no PUT (HTTP 400 real) em 768px",
+      "route": "/cliente/app/seguranca",
+      "viewport": "768x900",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09c-id1e-token-invalido-768.png",
+      "httpStatus": 400,
+      "notices": [],
+      "unhandled": [
+        "Confira os dados informados. (HTTP 400, invalid_or_expired_token)"
+      ],
+      "injections": [],
+      "overflow": 0
+    },
+    {
+      "scenario": "ID1e — token inválido no PUT (HTTP 400 real) em 1440px",
+      "route": "/cliente/app/seguranca",
+      "viewport": "1440x900",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09c-id1e-token-invalido-1440.png",
+      "httpStatus": 400,
+      "notices": [],
+      "unhandled": [
+        "Confira os dados informados. (HTTP 400, invalid_or_expired_token)"
+      ],
+      "injections": [],
+      "overflow": 0
+    },
+    {
+      "scenario": "ID1f — revogação de sessão recusada (503 injetado em window.fetch)",
+      "route": "/cliente/app/seguranca",
+      "viewport": "390x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09c-id1f-revogacao-recusada-503-390.png",
+      "httpStatus": 503,
+      "notices": [],
+      "unhandled": [
+        "O serviço está indisponível. Tente novamente. (HTTP 503, security_unavailable)"
+      ],
+      "injections": [
+        "DELETE /api/client/security/sessions/8359d7c7-f777-40ff-a098-70f55bd8457c → 503 security_unavailable"
+      ],
+      "overflow": 0
+    },
+    {
+      "scenario": "ID1b — código TOTP errado (403 mfa_code_invalid real)",
+      "route": "/cliente/app/seguranca",
+      "viewport": "390x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09c-id1b-codigo-errado-390.png",
+      "notices": [
+        "Não foi possível ativar o MFA agora."
+      ],
+      "unhandled": [],
+      "injections": [],
+      "overflow": 0
+    },
+    {
+      "scenario": "ID1g — ativação real: o aviso de bloqueio precisa corresponder ao servidor (bloqueio confirmado)",
+      "route": "/cliente/app/seguranca",
+      "viewport": "390x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09c-id1g-ativo-sessao-bloqueada-390.png",
+      "notices": [
+        "MFA ativado. Esta sessão antiga foi bloqueada; guarde os códigos e entre novamente."
+      ],
+      "unhandled": [],
+      "injections": [],
+      "overflow": 0
+    },
+    {
+      "scenario": "ID1c — desativação com senha recusada (403 invalid_credentials real)",
+      "route": "/cliente/app/seguranca",
+      "viewport": "390x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09c-id1c-desativar-senha-recusada-390.png",
+      "notices": [
+        "Não foi possível desativar o MFA agora."
+      ],
+      "unhandled": [],
+      "injections": [],
+      "overflow": 0
+    }
+  ],
+  "apiMeStatusAfterActivation": 401,
+  "serverBlocksSessionOnMfaActivation": true,
+  "mfaActivated": true,
+  "windowFetchInjection": [
+    "POST /api/client/security/mfa/setup → 403 invalid_credentials (somente window.fetch)",
+    "DELETE /api/client/security/sessions/:id → 503 security_unavailable (somente window.fetch, apenas no método DELETE)"
+  ],
+  "realHttpRefusals": [
+    "403 invalid_credentials (preparo/desativação do MFA)",
+    "403 mfa_code_invalid (código TOTP errado)",
+    "400 invalid_or_expired_token (token de troca inválido)",
+    "recusa real do segundo pedido de troca (HTTP medido; o 409 email_change_pending colapsa em 503 — resíduo ID6)"
+  ],
+  "serverIntegrity": "nenhum endpoint, contrato, sessão ou banco alterado; servidor real em toda a jornada",
+  "limitations": [
+    "Capturas no Chromium empacotado em Linux, tema claro (único suportado na área do cliente)",
+    "Identidades, sessões e códigos sintéticos em PostgreSQL descartável; nada é versionado com senha ou token",
+    "Sem leitores de tela, zoom 200%, Windows ou outros navegadores",
+    "Sem aceite humano, UAT, certificação WCAG ou produção; NO-GO"
+  ]
+}

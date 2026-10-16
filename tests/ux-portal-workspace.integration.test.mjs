@@ -24,7 +24,7 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import pg from 'pg';
@@ -32,6 +32,7 @@ import { chromium as playwrightChromium } from 'playwright';
 import packagedChromium from '@sparticuz/chromium';
 import { provisionStaff, STAFF_TEST_PASSWORD } from './helpers/staff-login.mjs';
 import { hashToken, hashPassword } from '../src/lib/client-auth-core.mjs';
+import { generate as generateTotp } from 'otplib';
 
 const RUN = process.env.RUN_DATABASE_INTEGRATION === '1' && process.env.DATABASE_URL;
 const root = path.resolve(import.meta.dirname, '..');
@@ -173,7 +174,13 @@ before(async () => {
       NEXT_DIST_DIR: '.next/integration-ux-portal',
       SITE_ADMIN_SESSION_SECRET: randomUUID().repeat(2),
       EMPLOYEE_SESSION_SECRET: randomUUID().repeat(2),
-      CLIENT_MFA_ENCRYPTION_KEY: Buffer.from(randomUUID()).toString('base64url').slice(0, 43),
+      // 32 bytes aleatórios cabem exatamente em 43 chars base64url e passam no
+      // roundtrip exigido por mfaKey(). A fórmula anterior
+      // (Buffer.from(randomUUID()).slice(0, 43)) cortava o encoding no meio de
+      // um char e falhava no roundtrip em ~38% das execuções, derrubando todo
+      // preparo de MFA com 503 — os gates que exercitam MFA já usavam
+      // randomBytes(32).
+      CLIENT_MFA_ENCRYPTION_KEY: randomBytes(32).toString('base64url'),
       ADMIN_LOGIN_MAX_ATTEMPTS: '200',
       SITE_ADMIN_LEGACY_TOKENS: '',
       SITE_ADMIN_TOKEN_MARCELO: '',
@@ -2099,4 +2106,433 @@ test('browser: falha de submissão na entrada do funcionário recebe foco, em di
     assert.match(entry.repeticaoAposErro, /Entrar com segurança/,
       `G5: o passo seguinte ao erro precisa alcançar a repetição em ${entry.viewport}/${entry.theme}`);
   }
+});
+
+// UX-PRO-09C (ID1) — identidade de conta/autenticação: em /cliente/app/seguranca,
+// todo manuseador baseado em workspaceFetch morria ANTES do ramo honesto — o helper
+// lança exceção em qualquer não-2xx, e os ramos `!ok`/`d.error` escritos na página
+// eram código morto. O resultado observável: senha recusada virava "erro de conexão",
+// token inválido e revogação de sessão não produziam NENHUM aviso (rejeição não
+// tratada), e o código TOTP errado era apresentado como indisponibilidade do MFA.
+//
+// O cenário ID1g MEDIU — não supôs — o efeito da ativação sobre a sessão: o
+// servidor invalida a sessão antiga (readClientSession: mfa_verified_at deve
+// postdatar activated_at), e o teste registra o 401 em vez de reivindicar defeito.
+//
+// Este teste registra o estado observado (resumo.json + PNGs) ANTES das asserções:
+// a execução RED, com a página ainda não corrigida, preserva o "antes" na pasta
+// indicada por UX_PORTAL_09C_EVIDENCE_DIR; a execução GREEN, com o reparo, grava o
+// "depois". A falha injetada existe APENAS em window.fetch, dentro da página, e o
+// servidor nunca é enfraquecido; os cenários de recusa real usam o HTTP verdadeiro
+// do PostgreSQL descartável. Nenhuma senha, token ou cookie entra em PNG ou JSON.
+test('browser: /cliente/app/seguranca descreve falhas e sucessos sem mentir (ID1 — UX-PRO-09C)', { skip: !RUN }, async () => {
+  const evidenceDir = process.env.UX_PORTAL_09C_EVIDENCE_DIR || '';
+  const suffix = randomUUID().slice(0, 8);
+  const entries = [];
+  const identities = [];
+  const observations = { apiMeStatusAfterActivation: null, mfaActivated: false, pendingEmail: null };
+  const windowFetchInjection = [];
+
+  async function makeClient(label) {
+    const email = `09c-${label}-${suffix}@exemplo.invalid`;
+    const password = `Cliente-${randomUUID()}!`;
+    const identityId = randomUUID();
+    await pool.query(
+      `INSERT INTO auth_identities (id, kind, email, display_name, status, verification_method, verified_at)
+       VALUES ($1,'client',$2,$3,'active','email_link',NOW())`,
+      [identityId, email, `Cliente Sintetico 09C ${label} ${suffix}`],
+    );
+    await pool.query('INSERT INTO auth_credentials (identity_id, password_hash) VALUES ($1,$2)',
+      [identityId, await hashPassword(password)]);
+    const login = await api('/api/auth/login', { method: 'POST', body: { email, password } });
+    assert.equal(login.status, 200, `login 09C/${label} deveria ser 200, veio ${login.status} ${JSON.stringify(login.body)}`);
+    const cookie = login.setCookie.map(item => item.split(';')[0]).join('; ');
+    assert.ok(cookie, `o login 09C/${label} precisa emitir cookie de sessão`);
+    identities.push(identityId);
+    return { identityId, email, password, cookie };
+  }
+
+  /**
+   * Sonda de rejeições não tratadas, com opcional injeção de falha apenas no
+   * método DELETE de revogação (o failRoutes do openPage não distingue método:
+   * derrubar a URL também derrubaria o GET da lista). Tudo em UM addInitScript —
+   * o openPage dispara o goto sem aguardar o onPage, e um segundo script
+   * registrado depois disso não se aplicaria à navegação.
+   */
+  async function installTruthProbe(page, { failSessionDelete = false } = {}) {
+    await page.addInitScript(inject => {
+      window.__ux09c = { unhandled: [], injections: [] };
+      window.addEventListener('unhandledrejection', event => {
+        window.__ux09c.unhandled.push(String(event.reason?.message || event.reason));
+      });
+      if (inject.failSessionDelete) {
+        const original = window.fetch.bind(window);
+        window.fetch = (input, init) => {
+          const url = typeof input === 'string' ? input : (input?.url || '');
+          const method = ((init && init.method) || 'GET').toUpperCase();
+          if (method === 'DELETE' && url.includes('/api/client/security/sessions/')) {
+            window.__ux09c.injections.push(`DELETE ${new URL(url, window.location.origin).pathname} → 503 security_unavailable`);
+            return Promise.resolve(new Response(JSON.stringify({ error: 'security_unavailable' }),
+              { status: 503, headers: { 'content-type': 'application/json' } }));
+          }
+          return original(input, init);
+        };
+      }
+    }, { failSessionDelete });
+  }
+
+  async function readState(page) {
+    return page.evaluate(() => ({
+      notices: [...document.querySelectorAll('p[role="status"], p[role="alert"]')]
+        .map(node => node.textContent.trim()).filter(Boolean),
+      unhandled: (window.__ux09c && window.__ux09c.unhandled) || [],
+      injections: (window.__ux09c && window.__ux09c.injections) || [],
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    }));
+  }
+
+  async function snap(page, scenarioId, viewport) {
+    if (!evidenceDir) return;
+    await mkdir(evidenceDir, { recursive: true });
+    await page.screenshot({ path: path.join(evidenceDir, `ux-pro-09c-${scenarioId}-${viewport}.png`), fullPage: true });
+  }
+
+  try {
+    // --- ID1a: senha recusada (403 invalid_credentials) precisa falar de senha —
+    // falha injetada só em window.fetch; o servidor não participa.
+    {
+      const client = await makeClient('a');
+      windowFetchInjection.push('POST /api/client/security/mfa/setup → 403 invalid_credentials (somente window.fetch)');
+      const browser = await launchBrowser();
+      try {
+        const { context, page, navigationResponse } = await openPage(browser, '/cliente/app/seguranca', client.cookie, {
+          width: 390, height: 844,
+          failRoutes: ['/api/client/security/mfa/setup'], status: 403, code: 'invalid_credentials',
+          onPage: installTruthProbe,
+        });
+        assert.equal(navigationResponse.status(), 200, 'a área protegida deveria responder 200');
+        await page.getByRole('heading', { name: 'Segurança da conta · aplicativo autenticador' }).waitFor();
+        await page.getByLabel('Confirme sua senha').fill(`Errada-${randomUUID()}!`);
+        await page.getByRole('button', { name: 'Preparar autenticador' }).click();
+        await page.locator('p[role="status"]').first().waitFor({ timeout: 30_000 });
+        const state = await readState(page);
+        await snap(page, 'id1a-setup-senha-recusada', '390');
+        entries.push({
+          scenario: 'ID1a — senha recusada no preparo do MFA (403 injetado em window.fetch)',
+          route: '/cliente/app/seguranca', viewport: '390x844', theme: 'claro (único suportado)',
+          screenshot: 'ux-pro-09c-id1a-setup-senha-recusada-390.png', ...state,
+        });
+        await context.close();
+      } finally { await browser.close().catch(() => {}); }
+    }
+
+    // --- ID1d: segundo pedido de troca com pendente real → recusa do servidor ---
+    // Medido nesta fatia: o 409 intocado (email_change_pending) colapsa em
+    // 503 security_unavailable porque o catch de handleEmailChangeRequest não
+    // tem o ramo `e.status` dos handlers irmãos (resíduo ID6, contrato de API —
+    // fora deste slice). O teste aceita os dois status e exige que a interface
+    // descreva a recusa sem fingir "erro de conexão".
+    {
+      const client = await makeClient('d');
+      observations.pendingEmail = `09c-pendente-${suffix}@exemplo.invalid`;
+      const first = await api('/api/client/security/email-change', {
+        method: 'POST', cookie: client.cookie, body: { newEmail: observations.pendingEmail } });
+      assert.equal(first.status, 202, `o pedido inicial de troca deveria ser 202, veio ${first.status}`);
+      const browser = await launchBrowser();
+      try {
+        const { context, page, navigationResponse } = await openPage(browser, '/cliente/app/seguranca', client.cookie,
+          { width: 390, height: 844, onPage: installTruthProbe });
+        assert.equal(navigationResponse.status(), 200, 'a área protegida deveria responder 200');
+        await page.getByRole('heading', { name: 'Trocar e-mail' }).waitFor();
+        await page.getByLabel('Novo e-mail', { exact: true }).fill(`09c-outro-${randomUUID().slice(0, 8)}@exemplo.invalid`);
+        const postPending = page.waitForResponse(response =>
+          response.url().includes('/api/client/security/email-change') && response.request().method() === 'POST');
+        await page.getByRole('button', { name: 'Solicitar troca', exact: true }).click();
+        const refused = await postPending;
+        await page.locator('p[role="status"]').first().waitFor({ timeout: 30_000 });
+        const state = await readState(page);
+        await snap(page, 'id1d-segundo-pedido-recusado', '390');
+        entries.push({
+          scenario: `ID1d — segundo pedido de troca recusado pelo servidor (HTTP ${refused.status()} real)`,
+          route: '/cliente/app/seguranca', viewport: '390x844', theme: 'claro (único suportado)',
+          screenshot: 'ux-pro-09c-id1d-segundo-pedido-recusado-390.png', httpStatus: refused.status(), ...state,
+        });
+        await context.close();
+      } finally { await browser.close().catch(() => {}); }
+    }
+
+    // --- ID1e: token inválido no PUT → o aviso precisa existir, em 4 larguras --
+    for (const [width, height] of [[320, 844], [390, 844], [768, 900], [1440, 900]]) {
+      const client = await makeClient(`e${width}`);
+      const browser = await launchBrowser();
+      try {
+        const { context, page, navigationResponse } = await openPage(browser, '/cliente/app/seguranca', client.cookie,
+          { width, height, onPage: installTruthProbe });
+        assert.equal(navigationResponse.status(), 200, `a área protegida deveria responder 200 em ${width}`);
+        await page.getByRole('heading', { name: 'Trocar e-mail' }).waitFor();
+        const putPending = page.waitForResponse(response =>
+          response.url().includes('/api/client/security/email-change') && response.request().method() === 'PUT');
+        await page.getByLabel('Token da URL manual', { exact: true }).fill('token-sintetico-invalido-09c');
+        await page.getByRole('button', { name: 'Confirmar troca', exact: true }).click();
+        const put = await putPending;
+        await page.waitForTimeout(800);
+        const state = await readState(page);
+        await snap(page, 'id1e-token-invalido', String(width));
+        entries.push({
+          scenario: `ID1e — token inválido no PUT (HTTP ${put.status()} real) em ${width}px`,
+          route: '/cliente/app/seguranca', viewport: `${width}x${height}`, theme: 'claro (único suportado)',
+          screenshot: `ux-pro-09c-id1e-token-invalido-${width}.png`, httpStatus: put.status(), ...state,
+        });
+        await context.close();
+      } finally { await browser.close().catch(() => {}); }
+    }
+
+    // --- ID1f: revogação de sessão recusada (503 injetado só em DELETE) --------
+    {
+      const client = await makeClient('f');
+      // Segunda sessão real da mesma identidade: sem ela não existe botão
+      // "Revogar" por item (a sessão atual nunca se revoga a si mesma).
+      const second = await api('/api/auth/login', { method: 'POST', body: { email: client.email, password: client.password } });
+      assert.equal(second.status, 200, 'a segunda sessão do mesmo cliente deveria ser 200');
+      windowFetchInjection.push('DELETE /api/client/security/sessions/:id → 503 security_unavailable (somente window.fetch, apenas no método DELETE)');
+      const browser = await launchBrowser();
+      try {
+        const { context, page, navigationResponse } = await openPage(browser, '/cliente/app/seguranca', client.cookie, {
+          width: 390, height: 844,
+          onPage: pageArg => installTruthProbe(pageArg, { failSessionDelete: true }),
+        });
+        assert.equal(navigationResponse.status(), 200, 'a área protegida deveria responder 200');
+        await page.getByRole('heading', { name: 'Sessões da conta' }).waitFor();
+        const revokeButton = page.getByRole('button', { name: 'Revogar', exact: true });
+        await revokeButton.waitFor({ timeout: 30_000 });
+        await revokeButton.click();
+        await page.waitForTimeout(1_200);
+        const state = await readState(page);
+        assert.ok(state.injections.some(item => item.startsWith('DELETE /api/client/security/sessions/')),
+          `a injeção de falha no DELETE precisa ter disparado; veio ${JSON.stringify(state.injections)}`);
+        await snap(page, 'id1f-revogacao-recusada-503', '390');
+        entries.push({
+          scenario: 'ID1f — revogação de sessão recusada (503 injetado em window.fetch)',
+          route: '/cliente/app/seguranca', viewport: '390x844', theme: 'claro (único suportado)',
+          screenshot: 'ux-pro-09c-id1f-revogacao-recusada-503-390.png', httpStatus: 503, ...state,
+        });
+        await context.close();
+      } finally { await browser.close().catch(() => {}); }
+    }
+
+    // --- ID1b/ID1g/ID1c: jornada real de MFA — código errado, ativação e o que
+    // acontece DEPOIS com a sessão (o aviso antigo afirmava "bloqueada").
+    {
+      const client = await makeClient('mfa');
+      const browser = await launchBrowser();
+      try {
+        const { context, page, navigationResponse } = await openPage(browser, '/cliente/app/seguranca', client.cookie,
+          { width: 390, height: 844, onPage: installTruthProbe });
+        assert.equal(navigationResponse.status(), 200, 'a área protegida deveria responder 200');
+        await page.getByRole('heading', { name: 'Segurança da conta · aplicativo autenticador' }).waitFor();
+        await page.getByLabel('Confirme sua senha').fill(client.password);
+        const setupPending = page.waitForResponse(response =>
+          response.url().includes('/api/client/security/mfa/setup') && response.request().method() === 'POST',
+          { timeout: 30_000 }).catch(() => null);
+        await page.getByRole('button', { name: 'Preparar autenticador' }).click();
+        const setupResponse = await setupPending;
+        await page.getByLabel('Código do aplicativo').waitFor({ timeout: 30_000 }).catch(() => {});
+        if (!(await page.locator('#mfa-activate-code').count())) {
+          const setupState = await readState(page);
+          throw new Error(
+            `preparo do MFA não abriu o campo de código (POST ${setupResponse ? setupResponse.status() : 'nenhum'}); avisos=${JSON.stringify(setupState.notices)}`);
+        }
+        const secret = (await page.locator('code').first().textContent())?.trim() || '';
+        assert.ok(secret.length >= 16, `o segredo TOTP precisa aparecer na tela de configuração, veio "${secret}"`);
+
+        // ID1b: código com formato válido porém errado.
+        const correct = String(await generateTotp({ secret }));
+        const wrong = String((Number(correct) + 1) % 1_000_000).padStart(6, '0');
+        await page.getByLabel('Código do aplicativo').fill(wrong);
+        await page.getByRole('button', { name: 'Ativar MFA', exact: true }).click();
+        await page.locator('p[role="status"]').first().waitFor({ timeout: 30_000 });
+        const wrongState = await readState(page);
+        await snap(page, 'id1b-codigo-errado', '390');
+        entries.push({
+          scenario: 'ID1b — código TOTP errado (403 mfa_code_invalid real)',
+          route: '/cliente/app/seguranca', viewport: '390x844', theme: 'claro (único suportado)',
+          screenshot: 'ux-pro-09c-id1b-codigo-errado-390.png', ...wrongState,
+        });
+
+        // ID1g: ativação real (uma repetição protege contra virada de janela TOTP).
+        for (let attempt = 1; attempt <= 2 && !observations.mfaActivated; attempt += 1) {
+          const code = String(await generateTotp({ secret }));
+          await page.getByLabel('Código do aplicativo').fill(code);
+          await page.getByRole('button', { name: 'Ativar MFA', exact: true }).click();
+          try {
+            await page.getByRole('heading', { name: 'Códigos de recuperação' }).waitFor({ timeout: 12_000 });
+            observations.mfaActivated = true;
+          } catch { /* virada de janela: nova tentativa com código novo */ }
+        }
+        if (observations.mfaActivated) {
+          const activeState = await readState(page);
+          await snap(page, 'id1g-ativo-sessao-bloqueada', '390');
+          entries.push({
+            scenario: 'ID1g — ativação real: o aviso de bloqueio precisa corresponder ao servidor (bloqueio confirmado)',
+            route: '/cliente/app/seguranca', viewport: '390x844', theme: 'claro (único suportado)',
+            screenshot: 'ux-pro-09c-id1g-ativo-sessao-bloqueada-390.png', ...activeState,
+          });
+          // readClientSession (client-access-api.mjs:242-247) invalida sessão sem
+          // mfa_verified_at posterior à ativação: o servidor BLOQUEIA a sessão
+          // antiga de fato. O teste mede isso em vez de supor.
+          const me = await api('/api/auth/me', { cookie: client.cookie });
+          observations.apiMeStatusAfterActivation = me.status;
+
+          // O botão continua levando à entrada; a sessão antiga já não serve.
+          await page.getByRole('button', { name: /Já guardei/ }).click();
+          await page.waitForURL('**/cliente/entrar**', { timeout: 30_000 });
+          await context.close();
+
+          // ID1c: reentra pelo desafio MFA real (a senha sozinha não autentica
+          // mais) e tenta desativar com senha recusada.
+          const relogin = await api('/api/auth/login', {
+            method: 'POST', body: { email: client.email, password: client.password } });
+          assert.equal(relogin.status, 202,
+            `com MFA ativo o login precisa desafiar com 202, veio ${relogin.status} ${JSON.stringify(relogin.body)}`);
+          const challengeCode = String(await generateTotp({ secret }));
+          const completed = await api('/api/auth/mfa/complete', {
+            method: 'POST', body: { challenge: relogin.body.challenge, code: challengeCode } });
+          assert.equal(completed.status, 200,
+            `a conclusão do desafio MFA deveria ser 200, veio ${completed.status} ${JSON.stringify(completed.body)}`);
+          const mfaCookie = completed.setCookie.map(item => item.split(';')[0]).join('; ');
+          assert.ok(mfaCookie, 'o desafio MFA concluído precisa emitir cookie de sessão');
+
+          const browser2 = await launchBrowser();
+          try {
+            const back = await openPage(browser2, '/cliente/app/seguranca', mfaCookie,
+              { width: 390, height: 844, onPage: installTruthProbe });
+            assert.equal(back.navigationResponse.status(), 200,
+              'a sessão nova, provada por MFA, precisa abrir a área sem novo login');
+            await back.page.getByRole('heading', { name: 'Segurança da conta · aplicativo autenticador' }).waitFor();
+            await back.page.getByLabel('Senha atual').fill(`Errada-${randomUUID()}!`);
+            // O servidor confere a senha ANTES do código: senha errada + código
+            // com formato válido bastam para reproduzir o 403 invalid_credentials.
+            await back.page.getByLabel('Código', { exact: true }).fill('000000');
+            await back.page.getByRole('button', { name: 'Desativar MFA e sair', exact: true }).click();
+            await back.page.locator('p[role="status"]').first().waitFor({ timeout: 30_000 });
+            const disableState = await readState(back.page);
+            await snap(back.page, 'id1c-desativar-senha-recusada', '390');
+            entries.push({
+              scenario: 'ID1c — desativação com senha recusada (403 invalid_credentials real)',
+              route: '/cliente/app/seguranca', viewport: '390x844', theme: 'claro (único suportado)',
+              screenshot: 'ux-pro-09c-id1c-desativar-senha-recusada-390.png', ...disableState,
+            });
+            await back.context.close();
+          } finally { await browser2.close().catch(() => {}); }
+        } else {
+          entries.push({ scenario: 'ID1g — ativação real', error: 'ativação de MFA não concluiu em duas tentativas' });
+          entries.push({ scenario: 'ID1c — desativação com senha recusada', error: 'pulado: a ativação não concluiu' });
+        }
+      } finally { await browser.close().catch(() => {}); }
+    }
+  } finally {
+    // Evidência gravada ANTES das asserções: a execução RED preserva o "antes".
+    if (evidenceDir) {
+      await mkdir(evidenceDir, { recursive: true });
+      await writeFile(path.join(evidenceDir, 'resumo.json'), `${JSON.stringify({
+        schemaVersion: 1, stage: 'UX-PRO-09C', date: '2026-10-16', gap: 'ID1',
+        route: '/cliente/app/seguranca', entries,
+        apiMeStatusAfterActivation: observations.apiMeStatusAfterActivation ?? null,
+        serverBlocksSessionOnMfaActivation: observations.apiMeStatusAfterActivation === 401,
+        mfaActivated: observations.mfaActivated,
+        windowFetchInjection,
+        realHttpRefusals: [
+          '403 invalid_credentials (preparo/desativação do MFA)',
+          '403 mfa_code_invalid (código TOTP errado)',
+          '400 invalid_or_expired_token (token de troca inválido)',
+          'recusa real do segundo pedido de troca (HTTP medido; o 409 email_change_pending colapsa em 503 — resíduo ID6)',
+        ],
+        serverIntegrity: 'nenhum endpoint, contrato, sessão ou banco alterado; servidor real em toda a jornada',
+        limitations: [
+          'Capturas no Chromium empacotado em Linux, tema claro (único suportado na área do cliente)',
+          'Identidades, sessões e códigos sintéticos em PostgreSQL descartável; nada é versionado com senha ou token',
+          'Sem leitores de tela, zoom 200%, Windows ou outros navegadores',
+          'Sem aceite humano, UAT, certificação WCAG ou produção; NO-GO',
+        ],
+      }, null, 2)}\n`, 'utf8');
+    }
+    // Limpeza real das identidades sintéticas desta fatia.
+    for (const identityId of identities) {
+      await pool.query('DELETE FROM auth_mfa WHERE identity_id=$1', [identityId]).catch(() => {});
+      await pool.query('DELETE FROM auth_access_audit WHERE actor_id=$1', [identityId]).catch(() => {});
+      await pool.query('DELETE FROM auth_sessions WHERE identity_id=$1', [identityId]).catch(() => {});
+      await pool.query('DELETE FROM auth_email_change WHERE identity_id=$1', [identityId]).catch(() => {});
+      await pool.query('DELETE FROM auth_credentials WHERE identity_id=$1', [identityId]).catch(() => {});
+      await pool.query('DELETE FROM auth_identities WHERE id=$1', [identityId]).catch(() => {});
+    }
+    await pool.query(`DELETE FROM local_outbox_messages WHERE recipient_address LIKE '09c-%'`).catch(() => {});
+  }
+
+  // ---- Asserções de correção (a execução RED falha AQUI, depois de gravar) ----
+  const pick = scenarioId => {
+    const entry = entries.find(item => item.scenario.startsWith(scenarioId));
+    assert.ok(entry, `o cenário ${scenarioId} precisa ter rodado`);
+    assert.ok(!entry.error, `${scenarioId}: ${entry.error || 'sem erro de execução'}`);
+    return entry;
+  };
+
+  const a = pick('ID1a');
+  assert.ok(a.notices.join(' '), 'ID1a: a senha recusada precisa produzir um aviso visível');
+  assert.doesNotMatch(a.notices.join(' '), /conex/i,
+    `ID1a: senha recusada não pode aparecer como erro de conexão; veio "${a.notices.join(' | ')}"`);
+  assert.match(a.notices.join(' '), /senha/i,
+    `ID1a: o aviso precisa falar da senha; veio "${a.notices.join(' | ')}"`);
+
+  const b = pick('ID1b');
+  assert.ok(b.notices.join(' '), 'ID1b: o código recusado precisa produzir um aviso visível');
+  assert.match(b.notices.join(' '), /Código incorreto/i,
+    `ID1b: o aviso precisa dizer que o código não confere; veio "${b.notices.join(' | ')}"`);
+
+  const d = pick('ID1d');
+  assert.ok([409, 503].includes(d.httpStatus),
+    `ID1d: o servidor recusa o segundo pedido com 409 ou 503; veio ${d.httpStatus}`);
+  assert.ok(d.notices.join(' '), 'ID1d: a recusa real do servidor precisa produzir um aviso visível');
+  assert.doesNotMatch(d.notices.join(' '), /conex/i,
+    `ID1d: recusa real do servidor não pode aparecer como erro de conexão; veio "${d.notices.join(' | ')}"`);
+  if (d.httpStatus === 409) {
+    assert.match(d.notices.join(' '), /andamento|em uso|diferente/i,
+      `ID1d: com 409 o aviso precisa nomear o motivo; veio "${d.notices.join(' | ')}"`);
+  } else {
+    assert.match(d.notices.join(' '), /indisponível|HTTP 503/i,
+      `ID1d: com 503 o aviso precisa dizer indisponibilidade real (sem "conexão"); veio "${d.notices.join(' | ')}"`);
+  }
+
+  const tokenEntries = entries.filter(item => item.scenario.startsWith('ID1e'));
+  assert.equal(tokenEntries.length, 4, 'ID1e precisa cobrir as quatro larguras');
+  for (const entry of tokenEntries) {
+    assert.equal(entry.httpStatus, 400, `ID1e: o servidor precisa recusar o token com 400 em ${entry.viewport}`);
+    assert.ok(entry.notices.join(' '), `ID1e: o token recusado precisa produzir aviso em ${entry.viewport}; veio silêncio`);
+    assert.match(entry.notices.join(' '), /token/i,
+      `ID1e: o aviso precisa nomear o token; veio "${entry.notices.join(' | ')}" em ${entry.viewport}`);
+    assert.deepEqual(entry.unhandled, [],
+      `ID1e: nenhuma rejeição não tratada é aceita em ${entry.viewport}; veio ${JSON.stringify(entry.unhandled)}`);
+    assert.ok(entry.overflow <= 1, `ID1e: overflow ${entry.overflow} em ${entry.viewport}`);
+  }
+
+  const f = pick('ID1f');
+  assert.ok(f.notices.join(' '), 'ID1f: a revogação recusada precisa produzir um aviso visível');
+  assert.match(f.notices.join(' '), /revog/i,
+    `ID1f: o aviso precisa falar em revogar; veio "${f.notices.join(' | ')}"`);
+  assert.deepEqual(f.unhandled, [],
+    `ID1f: nenhuma rejeição não tratada é aceita; veio ${JSON.stringify(f.unhandled)}`);
+
+  assert.equal(observations.mfaActivated, true, 'a jornada de ativação real precisa concluir');
+  const g = pick('ID1g');
+  assert.ok(g.notices.join(' '), 'ID1g: a ativação precisa produzir aviso');
+  assert.match(g.notices.join(' '), /MFA ativado/i,
+    `ID1g: o aviso de sucesso precisa continuar dizendo que o MFA foi ativado; veio "${g.notices.join(' | ')}"`);
+  assert.equal(observations.apiMeStatusAfterActivation, 401,
+    `ID1g: o servidor precisa manter o bloqueio da sessão antiga na ativação (readClientSession → 401); veio ${observations.apiMeStatusAfterActivation}`);
+
+  const c = pick('ID1c');
+  assert.ok(c.notices.join(' '), 'ID1c: a senha recusada na desativação precisa produzir aviso');
+  assert.match(c.notices.join(' '), /Confira sua senha/i,
+    `ID1c: o aviso precisa apontar a senha/código; veio "${c.notices.join(' | ')}"`);
+  assert.deepEqual(c.unhandled, [],
+    `ID1c: nenhuma rejeição não tratada é aceita; veio ${JSON.stringify(c.unhandled)}`);
 });

@@ -1,7 +1,8 @@
 // UX-06 — o vocabulário dos portais não pode divergir dos servidores.
 //
 // Este teste lê `src/server/employee-api.mjs`, `src/server/client-space-api.mjs`
-// e `src/server/client-access-api.mjs` e falha se a interface passar a traduzir
+// e `src/server/client-access-api.mjs` — mais `src/server/client-security-api.mjs`
+// desde a UX-PRO-09C — e falha se a interface passar a traduzir
 // um código que os servidores não devolvem mais, ou deixar sem tradução um
 // código que eles devolvem. É a amarração que impede a tradução de virar
 // invenção — o mesmo teste que, na UX-05, encontrou 17 códigos sem frase.
@@ -35,6 +36,7 @@ const timeClockCore = await readFile(new URL('../src/server/time-clock-core.mjs'
 const employeeApi = await readFile(new URL('../src/server/employee-api.mjs', import.meta.url), 'utf8');
 const clientSpaceApi = await readFile(new URL('../src/server/client-space-api.mjs', import.meta.url), 'utf8');
 const clientAccessApi = await readFile(new URL('../src/server/client-access-api.mjs', import.meta.url), 'utf8');
+const clientSecurityApi = await readFile(new URL('../src/server/client-security-api.mjs', import.meta.url), 'utf8');
 const employeeUi = await readFile(new URL('../src/app/funcionario/EmployeePortal.tsx', import.meta.url), 'utf8');
 const clientProvider = await readFile(new URL('../src/app/cliente/app/ClientSpaceProvider.tsx', import.meta.url), 'utf8');
 const clientHome = await readFile(new URL('../src/app/cliente/app/page.tsx', import.meta.url), 'utf8');
@@ -46,6 +48,26 @@ function serverErrorCodes(source) {
   return codes;
 }
 
+/**
+ * UX-PRO-09C — códigos de `client-security-api.mjs`: além dos literais diretos,
+ * os erros lançados com status (`new Error('codigo')` → `{ error: e.message }`)
+ * e os dois ternários explícitos (sessão ausente/pendente de confirmação e a
+ * falha de auditoria tratada pelo `fail`). Sem esta captura, os 11 códigos da
+ * superfície de segurança ficavam invisíveis para as duas direções do teste.
+ */
+function clientSecurityErrorCodes(source) {
+  const codes = new Set();
+  for (const match of source.matchAll(/error:\s*["']([a-z0-9_]+)["']/g)) codes.add(match[1]);
+  for (const match of source.matchAll(/new Error\('([a-z0-9_]+)'\)/g)) codes.add(match[1]);
+  for (const match of source.matchAll(/error:\s*session\s*\?\s*'([a-z0-9_]+)'\s*:\s*'([a-z0-9_]+)'/g)) {
+    codes.add(match[1]); codes.add(match[2]);
+  }
+  for (const match of source.matchAll(/=== 'AUDIT_UNAVAILABLE'\s*\?\s*'([a-z0-9_]+)'\s*:\s*'([a-z0-9_]+)'/g)) {
+    codes.add(match[1]); codes.add(match[2]);
+  }
+  return codes;
+}
+
 const codigosServidor = new Set([
   ...serverErrorCodes(employeeApi),
   ...serverErrorCodes(timeClockApi),
@@ -54,6 +76,7 @@ const codigosServidor = new Set([
   ...[...timeClockCore.matchAll(/TimeClockError\('([a-z0-9_]+)'/g)].map(m=>m[1]),
   ...serverErrorCodes(clientSpaceApi),
   ...serverErrorCodes(clientAccessApi),
+  ...clientSecurityErrorCodes(clientSecurityApi),
 ]);
 
 test('UX-06 vocabulário: todo código dos servidores de portal tem frase em português', () => {
@@ -89,6 +112,9 @@ test('UX-06 honestidade: falha de leitura jamais é descrita como ausência de d
     'employee_access_unavailable', 'employee_request_unavailable',
     'employee_request_review_unavailable', 'document_unavailable',
     'password_change_unavailable', 'mfa_login_unavailable', 'idempotency_key_unavailable',
+    // UX-PRO-09C: superfície de segurança do cliente — recusa que é falha de
+    // serviço, nunca "não existe" nem recusa de permissão.
+    'security_unavailable', 'audit_unavailable',
   ];
   for (const code of falhas) {
     const descriptor = describePortalError(code, 503);
