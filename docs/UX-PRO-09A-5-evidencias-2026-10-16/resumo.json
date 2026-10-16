@@ -1,0 +1,304 @@
+{
+  "schemaVersion": 1,
+  "stage": "UX-PRO-09A-5",
+  "date": "2026-10-16",
+  "gap": "G5",
+  "routes": [
+    "/cliente/entrar",
+    "/cliente/convite"
+  ],
+  "entries": [
+    {
+      "route": "/cliente/entrar",
+      "state": "erro pós-submissão (401 genérico real, conta desconhecida)",
+      "viewport": "320x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09a5-entrar-erro-320-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "email"
+        },
+        {
+          "action": "Tab",
+          "target": "password"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar"
+        },
+        {
+          "action": "Enter / 401 genérico",
+          "target": "E-mail ou senha não conferem. Verifique os dados e tente nov"
+        },
+        {
+          "action": "passo seguinte após o erro (repetição por teclado)",
+          "target": "E-mail ou senha não conferem. Verifique os dados e tente nov"
+        },
+        {
+          "action": "Tab após o erro",
+          "target": "Entrar"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "E-mail ou senha não conferem. Verifique os dados e tente nov",
+      "repeticaoAposErro": "Entrar"
+    },
+    {
+      "route": "/cliente/convite",
+      "state": "erro pós-submissão (400 password_common real, convite continua pendente)",
+      "viewport": "320x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09a5-convite-erro-320-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus senha",
+          "target": "password"
+        },
+        {
+          "action": "Tab",
+          "target": "passwordAgain"
+        },
+        {
+          "action": "Tab",
+          "target": "Criar meu acesso"
+        },
+        {
+          "action": "Enter / 400 password_common",
+          "target": "Essa senha é muito comum. Escolha uma frase-senha mais segur"
+        },
+        {
+          "action": "Tab após o erro",
+          "target": "Criar meu acesso"
+        }
+      ],
+      "overflow": 0,
+      "acceptHttpStatus": 400,
+      "focusAposFalha": "Essa senha é muito comum. Escolha uma frase-senha mais segur",
+      "repeticaoAposErro": "Criar meu acesso"
+    },
+    {
+      "route": "/cliente/entrar",
+      "state": "erro pós-submissão (401 genérico real, conta desconhecida)",
+      "viewport": "390x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09a5-entrar-erro-390-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "email"
+        },
+        {
+          "action": "Tab",
+          "target": "password"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar"
+        },
+        {
+          "action": "Enter / 401 genérico",
+          "target": "E-mail ou senha não conferem. Verifique os dados e tente nov"
+        },
+        {
+          "action": "passo seguinte após o erro (repetição por teclado)",
+          "target": "E-mail ou senha não conferem. Verifique os dados e tente nov"
+        },
+        {
+          "action": "Tab após o erro",
+          "target": "Entrar"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "E-mail ou senha não conferem. Verifique os dados e tente nov",
+      "repeticaoAposErro": "Entrar"
+    },
+    {
+      "route": "/cliente/convite",
+      "state": "erro pós-submissão (400 password_common real, convite continua pendente)",
+      "viewport": "390x844",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09a5-convite-erro-390-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus senha",
+          "target": "password"
+        },
+        {
+          "action": "Tab",
+          "target": "passwordAgain"
+        },
+        {
+          "action": "Tab",
+          "target": "Criar meu acesso"
+        },
+        {
+          "action": "Enter / 400 password_common",
+          "target": "Essa senha é muito comum. Escolha uma frase-senha mais segur"
+        },
+        {
+          "action": "Tab após o erro",
+          "target": "Criar meu acesso"
+        }
+      ],
+      "overflow": 0,
+      "acceptHttpStatus": 400,
+      "focusAposFalha": "Essa senha é muito comum. Escolha uma frase-senha mais segur",
+      "repeticaoAposErro": "Criar meu acesso"
+    },
+    {
+      "route": "/cliente/entrar",
+      "state": "erro pós-submissão (401 genérico real, conta desconhecida)",
+      "viewport": "768x900",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09a5-entrar-erro-768-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "email"
+        },
+        {
+          "action": "Tab",
+          "target": "password"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar"
+        },
+        {
+          "action": "Enter / 401 genérico",
+          "target": "E-mail ou senha não conferem. Verifique os dados e tente nov"
+        },
+        {
+          "action": "passo seguinte após o erro (repetição por teclado)",
+          "target": "E-mail ou senha não conferem. Verifique os dados e tente nov"
+        },
+        {
+          "action": "Tab após o erro",
+          "target": "Entrar"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "E-mail ou senha não conferem. Verifique os dados e tente nov",
+      "repeticaoAposErro": "Entrar"
+    },
+    {
+      "route": "/cliente/convite",
+      "state": "erro pós-submissão (400 password_common real, convite continua pendente)",
+      "viewport": "768x900",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09a5-convite-erro-768-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus senha",
+          "target": "password"
+        },
+        {
+          "action": "Tab",
+          "target": "passwordAgain"
+        },
+        {
+          "action": "Tab",
+          "target": "Criar meu acesso"
+        },
+        {
+          "action": "Enter / 400 password_common",
+          "target": "Essa senha é muito comum. Escolha uma frase-senha mais segur"
+        },
+        {
+          "action": "Tab após o erro",
+          "target": "Criar meu acesso"
+        }
+      ],
+      "overflow": 0,
+      "acceptHttpStatus": 400,
+      "focusAposFalha": "Essa senha é muito comum. Escolha uma frase-senha mais segur",
+      "repeticaoAposErro": "Criar meu acesso"
+    },
+    {
+      "route": "/cliente/entrar",
+      "state": "erro pós-submissão (401 genérico real, conta desconhecida)",
+      "viewport": "1440x900",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09a5-entrar-erro-1440-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "email"
+        },
+        {
+          "action": "Tab",
+          "target": "password"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar"
+        },
+        {
+          "action": "Enter / 401 genérico",
+          "target": "E-mail ou senha não conferem. Verifique os dados e tente nov"
+        },
+        {
+          "action": "passo seguinte após o erro (repetição por teclado)",
+          "target": "E-mail ou senha não conferem. Verifique os dados e tente nov"
+        },
+        {
+          "action": "Tab após o erro",
+          "target": "Entrar"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "E-mail ou senha não conferem. Verifique os dados e tente nov",
+      "repeticaoAposErro": "Entrar"
+    },
+    {
+      "route": "/cliente/convite",
+      "state": "erro pós-submissão (400 password_common real, convite continua pendente)",
+      "viewport": "1440x900",
+      "theme": "claro (único suportado)",
+      "screenshot": "ux-pro-09a5-convite-erro-1440-claro.png",
+      "percursoTeclado": [
+        {
+          "action": "focus senha",
+          "target": "password"
+        },
+        {
+          "action": "Tab",
+          "target": "passwordAgain"
+        },
+        {
+          "action": "Tab",
+          "target": "Criar meu acesso"
+        },
+        {
+          "action": "Enter / 400 password_common",
+          "target": "Essa senha é muito comum. Escolha uma frase-senha mais segur"
+        },
+        {
+          "action": "Tab após o erro",
+          "target": "Criar meu acesso"
+        }
+      ],
+      "overflow": 0,
+      "acceptHttpStatus": 400,
+      "focusAposFalha": "Essa senha é muito comum. Escolha uma frase-senha mais segur",
+      "repeticaoAposErro": "Criar meu acesso"
+    }
+  ],
+  "simulatedFetchRejection": false,
+  "mockedHttp": false,
+  "invite": {
+    "estadoAposRecusas": "pendente (não consumido)",
+    "tokenEmEvidencia": "não (somente em memória)"
+  },
+  "limitations": [
+    "Tema claro único nestas superfícies; sem alternador noturno",
+    "Percurso medido no Chromium empacotado em Linux; sem leitores de tela/zoom 200%/Windows",
+    "Dados sintéticos em PostgreSQL descartável; sem SMTP real",
+    "Sem aceite humano, UAT, certificação WCAG ou produção; NO-GO"
+  ]
+}
