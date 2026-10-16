@@ -1,0 +1,566 @@
+{
+  "stage": "ux-pro-09e",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "route": "/servicos",
+  "limitations": [
+    "Chromium headless Linux; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servicos/w320-day-servicos.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Serviços — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviços"
+          },
+          {
+            "level": 2,
+            "text": "Segurança Desarmada"
+          },
+          {
+            "level": 2,
+            "text": "Monitoramento 24 Horas"
+          },
+          {
+            "level": 2,
+            "text": "Câmeras e CFTV"
+          },
+          {
+            "level": 2,
+            "text": "Portaria e Controle de Acesso"
+          },
+          {
+            "level": 2,
+            "text": "Limpeza e Conservação"
+          },
+          {
+            "level": 2,
+            "text": "Supervisão e Ronda"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1579,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 29,
+          "resolvedCount": 0,
+          "indeterminateCount": 29,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 8
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Conhecer este serviço",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servicos/w320-night-servicos.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Serviços — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviços"
+          },
+          {
+            "level": 2,
+            "text": "Segurança Desarmada"
+          },
+          {
+            "level": 2,
+            "text": "Monitoramento 24 Horas"
+          },
+          {
+            "level": 2,
+            "text": "Câmeras e CFTV"
+          },
+          {
+            "level": 2,
+            "text": "Portaria e Controle de Acesso"
+          },
+          {
+            "level": 2,
+            "text": "Limpeza e Conservação"
+          },
+          {
+            "level": 2,
+            "text": "Supervisão e Ronda"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1579,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 29,
+          "resolvedCount": 0,
+          "indeterminateCount": 29,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 8
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Conhecer este serviço",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servicos/w390-day-servicos.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Serviços — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviços"
+          },
+          {
+            "level": 2,
+            "text": "Segurança Desarmada"
+          },
+          {
+            "level": 2,
+            "text": "Monitoramento 24 Horas"
+          },
+          {
+            "level": 2,
+            "text": "Câmeras e CFTV"
+          },
+          {
+            "level": 2,
+            "text": "Portaria e Controle de Acesso"
+          },
+          {
+            "level": 2,
+            "text": "Limpeza e Conservação"
+          },
+          {
+            "level": 2,
+            "text": "Supervisão e Ronda"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1579,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 29,
+          "resolvedCount": 0,
+          "indeterminateCount": 29,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 8
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Conhecer este serviço",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servicos/w390-night-servicos.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Serviços — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviços"
+          },
+          {
+            "level": 2,
+            "text": "Segurança Desarmada"
+          },
+          {
+            "level": 2,
+            "text": "Monitoramento 24 Horas"
+          },
+          {
+            "level": 2,
+            "text": "Câmeras e CFTV"
+          },
+          {
+            "level": 2,
+            "text": "Portaria e Controle de Acesso"
+          },
+          {
+            "level": 2,
+            "text": "Limpeza e Conservação"
+          },
+          {
+            "level": 2,
+            "text": "Supervisão e Ronda"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1579,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 29,
+          "resolvedCount": 0,
+          "indeterminateCount": 29,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 8
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Conhecer este serviço",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servicos/w768-day-servicos.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Serviços — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviços"
+          },
+          {
+            "level": 2,
+            "text": "Segurança Desarmada"
+          },
+          {
+            "level": 2,
+            "text": "Monitoramento 24 Horas"
+          },
+          {
+            "level": 2,
+            "text": "Câmeras e CFTV"
+          },
+          {
+            "level": 2,
+            "text": "Portaria e Controle de Acesso"
+          },
+          {
+            "level": 2,
+            "text": "Limpeza e Conservação"
+          },
+          {
+            "level": 2,
+            "text": "Supervisão e Ronda"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1579,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 29,
+          "resolvedCount": 0,
+          "indeterminateCount": 29,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 8
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Conhecer este serviço",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servicos/w768-night-servicos.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Serviços — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviços"
+          },
+          {
+            "level": 2,
+            "text": "Segurança Desarmada"
+          },
+          {
+            "level": 2,
+            "text": "Monitoramento 24 Horas"
+          },
+          {
+            "level": 2,
+            "text": "Câmeras e CFTV"
+          },
+          {
+            "level": 2,
+            "text": "Portaria e Controle de Acesso"
+          },
+          {
+            "level": 2,
+            "text": "Limpeza e Conservação"
+          },
+          {
+            "level": 2,
+            "text": "Supervisão e Ronda"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1579,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 29,
+          "resolvedCount": 0,
+          "indeterminateCount": 29,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 8
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Conhecer este serviço",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servicos/w1440-day-servicos.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Serviços — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviços"
+          },
+          {
+            "level": 2,
+            "text": "Segurança Desarmada"
+          },
+          {
+            "level": 2,
+            "text": "Monitoramento 24 Horas"
+          },
+          {
+            "level": 2,
+            "text": "Câmeras e CFTV"
+          },
+          {
+            "level": 2,
+            "text": "Portaria e Controle de Acesso"
+          },
+          {
+            "level": 2,
+            "text": "Limpeza e Conservação"
+          },
+          {
+            "level": 2,
+            "text": "Supervisão e Ronda"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1579,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 29,
+          "resolvedCount": 0,
+          "indeterminateCount": 29,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 8
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Conhecer este serviço",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servicos/w1440-night-servicos.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Serviços — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviços"
+          },
+          {
+            "level": 2,
+            "text": "Segurança Desarmada"
+          },
+          {
+            "level": 2,
+            "text": "Monitoramento 24 Horas"
+          },
+          {
+            "level": 2,
+            "text": "Câmeras e CFTV"
+          },
+          {
+            "level": 2,
+            "text": "Portaria e Controle de Acesso"
+          },
+          {
+            "level": 2,
+            "text": "Limpeza e Conservação"
+          },
+          {
+            "level": 2,
+            "text": "Supervisão e Ronda"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1579,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 29,
+          "resolvedCount": 0,
+          "indeterminateCount": 29,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 8
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Conhecer este serviço",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,374 @@
+{
+  "stage": "ux-pro-09e",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "route": "/servicos/Segurança%20Desarmada",
+  "limitations": [
+    "Chromium headless Linux; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos/Segurança%20Desarmada",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servico-seguranca-desarmada/w320-day-servico-seguranca-desarmada.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Segurança Desarmada — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviço não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 42,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos serviços",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos/Segurança%20Desarmada",
+      "viewport": "320x780",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servico-seguranca-desarmada/w320-night-servico-seguranca-desarmada.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Segurança Desarmada — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviço não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 42,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos serviços",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos/Segurança%20Desarmada",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servico-seguranca-desarmada/w390-day-servico-seguranca-desarmada.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Segurança Desarmada — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviço não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 42,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos serviços",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos/Segurança%20Desarmada",
+      "viewport": "390x844",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servico-seguranca-desarmada/w390-night-servico-seguranca-desarmada.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Segurança Desarmada — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviço não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 42,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos serviços",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos/Segurança%20Desarmada",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servico-seguranca-desarmada/w768-day-servico-seguranca-desarmada.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Segurança Desarmada — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviço não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 42,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos serviços",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos/Segurança%20Desarmada",
+      "viewport": "768x1024",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servico-seguranca-desarmada/w768-night-servico-seguranca-desarmada.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Segurança Desarmada — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviço não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 42,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos serviços",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos/Segurança%20Desarmada",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servico-seguranca-desarmada/w1440-day-servico-seguranca-desarmada.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Segurança Desarmada — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviço não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 42,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos serviços",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/servicos/Segurança%20Desarmada",
+      "viewport": "1440x900",
+      "screenshot": "docs/UX-PRO-09E-evidencias-2026-10-16/antes/servico-seguranca-desarmada/w1440-night-servico-seguranca-desarmada.png",
+      "gateEvidence": null,
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Segurança Desarmada — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Serviço não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 42,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 1
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos serviços",
+        "outline": "auto"
+      },
+      "problems": [],
+      "externalBlocked": [
+        "recurso externo bloqueado: https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap (net::ERR_CONNECTION_CLOSED)",
+        "console (https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Man): Failed to load resource: net::ERR_CONNECTION_CLOSED"
+      ]
+    }
+  ]
+}

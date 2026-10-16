@@ -58,7 +58,11 @@ export default function ContatoPage() {
       <h1 style={{ fontSize: 32 }}>Contato claro — PUB-02 / PUB-03</h1>
       <p style={{ opacity: 0.8 }}>Formulário integrado à mesma API de leads com protocolo persistido, consentimento, origem/campanha, antispam, deduplicação controlada e responsável de atendimento (PUB-03). Sem promessa de horário sem reserva real (PUB-04). O assistente abaixo responde apenas com base pública aprovada e publicada.</p>
 
-      <section style={{ marginTop: 16, padding: 16, background: "#f8fafc", borderRadius: 8, fontSize: 14 }}>
+      {/* UX-PRO-09E: em viewport de 320 px o e-mail é uma única palavra de 287 px
+          medida (rect) contra ~208 px de caixa, e empurrava o documento para
+          343 px. `overflow-wrap` quebra apenas a palavra que não cabe; as demais
+          linhas e as outras larguras ficam exatamente como estão. */}
+      <section style={{ marginTop: 16, padding: 16, background: "#f8fafc", borderRadius: 8, fontSize: 14, overflowWrap: "break-word" }}>
         <strong>Endereço:</strong> Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarulhos, SP, 07175-000<br />
         <strong>Telefone:</strong> (11) 3437-2217<br />
         <strong>E-mail:</strong> contato@gruposegsystemseguranca.com.br<br />

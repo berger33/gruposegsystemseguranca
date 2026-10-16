@@ -62,7 +62,12 @@ export default function FaqPage() {
 
       <section style={{ marginTop: 32, padding: 16, borderLeft: "4px solid #0b5fff", background: "#f0f7ff" }}>
         <h2 style={{ margin: 0, fontSize: 18 }}>Contato claro</h2>
-        <p style={{ fontSize: 14, margin: "8px 0 0" }}>
+        {/* UX-PRO-09E: mesma causa medida em /contato — em 320 px o e-mail (287 px
+            de rect) excedia a caixa do parágrafo e levava o documento a 347 px,
+            sem que qualquer rect de elemento ultrapassasse o limite (por isso o
+            probe do 09B não atribuiu o culpado). A quebra vale só para o que não
+            cabe; o texto continua o mesmo. */}
+        <p style={{ fontSize: 14, margin: "8px 0 0", overflowWrap: "break-word" }}>
           Endereço: Av. Armando Bei, 305 - Sala 01, Vila Nova Bonsucesso, Guarulhos, SP, 07175-000 (confirmado em proximo-passo.md, CNPJ pendente D-11)<br />
           Telefone: (11) 3437-2217<br />
           E-mail: contato@gruposegsystemseguranca.com.br (pendente confirmação)<br />
