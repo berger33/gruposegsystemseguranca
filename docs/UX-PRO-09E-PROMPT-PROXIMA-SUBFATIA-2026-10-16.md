@@ -26,7 +26,7 @@ Depois, na mesma fila e em PR separada: **item 3 — C11 (financeiro)**: alvo de
 
 ## Gates de referência da correção UX-PRO-09E
 
-Os resultados locais desta branch corretiva estão no relatório atualizado: `npm test` **956/956**, `typecheck`, build (**105 páginas**), `qa-wave0-static` **5/5**, `test:ux-portal:pg` **22/22**, inventário `--check` e captura/manifestos. Os **9/9 checks da PR #260** pertencem à implementação original, não substituem os checks da PR corretiva. Antes da próxima subfatia, exigir todos os checks SUCCESS da correção e confirmar a SHA mergeada em `origin/main`.
+Os resultados locais desta branch corretiva estão no relatório atualizado: `npm test` **956/956**, `typecheck`, build (**105 páginas**), `qa-wave0-static` **5/5**, `test:ux-portal:pg` **22/22**, `test:ai-rag-widget:pg` **26/26** (preservação dos temas privados), inventário `--check` e captura/manifestos. Os **9/9 checks da PR #260** pertencem à implementação original, não substituem os checks da PR corretiva. Antes da próxima subfatia, exigir todos os checks SUCCESS da correção e confirmar a SHA mergeada em `origin/main`.
 
 ## Regras permanentes
 

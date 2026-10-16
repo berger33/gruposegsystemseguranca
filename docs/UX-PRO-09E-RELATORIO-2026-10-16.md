@@ -2,7 +2,7 @@
 
 **Data:** 16/10/2026 · **Base da correção:** `6866b5019b0fcb12536ca51fcc7061e9b2e538d9` · **Branch fixa:** `arena/b928ace8-gruposegsystemseguranca` · **Escopo:** apenas os efeitos fora do limite autorizados que a #260 introduziu na UX-PRO-09E já mergeada.
 
-**Status:** a PR #260 foi mergeada em `origin/main` e seus checks estavam verdes. Esta não é uma segunda implementação da subfatia: é a correção estreita autorizada depois de se constatar que o estado mergeado também alterou papéis expressamente excluídos. A execução não registra aceite humano, UAT nem conformidade WCAG. **Homologação e produção permanecem NO-GO.**
+**Status:** a PR #260 foi mergeada em `origin/main` e seus checks estavam verdes. Esta não é uma segunda implementação da subfatia: é a correção estreita autorizada depois de se constatar que o estado mergeado também alterou papéis expressamente excluídos. A primeira execução da CI da PR corretiva detectou que um valor literal nos controles RAG privados ignorava o override noturno (3,03:1 no CTA de `/admin/marcelo/assistente`); o fallback agora referencia `var(--rag-accent)`, preservando o tema. O gate FECH-01 local passou 26/26 após a correção. A PR corretiva permanece aberta até todos os checks do commit final passarem. A execução não registra aceite humano, UAT nem conformidade WCAG. **Homologação e produção permanecem NO-GO.**
 
 ## 1. Retificação necessária
 
@@ -13,7 +13,7 @@ A #260 resolveu o overflow e escureceu os alvos medidos, mas fez duas alteraçõ
 - mudou o `accent`/`border` compartilhado de `RAG_COLORS.publico`, recolorindo o título grande de 20 px/700, que media **3,35:1** e tinha sido classificado como **sem defeito demonstrado**;
 - mudou `.steps li span` de `#8397a8`, embora os números sejam spans fora das 104 amostras e devam preservar esse estilo.
 
-A correção atual mantém o `accent` e a borda-base públicos em `#ea580c`, cria `--rag-interactive-accent: #c2410c` somente para o texto das quatro sugestões e o fundo do CTA em `ragKey="publico"`, e restaura `.steps li span` para `#8397a8`. Os escopos privados permanecem intactos. O overflow já corrigido em `/contato` e `/faq` e as cores dos textos pequenos do simulador permanecem como na #260. Não alterei a especificidade de `.stepActive`/`.stepDone` (resíduo PU5), nem ampliei a correção a outros textos ou fundos.
+A correção atual mantém o `accent` e a borda-base públicos em `#ea580c`, cria `--rag-interactive-accent: #c2410c` somente para o texto das quatro sugestões e o fundo do CTA em `ragKey="publico"`, e restaura `.steps li span` para `#8397a8`. Para `cliente`/`rh`/`marcelo`, o valor interativo referencia `var(--rag-accent)` computado, mantendo os overrides noturnos privados. O gate FECH-01 confirmou os três assistentes em day/night; nenhum estilo privado foi alterado. O overflow já corrigido em `/contato` e `/faq` e as cores dos textos pequenos do simulador permanecem como na #260. Não alterei a especificidade de `.stepActive`/`.stepDone` (resíduo PU5), nem ampliei a correção a outros textos ou fundos.
 
 ## 2. Resultado amostra por amostra
 
@@ -66,6 +66,7 @@ O output after anterior da #260 permanece preservado na raiz da pasta de evidên
 | `npm run build` | Passou; 105 páginas geradas. |
 | `node scripts/qa-wave0-static.mjs` | **5/5** verificações. |
 | `npm run test:ux-portal:pg` | **22/22**, `UX_PORTAL_TEST_EXIT: 0`; PostgreSQL temporário removido. |
+| `npm run test:ai-rag-widget:pg` | **26/26**, `FECH01_RAG_WIDGET_TEST_EXIT: 0`; os três assistentes privados preservaram contraste/tema; PostgreSQL temporário removido. |
 | `node scripts/ux-pro-00-inventory.mjs` + `--check` | Passaram após alteração em `src/app` e inclusão da captura própria. O diff foi revisado coluna a coluna: 10 rotas estáticas, apenas `capturas_stage` no inventário e `evidencia` na matriz, com os marcadores aditivos `ux-pro-09e-antes`/`ux-pro-09e-antes-visual`; nenhum campo/rota alheio mudou. Inventário: 100 rotas. |
 | Evidência before/after | After: 112/112 PNGs referenciados, nenhum ausente/órfão; dimensões, SHA-256 e pares day/night validados. Before próprio: 112 viewport + 24 full-page, 136/136 PNGs com referências, dimensões e SHA-256 testados; overflow reproduzido em 320 px/day/night (343 px em contato, 347 px em FAQ). |
 | `git diff --check` | Passou. |

@@ -48,8 +48,9 @@ const RAG_COLORS: Record<string, { border: string; bg: string; accent: string; l
   rh: { border: "#059669", bg: "#ecfdf5", accent: "#059669", light: "#d1fae5" },
   marcelo: { border: "#7c3aed", bg: "#f5f3ff", accent: "#7c3aed", light: "#ede9fe" },
   // UX-PRO-09E: manter o acento de identidade pública no título grande e nos
-  // demais papéis fora do escopo. Só as sugestões e o envio, alvos medidos,
-  // usam abaixo um acento interativo separado e mais escuro.
+  // demais papéis fora do escopo. Só as sugestões e o envio públicos, alvos
+  // medidos, usam o acento escuro; privados seguem var(--rag-accent) calculado
+  // para preservar os overrides do tema noturno administrativo.
   publico: { border: "#ea580c", bg: "#fff7ed", accent: "#ea580c", light: "#ffedd5" },
 };
 
@@ -91,7 +92,7 @@ export default function RagWidget({ ragKey, title, description, placeholder }: P
   const requestSeq = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const colors = RAG_COLORS[ragKey] || RAG_COLORS.publico;
-  const interactiveAccent = ragKey === "publico" ? "#c2410c" : colors.accent;
+  const interactiveAccent = ragKey === "publico" ? "#c2410c" : "var(--rag-accent)";
   const scopeLabel = ragScopeLabel(ragKey);
   // Keep the day palette unchanged while allowing the administrative night
   // theme to replace the visual roles without changing the RAG scope colors

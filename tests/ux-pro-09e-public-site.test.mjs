@@ -62,9 +62,14 @@ test('UX-PRO-09E PU2: somente as quatro sugestões e o CTA público recebem o ac
   const publico = ragColors().publico;
   const widget = source('src/components/RagWidget.tsx');
   const contrastColor = /--rag-accent-contrast":\s*"(#[0-9a-f]{3,6})"/i.exec(widget)?.[1];
-  const interactiveAccent = /const interactiveAccent = ragKey === "publico" \? "(#[0-9a-f]{6})" : colors\.accent;/.exec(widget)?.[1];
+  const interactiveAccent = /const interactiveAccent = ragKey === "publico" \? "(#[0-9a-f]{6})" : "([^"]+)";/.exec(widget);
   assert.ok(contrastColor, 'o texto do CTA precisa continuar usando --rag-accent-contrast');
-  assert.equal(interactiveAccent, '#c2410c', 'o acento interativo escuro é aplicado apenas ao escopo público');
+  assert.ok(interactiveAccent, 'o acento interativo precisa separar o público dos papéis privados');
+  assert.equal(interactiveAccent[1], '#c2410c', 'o acento interativo escuro é aplicado apenas ao escopo público');
+  assert.equal(interactiveAccent[2], 'var(--rag-accent)',
+    'os controles privados precisam seguir o token computado, inclusive os overrides noturnos administrativos');
+  assert.match(source('src/app/admin/admin-theme.css'), /--rag-accent:\s*var\(--ux-color-brand-strong\)\s*!important/,
+    'o tema noturno privado continua podendo sobrescrever o acento original dos controles');
   assert.deepEqual(publico, { border: '#ea580c', bg: '#fff7ed', accent: '#ea580c', light: '#ffedd5' },
     'a cor-base, borda, título e papéis não medidos do RAG público permanecem inalterados');
 
