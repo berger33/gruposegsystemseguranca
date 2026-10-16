@@ -1,0 +1,336 @@
+{
+  "schemaVersion": 1,
+  "stage": "UX-PRO-09A-6",
+  "date": "2026-10-16",
+  "gap": "G5",
+  "route": "/admin/entrar",
+  "entries": [
+    {
+      "route": "/admin/entrar",
+      "theme": "day",
+      "viewport": "320x844",
+      "screenshot": "ux-pro-09a6-admin-entrar-day-320.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "login-email"
+        },
+        {
+          "action": "Tab",
+          "target": "login-password"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar"
+        },
+        {
+          "action": "Enter / 401",
+          "target": "[data-login-error] E-mail ou senha não conferem. Confira os dados e t"
+        },
+        {
+          "action": "Shift+Tab após o erro",
+          "target": "login-password"
+        },
+        {
+          "action": "redigitar senha para repetir",
+          "target": "login-password"
+        },
+        {
+          "action": "Tab após redigitar",
+          "target": "Entrar"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "[data-login-error] E-mail ou senha não conferem. Confira os dados e t",
+      "repeticaoAposErro": "Entrar"
+    },
+    {
+      "route": "/admin/entrar",
+      "theme": "day",
+      "viewport": "390x844",
+      "screenshot": "ux-pro-09a6-admin-entrar-day-390.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "login-email"
+        },
+        {
+          "action": "Tab",
+          "target": "login-password"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar"
+        },
+        {
+          "action": "Enter / 401",
+          "target": "[data-login-error] E-mail ou senha não conferem. Confira os dados e t"
+        },
+        {
+          "action": "Shift+Tab após o erro",
+          "target": "login-password"
+        },
+        {
+          "action": "redigitar senha para repetir",
+          "target": "login-password"
+        },
+        {
+          "action": "Tab após redigitar",
+          "target": "Entrar"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "[data-login-error] E-mail ou senha não conferem. Confira os dados e t",
+      "repeticaoAposErro": "Entrar"
+    },
+    {
+      "route": "/admin/entrar",
+      "theme": "day",
+      "viewport": "768x900",
+      "screenshot": "ux-pro-09a6-admin-entrar-day-768.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "login-email"
+        },
+        {
+          "action": "Tab",
+          "target": "login-password"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar"
+        },
+        {
+          "action": "Enter / 401",
+          "target": "[data-login-error] E-mail ou senha não conferem. Confira os dados e t"
+        },
+        {
+          "action": "Shift+Tab após o erro",
+          "target": "login-password"
+        },
+        {
+          "action": "redigitar senha para repetir",
+          "target": "login-password"
+        },
+        {
+          "action": "Tab após redigitar",
+          "target": "Entrar"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "[data-login-error] E-mail ou senha não conferem. Confira os dados e t",
+      "repeticaoAposErro": "Entrar"
+    },
+    {
+      "route": "/admin/entrar",
+      "theme": "day",
+      "viewport": "1440x900",
+      "screenshot": "ux-pro-09a6-admin-entrar-day-1440.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "login-email"
+        },
+        {
+          "action": "Tab",
+          "target": "login-password"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar"
+        },
+        {
+          "action": "Enter / 401",
+          "target": "[data-login-error] E-mail ou senha não conferem. Confira os dados e t"
+        },
+        {
+          "action": "Shift+Tab após o erro",
+          "target": "login-password"
+        },
+        {
+          "action": "redigitar senha para repetir",
+          "target": "login-password"
+        },
+        {
+          "action": "Tab após redigitar",
+          "target": "Entrar"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "[data-login-error] E-mail ou senha não conferem. Confira os dados e t",
+      "repeticaoAposErro": "Entrar"
+    },
+    {
+      "route": "/admin/entrar",
+      "theme": "night",
+      "viewport": "320x844",
+      "screenshot": "ux-pro-09a6-admin-entrar-night-320.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "login-email"
+        },
+        {
+          "action": "Tab",
+          "target": "login-password"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar"
+        },
+        {
+          "action": "Enter / 401",
+          "target": "[data-login-error] E-mail ou senha não conferem. Confira os dados e t"
+        },
+        {
+          "action": "Shift+Tab após o erro",
+          "target": "login-password"
+        },
+        {
+          "action": "redigitar senha para repetir",
+          "target": "login-password"
+        },
+        {
+          "action": "Tab após redigitar",
+          "target": "Entrar"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "[data-login-error] E-mail ou senha não conferem. Confira os dados e t",
+      "repeticaoAposErro": "Entrar"
+    },
+    {
+      "route": "/admin/entrar",
+      "theme": "night",
+      "viewport": "390x844",
+      "screenshot": "ux-pro-09a6-admin-entrar-night-390.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "login-email"
+        },
+        {
+          "action": "Tab",
+          "target": "login-password"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar"
+        },
+        {
+          "action": "Enter / 401",
+          "target": "[data-login-error] E-mail ou senha não conferem. Confira os dados e t"
+        },
+        {
+          "action": "Shift+Tab após o erro",
+          "target": "login-password"
+        },
+        {
+          "action": "redigitar senha para repetir",
+          "target": "login-password"
+        },
+        {
+          "action": "Tab após redigitar",
+          "target": "Entrar"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "[data-login-error] E-mail ou senha não conferem. Confira os dados e t",
+      "repeticaoAposErro": "Entrar"
+    },
+    {
+      "route": "/admin/entrar",
+      "theme": "night",
+      "viewport": "768x900",
+      "screenshot": "ux-pro-09a6-admin-entrar-night-768.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "login-email"
+        },
+        {
+          "action": "Tab",
+          "target": "login-password"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar"
+        },
+        {
+          "action": "Enter / 401",
+          "target": "[data-login-error] E-mail ou senha não conferem. Confira os dados e t"
+        },
+        {
+          "action": "Shift+Tab após o erro",
+          "target": "login-password"
+        },
+        {
+          "action": "redigitar senha para repetir",
+          "target": "login-password"
+        },
+        {
+          "action": "Tab após redigitar",
+          "target": "Entrar"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "[data-login-error] E-mail ou senha não conferem. Confira os dados e t",
+      "repeticaoAposErro": "Entrar"
+    },
+    {
+      "route": "/admin/entrar",
+      "theme": "night",
+      "viewport": "1440x900",
+      "screenshot": "ux-pro-09a6-admin-entrar-night-1440.png",
+      "percursoTeclado": [
+        {
+          "action": "focus e-mail",
+          "target": "login-email"
+        },
+        {
+          "action": "Tab",
+          "target": "login-password"
+        },
+        {
+          "action": "Tab",
+          "target": "Entrar"
+        },
+        {
+          "action": "Enter / 401",
+          "target": "[data-login-error] E-mail ou senha não conferem. Confira os dados e t"
+        },
+        {
+          "action": "Shift+Tab após o erro",
+          "target": "login-password"
+        },
+        {
+          "action": "redigitar senha para repetir",
+          "target": "login-password"
+        },
+        {
+          "action": "Tab após redigitar",
+          "target": "Entrar"
+        }
+      ],
+      "overflow": 0,
+      "loginHttpStatus": 401,
+      "focusAposFalha": "[data-login-error] E-mail ou senha não conferem. Confira os dados e t",
+      "repeticaoAposErro": "Entrar"
+    }
+  ],
+  "simulatedFetchRejection": false,
+  "mockedHttp": false,
+  "limitations": [
+    "Percurso medido no Chromium empacotado em Linux; sem leitores de tela/zoom 200%/Windows",
+    "Dados sintéticos em PostgreSQL descartável",
+    "Sem aceite humano, UAT, certificação WCAG ou produção; NO-GO"
+  ]
+}

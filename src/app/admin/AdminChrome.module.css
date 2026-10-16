@@ -210,6 +210,10 @@
 
 .message { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0; padding: 11px 13px; border-radius: 10px; font-size: 12.5px; line-height: 1.5; }
 .messageError { background: #fdeceb; color: #8c1c14; border: 1px solid #f2c6c2; }
+
+/* UX-PRO-09A-6 (G5): contorno visível para a mensagem de erro focável da entrada.
+   Só atinge elementos com tabindex="-1" focados por código; nada mais muda. */
+.message[tabindex="-1"]:focus { outline: 3px solid #8c1c14; outline-offset: 2px; }
 .messageOk { background: #e9f7ee; color: #1d6b34; border: 1px solid #bfe6cb; }
 .messageInfo { background: #e8f1fb; color: #144a86; border: 1px solid #c3d9ef; }
 
@@ -347,6 +351,10 @@
   background: var(--ux-color-error-soft);
   border-color: #70484b;
   color: var(--ux-color-error);
+}
+
+:global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .message[tabindex="-1"]:focus {
+  outline-color: var(--ux-color-error);
 }
 
 :global(html[data-admin-theme="night"]) .page[data-admin-theme-scope="true"] .messageOk {

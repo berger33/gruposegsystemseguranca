@@ -71,6 +71,8 @@
 .shell[data-admin-theme-scope="true"] {color:var(--ux-color-text);background:var(--ux-color-canvas);}
 .app {color:var(--ux-color-text);}
 .tab:focus-visible,.quick button:focus-visible,.button:focus-visible,.input:focus-visible,.select:focus-visible,.textarea:focus-visible,.logout:focus-visible,.ghost:focus-visible,.blockLink:focus-visible {outline:3px solid var(--ux-color-focus);outline-offset:3px;}
+/* UX-PRO-09A-6 (G5): contorno visível do aviso de erro focável da entrada. */
+.loginErrorFocus:focus{outline:3px solid var(--ux-color-focus);outline-offset:3px;border-radius:12px;}
 
 :global(html[data-admin-theme="night"]) .shell[data-admin-theme-scope="true"] {
   --employee-app: #111e30;
