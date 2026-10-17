@@ -1,0 +1,507 @@
+{
+ "stage": "ux-pro-e6",
+ "gerado_em": "2026-10-17T03:37:44.824Z",
+ "observacao": "captura estrutural/visual do reparo E6; problemas derivados da medição (mainCount != 1, marco ausente ou região de conteúdo fora do main)",
+ "entries": [
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/operacao",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-operacao-1440x900-day.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Navegação operacional]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/operacao",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "night",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-operacao-1440x900-night.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Navegação operacional]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/operacao",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "day",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-operacao-390x844-day.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Navegação operacional]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/operacao",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "night",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-operacao-390x844-night.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Navegação operacional]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/conhecimento",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-conhecimento-1440x900-day.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/conhecimento",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "night",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-conhecimento-1440x900-night.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/conhecimento",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "day",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-conhecimento-390x844-day.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/conhecimento",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "night",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-conhecimento-390x844-night.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/crm",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-crm-1440x900-day.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Tarefas do CRM]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/crm",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "night",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-crm-1440x900-night.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Tarefas do CRM]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/crm",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "day",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-crm-390x844-day.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Tarefas do CRM]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/crm",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "night",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-crm-390x844-night.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Tarefas do CRM]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/pendencias",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-pendencias-1440x900-day.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/pendencias",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "night",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-pendencias-1440x900-night.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/pendencias",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "day",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-pendencias-390x844-day.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/pendencias",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "night",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-pendencias-390x844-night.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/portal/alertas",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-portal-alertas-1440x900-day.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "header",
+    "footer"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/portal/alertas",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "night",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-portal-alertas-1440x900-night.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "header",
+    "footer"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/portal/alertas",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "day",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-portal-alertas-390x844-day.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "header",
+    "footer"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/portal/alertas",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "night",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-portal-alertas-390x844-night.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "header",
+    "footer"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/publicacao",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-publicacao-1440x900-day.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Áreas de publicação]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/publicacao",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "night",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-publicacao-1440x900-night.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Áreas de publicação]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/publicacao",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "day",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-publicacao-390x844-day.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Áreas de publicação]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin/publicacao",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "night",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-publicacao-390x844-night.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Áreas de publicação]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-hub-1440x900-day.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "night",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-hub-1440x900-night.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "day",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-hub-390x844-day.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ]
+  },
+  {
+   "stage": "ux-pro-e6",
+   "route": "/admin",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "night",
+   "screenshot": "docs/UX-PRO-E6-evidencias-2026-10-17/depois/ux-pro-e6-hub-390x844-night.png",
+   "problems": [],
+   "state": "depois",
+   "mainCount": 1,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ]
+  }
+ ]
+}

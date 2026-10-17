@@ -184,7 +184,7 @@ export default function RhWorkspace() {
   const activeTab = TABS.find(item => item.id === tab)!;
 
   return (
-    <main className={styles.workspace}>
+    <div className={styles.workspace} data-admin-content="true">
       <nav className={styles.breadcrumbNav} aria-label="Trilha de navegação">
         <a href="/admin">Início</a> · <span aria-current="page">Pessoas e RH</span>
       </nav>
@@ -308,7 +308,7 @@ export default function RhWorkspace() {
           </div>
         </>
       ) : null}
-    </main>
+    </div>
   );
 }
 

@@ -16,7 +16,7 @@ export default function PublicationClient({initialTab='conteudo'}:{initialTab?:s
  const tokens=getThemeTokens(theme);
  const transitions:Record<string,string[]>={rascunho:['em_revisao'],em_revisao:['aprovado','rejeitado'],aprovado:['publicado','arquivado'],publicado:['arquivado'],rejeitado:[],arquivado:[]};
  const labels:Record<string,string>={em_revisao:'Enviar para revisão',aprovado:'Aprovar',rejeitado:'Rejeitar',publicado:'Publicar',arquivado:'Arquivar'};
- return <main style={{maxWidth:1080,margin:'auto',padding:24,fontFamily:'system-ui',color:'#17253b',background:'#fff',minHeight:'100vh'}}>
+ return <div style={{maxWidth:1080,margin:'auto',padding:24,fontFamily:'system-ui',color:'#17253b',background:'#fff',minHeight:'100vh'}} data-admin-content="true">
  <a href="/admin/comercial">Voltar ao comercial</a><h1>Publicação do site</h1>
  <nav aria-label="Áreas de publicação" style={{display:'flex',flexWrap:'wrap',gap:12}}>{[['conteudo','Conteúdo'],['temas','Temas'],['pacotes','Pacotes']].map(([k,l])=><button key={k} aria-pressed={tab===k} onClick={()=>setTab(k)}>{l}</button>)}<a href="/conteudos">Conteúdo público</a><a href="/pacotes">Pacotes públicos</a></nav>
  {error&&<p role="alert">Não foi possível concluir: {error}. Verifique sua sessão e os dados informados.</p>}{message&&<p role="status">{message}</p>}
@@ -52,5 +52,5 @@ export default function PublicationClient({initialTab='conteudo'}:{initialTab?:s
  {tab==='pacotes'&&<><p>{r.description}</p><p>{r.service_details.map((s:Row)=>s.name).join(', ')}</p><strong>Preço sob consulta</strong>{r.is_approved&&<label><input type="checkbox" checked={compare.includes(r.id)} onChange={e=>setCompare(e.target.checked?[...compare,r.id]:compare.filter(x=>x!==r.id))}/>Comparar {r.name}</label>}</>}
  </article>)}
  {history&&<section style={box}><h2>Histórico de {history.title}</h2>{history.history.map((h:Row)=><p key={h.id}>{h.previous_status||'início'} → {h.next_status}: {h.reason} ({new Date(h.created_at).toLocaleString('pt-BR')})</p>)}</section>}
- </main>;
+ </div>;
 }

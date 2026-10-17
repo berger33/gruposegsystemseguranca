@@ -668,7 +668,7 @@ export default function ComplianceWorkspace() {
   );
 
   return (
-    <main className={styles.workspace} data-testid="compliance-workspace">
+    <div className={styles.workspace} data-testid="compliance-workspace" data-admin-content="true">
       <nav aria-label="Trilha" className={styles.breadcrumbNav}>
         <a href="/admin">Início</a> · <span aria-current="page">Compliance</span>
       </nav>
@@ -1723,6 +1723,6 @@ export default function ComplianceWorkspace() {
         conteúdo gravado nos eventos e no campo de erro das execuções é histórico imutável e nunca é
         reescrito. Responsável e identidade executora aparecem como o servidor devolve.
       </p>
-    </main>
+    </div>
   );
 }

@@ -270,7 +270,7 @@ export function AnalyticsWorkspace() {
     : null;
 
   return (
-    <main className={styles.workspace} data-testid="analytics-workspace">
+    <div className={styles.workspace} data-testid="analytics-workspace" data-admin-content="true">
       <nav aria-label="Trilha" className={styles.breadcrumbNav}>
         <a href="/admin">Início</a> · <span aria-current="page">Analytics e experimentos</span>
       </nav>
@@ -784,6 +784,6 @@ export function AnalyticsWorkspace() {
           </section>
         ) : null}
       </div>
-    </main>
+    </div>
   );
 }

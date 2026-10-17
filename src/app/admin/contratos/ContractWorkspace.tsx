@@ -219,7 +219,7 @@ export default function ContractWorkspace() {
   }
 
   return (
-    <main className={styles.workspace} data-testid="contracts-workspace">
+    <div className={styles.workspace} data-testid="contracts-workspace" data-admin-content="true">
       <nav aria-label="Navegação comercial" className={styles.breadcrumbNav}>
         <a href="/admin/comercial">Comercial</a> · <a href="/admin/crm">Empresas e funil</a>
       </nav>
@@ -446,6 +446,6 @@ export default function ContractWorkspace() {
           </>
         )}
       </section>
-    </main>
+    </div>
   );
 }

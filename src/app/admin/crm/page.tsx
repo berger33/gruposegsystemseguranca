@@ -382,7 +382,7 @@ function CrmPageContent() {
   const duplicatesPending = Boolean(importPreview && importPreview.report?.duplicate > 0);
 
   return (
-    <main className={styles.workspace}>
+    <div className={styles.workspace} data-admin-content="true">
       <h1>Empresas e oportunidades</h1>
       <p className={styles.lede}>Cadastre empresas, acompanhe suas oportunidades e organize os próximos contatos. Cada comercial acessa seu próprio funil; as permissões continuam verificadas no servidor.</p>
       <nav className={styles.taskNav} aria-label="Tarefas do CRM">
@@ -948,7 +948,7 @@ function CrmPageContent() {
         <MyDelegatedTasks />
         <MyAgenda />
       </section>
-    </main>
+    </div>
   );
 }
 

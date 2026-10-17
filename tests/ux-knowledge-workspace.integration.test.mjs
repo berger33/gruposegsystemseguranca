@@ -475,7 +475,7 @@ async function contraste08a(page, selector) {
 async function medirSuperficie08a(page, rotulo) {
   const overflowDocumentoPx = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert.ok(overflowDocumentoPx <= 1, `transbordo de ${overflowDocumentoPx}px em ${rotulo}`);
-  const alvos = await page.locator('main main :is(button, [role="tab"], select, input)').evaluateAll(elements => elements
+  const alvos = await page.locator('main [data-admin-content="true"] :is(button, [role="tab"], select, input)').evaluateAll(elements => elements
     .map(element => element.getBoundingClientRect())
     .filter(rect => rect.width > 0 && rect.height > 0)
     .map(rect => Math.round(rect.height)));

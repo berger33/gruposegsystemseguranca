@@ -43,7 +43,7 @@ function InvitationFlowPreviewPageContent() {
   }
 
   return (
-    <main className={styles.page}>
+    <div className={styles.page} data-admin-content="true">
       <header className={styles.header}>
         <Link href="/admin/portal" className={styles.back}><ArrowLeft size={15} /> Configuração de acesso</Link>
         <span className={styles.headerLabel}><Mail size={14} /> FLUXO DE CONVITE</span>
@@ -144,7 +144,7 @@ function InvitationFlowPreviewPageContent() {
 
         <footer className={styles.footer}><span>Sem banco, conta, envio de e-mail ou link de acesso real.</span><Link href="/cliente">Ver página informativa do portal <ArrowRight size={14} /></Link></footer>
       </section>
-    </main>
+    </div>
   );
 }
 

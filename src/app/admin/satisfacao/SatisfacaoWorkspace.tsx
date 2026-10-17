@@ -440,7 +440,7 @@ export default function SatisfacaoWorkspace() {
   const scopedTargets = targets.filter(target => target.client_account_id === form.client_account_id);
 
   return (
-    <main className={styles.workspace} data-testid="satisfacao-workspace">
+    <div className={styles.workspace} data-testid="satisfacao-workspace" data-admin-content="true">
       <nav aria-label="Trilha" className={styles.breadcrumbNav}>
         <a href="/admin">Início</a> · <span aria-current="page">Satisfação</span>
       </nav>
@@ -1140,6 +1140,6 @@ export default function SatisfacaoWorkspace() {
           </section>
         ) : null}
       </div>
-    </main>
+    </div>
   );
 }

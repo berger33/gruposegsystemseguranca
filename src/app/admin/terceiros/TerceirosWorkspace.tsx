@@ -655,7 +655,7 @@ export default function TerceirosWorkspace() {
   });
 
   return (
-    <main className={styles.workspace} data-testid="terceiros-workspace">
+    <div className={styles.workspace} data-testid="terceiros-workspace" data-admin-content="true">
       <nav aria-label="Trilha" className={styles.breadcrumbNav}>
         <a href="/admin">Início</a> · <span aria-current="page">Terceiros</span>
       </nav>
@@ -1341,6 +1341,6 @@ export default function TerceirosWorkspace() {
           </section>
         ) : null}
       </div>
-    </main>
+    </div>
   );
 }

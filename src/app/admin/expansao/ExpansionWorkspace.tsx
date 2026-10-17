@@ -482,7 +482,7 @@ export function ExpansionWorkspace() {
   const filtersActive = Boolean(appliedFilters.status || appliedFilters.q.trim() || appliedFilters.location.trim());
 
   return (
-    <main className={styles.workspace} data-testid="expansion-workspace">
+    <div className={styles.workspace} data-testid="expansion-workspace" data-admin-content="true">
       <nav aria-label="Trilha" className={styles.breadcrumbNav}>
         <a href="/admin">Início</a> · <span aria-current="page">Expansão</span>
       </nav>
@@ -1318,7 +1318,7 @@ export function ExpansionWorkspace() {
           </section>
         ) : null}
       </div>
-    </main>
+    </div>
   );
 }
 

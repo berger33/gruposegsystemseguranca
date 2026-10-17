@@ -316,7 +316,7 @@ export default function ContractWorkflowClient({ id }: Props) {
   const contrato = detalhe.dado?.contract as Qualquer | undefined;
 
   return (
-    <main className={styles.workspace} data-testid="contract-detail">
+    <div className={styles.workspace} data-testid="contract-detail" data-admin-content="true">
       <nav aria-label="Navegação contratual" className={styles.breadcrumbNav}>
         <a href="/admin/contratos">← Contratos</a>
       </nav>
@@ -981,6 +981,6 @@ export default function ContractWorkflowClient({ id }: Props) {
           ) : null}
         </section>
       ))}
-    </main>
+    </div>
   );
 }

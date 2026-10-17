@@ -58,7 +58,7 @@ export default function ComercialWorkspace() {
   const area = TABS.find(item => item.id === view) as Area;
 
   return (
-    <main className={styles.workspace}>
+    <div className={styles.workspace} data-admin-content="true">
       <nav aria-label="Trilha" className={styles.breadcrumbNav}>
         <a href="/admin">Início</a> · <span aria-current="page">Comercial</span>
       </nav>
@@ -144,6 +144,6 @@ export default function ComercialWorkspace() {
           </>
         )}
       </div>
-    </main>
+    </div>
   );
 }

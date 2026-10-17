@@ -502,7 +502,7 @@ export default function QualidadeWorkspace() {
     : null;
 
   return (
-    <main className={styles.workspace} data-testid="quality-workspace">
+    <div className={styles.workspace} data-testid="quality-workspace" data-admin-content="true">
       <nav aria-label="Trilha" className={styles.breadcrumbNav}>
         <a href="/admin">Início</a> · <span aria-current="page">Qualidade</span>
       </nav>
@@ -1441,6 +1441,6 @@ export default function QualidadeWorkspace() {
           </section>
         ) : null}
       </div>
-    </main>
+    </div>
   );
 }
