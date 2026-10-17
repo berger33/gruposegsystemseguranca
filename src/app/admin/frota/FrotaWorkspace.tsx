@@ -583,7 +583,7 @@ export default function FrotaWorkspace() {
   };
 
   return (
-    <main className={styles.workspace} data-testid="frota-workspace">
+    <div className={styles.workspace} data-testid="frota-workspace" data-admin-content="true">
       <nav aria-label="Trilha" className={styles.breadcrumbNav}>
         <a href="/admin">Início</a> · <span aria-current="page">Frota</span>
       </nav>
@@ -1352,6 +1352,6 @@ export default function FrotaWorkspace() {
           </section>
         ) : null}
       </div>
-    </main>
+    </div>
   );
 }

@@ -414,7 +414,7 @@ export default function KnowledgeWorkspace() {
   };
 
   return (
-    <main className={styles.workspace}>
+    <div className={styles.workspace} data-admin-content="true">
       <nav aria-label="Trilha" className={styles.breadcrumbNav}>
         <a href="/admin">Início</a> · <span aria-current="page">Base de conhecimento</span>
       </nav>
@@ -615,6 +615,6 @@ export default function KnowledgeWorkspace() {
           </section>
         ) : null}
       </div>
-    </main>
+    </div>
   );
 }

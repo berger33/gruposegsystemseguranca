@@ -1,0 +1,1854 @@
+{
+ "stage": "ux-pro-e6",
+ "gerado_em": "2026-10-17T03:37:44.766Z",
+ "base": "ver relatório da subfatia (SHA registrado em UX-PRO-E6-RELATORIO)",
+ "entries": [
+  {
+   "route": "/admin",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ],
+   "fingerprint": "81e61e7d1ea59dc2cbefed34e66a2dfe",
+   "scroll": [
+    1440,
+    1982
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/analytics",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ],
+   "fingerprint": "34491bddd5012edba7fa3ab1f245da1d",
+   "scroll": [
+    1440,
+    900
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/aparencia",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "header",
+    "footer"
+   ],
+   "fingerprint": "eff2c547902686f19176b356196b23df",
+   "scroll": [
+    1440,
+    2144
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/carteira",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ],
+   "fingerprint": "f6076a63e61784beb41999d0b0d56184",
+   "scroll": [
+    1440,
+    1000
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/clientes",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ],
+   "fingerprint": "17f7e31211781384bbef7cacd25d6e11",
+   "scroll": [
+    1440,
+    900
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/comercial",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]",
+    "nav[aria-label=Etapas comerciais]"
+   ],
+   "fingerprint": "ffcd93e4be1b00d7e692059d051f4989",
+   "scroll": [
+    1440,
+    1343
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/compliance",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ],
+   "fingerprint": "57729e9ec2ae5b878b1cb6dcd609444a",
+   "scroll": [
+    1440,
+    1185
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/conhecimento",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ],
+   "fingerprint": "0f5088c94655b29248928e4df0e18756",
+   "scroll": [
+    1440,
+    904
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/continuidade",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ],
+   "fingerprint": "0bd91aa85e1030f356ddf74115c1a8af",
+   "scroll": [
+    1440,
+    1124
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/contratos",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Navegação comercial]"
+   ],
+   "fingerprint": "ff76be6bd44437dc474ae0592c4b659a",
+   "scroll": [
+    1440,
+    1407
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/contratos/e6-sintetico-000",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Navegação contratual]"
+   ],
+   "fingerprint": "608135509577d6e0bd89094cb167b30a",
+   "scroll": [
+    1440,
+    1030
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/crm",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Tarefas do CRM]"
+   ],
+   "fingerprint": "29077a33fa01304a97963fa51dcd240f",
+   "scroll": [
+    1440,
+    4284
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/emergencial",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ],
+   "fingerprint": "15afd54a27e1216f0347fdfe1a73709e",
+   "scroll": [
+    1440,
+    2222
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/expansao",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ],
+   "fingerprint": "d82c112e2ab77a8d86b5bf0ffaf359ff",
+   "scroll": [
+    1440,
+    1079
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/financeiro",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Navegação financeira]"
+   ],
+   "fingerprint": "489ef72165db8588e649263c0253e048",
+   "scroll": [
+    1440,
+    908
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/fornecedores",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Etapas da jornada de fornecedores]"
+   ],
+   "fingerprint": "e285517e9849872b046e6e5458e38dab",
+   "scroll": [
+    1440,
+    1536
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/frota",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ],
+   "fingerprint": "cf669192f6a18c43b3b07a8027b892c3",
+   "scroll": [
+    1440,
+    1030
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/funcionarios",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha de navegação]"
+   ],
+   "fingerprint": "4dc13a9e0c0219d83acbeb57c1205bfc",
+   "scroll": [
+    1440,
+    900
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/inteligencia",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ],
+   "fingerprint": "9064f6cac9fbb79a5e286032cf602b83",
+   "scroll": [
+    1440,
+    1000
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/leads",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "header",
+    "nav[aria-label=Atalhos administrativos]"
+   ],
+   "fingerprint": "c7501efcdf05faa450f0c24ecd3e3fe0",
+   "scroll": [
+    1440,
+    1104
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/licitacoes",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Etapas da jornada de licitações]"
+   ],
+   "fingerprint": "ce92bceda8ad0fd19d46888e115c7b81",
+   "scroll": [
+    1440,
+    928
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/marcelo",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha de navegação]",
+    "header"
+   ],
+   "fingerprint": "fb02d3463019f991358098649d7890b4",
+   "scroll": [
+    1440,
+    1116
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/marcelo/assistente",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ],
+   "fingerprint": "d51584f9d6893935753d903cb46f62d7",
+   "scroll": [
+    1440,
+    900
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/operacao",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Navegação operacional]"
+   ],
+   "fingerprint": "78482da787461deada817c4c1a4caff4",
+   "scroll": [
+    1440,
+    1030
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/patrimonio",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ],
+   "fingerprint": "2af60b33712c4c00ed5fe38f42054939",
+   "scroll": [
+    1440,
+    1030
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/pendencias",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ],
+   "fingerprint": "852894170366c2436f34014817aba5ef",
+   "scroll": [
+    1440,
+    900
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/portal",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "header",
+    "footer"
+   ],
+   "fingerprint": "7c7319bfe593aa1ad6b662740dd347d7",
+   "scroll": [
+    1440,
+    1515
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/portal/alertas",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "header",
+    "footer"
+   ],
+   "fingerprint": "f25e6dec27e57556bd748aa76c0f78dd",
+   "scroll": [
+    1440,
+    1782
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/portal/autocadastro",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "header",
+    "footer"
+   ],
+   "fingerprint": "2e8f9170feb7795eb2e72cfe9af5a442",
+   "scroll": [
+    1440,
+    1206
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/portal/convites",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "header",
+    "nav[aria-label=Etapas do fluxo demonstrativo]",
+    "footer"
+   ],
+   "fingerprint": "bf9b8672e1d0b85f39988a4e5c16c130",
+   "scroll": [
+    1440,
+    1102
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/portal/permissoes",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "header",
+    "footer"
+   ],
+   "fingerprint": "3a987286d02ac2a76c6332601a8d652a",
+   "scroll": [
+    1440,
+    2028
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/portal/solicitacoes",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "header"
+   ],
+   "fingerprint": "8422b520727fdcfc5e65670636acc1e8",
+   "scroll": [
+    1440,
+    1102
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/publicacao",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Áreas de publicação]"
+   ],
+   "fingerprint": "171d3577119d327f16f4a3ed6e2a19cd",
+   "scroll": [
+    1440,
+    1112
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/qualidade",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ],
+   "fingerprint": "91fa0e0d58d331df4cdadfe74443f38d",
+   "scroll": [
+    1440,
+    1030
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/relatorios",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ],
+   "fingerprint": "fcf4eb089c20d3902e5be119f234246a",
+   "scroll": [
+    1440,
+    1333
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/rh/assistente",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ],
+   "fingerprint": "a73aac586737ee3afc521e3e93fe6913",
+   "scroll": [
+    1440,
+    900
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/satisfacao",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ],
+   "fingerprint": "4698d25d03d7f4de1d51eae25740edb5",
+   "scroll": [
+    1440,
+    1000
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/tema",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Áreas de publicação]"
+   ],
+   "fingerprint": "1a38647b25caaac1045097fd0e22e8a3",
+   "scroll": [
+    1440,
+    1102
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/terceiros",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ],
+   "fingerprint": "b3a024b567ebe23ff5828ecd089d3d6d",
+   "scroll": [
+    1440,
+    1030
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/ti",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "gate",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc AdminChrome"
+   ],
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Ferramentas de sistema]",
+    "nav[aria-label=Tarefas desta área]"
+   ],
+   "fingerprint": "d5da55919ff24bcf7cd50746bf8a97f8",
+   "scroll": [
+    1440,
+    2437
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/entrar",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "autonoma",
+   "mainCount": 1,
+   "mains": [
+    "<main class=\"AdminChrome_page__6POBM\" data-admin-theme-scope=\"true\"><div class=\"AdminChrome_container__nyEAc\"><p class=\""
+   ],
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main"
+   ],
+   "fingerprint": "100662b58993062e71ba6853fe3b2be1",
+   "scroll": [
+    1440,
+    900
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/convite",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "autonoma",
+   "mainCount": 1,
+   "mains": [
+    "<main style=\"padding:24px\"><p>Token não informado.</p></main>"
+   ],
+   "shellMain": false,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main"
+   ],
+   "fingerprint": "526c042b2a73a48063252ea505061fa3",
+   "scroll": [
+    1440,
+    900
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/verificacao-manual",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "autonoma",
+   "mainCount": 1,
+   "mains": [
+    "<main style=\"max-width:790px;margin:32px auto;padding:24px;font-family:system-ui, sans-serif;line-height:1.6\" data-admin"
+   ],
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main"
+   ],
+   "fingerprint": "27c2b29ed19c7f28959b43dc6dce4dad",
+   "scroll": [
+    1440,
+    900
+   ],
+   "problems": []
+  },
+  {
+   "route": "/admin/operacao",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Navegação operacional]"
+   ],
+   "fingerprint": "78482da787461deada817c4c1a4caff4",
+   "scroll": [
+    1440,
+    1030
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-operacao-1440x900-day.png"
+  },
+  {
+   "route": "/admin/operacao",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "night",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Navegação operacional]"
+   ],
+   "fingerprint": "2078d3c0ebb1288470ad8bf0f86c4979",
+   "scroll": [
+    1440,
+    1030
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-operacao-1440x900-night.png"
+  },
+  {
+   "route": "/admin/operacao",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "day",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Navegação operacional]"
+   ],
+   "fingerprint": "52359ab4e5531768c75eef341aaa814c",
+   "scroll": [
+    390,
+    844
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-operacao-390x844-day.png"
+  },
+  {
+   "route": "/admin/operacao",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "night",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Navegação operacional]"
+   ],
+   "fingerprint": "1fbee0293d52b971a3d4ea3fdeaefe6b",
+   "scroll": [
+    390,
+    844
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-operacao-390x844-night.png"
+  },
+  {
+   "route": "/admin/conhecimento",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ],
+   "fingerprint": "0f5088c94655b29248928e4df0e18756",
+   "scroll": [
+    1440,
+    904
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-conhecimento-1440x900-day.png"
+  },
+  {
+   "route": "/admin/conhecimento",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "night",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ],
+   "fingerprint": "673d2683800884e6d9458e1dc711afcf",
+   "scroll": [
+    1440,
+    904
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-conhecimento-1440x900-night.png"
+  },
+  {
+   "route": "/admin/conhecimento",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "day",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ],
+   "fingerprint": "b0c5a9c9ae39a473c213adb76f8b1530",
+   "scroll": [
+    390,
+    1319
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-conhecimento-390x844-day.png"
+  },
+  {
+   "route": "/admin/conhecimento",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "night",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Trilha]"
+   ],
+   "fingerprint": "bf71ec5e0b533c78d1ca9471108715fb",
+   "scroll": [
+    390,
+    1319
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-conhecimento-390x844-night.png"
+  },
+  {
+   "route": "/admin/crm",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Tarefas do CRM]"
+   ],
+   "fingerprint": "29077a33fa01304a97963fa51dcd240f",
+   "scroll": [
+    1440,
+    4284
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-crm-1440x900-day.png"
+  },
+  {
+   "route": "/admin/crm",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "night",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Tarefas do CRM]"
+   ],
+   "fingerprint": "e9e903ff83c11d51f1aa87b707dcfd97",
+   "scroll": [
+    1440,
+    4284
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-crm-1440x900-night.png"
+  },
+  {
+   "route": "/admin/crm",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "day",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Tarefas do CRM]"
+   ],
+   "fingerprint": "179dd9bfb25fcea940e131b7d24214e7",
+   "scroll": [
+    390,
+    6585
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-crm-390x844-day.png"
+  },
+  {
+   "route": "/admin/crm",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "night",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Tarefas do CRM]"
+   ],
+   "fingerprint": "e945bd756e9df5d9c5295fc0fd26d8b8",
+   "scroll": [
+    390,
+    6585
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-crm-390x844-night.png"
+  },
+  {
+   "route": "/admin/pendencias",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ],
+   "fingerprint": "852894170366c2436f34014817aba5ef",
+   "scroll": [
+    1440,
+    900
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-pendencias-1440x900-day.png"
+  },
+  {
+   "route": "/admin/pendencias",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "night",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ],
+   "fingerprint": "4032682010b64aff257b459060f7ec6e",
+   "scroll": [
+    1440,
+    900
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-pendencias-1440x900-night.png"
+  },
+  {
+   "route": "/admin/pendencias",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "day",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ],
+   "fingerprint": "6c15267df874823a90f884b4e399dd22",
+   "scroll": [
+    390,
+    974
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-pendencias-390x844-day.png"
+  },
+  {
+   "route": "/admin/pendencias",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "night",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ],
+   "fingerprint": "d7f10a2adaa65ce371252634d0eb6017",
+   "scroll": [
+    390,
+    974
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-pendencias-390x844-night.png"
+  },
+  {
+   "route": "/admin/portal/alertas",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "header",
+    "footer"
+   ],
+   "fingerprint": "f25e6dec27e57556bd748aa76c0f78dd",
+   "scroll": [
+    1440,
+    1782
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-portal-alertas-1440x900-day.png"
+  },
+  {
+   "route": "/admin/portal/alertas",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "night",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "header",
+    "footer"
+   ],
+   "fingerprint": "cbd81920aa14e4c486b1fa5c57a6fb71",
+   "scroll": [
+    1440,
+    1782
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-portal-alertas-1440x900-night.png"
+  },
+  {
+   "route": "/admin/portal/alertas",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "day",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "header",
+    "footer"
+   ],
+   "fingerprint": "7065273cd2c9cd8708622afc8a04aac4",
+   "scroll": [
+    390,
+    2437
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-portal-alertas-390x844-day.png"
+  },
+  {
+   "route": "/admin/portal/alertas",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "night",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "header",
+    "footer"
+   ],
+   "fingerprint": "d86608262bc7cc926c4adebd6d7cc902",
+   "scroll": [
+    390,
+    2437
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-portal-alertas-390x844-night.png"
+  },
+  {
+   "route": "/admin/publicacao",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Áreas de publicação]"
+   ],
+   "fingerprint": "171d3577119d327f16f4a3ed6e2a19cd",
+   "scroll": [
+    1440,
+    1112
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-publicacao-1440x900-day.png"
+  },
+  {
+   "route": "/admin/publicacao",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "night",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Áreas de publicação]"
+   ],
+   "fingerprint": "daa8043852307608530f1e8a7c3a5318",
+   "scroll": [
+    1440,
+    1112
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-publicacao-1440x900-night.png"
+  },
+  {
+   "route": "/admin/publicacao",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "day",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Áreas de publicação]"
+   ],
+   "fingerprint": "4287dc6eeefd9579384ac3f819749189",
+   "scroll": [
+    390,
+    1440
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-publicacao-390x844-day.png"
+  },
+  {
+   "route": "/admin/publicacao",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "night",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 1,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]",
+    "nav[aria-label=Áreas de publicação]"
+   ],
+   "fingerprint": "a1825e8384309e5c2d45d07485db7b8c",
+   "scroll": [
+    390,
+    1440
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-publicacao-390x844-night.png"
+  },
+  {
+   "route": "/admin",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "day",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ],
+   "fingerprint": "81e61e7d1ea59dc2cbefed34e66a2dfe",
+   "scroll": [
+    1440,
+    1982
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-hub-1440x900-day.png"
+  },
+  {
+   "route": "/admin",
+   "role": "admin",
+   "viewport": "1440x900",
+   "theme": "night",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ],
+   "fingerprint": "53a916e75ef8842d41f0db2360b4e8c3",
+   "scroll": [
+    1440,
+    1982
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-hub-1440x900-night.png"
+  },
+  {
+   "route": "/admin",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "day",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ],
+   "fingerprint": "d44691544219bb06dc365bf5f29a56aa",
+   "scroll": [
+    390,
+    4073
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-hub-390x844-day.png"
+  },
+  {
+   "route": "/admin",
+   "role": "admin",
+   "viewport": "390x844",
+   "theme": "night",
+   "estado": "captura",
+   "mainCount": 1,
+   "shellMain": true,
+   "contentRegions": 0,
+   "contentInsideMain": true,
+   "landmarks": [
+    "main",
+    "header",
+    "nav[aria-label=Módulos administrativos]",
+    "nav[aria-label=Você está aqui]"
+   ],
+   "fingerprint": "5eb4ae1ed01162cb4a48186bccccc2d9",
+   "scroll": [
+    390,
+    4073
+   ],
+   "problems": [],
+   "screenshot": "ux-pro-e6-hub-390x844-night.png"
+  }
+ ]
+}

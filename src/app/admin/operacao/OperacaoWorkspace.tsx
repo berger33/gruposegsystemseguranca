@@ -583,7 +583,7 @@ export default function OperacaoWorkspace() {
   const activeTabInfo = TABS.find(item => item.id === activeTab)!;
 
   return (
-    <main className={styles.workspace}>
+    <div className={styles.workspace} data-admin-content="true">
       <nav aria-label="Navegação operacional" className={styles.breadcrumbNav}>
         <a href="/admin/contratos">Contratos</a> · <a href="/admin/crm">Empresas e funil</a>
       </nav>
@@ -717,7 +717,7 @@ export default function OperacaoWorkspace() {
           </div>
         </>
       ) : null}
-    </main>
+    </div>
   );
 }
 

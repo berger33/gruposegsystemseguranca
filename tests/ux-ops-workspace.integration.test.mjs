@@ -607,7 +607,7 @@ async function contraste07d(page, selector) {
 async function medirSuperficie07d(page, rotulo) {
   const overflowDocumentoPx = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert.ok(overflowDocumentoPx <= 1, `transbordo de ${overflowDocumentoPx}px em ${rotulo}`);
-  const alvos = await page.locator('main main :is(button, [role="tab"], select, input)').evaluateAll(elements => elements
+  const alvos = await page.locator('main [data-admin-content="true"] :is(button, [role="tab"], select, input)').evaluateAll(elements => elements
     .map(element => element.getBoundingClientRect())
     .filter(rect => rect.width > 0 && rect.height > 0)
     .map(rect => Math.round(rect.height)));
@@ -616,13 +616,13 @@ async function medirSuperficie07d(page, rotulo) {
   assert.ok(menorAlvoPx >= 44, `controles precisam ter pelo menos 44px; medido ${menorAlvoPx}px em ${rotulo}`);
   // Links de texto em linha (trilha "Contratos · Empresas e funil") são
   // medidos à parte e só registrados: não são controles de formulário.
-  const links = await page.locator('main main a[href]').evaluateAll(elements => elements
+  const links = await page.locator('main [data-admin-content="true"] a[href]').evaluateAll(elements => elements
     .map(element => element.getBoundingClientRect())
     .filter(rect => rect.width > 0 && rect.height > 0)
     .map(rect => Math.round(rect.height)));
   // Registrado, não corrigido nesta subfatia: tabelas mais largas que a tela
   // rolam dentro do próprio contêiner; o contêiner não declara região focável.
-  const tabelas = await page.locator('main main table').evaluateAll(tables => tables.map(table => {
+  const tabelas = await page.locator('main [data-admin-content="true"] table').evaluateAll(tables => tables.map(table => {
     const wrapper = table.parentElement;
     const rolagemInterna = Boolean(wrapper) && wrapper.scrollWidth - wrapper.clientWidth > 1;
     return { rolagemInterna, regiaoFocavel: Boolean(wrapper) && wrapper.hasAttribute('tabindex') };
@@ -726,12 +726,12 @@ test('browser 07D-1: carregamento inicial não presume abas, vazio nem falha', {
   assert.ok(massa07d, 'a massa sintética da 07D-1 precisa existir');
   await withBrowser07d(async browser => {
     const { context, page } = await openOps07d(browser, { rules: { posts: { delay: 5000 } } });
-    const carregando = page.locator('main main [data-ui-state="loading"]').first();
+    const carregando = page.locator('main [data-admin-content="true"] [data-ui-state="loading"]').first();
     await carregando.waitFor();
     assert.match(await carregando.innerText(), /Consultando a operação/);
     assert.equal(await page.locator('[role="tablist"]').count(), 0, 'sem leitura concluída, as abas não aparecem');
-    assert.equal(await page.locator('main main [data-ui-state="empty"]').count(), 0, 'nenhum vazio é presumido durante a leitura');
-    assert.equal(await page.locator('main main [data-ui-state="error"]').count(), 0, 'carregando não é falha');
+    assert.equal(await page.locator('main [data-admin-content="true"] [data-ui-state="empty"]').count(), 0, 'nenhum vazio é presumido durante a leitura');
+    assert.equal(await page.locator('main [data-admin-content="true"] [data-ui-state="error"]').count(), 0, 'carregando não é falha');
     await capture07d(page, 'operacao-1440-carregando', { state: 'carregando_painel_inicial' });
     await page.locator('[role="tablist"]').waitFor();
     await page.locator('section[aria-labelledby="posts-title"] table', { hasText: massa07d.postA.name }).waitFor();
@@ -743,16 +743,16 @@ test('browser 07D-1: 2xx sem a lista canônica no painel inicial é falha declar
   assert.ok(massa07d, 'a massa sintética da 07D-1 precisa existir');
   await withBrowser07d(async browser => {
     const { context, page } = await openOps07d(browser, { rules: { posts: { malformed: true } } });
-    await page.locator('main main [data-ui-state="error"], [role="tablist"]').first().waitFor();
+    await page.locator('main [data-admin-content="true"] [data-ui-state="error"], [role="tablist"]').first().waitFor();
     await capture07d(page, 'operacao-1440-resposta-invalida', { state: 'resposta_2xx_sem_lista_painel_inicial' });
-    const falha = page.locator('main main [data-ui-state="error"]');
+    const falha = page.locator('main [data-admin-content="true"] [data-ui-state="error"]');
     assert.equal(await falha.count(), 1, 'corpo 2xx sem "posts" precisa virar falha declarada');
     const texto = await falha.innerText();
     assert.match(texto, /invalid_ops_response/, 'o código de diagnóstico fica disponível');
     assert.match(texto, /HTTP 200/, 'a resposta real do servidor é declarada');
     assert.match(texto, /não significa que não existam registros/i);
     assert.equal(await page.getByText('Nenhum posto cadastrado ainda').count(), 0, 'a resposta ilegível não vira "nenhum posto"');
-    assert.equal(await page.locator('main main [data-ui-state="empty"]').count(), 0, 'nenhum vazio é presumido');
+    assert.equal(await page.locator('main [data-admin-content="true"] [data-ui-state="empty"]').count(), 0, 'nenhum vazio é presumido');
     assert.equal(await page.locator('[role="tablist"]').count(), 0, 'sem leitura completa, as abas não aparecem (mesma regra herdada da falha)');
 
     const leiturasAntes = await page.evaluate(() => window.__uxOps07d.calls.posts || 0);

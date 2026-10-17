@@ -157,7 +157,7 @@ function CarteiraContent() {
   const filterHint = FILTERS.find(item => item.value === filter)?.hint ?? "";
 
   return (
-    <main className={styles.workspace}>
+    <div className={styles.workspace} data-admin-content="true">
       <nav aria-label="Trilha" className={styles.breadcrumbNav}>
         <a href="/admin">Início</a> · <a href="/admin/comercial">Comercial</a> · <a href="/admin/crm">Empresas e funil</a> · <span aria-current="page">Carteira</span>
       </nav>
@@ -365,7 +365,7 @@ function CarteiraContent() {
           <p className={styles.hint}>Os totais aparecem depois que a leitura da carteira terminar.</p>
         )}
       </section>
-    </main>
+    </div>
   );
 }
 

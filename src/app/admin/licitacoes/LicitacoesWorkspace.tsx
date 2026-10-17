@@ -413,7 +413,7 @@ export default function LicitacoesWorkspace() {
   const window_ = dossier?.proposal_window ?? null;
 
   return (
-    <main className={styles.workspace}>
+    <div className={styles.workspace} data-admin-content="true">
       <div className="border-b pb-4">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">Licitações — EXT-03</h1>
         <p className="text-sm text-gray-500 mt-1">
@@ -1048,6 +1048,6 @@ export default function LicitacoesWorkspace() {
           </section>
         </div>
       )}
-    </main>
+    </div>
   );
 }

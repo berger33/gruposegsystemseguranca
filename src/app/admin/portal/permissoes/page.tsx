@@ -190,7 +190,7 @@ function ReminderPermissionsPageContent() {
   const actionIsValid = action === "grant" ? Boolean(selectedAdmin?.status === "ativa" && !hasPermission) : hasPermission;
 
   return (
-    <main className={styles.page}>
+    <div className={styles.page} data-admin-content="true">
       <header className={styles.header}>
         <Link href="/admin/portal" className={styles.back}><ArrowLeft size={15} /> Configuração do portal</Link>
         <span className={styles.headerTag}><ShieldCheck size={14} /> PERMISSÕES ADMINISTRATIVAS</span>
@@ -292,7 +292,7 @@ function ReminderPermissionsPageContent() {
 
         <footer className={styles.footer}><span>Somente uma demonstração local: não autentica, não envia avisos e não salva mudanças.</span><Link href="/admin/portal/alertas">Voltar à prévia de alertas <ArrowLeft size={13} /></Link></footer>
       </section>
-    </main>
+    </div>
   );
 }
 

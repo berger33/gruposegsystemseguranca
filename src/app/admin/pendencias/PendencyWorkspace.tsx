@@ -80,7 +80,7 @@ export function PendencyWorkspace() {
   }
 
   return (
-    <main style={{ maxWidth: 1000, margin: "40px auto", padding: 24, fontFamily: "system-ui" }}>
+    <div style={{ maxWidth: 1000, margin: "40px auto", padding: 24, fontFamily: "system-ui" }} data-admin-content="true">
       <p style={{ color: "#64748b", letterSpacing: 1 }}>F15 · PENDÊNCIAS INTERNAS</p>
       <h1>Minhas pendências</h1>
       <p>
@@ -129,6 +129,6 @@ export function PendencyWorkspace() {
           </article>
         ))
       )}
-    </main>
+    </div>
   );
 }

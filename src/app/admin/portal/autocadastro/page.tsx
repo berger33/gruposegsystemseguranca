@@ -12,7 +12,7 @@ function SelfRegistrationPreviewPageContent() {
   const [previewState, setPreviewState] = useState<PreviewState>(null);
 
   return (
-    <main className={styles.page}>
+    <div className={styles.page} data-admin-content="true">
       <header className={styles.header}>
         <Link href="/admin/portal" className={styles.back}><ArrowLeft size={15} /> Configuração do portal</Link>
         <span className={styles.headerLabel}><UserRoundPlus size={14} /> AUTOCADASTRO VERIFICADO</span>
@@ -57,7 +57,7 @@ function SelfRegistrationPreviewPageContent() {
         <div className={styles.policy}><ShieldCheck size={18} /><p>O modo inicial continua sendo convite. Autocadastro só deverá ser habilitado por decisão administrativa, com verificação de vínculo, permissões mínimas e trilha de auditoria.</p></div>
         <footer className={styles.footer}><span>Não cria conta, não salva informações e não abre acesso ao portal.</span><Link href="/admin/portal">Voltar às opções de acesso <ArrowLeft size={13} /></Link></footer>
       </section>
-    </main>
+    </div>
   );
 }
 

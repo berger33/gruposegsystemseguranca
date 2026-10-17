@@ -213,7 +213,7 @@ export default function MarceloPanel() {
   };
 
   return (
-    <main data-testid="marcelo-panel" className={`${styles.workspace} ${executive.workspace}`}>
+    <div data-testid="marcelo-panel" className={`${styles.workspace} ${executive.workspace}`} data-admin-content="true">
       <nav className={styles.breadcrumbNav} aria-label="Trilha de navegação">
         <a href="/admin">Início</a> · <span aria-current="page">Painel de decisões</span>
       </nav>
@@ -464,7 +464,7 @@ export default function MarceloPanel() {
       {tab === "metas" ? <GoalsTab period={period} /> : null}
       {tab === "diario" ? <DiaryTab /> : null}
       {tab === "expansao" ? <ExpansionTab period={period} /> : null}
-    </main>
+    </div>
   );
 }
 

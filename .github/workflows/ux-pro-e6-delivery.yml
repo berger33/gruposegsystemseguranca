@@ -1,0 +1,30 @@
+name: UX-PRO-E6 main unico por documento
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/admin/**'
+      - 'tests/ux-pro-e6-single-main.test.mjs'
+      - 'tests/ux-pro-e6-single-main.integration.test.mjs'
+      - 'tests/ux-ops-workspace.integration.test.mjs'
+      - 'tests/ux-knowledge-workspace.integration.test.mjs'
+      - 'scripts/qa-ux-pro-e6-postgres.mjs'
+      - 'package.json'
+      - '.github/workflows/ux-pro-e6-delivery.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Contrato estático do <main> único (sem banco)
+        run: node --test tests/ux-pro-e6-single-main.test.mjs
+      - name: PostgreSQL descartável, HTTP real e Chromium (mínimo 5)
+        run: node scripts/qa-ux-pro-e6-postgres.mjs

@@ -341,7 +341,7 @@ export default function FinanceiroWorkspace() {
   const activeTabInfo = TABS.find(item => item.id === tab)!;
 
   return (
-    <main className={styles.workspace} data-testid="financeiro-workspace">
+    <div className={styles.workspace} data-testid="financeiro-workspace" data-admin-content="true">
       <nav aria-label="Navegação financeira" className={styles.breadcrumbNav}>
         <a href="/admin/contratos">Contratos</a> · <a href="/admin/crm">Empresas e funil</a>
       </nav>
@@ -659,7 +659,7 @@ export default function FinanceiroWorkspace() {
           </div>
         </>
       ) : null}
-    </main>
+    </div>
   );
 }
 
