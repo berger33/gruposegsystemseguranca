@@ -1,5 +1,7 @@
 # UX-Pro-10A — Auditoria visual final (Parte A)
 
+> **Registro histórico com retificação (18/10/2026, PR corretiva da #263):** documento movido da raiz para `docs/`. A auditoria estática abaixo é preservada como histórico, mas dois pontos **não** valem como conclusão: (1) o item 5 das pendências de navegador pressupunha iframes em todos os layouts ("as layouts apontam para `/visuals/layout-XX/index.html`") — medido no código, **só o Layout 01** faz isso; (2) a UX-PRO-10B (teclado, tema, zoom em navegador) **continua pendente** e não foi resolvida pela PR #263 — os arquivos `public/visuals/layout-02..10` que ela criou eram órfãos e foram removidos por decisão do proprietário. Ver [`UX-PRO-10B-CORRECAO-263-ESCOPO-ANTES-2026-10-18.md`](UX-PRO-10B-CORRECAO-263-ESCOPO-ANTES-2026-10-18.md).
+
 ## Branch e Contexto
 - **Branch**: `arena/58196766-gruposegsystemseguranca-uxpro10-a`
 - **Base**: `d1bba3e` ( após merge da PR #262)

@@ -1,5 +1,7 @@
 # UX-Pro-10C — Fechamento Documental
 
+> **Retificação (18/10/2026, PR corretiva da #263):** documento movido da raiz para `docs/`. Este fechamento foi **prematuro** e fica retificado: a UX-PRO-10B (teclado, tema, zoom e comparação visual **em navegador**) **continua pendente** — a PR #263 não a executou, declarou resolvido um gap de iframe cuja premissa era falsa (só o Layout 01 usa `/visuals/layout-01/index.html`) e criou 9 arquivos órfãos já removidos por esta correção. Na tabela abaixo, os itens de teclado/zoom e de fechamento de lacunas passam de ✅ para ⚠️ pendente. O status honesto da família é o da conclusão deste documento: **parcialmente concluído — 10A estática feita, 10B pendente, sem aceite humano nem conformidade WCAG declarada**. Ver [`UX-PRO-10B-CORRECAO-263-ESCOPO-ANTES-2026-10-18.md`](UX-PRO-10B-CORRECAO-263-ESCOPO-ANTES-2026-10-18.md).
+
 ## Branch e Contexto
 - **Branch**: `arena/58196766-gruposegsystemseguranca-uxpro10-c`
 - **Base**: `d1bba3e` (após merge da PR #262)
@@ -44,7 +46,7 @@
 | Testar estados reais ou cenários de teste | ✅ | Unitários passing |
 | Verificar temas (10 temas + color modes) | ✅ | CSS verificado |
 | Testar teclado, zoom, tamanhos de tela | ⚠️ | Requer browser test (gaps documentados) |
-| Fechar cada lacuna com correção em PR própria | ✅ | Nenhuma lacuna crítica |
+| Fechar cada lacuna com correção em PR própria | ⚠️ | Retificado: a lacuna de teste em navegador (10B) segue aberta; a "correção" de iframe da #263 partiu de premissa falsa e foi revertida na PR corretiva |
 | Atualizar inventário, docs e README | ✅ | Documentação atualizada |
 | Emitir relatório final com cobertura por rota | ✅ | Este documento |
 

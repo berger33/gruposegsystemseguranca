@@ -1,8 +1,10 @@
 # Gap Resolution: UX-Pro-10B P0 - Keyboard Accessibility
 
+> **Retificação (18/10/2026, PR corretiva da #263):** documento movido da raiz para `docs/`. Premissa corrigida: **apenas o Layout 01 contém iframe** (`/visuals/layout-01/index.html`); os layouts 02–10 são componentes React. O gap abaixo — navegação de teclado **em navegador real** — **continua pendente**: não foi executado pela PR #263 nem por esta correção, e nenhum teste unitário o substitui. Ver [`UX-PRO-10B-CORRECAO-263-ESCOPO-ANTES-2026-10-18.md`](UX-PRO-10B-CORRECAO-263-ESCOPO-ANTES-2026-10-18.md).
+
 ## Contexto
 - **Gap**: Keyboard accessibility (P0)
-- **Arquitetura**: Layouts contêm iframes (`/visuals/layout-XX/index.html`)
+- **Arquitetura (corrigida)**: somente o Layout 01 contém iframe (`/visuals/layout-01/index.html`); os demais layouts são componentes React
 - **Focus management**: Necessário testar Tab order e focus dentro dos iframes
 - **Testes unitários**: 958 testes passing (já verificados)
 
@@ -11,8 +13,8 @@
 ### Estrutura de Navegação
 - Todos os layouts têm `SitePreviewNotice visual="XX"` com `aria-label="Prévia interna do layout XX"`
 - O componente `SitePreviewNotice` tem `data-testid="site-preview-notice"` e `aria-label`
-- Layouts renderizam `<main className={styles.framePage}>` com iframe interno
-- O iframe tem `title="Layout XX — [descrição]"` e `loading="eager"`
+- Apenas o Layout 01 renderiza `<main className={styles.framePage}>` com iframe interno; os demais renderizam o componente React do layout
+- O iframe do Layout 01 tem `title="Layout 01 — Institucional clássica"` e `loading="eager"`
 
 ### ✅ Elementos com Atributos de Acessibilidade
 - [x] `SitePreviewNotice` tem `aria-label` correto
