@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import UiBadge, { type UiBadgeTone } from "@/components/ui/UiBadge";
 import UiState from "@/components/ui/UiState";
 import UiTaskWorkspace from "@/components/ui/UiTaskWorkspace";
@@ -40,6 +40,15 @@ type Quotation = {
 };
 type Order = { id: string; protocol: string; quotation_id: string; supplier_name?: string | null; product_name?: string | null; total_price_cents: number; status: string; derived?: { situation?: string; deadline?: { situation?: string } } };
 type Detail = { quotation: Quotation; validities: Array<Record<string, unknown>>; alert_rule: Record<string, unknown> | null; documents: Array<Record<string, unknown>>; orders: Order[] };
+
+const SUPPLIER_TABS = [
+  { id: "quotations", label: "Cotações" },
+  { id: "detail", label: "Detalhe canônico" },
+  { id: "validity", label: "Validade e alertas" },
+  { id: "documents", label: "Referências documentais" },
+  { id: "orders", label: "Pedidos internos" },
+] as const;
+type SupplierTabId = (typeof SUPPLIER_TABS)[number]["id"];
 
 type ResourceKey = "references" | "quotations" | "orders" | "detail";
 
@@ -151,6 +160,7 @@ function tone(value: string): UiBadgeTone {
 }
 
 export default function FornecedoresWorkspace() {
+  const [activeTab, setActiveTab] = useState<SupplierTabId>("quotations");
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -176,6 +186,21 @@ export default function FornecedoresWorkspace() {
   const [deadlineForm, setDeadlineForm] = useState({ order_id: "", due_date: "", source: "registro_interno", source_reference: "", justification: "" });
 
   const productsForSupplier = useMemo(() => products.filter(p => p.supplier_id === quoteForm.supplier_id), [products, quoteForm.supplier_id]);
+
+  function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    const currentIndex = SUPPLIER_TABS.findIndex(tab => tab.id === activeTab);
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % SUPPLIER_TABS.length;
+    if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + SUPPLIER_TABS.length) % SUPPLIER_TABS.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = SUPPLIER_TABS.length - 1;
+    if (nextIndex === null) return;
+
+    event.preventDefault();
+    const nextTab = SUPPLIER_TABS[nextIndex];
+    setActiveTab(nextTab.id);
+    document.getElementById(`fornecedores-tab-${nextTab.id}`)?.focus();
+  }
 
   const commit = useCallback((updater: (current: Record<ResourceKey, ReadState>) => Record<ResourceKey, ReadState>) => {
     const next = updater(statesRef.current);
