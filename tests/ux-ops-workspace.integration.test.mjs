@@ -1294,3 +1294,218 @@ test('07D-2 envio com teclado em 320/390/768/1440 e tema noite sem transbordo', 
     } finally { await browser.close(); }
   }
 });
+
+// ============================================================================
+// UX-PRO-E3 — carimbos `TIMESTAMPTZ` de /admin/operacao.
+//
+// Caso ADITIVO: nenhum caso herdado (UX-07, 07D-1 ou 07D-2) é editado,
+// removido ou relaxado. A massa é criada pelas próprias APIs de operação e as
+// respostas que este caso precisa datar são reescritas SOMENTE em
+// `window.fetch` da própria página — servidor, banco, permissões e auditoria
+// continuam intactos.
+//
+// O que este caso prova (decisão do proprietário em 19/10/2026, via (a)):
+//  - as sete linhas de carimbo saem no fuso America/Sao_Paulo, com o fuso
+//    DECLARADO no próprio texto;
+//  - o instante ISO original continua visível como texto secundário;
+//  - duas marcas distintas do mesmo dia (14:32Z e 17:32Z) NÃO colidem: uma
+//    sai 11:32 e a outra 14:32, e o texto ISO antigo (`2026-10-05 14:32`) some.
+//
+// O que NÃO prova: aceite humano, leitor de tela, homologação, produção ou
+// conversão de datas de calendário (`DATE`), que ficam fora desta fatia.
+// ============================================================================
+const E3_STAMP_A = '2026-10-05T14:32:00Z';   // 11:32 em America/Sao_Paulo
+const E3_STAMP_B = '2026-10-05T17:32:00Z';   // 14:32 em America/Sao_Paulo
+const E3_LOCAL_A = '05/10/2026 11:32 (America/Sao_Paulo)';
+const E3_LOCAL_B = '05/10/2026 14:32 (America/Sao_Paulo)';
+
+async function fixtureE3(suffix) {
+  const employee = await api('/api/hr/employees', {
+    method: 'POST', cookie: rhCookie,
+    body: { matricula: `QA-E3-${suffix}`, display_name: `Profissional E3 ${suffix}`, cargo: 'vigilante', status: 'ativo', employment_type: 'clt' },
+  });
+  assert.equal(employee.status, 201, `funcionário E3: ${employee.status} ${JSON.stringify(employee.body)}`);
+  const post = await api('/api/ops/posts', { method: 'POST', cookie: tiCookie, body: { name: `Posto E3 ${suffix}` } });
+  assert.equal(post.status, 201);
+  const turno = await api('/api/ops/shift-templates', {
+    method: 'POST', cookie: tiCookie,
+    body: { name: `Turno E3 ${suffix}`, shift_type: 'diurno', start_time: '07:00', end_time: '19:00', duration_hours: 12 },
+  });
+  assert.equal(turno.status, 201);
+  const version = await api('/api/ops/schedule-versions', {
+    method: 'POST', cookie: tiCookie, body: { valid_from: '2037-06-01', valid_to: '2037-06-03', status: 'revisada' },
+  });
+  assert.equal(version.status, 201, `versão E3: ${version.status} ${JSON.stringify(version.body)}`);
+  const entry = await api('/api/ops/schedule-entries', {
+    method: 'POST', cookie: tiCookie,
+    body: {
+      version_id: version.body.version.id, post_id: post.body.post.id,
+      employee_id: employee.body.employee.id, shift_template_id: turno.body.template.id,
+      entry_date: '2037-06-01',
+    },
+  });
+  assert.equal(entry.status, 201, `entrada E3: ${entry.status} ${JSON.stringify(entry.body)}`);
+  return { version: version.body.version, employee: employee.body.employee };
+}
+
+/** Abre /admin/operacao com as respostas datadas reescritas em `window.fetch`. */
+async function openOpsE3(browser, { versionId, employeeId }) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'pt-BR' });
+  const separator = tiCookie.indexOf('=');
+  await context.addCookies([{ name: tiCookie.slice(0, separator), value: tiCookie.slice(separator + 1), url: baseUrl }]);
+  const page = await context.newPage();
+  page.setDefaultTimeout(45_000);
+  page.setDefaultNavigationTimeout(90_000);
+  await page.addInitScript(({ stampA, stampB, ackVersionId, ackEmployeeId }) => {
+    const original = window.fetch.bind(window);
+    const state = { rewrites: {} };
+    window.__e3 = state;
+    const respond = body => new Response(JSON.stringify(body), {
+      status: 200, headers: { 'content-type': 'application/json' },
+    });
+    window.fetch = async (input, init) => {
+      const raw = typeof input === 'string' ? input : (input?.url || '');
+      const method = String(init?.method || (typeof input !== 'string' ? input?.method : '') || 'GET').toUpperCase();
+      let url;
+      try { url = new URL(raw, location.origin); } catch { return original(input, init); }
+      if (method !== 'GET' || !url.pathname.startsWith('/api/ops/')) return original(input, init);
+      const name = url.pathname.slice('/api/ops/'.length);
+      const response = await original(input, init);
+      if (!response.ok) return response;
+      const data = await response.clone().json().catch(() => null);
+      if (!data || typeof data !== 'object') return response;
+      state.rewrites[name] = (state.rewrites[name] || 0) + 1;
+      if (name === 'coverage-gaps') {
+        return respond({ ...data, gaps: [{
+          id: 'e3-gap', post_name: 'Posto E3', gap_date: '2026-10-05',
+          gap_start: stampA, gap_end: stampB, uncovered_minutes: 180,
+          reason: 'massa E3', status: 'aberto',
+        }] });
+      }
+      if (name === 'validations') {
+        return respond({ ...data, validations: [{
+          id: 'e3-validation', validation_type: 'conflito', is_valid: false,
+          validated_at: stampB, conflict_details: { error: 'massa E3' },
+        }] });
+      }
+      if (name === 'handovers') {
+        return respond({ ...data, handovers: [{
+          id: 'e3-handover', protocol: 'HND-OPS-E3', handover_date: stampA,
+          status: 'aceito', pending_tasks: null,
+        }] });
+      }
+      if (name === 'checklist-instances') {
+        return respond({ ...data, instances: [{
+          id: 'e3-checklist', scheduled_date: '2026-10-05', status: 'concluido', executed_at: stampB,
+        }] });
+      }
+      if (name === 'schedule-versions') {
+        return respond({ ...data, versions: (data.versions || []).map(item => ({ ...item, published_at: stampA })) });
+      }
+      if (name === 'schedule-acks' && url.searchParams.get('version_id') === ackVersionId) {
+        return respond({ ...data, acknowledgments: [{
+          id: 'e3-ack', version_id: ackVersionId, employee_id: ackEmployeeId,
+          employee_name: 'Profissional E3', acknowledged_at: stampB,
+        }] });
+      }
+      if (name === 'schedule-history' && url.searchParams.get('version_id') === ackVersionId) {
+        return respond({ ...data, history: [{
+          id: 'e3-history', version_id: ackVersionId, previous_status: 'revisada',
+          next_status: 'publicada', changed_by: 'qa', reason: 'massa E3', created_at: stampA,
+        }] });
+      }
+      return response;
+    };
+  }, { stampA: E3_STAMP_A, stampB: E3_STAMP_B, ackVersionId: versionId, ackEmployeeId: employeeId });
+  await page.goto(`${baseUrl}/admin/operacao`, { waitUntil: 'domcontentloaded' });
+  await page.locator('[role="tablist"]').waitFor();
+  return { context, page };
+}
+
+test('E3 browser: carimbos timestamptz saem em São Paulo com o fuso declarado e o ISO preservado, sem colidir', { skip: !RUN }, async () => {
+  const fixture = await fixtureE3(randomUUID().slice(0, 8));
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openOpsE3(browser, {
+      versionId: fixture.version.id, employeeId: fixture.employee.id,
+    });
+
+    // 1) gap_start/gap_end (linha 1140): duas marcas distintas do mesmo dia.
+    await page.getByRole('tab', { name: 'Dimensionamento', exact: true }).click();
+    const lacunas = page.locator('section[aria-labelledby="coverage-gaps-title"]');
+    await lacunas.locator('table').waitFor();
+    const janela = (await lacunas.locator('tbody tr').first().locator('td').nth(2).innerText()).trim();
+    assert.match(janela, new RegExp(escape07d(E3_LOCAL_A)),
+      `gap_start precisa sair em São Paulo com o fuso declarado; recebido: ${JSON.stringify(janela)}`);
+    assert.match(janela, new RegExp(escape07d(E3_LOCAL_B)),
+      `gap_end precisa sair em São Paulo com o fuso declarado; recebido: ${JSON.stringify(janela)}`);
+    assert.ok(janela.includes(E3_STAMP_A) && janela.includes(E3_STAMP_B),
+      `o instante ISO de cada marca precisa continuar visível; recebido: ${JSON.stringify(janela)}`);
+    assert.doesNotMatch(janela, /2026-10-05 14:32/,
+      `o texto anterior (ISO fatiado sem fuso) não pode permanecer; recebido: ${JSON.stringify(janela)}`);
+    const marcas = janela.match(/\d{2}\/\d{2}\/\d{4} \d{2}:\d{2} \(America\/Sao_Paulo\)/g) || [];
+    assert.equal(new Set(marcas).size, 2,
+      `as duas marcas distintas do mesmo dia precisam permanecer distintas no texto exibido; recebido: ${JSON.stringify(janela)}`);
+
+    // 2) validated_at (linha 1014).
+    await page.getByRole('tab', { name: 'Jornada e habilitação', exact: true }).click();
+    const bloqueios = page.locator('section[aria-labelledby="validations-title"]');
+    await bloqueios.locator('table').waitFor();
+    const quando = (await bloqueios.locator('tbody tr').first().locator('td').first().innerText()).trim();
+    assert.match(quando, new RegExp(escape07d(E3_LOCAL_B)),
+      `validated_at precisa sair em São Paulo com o fuso declarado; recebido: ${JSON.stringify(quando)}`);
+    assert.ok(quando.includes(E3_STAMP_B), `o ISO de validated_at precisa continuar visível; recebido: ${JSON.stringify(quando)}`);
+    assert.doesNotMatch(quando, /2026-10-05 17:32/, `o ISO fatiado não pode permanecer; recebido: ${JSON.stringify(quando)}`);
+
+    // 3) handover_date (linha 1513).
+    await page.getByRole('tab', { name: 'Passagem de turno', exact: true }).click();
+    const passagem = page.locator('section[aria-labelledby="handover-title"]');
+    await passagem.locator('table').waitFor();
+    const dataHora = (await passagem.locator('tbody tr').first().locator('td').nth(1).innerText()).trim();
+    assert.match(dataHora, new RegExp(escape07d(E3_LOCAL_A)),
+      `handover_date precisa sair em São Paulo com o fuso declarado; recebido: ${JSON.stringify(dataHora)}`);
+    assert.ok(dataHora.includes(E3_STAMP_A), `o ISO de handover_date precisa continuar visível; recebido: ${JSON.stringify(dataHora)}`);
+
+    // 4) executed_at (linha 1583).
+    await page.getByRole('tab', { name: 'Checklists de posto', exact: true }).click();
+    const checklists = page.locator('section[aria-labelledby="checklist-title"]');
+    await checklists.locator('table').waitFor();
+    const execucao = (await checklists.locator('tbody tr').first().locator('td').nth(2).innerText()).trim();
+    assert.match(execucao, new RegExp(escape07d(E3_LOCAL_B)),
+      `executed_at precisa sair em São Paulo com o fuso declarado; recebido: ${JSON.stringify(execucao)}`);
+    assert.ok(execucao.includes(E3_STAMP_B), `o ISO de executed_at precisa continuar visível; recebido: ${JSON.stringify(execucao)}`);
+
+    // 5) published_at (linha 1209), acknowledged_at (linha 1374) e created_at (linha 1432).
+    await page.getByRole('tab', { name: 'Escalas', exact: true }).click();
+    const versoes = page.locator('section[aria-labelledby="schedule-versions-title"]');
+    await versoes.locator('table').waitFor();
+    const linha = versoes.locator('tbody tr', { hasText: '2037-06-01' });
+    const publicada = (await linha.locator('td').nth(5).innerText()).trim();
+    assert.match(publicada, new RegExp(escape07d(E3_LOCAL_A)),
+      `published_at precisa sair em São Paulo com o fuso declarado; recebido: ${JSON.stringify(publicada)}`);
+    assert.ok(publicada.includes(E3_STAMP_A), `o ISO de published_at precisa continuar visível; recebido: ${JSON.stringify(publicada)}`);
+    assert.doesNotMatch(publicada, /2026-10-05 14:32/, `o ISO fatiado não pode permanecer; recebido: ${JSON.stringify(publicada)}`);
+
+    await linha.getByRole('button', { name: 'Ver calendário', exact: true }).click();
+    const calendario = page.locator('section[aria-labelledby="schedule-calendar-title"]');
+    await calendario.locator('table').waitFor();
+    const ciencias = page.locator('section[aria-labelledby="schedule-acks-title"]');
+    await ciencias.locator('table').waitFor();
+    const ciente = (await ciencias.locator('tbody tr').first().locator('td').nth(1).innerText()).trim();
+    assert.match(ciente, new RegExp(`Ciente desde ${escape07d(E3_LOCAL_B)}`),
+      `acknowledged_at precisa sair em São Paulo com o fuso declarado, preservando "Ciente desde"; recebido: ${JSON.stringify(ciente)}`);
+    assert.ok(ciente.includes(E3_STAMP_B), `o ISO de acknowledged_at precisa continuar visível; recebido: ${JSON.stringify(ciente)}`);
+    const historico = page.locator('section[aria-labelledby="schedule-history-title"]');
+    const criada = (await historico.locator('tbody tr').first().locator('td').first().innerText()).trim();
+    assert.match(criada, new RegExp(escape07d(E3_LOCAL_A)),
+      `created_at do histórico precisa sair em São Paulo com o fuso declarado; recebido: ${JSON.stringify(criada)}`);
+    assert.ok(criada.includes(E3_STAMP_A), `o ISO de created_at precisa continuar visível; recebido: ${JSON.stringify(criada)}`);
+
+    // 6) Nenhum carimbo antigo sobrou em todo o documento.
+    const corpo = await page.textContent('body');
+    assert.doesNotMatch(corpo || '', /2026-10-05 14:32|2026-10-05 17:32/,
+      'nenhum carimbo pode continuar no formato ISO fatiado sem fuso');
+
+    await context.close();
+  } finally { await browser.close(); }
+});
