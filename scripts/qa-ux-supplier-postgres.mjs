@@ -58,9 +58,10 @@ function run(cmd, args, env, capture = false) {
 
 // O mínimo protege o gate contra regressão silenciosa: os dois casos herdados
 // (contrato estático) mais os oito casos de leitura com navegador real da
-// UX-PRO-07C-1 e os oito casos de escrita da UX-PRO-07C-2. Skip, todo ou
+// UX-PRO-07C-1, os oito casos de escrita da UX-PRO-07C-2 e os dois casos C11
+// (contrato e navegação por teclado com estado preservado). Skip, todo ou
 // ausência de resumo TAP reprovam o gate.
-const MINIMUM_CASES = 18;
+const MINIMUM_CASES = 20;
 function auditTap(output) {
   const number = label => {
     const match = output.match(new RegExp(`^# ${label} (\\d+)$`, 'm'));
@@ -83,6 +84,9 @@ const password = randomBytes(24).toString('hex');
 const postgres = new EmbeddedPostgres({
   databaseDir: path.join(directory, 'data'),
   port, user: 'seg_qa', password, persistent: false,
+  // Define a UTF-8 QA cluster explicitly; the host Windows locale must not
+  // silently create WIN1252 and make UTF-8 migrations fail before the tests.
+  initdbFlags: ['--encoding=UTF8', '--locale=C'],
   postgresFlags: ['-c', 'listen_addresses=127.0.0.1'],
   onLog: () => {},
   onError: error => console.error('QA_PG_ENGINE_ERROR', String(error).replaceAll(password, '[redacted]').slice(0, 300)),

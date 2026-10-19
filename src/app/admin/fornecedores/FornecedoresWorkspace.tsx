@@ -386,6 +386,7 @@ export default function FornecedoresWorkspace() {
       onSuccess: data => {
         const id = String((data as { quotation: { id: string } }).quotation.id);
         setSelectedId(id); setQuoteForm({ supplier_id: "", product_id: "", quantity: "1", unit_price: "", notes: "" });
+        setActiveTab("detail");
         return refresh("Cotação confirmada pelo servidor; autoria veio da sessão staff.", id);
       },
     });
@@ -659,11 +660,25 @@ export default function FornecedoresWorkspace() {
           </div>
 
           <nav aria-label="Etapas da jornada de fornecedores" role="tablist" className={styles.tabs}>
-            {['Cotações', 'Detalhe canônico', 'Validade e alertas', 'Referências documentais', 'Pedidos internos'].map((label, index) => (
-              <button key={label} type="button" role="tab" aria-selected={index === 0} tabIndex={index === 0 ? 0 : -1} className={index === 0 ? styles.tabActive : styles.tab}>{label}</button>
+            {SUPPLIER_TABS.map(tab => (
+              <button
+                key={tab.id}
+                id={`fornecedores-tab-${tab.id}`}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                aria-controls={`fornecedores-panel-${tab.id}`}
+                tabIndex={activeTab === tab.id ? 0 : -1}
+                className={activeTab === tab.id ? styles.tabActive : styles.tab}
+                onClick={() => setActiveTab(tab.id)}
+                onKeyDown={handleTabKeyDown}
+              >
+                {tab.label}
+              </button>
             ))}
           </nav>
 
+          <div id="fornecedores-panel-quotations" className={styles.tabPanel} role="tabpanel" aria-labelledby="fornecedores-tab-quotations" tabIndex={0} hidden={activeTab !== "quotations"}>
           <section className={styles.panel} aria-labelledby="fornecedores-nova-cotacao">
             <h2 className={styles.panelTitle} id="fornecedores-nova-cotacao">Nova cotação interna</h2>
             {resourceBand("references")}
@@ -712,7 +727,6 @@ export default function FornecedoresWorkspace() {
             </form>
           </section>
 
-          <div className={styles.layout}>
             <section className={styles.panel} aria-labelledby="fornecedores-cotacoes">
               <h2 className={styles.panelTitle} id="fornecedores-cotacoes">Cotações</h2>
               {resourceBand("quotations")}
@@ -732,7 +746,7 @@ export default function FornecedoresWorkspace() {
                             type="button"
                             className={local.quoteButton}
                             data-selected={selectedId === q.id ? "true" : "false"}
-                            onClick={() => setSelectedId(q.id)}
+                            onClick={() => { setSelectedId(q.id); setActiveTab("detail"); }}
                           >
                             <span className={local.quoteProtocol}>{q.protocol}</span>
                             <span>{q.supplier_name || "Fornecedor não retornado"} · {q.product_name || "Produto não retornado"}</span>
@@ -745,7 +759,9 @@ export default function FornecedoresWorkspace() {
                 )
               ) : null}
             </section>
+          </div>
 
+          <div id="fornecedores-panel-detail" className={styles.tabPanel} role="tabpanel" aria-labelledby="fornecedores-tab-detail" tabIndex={0} hidden={activeTab !== "detail"}>
             <div className={styles.stackWide}>
               <section className={styles.panel} aria-labelledby="fornecedores-detalhe">
                 <div className={styles.rowWrap}>
@@ -820,7 +836,10 @@ export default function FornecedoresWorkspace() {
                   </div>
                 ) : null}
               </section>
+            </div>
+          </div>
 
+          <div id="fornecedores-panel-validity" className={styles.tabPanel} role="tabpanel" aria-labelledby="fornecedores-tab-validity" tabIndex={0} hidden={activeTab !== "validity"}>
               {quote ? (
                 <section className={styles.panel} aria-labelledby="fornecedores-validade">
                   <h2 className={styles.panelTitle} id="fornecedores-validade">Validade e alerta</h2>
@@ -872,8 +891,10 @@ export default function FornecedoresWorkspace() {
                     </form>
                   ) : null}
                 </section>
-              ) : null}
+              ) : <UiState variant="empty" title="Selecione uma cotação para consultar validade e alertas." detail="Abra a etapa Cotações e selecione um registro. Nenhuma validade é estimada." />}
+          </div>
 
+          <div id="fornecedores-panel-documents" className={styles.tabPanel} role="tabpanel" aria-labelledby="fornecedores-tab-documents" tabIndex={0} hidden={activeTab !== "documents"}>
               {quote ? (
                 <section className={styles.panel} aria-labelledby="fornecedores-documentos">
                   <h2 className={styles.panelTitle} id="fornecedores-documentos">Referências documentais</h2>
@@ -913,10 +934,10 @@ export default function FornecedoresWorkspace() {
                     </div>
                   </form>
                 </section>
-              ) : null}
-            </div>
+              ) : <UiState variant="empty" title="Selecione uma cotação para consultar referências documentais." detail="Abra a etapa Cotações e selecione um registro. Nenhum arquivo é presumido ou enviado." />}
           </div>
 
+          <div id="fornecedores-panel-orders" className={styles.tabPanel} role="tabpanel" aria-labelledby="fornecedores-tab-orders" tabIndex={0} hidden={activeTab !== "orders"}>
           <section className={styles.panel} aria-labelledby="fornecedores-pedidos">
             <h2 className={styles.panelTitle} id="fornecedores-pedidos">Pedidos internos</h2>
             {resourceBand("orders")}
@@ -985,6 +1006,7 @@ export default function FornecedoresWorkspace() {
               </form>
             ) : null}
           </section>
+          </div>
         </>
       )}
     </UiTaskWorkspace>

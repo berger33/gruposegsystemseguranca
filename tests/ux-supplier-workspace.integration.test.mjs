@@ -22,7 +22,7 @@ test('C11: cada etapa liga aba e painel e seleciona um único estado real',()=>{
  const ui=fs.readFileSync('src/app/admin/fornecedores/FornecedoresWorkspace.tsx','utf8');
  assert.match(ui,/aria-controls=\{`fornecedores-panel-\$\{tab\.id\}`\}/);
  assert.match(ui,/role="tabpanel"/);
- assert.match(ui,/aria-labelledby=\{`fornecedores-tab-\$\{tab\.id\}`\}/);
+ assert.match(ui,/aria-labelledby="fornecedores-tab-/);
  assert.match(ui,/aria-selected=\{activeTab === tab\.id\}/);
  assert.match(ui,/onKeyDown=\{handleTabKeyDown\}/);
 });
@@ -142,11 +142,12 @@ async function createQuotation(tag) {
 
 async function launchBrowser() {
   let lastError;
+  const externalBrowser = process.env.UX_SUPPLIER_BROWSER_EXECUTABLE_PATH;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       return await playwrightChromium.launch({
-        executablePath: await packagedChromium.executablePath(),
-        args: packagedChromium.args.filter(argument => argument !== '--disable-web-security'),
+        executablePath: externalBrowser || await packagedChromium.executablePath(),
+        args: externalBrowser ? [] : packagedChromium.args.filter(argument => argument !== '--disable-web-security'),
         headless: true,
       });
     } catch (error) {
@@ -448,6 +449,7 @@ test('as quatro leituras continuam exigindo sessão e papel autorizado', { skip:
 test('browser: carregamento contextual e vazio concluído nunca se confundem', { skip: !RUN }, async () => {
   await withBrowser(async browser => {
     const { context, page } = await openFornecedores(browser, { rules: { orders: { delay: 1500 } } });
+    await page.getByRole('tab', { name: 'Pedidos internos' }).click();
     const loading = page.locator('[data-testid="fornecedores-orders-carregando"]');
     await loading.waitFor();
     assert.equal(await loading.locator('[data-ui-state="loading"]').count(), 1);
@@ -588,6 +590,55 @@ test('browser: selecionar cotação relê o detalhe sem relançar as três lista
   });
 });
 
+test('browser C11: cinco abas funcionam por teclado, mostram um painel e preservam campos', { skip: !RUN }, async () => {
+  await withBrowser(async browser => {
+    const { context, page } = await openFornecedores(browser, { width: 390, height: 844 });
+    await page.locator('[data-testid="fornecedores-quotations-lista"]').waitFor();
+    const tabs = page.getByRole('tab');
+    assert.equal(await tabs.count(), 5);
+
+    for (let index = 0; index < 5; index++) {
+      const tab = tabs.nth(index);
+      const panelId = await tab.getAttribute('aria-controls');
+      assert.ok(panelId, `aba ${index + 1} deve apontar para um painel`);
+      assert.equal(await page.locator(`#${panelId}`).getAttribute('aria-labelledby'), await tab.getAttribute('id'));
+    }
+
+    const tabCallsBefore = await page.evaluate(() => ({ ...window.__uxSupplierControl.calls }));
+    await tabs.nth(0).focus();
+    await page.keyboard.press('ArrowRight');
+    assert.equal(await tabs.nth(1).getAttribute('aria-selected'), 'true');
+    assert.equal(await page.locator('#fornecedores-panel-detail').isVisible(), true);
+    await page.keyboard.press('End');
+    assert.equal(await tabs.nth(4).getAttribute('aria-selected'), 'true');
+    assert.equal(await page.locator('#fornecedores-panel-orders').isVisible(), true);
+    await page.keyboard.press('Home');
+    assert.equal(await tabs.nth(0).getAttribute('aria-selected'), 'true');
+    assert.equal(await page.locator('#fornecedores-panel-quotations').isVisible(), true);
+
+    const nota = 'rascunho preservado ao alternar painel';
+    await page.locator('#fornecedores-notes').fill(nota);
+    await tabs.nth(3).click();
+    assert.equal(await page.locator('#fornecedores-panel-documents').isVisible(), true);
+    await tabs.nth(0).click();
+    assert.equal(await page.locator('#fornecedores-notes').inputValue(), nota);
+    const tabCallsAfter = await page.evaluate(() => ({ ...window.__uxSupplierControl.calls }));
+    assert.deepEqual(tabCallsAfter, tabCallsBefore, 'alternar abas não dispara leituras nem escritas');
+
+    const activePanels = await page.locator('[role="tabpanel"]:visible').count();
+    assert.equal(activePanels, 1, 'somente o painel escolhido fica visível');
+    await capture(page, 'fornecedores-c11-tabs-390-teclado', {
+      state: 'cinco_abas_funcionais',
+      activeTab: await tabs.nth(0).innerText(),
+      visiblePanels: activePanels,
+      camposPreservados: true,
+      chamadasDeRedeAoAlternar: 0,
+      percurso: ['ArrowRight', 'End', 'Home', 'Tab/click'],
+    });
+    await context.close();
+  });
+});
+
 test('browser: 320 390 768 1440, tema noturno e percurso de teclado medidos sem problemas', { skip: !RUN }, async () => {
   await withBrowser(async browser => {
     const { context, page } = await openFornecedores(browser);
@@ -724,10 +775,9 @@ test('browser: escrita da cotação declara envio, bloqueia duplo clique e recon
     const { context, page } = await openFornecedores(browser, { writeRules: { 'create-quotation': { delay: 1600 } } });
     const list = page.locator('[data-testid="fornecedores-quotations-lista"]');
     await list.waitFor();
-    // Seleciona a cotação da preparação para expor controles de escrita concorrentes.
     await list.getByRole('button').filter({ hasText: quotationProtocol }).first().click();
+    await page.getByRole('tab', { name: 'Cotações' }).click();
     const detail = page.locator('[data-testid="fornecedores-detalhe-painel"]');
-    await detail.waitFor();
 
     await page.selectOption('#fornecedores-supplier', catalog.supplierId);
     await page.selectOption('#fornecedores-product', catalog.productId);
@@ -747,7 +797,7 @@ test('browser: escrita da cotação declara envio, bloqueia duplo clique e recon
     assert.equal(await submit.getAttribute('aria-busy'), 'true', 'o botão em curso precisa declarar aria-busy');
     // Demais escritas bloqueadas durante o envio; leitura segue disponível.
     for (const name of [/Mover para/, 'Registrar validade', 'Registrar regra explícita', 'Registrar referência']) {
-      const control = page.getByRole('button', { name });
+      const control = page.locator('button').filter({ hasText: name });
       assert.equal(await control.first().isDisabled(), true, `escrita concorrente precisa ficar bloqueada: ${String(name)}`);
     }
     assert.equal(await page.locator('[data-testid="fornecedores-atualizar-listas"]').isDisabled(), false,
@@ -789,7 +839,7 @@ test('browser: transição de cotação com envio pendente mantém payload canô
     await sending.waitFor();
     assert.match(await sending.innerText(), /transição de estado da cotação/i);
     assert.equal(await btn.getAttribute('aria-busy'), 'true');
-    assert.equal(await page.getByRole('button', { name: 'Confirmar no servidor' }).isDisabled(), true,
+    assert.equal(await page.locator('button').filter({ hasText: 'Confirmar no servidor' }).isDisabled(), true,
       'a criação precisa ficar bloqueada durante a transição');
 
     await page.locator('p[role="status"]').filter({ hasText: /Estado enviado confirmado pelo servidor/ }).waitFor();
@@ -835,7 +885,7 @@ test('browser: falha transitória de escrita declara incerteza, não repete sozi
     assert.match(await list.innerText(), /última leitura concluída às \d{2}:\d{2}:\d{2}/);
     assert.match(await detail.innerText(), /Rascunho/);
     // Escritas bloqueadas enquanto o resultado é incerto; leituras disponíveis.
-    assert.equal(await page.getByRole('button', { name: 'Confirmar no servidor' }).isDisabled(), true);
+    assert.equal(await page.locator('button').filter({ hasText: 'Confirmar no servidor' }).isDisabled(), true);
     assert.equal(await page.getByRole('button', { name: 'Mover para Enviada' }).isDisabled(), true);
     assert.equal(await page.locator('[data-testid="fornecedores-atualizar-listas"]').isDisabled(), false);
     await page.waitForTimeout(1500);
@@ -867,6 +917,7 @@ test('browser: conflito real de escrita é distinto de transitório, com código
     await list.waitFor();
     await list.getByRole('button').filter({ hasText: created.quotation.protocol }).first().click();
     await page.locator('[data-testid="fornecedores-detalhe-painel"]').waitFor();
+    await page.getByRole('tab', { name: 'Validade e alertas' }).click();
 
     // Primeira validade: sucesso real do servidor.
     await page.fill('#fornecedores-valida-ate', '2027-03-15');

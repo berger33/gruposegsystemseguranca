@@ -45,7 +45,8 @@ function auditTap(output) {
 const database = "seg_qa_ext04", port = await freeLoopbackPort();
 const directory = await mkdtemp(path.join(tmpdir(), "seg-qa-ext04-pg-"));
 const password = randomBytes(24).toString("hex");
-const postgres = new EmbeddedPostgres({ databaseDir: path.join(directory, "data"), port, user: "seg_qa", password, persistent: false, postgresFlags: ["-c", "listen_addresses=127.0.0.1"], onLog: () => {}, onError: error => console.error("QA_PG_ENGINE_ERROR", String(error).replaceAll(password, "[redacted]").slice(0, 300)) });
+// As migrações são UTF-8; não herde o locale WIN1252 da máquina Windows.
+const postgres = new EmbeddedPostgres({ databaseDir: path.join(directory, "data"), port, user: "seg_qa", password, persistent: false, initdbFlags: ["--encoding=UTF8", "--locale=C"], postgresFlags: ["-c", "listen_addresses=127.0.0.1"], onLog: () => {}, onError: error => console.error("QA_PG_ENGINE_ERROR", String(error).replaceAll(password, "[redacted]").slice(0, 300)) });
 let result = 1;
 try {
   await postgres.initialise(); await postgres.start(); await postgres.createDatabase(database);
