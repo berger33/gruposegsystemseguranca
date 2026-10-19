@@ -69,6 +69,7 @@ import {
   weekdayLabel,
 } from "../../../lib/ops-vocabulary.mjs";
 import styles from "../../../components/ui/UiWorkspace.module.css";
+import { opsDateTime, opsIsoStamp } from "../../../lib/ops-dates.mjs";
 
 // OPS-03: janela de datas da validade da versão, limitada a 31 colunas para o
 // calendário continuar legível. Quando a validade excede a janela, o recorte é
@@ -896,6 +897,19 @@ function PostsPanel({
   );
 }
 
+// UX-PRO-E3: carimbo `TIMESTAMPTZ` em São Paulo, com o fuso declarado no
+// próprio texto e o instante ISO original preservado como texto secundário.
+// A apresentação mudou; nenhum valor, contrato ou ordenação mudou.
+function Stamp({ value }: { value: string | null | undefined }) {
+  const iso = opsIsoStamp(value);
+  return (
+    <>
+      {opsDateTime(value)}
+      {iso ? <span className={styles.hint}> · {iso}</span> : null}
+    </>
+  );
+}
+
 function JourneyPanel({ workRules, qualifications, validations }: { workRules: WorkRule[]; qualifications: Qualification[]; validations: ScheduleValidation[] }) {
   return (
     <>
@@ -1011,7 +1025,7 @@ function JourneyPanel({ workRules, qualifications, validations }: { workRules: W
               <tbody>
                 {validations.map(item => (
                   <tr key={item.id}>
-                    <td>{String(item.validated_at).slice(0, 16).replace("T", " ")}</td>
+                    <td><Stamp value={item.validated_at} /></td>
                     <td><StatusBadge label={item.validation_type} tone="danger" /></td>
                     <td>{String((item.conflict_details as { error?: string } | null)?.error || "—")}</td>
                   </tr>
@@ -1137,7 +1151,7 @@ function DimensioningPanel({
                       <tr key={gap.id}>
                         <td>{gap.post_name || "—"}</td>
                         <td>{String(gap.gap_date).slice(0, 10)}</td>
-                        <td>{String(gap.gap_start).slice(0, 16).replace("T", " ")} – {String(gap.gap_end).slice(0, 16).replace("T", " ")}</td>
+                        <td><Stamp value={gap.gap_start} /> – <Stamp value={gap.gap_end} /></td>
                         <td>{gap.uncovered_minutes}</td>
                         <td>{gap.reason || "—"}</td>
                         <td><StatusBadge label={coverageGapStatusLabel(gap.status)} tone={coverageGapStatusTone(gap.status)} /></td>
@@ -1206,7 +1220,7 @@ function SchedulesPanel({
                         <td>{version.unit_name || (version.unit_id ? "—" : "sem unidade")}</td>
                         <td>{String(version.valid_from).slice(0, 10)} a {String(version.valid_to).slice(0, 10)}</td>
                         <td><StatusBadge label={scheduleVersionStatusLabel(version.status)} tone={scheduleVersionStatusTone(version.status)} /></td>
-                        <td>{version.published_at ? String(version.published_at).slice(0, 16).replace("T", " ") : "—"}</td>
+                        <td>{version.published_at ? <Stamp value={version.published_at} /> : "—"}</td>
                         <td>
                           <div className={styles.actions}>
                             <button
@@ -1371,9 +1385,10 @@ function SchedulesPanel({
                                     <td>{employee.employee_name || "—"}</td>
                                     <td>
                                       <StatusBadge
-                                        label={ack ? `Ciente desde ${String(ack.acknowledged_at).slice(0, 16).replace("T", " ")}` : "Pendente"}
+                                        label={ack ? `Ciente desde ${opsDateTime(ack.acknowledged_at)}` : "Pendente"}
                                         tone={ack ? "success" : "warning"}
                                       />
+                                      {ack ? <span className={styles.hint}> · {opsIsoStamp(ack.acknowledged_at)}</span> : null}
                                     </td>
                                     <td>
                                       <div className={styles.actions}>
@@ -1429,7 +1444,7 @@ function SchedulesPanel({
                       <tbody>
                         {scheduleHistory.map(item => (
                           <tr key={item.id}>
-                            <td>{String(item.created_at).slice(0, 16).replace("T", " ")}</td>
+                            <td><Stamp value={item.created_at} /></td>
                             <td>
                               <StatusBadge
                                 label={item.previous_status
@@ -1510,7 +1525,7 @@ function HandoverPanel({ handovers }: { handovers: Handover[] }) {
               {handovers.map(h => (
                 <tr key={h.id}>
                   <td><code>{h.protocol}</code></td>
-                  <td>{String(h.handover_date).slice(0, 16).replace("T", " ")}</td>
+                  <td><Stamp value={h.handover_date} /></td>
                   <td><StatusBadge label={handoverStatusLabel(h.status)} tone={handoverStatusTone(h.status)} /></td>
                   <td>{h.pending_tasks || "Sem pendências"}</td>
                 </tr>
@@ -1580,7 +1595,7 @@ function ChecklistPanel({ checklists }: { checklists: ChecklistInstance[] }) {
                 <tr key={inst.id}>
                   <td>{String(inst.scheduled_date).slice(0, 10)}</td>
                   <td><StatusBadge label={checklistInstanceStatusLabel(inst.status)} tone={checklistInstanceStatusTone(inst.status)} /></td>
-                  <td>{inst.executed_at ? String(inst.executed_at).slice(0, 16).replace("T", " ") : "Pendente"}</td>
+                  <td>{inst.executed_at ? <Stamp value={inst.executed_at} /> : "Pendente"}</td>
                 </tr>
               ))}
             </tbody>

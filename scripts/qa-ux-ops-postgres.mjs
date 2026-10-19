@@ -52,11 +52,13 @@ function run(cmd, args, env, capture = false) {
 }
 
 // UX-PRO-07D-1 — auditoria do resumo TAP, aditiva ao gate UX-07. O mínimo
-// protege contra regressão silenciosa: os 9 casos herdados da UX-07 (fatia A)
-// mais os 10 casos de leitura da UX-PRO-07D-1. Falha, skip, todo, ausência do
-// resumo TAP ou aprovações abaixo do mínimo reprovam o gate — inclusive uma
-// execução filtrada por UX_OPS_TEST_PATTERN, que nunca vale como prova.
-const MINIMUM_CASES = 19;
+// protege contra regressão silenciosa: 9 casos herdados da UX-07 (fatia A),
+// 10 de leitura da UX-PRO-07D-1, 8 da UX-PRO-07D-2 (um deles roda para cada
+// fase do resultado atrasado) e 1 aditivo da UX-PRO-E3, totalizando 28. Falha,
+// skip, todo, ausência do resumo TAP ou aprovações abaixo do mínimo reprovam o
+// gate — inclusive uma execução filtrada por UX_OPS_TEST_PATTERN, que nunca
+// vale como prova.
+const MINIMUM_CASES = 28;
 function auditTap(output) {
   const number = label => {
     const match = output.match(new RegExp(`^# ${label} (\\d+)$`, 'm'));
