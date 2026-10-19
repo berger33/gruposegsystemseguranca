@@ -31,3 +31,12 @@ O teste deve cobrir dia/noite quando o contexto suportar tema administrativo e o
 ## Estado antes
 
 A nota de correção da #264 registra 10B como pendente: teclado no iframe 01, tema, zoom/tamanhos e prévias ainda sem validação em navegador. O status desta medição será atualizado com evidências observadas; ausência de falhas em inspeção estática não será convertida em aprovação visual ou acessível.
+
+### Evidência de navegador da linha de base (18/10/2026)
+
+- Chrome instalado, Playwright, aplicação no worktree limpo e banco PostgreSQL temporário UTF-8; migrações 001–180 aplicadas para a galeria autenticada.
+- 40 capturas de `/layout-preview?visual=01..10`, nos viewports 320, 390, 768 e 1440: HTTP 200, título H1 presente, faixa de prévia presente, nenhum iframe inesperado (Layout 01 tem um iframe) e sem rolagem horizontal medida.
+- Em `/layout-01`, Tab percorre “Abrir Aparência do site” → “Ver site atual” → iframe; dentro do iframe o foco chega ao link `#inicio`; Shift+Tab retorna ao link pai “Ver site atual”.
+- `/admin/aparencia` com perfil sintético `ti`: 8 capturas (4 larguras × claro/escuro), carregamento concluído e mensagem de acesso somente para comparação; a conta não tem `site.visual.write`. Enter compara Layout 01 e não executa publicação.
+- O percurso automatizado encontrou, em 1440 px, um campo `input` focado sem indicador visual detectável no shell compartilhado. A inspeção de código localizou o campo “Buscar módulo” e uma regra de foco que não inclui `input`; essa é a única correção proposta nesta fatia. O achado só ocorre quando a busca está visível; nos viewports estreitos ela fica recolhida.
+- Inspeção estática de captura já feita; as imagens persistidas não constituem validação manual. Nenhum usuário autenticou manualmente, nenhum aceite humano foi realizado e a publicação do layout não foi alterada.
