@@ -78,6 +78,17 @@ test('UX-PRO-E2-C1: associações sem órfãos, ids únicos e contratos de campo
 
     assert.equal(controls.length, file.controls, `${file.name}: a fatia não pode apagar nem inventar controles (${controls.length}/${file.controls})`);
 
+    // A varredura acima é por linha (padrão do legado): cada linha pode declarar
+    // no máximo um controle. Se dois controles forem escritos na mesma linha, um
+    // deles escaparia da checagem de rótulo; esta contagem global garante que
+    // todo <input>/<select>/<textarea> do arquivo foi efetivamente verificado.
+    const tagsNoArquivo = (source.match(/<(input|select|textarea)\b/g) || []).length;
+    assert.equal(
+      tagsNoArquivo,
+      controls.length,
+      `${file.name}: ${tagsNoArquivo - controls.length} controle(s) fora da varredura por linha (tag multilinha?) — mantenha um controle por linha para que a checagem de rótulo o alcance`
+    );
+
     const ids = controls.map(control => control.id).filter(Boolean);
     assert.equal(new Set(ids).size, ids.length, `${file.name}: ids de controle duplicados`);
     for (const control of controls) {
@@ -86,6 +97,16 @@ test('UX-PRO-E2-C1: associações sem órfãos, ids únicos e contratos de campo
 
     const orfaos = [...labels.keys()].filter(id => !ids.includes(id));
     assert.deepEqual(orfaos, [], `${file.name}: <label htmlFor> órfão(s): ${orfaos.join(', ')}`);
+
+    // Um único rótulo por controle: o Map acima colapsaria dois <label> para o
+    // mesmo id, então a contagem bruta confirma que não há rótulo duplicado
+    // criando ambiguidade de nome acessível.
+    const labelsNoArquivo = (source.match(/<label htmlFor=/g) || []).length;
+    assert.equal(
+      labelsNoArquivo,
+      controls.length,
+      `${file.name}: ${labelsNoArquivo} <label htmlFor> para ${controls.length} controle(s) — cada controle deve ter exatamente um rótulo`
+    );
 
     const placeholders = source.match(/placeholder=/g) || [];
     assert.equal(placeholders.length, file.placeholders, `${file.name}: dicas de placeholder devem ser preservadas (${placeholders.length}/${file.placeholders})`);

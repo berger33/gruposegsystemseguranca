@@ -2,6 +2,7 @@
 
 **Data:** 15/10/2026 · **Base conferida:** `main`/`origin/main` = `12fe34e` (merge da PR #233, UX-PRO-07E-2), árvore limpa.
 **Regra do plano mestre:** 1 fatia pequena = 1 sessão = 1 PR; merge só com todos os checks verdes. Nada aqui é aceite humano nem declara conformidade WCAG.
+**Atualização 19/10/2026:** o item **E2** dos resíduos transversais foi entregue em duas metades — `prompt()/confirm` na [UX-PRO-E2](UX-PRO-E2-RELATORIO-2026-10-19.md) (PR #271) e `sem rótulos` nos 108 controles na [UX-PRO-E2-C1](UX-PRO-E2-C1-RELATORIO-2026-10-19.md) (PR #272), verificada em [UX-PRO-E2-C1 — verificação](UX-PRO-E2-C1-VERIFICACAO-2026-10-19.md). E2 sai da fila de resíduos; permanecem E3, E5, E6, E8 e E9, cada um exigindo decisão explícita do proprietário.
 
 ---
 
@@ -29,7 +30,7 @@
 | 6 | **07K** | `/admin/compliance` (1.609 linhas; inclui documentos/obrigações) | Idem; preservar EXT-07 (agendador 3600s, planos de ação migração 168) | 1–2 |
 | 7 | **07L** | `/admin/continuidade` | Idem; preservar EXT-10 (isolamento `client_account_id`) e não misturar `/cliente/app/continuidade` | 1–2 |
 | 8 | **07M** | `/admin/contratos` + `/admin/contratos/[id]` | **Só auditoria de preservação primeiro** (rotas já tratadas na UX-PRO-06, PRs #216/#217); só abrir PR de código se lacuna UX-PRO-07 for reproduzida | 0–1 |
-| 9 | **Resíduos transversais E2–E9** (exigem decisão explícita do proprietário, por item) | `/admin/operacao`, `/admin/financeiro`, compartilhados | E2 legado avançado (`OpsAdvanced2/3Client`: `prompt()/confirm`, sem rótulos); E3 datas/horas `timestamptz` fatiadas sem fuso (7 ocorrências, fixadas por teste L06); E5 rolagem interna de tabela sem região focável (390/320px); E6 `<main>` aninhado transversal — 19 rotas (`AdminGate.tsx:115`); E8 contraste noturno 1,95:1 da aba ativa (`.tabActive`/`.actions .primary` compartilhados); E9 quebra de palavra em cabeçalhos a 768px (`UiWorkspace.module.css:11`) | 3–5 (1 PR por item/grupo) |
+| 9 | **Resíduos transversais E2–E9** (exigem decisão explícita do proprietário, por item) | `/admin/operacao`, `/admin/financeiro`, compartilhados | **E2 concluído** — legado avançado (`OpsAdvanced2/3Client`): `prompt()/confirm` na UX-PRO-E2 (#271) e rótulos persistentes nos 108 controles na UX-PRO-E2-C1 (#272), verificado em 19/10/2026; não reabrir. E3 datas/horas `timestamptz` fatiadas sem fuso (7 ocorrências, fixadas por teste L06); E5 rolagem interna de tabela sem região focável (390/320px); E6 `<main>` aninhado transversal — 19 rotas (`AdminGate.tsx:115`); E8 contraste noturno 1,95:1 da aba ativa (`.tabActive`/`.actions .primary` compartilhados); E9 quebra de palavra em cabeçalhos a 768px (`UiWorkspace.module.css:11`) | 3–5 (1 PR por item/grupo) |
 | 10 | **C11 + resíduos registrados** | financeiro | C11 fora de escopo (só por ordem expressa); alvo de toque de 29px do botão de repetir legado (observação 07E-2); 2 hits auditados e não corrigidos com justificativa (`FiscalWorkspace.tsx:80`, `ExpenseWorkspace.tsx:176`) | sob decisão |
 | 11 | **Limpeza de governança** | GitHub | PR **#230 aberta em CONFLICTING** — duplicata da 07D-1 já mergeada na #229: fechar como duplicada ou reaproveitar; nunca mergear como está | 1 ação |
 
