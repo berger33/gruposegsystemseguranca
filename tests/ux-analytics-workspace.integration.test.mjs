@@ -547,16 +547,8 @@ test('UX-PRO-E5 browser: tabela de experimentos rolável em 390px tem região ac
       tabIndex: element.tabIndex,
     }));
     const e5EvidenceDir = process.env.UX_E5_EVIDENCE_DIR;
-    if (e5EvidenceDir) {
-      await mkdir(e5EvidenceDir, { recursive: true });
-      const phase = process.env.UX_E5_CAPTURE_PHASE || 'after';
-      await page.screenshot({ path: path.join(e5EvidenceDir, `analytics-390-e5-${phase}.png`), fullPage: true });
-      await writeFile(path.join(e5EvidenceDir, `analytics-390-e5-${phase}.json`), `${JSON.stringify({
-        route: '/admin/analytics', role: 'admin', viewport: '390x844', theme: 'day', phase, geometry,
-        evidence: 'Playwright Chromium com app HTTP e PostgreSQL temporário; massa sintética criada pelo gate via API canônica.',
-        limitations: 'Captura e medições automatizadas; não equivale a validação manual nem a teste com leitor de tela.',
-      }, null, 2)}\n`, 'utf8');
-    }
+    const phase = process.env.UX_E5_CAPTURE_PHASE || 'after';
+    if (e5EvidenceDir) await mkdir(e5EvidenceDir, { recursive: true });
     assert.ok(geometry.maxScrollLeft > 0, `pré-condição: a tabela deve rolar horizontalmente em 390px: ${JSON.stringify(geometry)}`);
     assert.equal(geometry.role, 'region', `role da região: ${JSON.stringify(geometry)}`);
     assert.ok(geometry.label?.trim(), `nome acessível da região: ${JSON.stringify(geometry)}`);
@@ -571,6 +563,47 @@ test('UX-PRO-E5 browser: tabela de experimentos rolável em 390px tem região ac
     assert.ok(reachedByTab, 'a região da tabela precisa ser alcançável pelo percurso de Tab');
     const focus = await wrapper.evaluate(element => ({ outlineStyle: getComputedStyle(element).outlineStyle, outlineWidth: parseFloat(getComputedStyle(element).outlineWidth) || 0 }));
     assert.ok(focus.outlineStyle !== 'none' && focus.outlineWidth >= 1, `foco visível na região rolável: ${JSON.stringify(focus)}`);
+    if (e5EvidenceDir) await page.screenshot({ path: path.join(e5EvidenceDir, `analytics-390-e5-${phase}.png`), fullPage: true });
+
+    const matrix = { day: {}, night: {} };
+    for (const theme of ['day', 'night']) {
+      const currentTheme = await page.evaluate(() => document.documentElement.dataset.adminTheme || 'day');
+      if (currentTheme !== theme) {
+        await page.click('[data-admin-theme-toggle="true"]');
+        await page.waitForFunction(expected => (document.documentElement.dataset.adminTheme || 'day') === expected, theme);
+      }
+      for (const width of [320, 390, 768, 1440]) {
+        await page.setViewportSize({ width, height: width < 500 ? 844 : 900 });
+        const measurement = await page.evaluate(() => {
+          const table = document.querySelector('[data-testid="analytics-list-table"]');
+          const region = table?.parentElement;
+          return {
+            documentOverflowPx: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+            wrapperClientWidth: region?.clientWidth ?? null,
+            wrapperScrollWidth: region?.scrollWidth ?? null,
+            role: region?.getAttribute('role') ?? null,
+            label: region?.getAttribute('aria-label') ?? null,
+            tabIndex: region?.tabIndex ?? null,
+          };
+        });
+        assert.ok(measurement.documentOverflowPx <= 1, `transbordo de documento ${measurement.documentOverflowPx}px em ${width}px tema ${theme}`);
+        assert.equal(measurement.role, 'region');
+        assert.ok(measurement.label?.trim());
+        assert.equal(measurement.tabIndex, 0);
+        matrix[theme][width] = measurement;
+      }
+      if (theme === 'night' && e5EvidenceDir) {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.screenshot({ path: path.join(e5EvidenceDir, `analytics-390-e5-${phase}-night.png`), fullPage: true });
+      }
+    }
+    if (e5EvidenceDir) {
+      await writeFile(path.join(e5EvidenceDir, `analytics-390-e5-${phase}.json`), `${JSON.stringify({
+        route: '/admin/analytics', role: 'admin', phase, geometry, focus, keyboardReachable: true, matrix,
+        evidence: 'Playwright Chromium com app HTTP e PostgreSQL temporário; massa sintética criada pelo gate via API canônica.',
+        limitations: 'Capturas e medições automatizadas; sem validação manual, leitor de tela ou aceite humano.',
+      }, null, 2)}\n`, 'utf8');
+    }
     await context.close();
   });
 });

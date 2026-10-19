@@ -691,7 +691,7 @@ export default function FrotaWorkspace() {
                     <span className={styles.metricLabel}>Sem responsável canônico registrado</span>
                   </li>
                 </ul>
-                <div className={styles.tableWrap}>
+                <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                   <table className={styles.table} data-testid="frota-tabela">
                     <caption>
                       Veículos da jornada canônica, em ordem de placa. Situação, quilometragem e
@@ -994,7 +994,7 @@ export default function FrotaWorkspace() {
             {dossierData ? (
               <>
                 {Array.isArray(dossierData.fuel_logs) && dossierData.fuel_logs.length > 0 ? (
-                  <div className={styles.tableWrap}>
+                  <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                     <table className={styles.table} data-testid="frota-abastecimentos-tabela">
                       <caption>
                         Abastecimentos registrados para este veículo, do mais recente ao mais
@@ -1080,7 +1080,7 @@ export default function FrotaWorkspace() {
             {dossierData ? (
               <>
                 {Array.isArray(dossierData.maintenance_logs) && dossierData.maintenance_logs.length > 0 ? (
-                  <div className={styles.tableWrap}>
+                  <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                     <table className={styles.table} data-testid="frota-manutencoes-tabela">
                       <caption>
                         Manutenções registradas para este veículo, da mais recente à mais antiga.

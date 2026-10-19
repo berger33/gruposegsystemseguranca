@@ -49,3 +49,22 @@ O inventário estático demonstra omissão de semântica em JSX, não comprova o
 - Antes de mudar qualquer JSX de workspace, o gate isolado `UX_ANALYTICS_TEST_PATTERN='UX-PRO-E5 browser' npm run test:ux-analytics:pg` subiu servidor real, PostgreSQL temporário UTF-8 e Chromium local. Em `/admin/analytics` (admin, 390×844, dia), a tabela rolou horizontalmente: wrapper `clientWidth=301`, `scrollWidth=842`, `maxScrollLeft=541`; o DOM confirmou `role=null`, `aria-label=null`, `tabIndex=-1`. O teste falhou como esperado ao exigir `role="region"`.
 - Captura anterior automatizada: `docs/ux-pro-e5-evidencias/analytics-390-e5-before.png`; medições reproduzíveis em `analytics-390-e5-before.json`. A imagem inclui a indicação visual de compilação do Next em desenvolvimento; os valores de geometria vieram diretamente do DOM.
 - O primeiro gate criou cluster com locale WIN1252 e migração falhou antes da suíte; a configuração do gate foi corrigida para UTF-8/locale `C`, e o teste foi repetido com sucesso até a asserção E5.
+
+## Resultado depois da implementação
+
+- Os 39 wrappers diretos passaram a declarar `role="region"`, `aria-label="Tabela com rolagem horizontal"` e `tabIndex={0}`; o wrapper já parcial de Incidentes recebeu apenas `role="region"`. Os 5 wrappers de Integration Logs e 6 wrappers de Patrimônio com `UiTableScroll` foram preservados sem duplicação.
+- O teste AST focal passou (51 wrappers avaliados; exceções pré-existentes cobertas). O teste de navegador real em `/admin/analytics`, com Chromium, sessão administrativa e PostgreSQL temporário, passou: em 390×844, dia, wrapper `clientWidth=301`, `scrollWidth=842`, rolagem máxima 541 px, região nomeada, `tabIndex=0`, alcançável por Tab e contorno visível de 3 px.
+- A matriz Playwright passou em 320/390/768/1440 px nos temas dia/noite. As oito medições tiveram `documentOverflowPx=0`; a região manteve nome, role e foco. Em 768/1440 px, os dados sintéticos usados não excederam a largura disponível e não houve rolagem horizontal necessária.
+- Evidências automatizadas: `docs/ux-pro-e5-evidencias/analytics-390-e5-after.png`, `analytics-390-e5-after-night.png` e `analytics-390-e5-after.json`. A captura contém o indicador “Compiling…” do servidor de desenvolvimento; as medidas vieram do DOM montado e não dependem da aparência desse indicador. São viewports em navegador desktop, não dispositivos físicos.
+- TypeScript terminou sem diagnóstico (`npm run typecheck`); `npm run build` compilou e gerou as 105 páginas estáticas. `node scripts/qa-wave0-static.mjs` passou 5/5. `node scripts/ux-pro-00-inventory.mjs --check` passou com 100 rotas, sem alteração de inventário. `git diff --check` passou depois de restaurar os arquivos gerados do Next; `next-env.d.ts` e `tsconfig.json` estão idênticos à base.
+- `npm test` não passou neste Windows: 961 testes passaram e 3 falharam exclusivamente por `EPERM` ao criar symlinks em `tests/qa-backup-coverage-inventory.test.mjs`, `tests/qa-cli-v2-local-provider.test.mjs` e `tests/qa-cli-v2-transfer.test.mjs`. Não se alteraram nem ignoraram essas provas. Como a suíte completa é gate requerido, a PR fica bloqueada até a execução do gate em ambiente que permita symlinks ou a resolução específica do ambiente.
+
+## Antes/depois e limites da validação
+
+| Evidência | Antes | Depois |
+|---|---|---|
+| AST de 51 wrappers | 39 sem semântica/foco, 1 parcial, 5 prontos, 6 com região interna | 45 wrappers diretos com role, nome e foco; exceções preparadas mantidas |
+| Analytics, 390 px, dia | rolagem máxima 541 px; `role=null`, sem nome, `tabIndex=-1`; teste falhou como esperado | rolagem máxima 541 px; região nomeada, `tabIndex=0`, foco por Tab e indicador visível; passou |
+| Viewports/temas | cobertura inicial focal em 390 px, tema dia | matriz automatizada 320/390/768/1440 px, dia/noite; sem overflow do documento |
+
+As medições não demonstram uso manual, compatibilidade com leitor de tela, validação em aparelho físico, revisão humana ou comportamento de todas as tabelas em cada estado de dados. A cobertura automatizada do DOM montado em Analytics é representativa; o teste AST verifica os demais componentes estaticamente. Nenhuma mudança alterou autenticação, permissões, contratos de API, isolamento, auditoria, dados ou funcionamento local.

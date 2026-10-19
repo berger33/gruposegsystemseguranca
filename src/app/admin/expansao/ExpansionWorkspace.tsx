@@ -659,7 +659,7 @@ export function ExpansionWorkspace() {
                   acima. Não são total da empresa, meta nem histórico, e nenhum deles é percentual.
                 </p>
 
-                <div className={styles.tableWrap}>
+                <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                   <table className={styles.table} data-testid="expansion-list-table">
                     <caption>
                       Planos devolvidos pelo servidor, do mais recente para o mais antigo (limite de 200 por
@@ -1147,7 +1147,7 @@ export function ExpansionWorkspace() {
                         detail="Cenário nenhum é gerado automaticamente: cada um é escrito pela equipe, com premissa própria."
                       />
                     ) : (
-                      <div className={styles.tableWrap}>
+                      <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                         <table className={styles.table} data-testid="expansion-scenarios-table">
                           <caption>
                             Cenários do plano, do mais antigo para o mais novo. A margem projetada é coluna

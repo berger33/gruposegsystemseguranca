@@ -624,7 +624,7 @@ export default function QualidadeWorkspace() {
                     <span className={styles.metricLabel}>Encerradas com evidência e responsável</span>
                   </li>
                 </ul>
-                <div className={styles.tableWrap}>
+                <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                   <table className={styles.table} data-testid="quality-list-table">
                     <caption>
                       Não conformidades devolvidas pelo servidor para o seu escopo, da mais recente à mais
@@ -955,7 +955,7 @@ export default function QualidadeWorkspace() {
                   <div className={styles.padded}>
                     <h3 className={styles.cardTitle}>Ações corretivas</h3>
                     {selected.actions.length ? (
-                      <div className={styles.tableWrap}>
+                      <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                         <table className={styles.table} data-testid="quality-actions-table">
                           <caption>
                             Ações da não conformidade. Ação concluída ou cancelada é imutável no banco.

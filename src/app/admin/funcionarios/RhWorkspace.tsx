@@ -349,7 +349,7 @@ function Team({ employees }: { employees: Employee[] }) {
       <h3 id="rh-equipe-titulo" className={styles.panelTitle}>
         Equipe alcançada pelas suas concessões ({employees.length})
       </h3>
-      <div className={styles.tableWrap}>
+      <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
         <table className={styles.table}>
           <caption>
             Remuneração não integra esta listagem. A leitura salarial exige a concessão
@@ -827,7 +827,7 @@ function Documents({ docs, run }: { docs: Doc[]; run: RunTask }) {
         Aprovar registra a revisão. Publicar ao titular é um passo distinto e exige fonte autorizada. O
         download é auditado e o arquivo não tem endereço público.
       </p>
-      <div className={styles.tableWrap}>
+      <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
         <table className={styles.table}>
           <thead>
             <tr>

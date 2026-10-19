@@ -744,7 +744,7 @@ function PostsPanel({
         {posts.length === 0 ? (
           <UiState variant="empty" title="Nenhum posto cadastrado ainda" detail="A consulta foi respondida pelo servidor e não encontrou postos no seu escopo." />
         ) : (
-          <div className={styles.tableWrap}>
+          <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
             <table className={styles.table}>
               <thead>
                 <tr>
@@ -802,7 +802,7 @@ function PostsPanel({
             {jobRoles.length === 0 ? (
               <UiState variant="empty" title="Nenhum cargo ou função cadastrado" detail="Alocação com cargo exigido depende de entidade própria registrada aqui." />
             ) : (
-              <div className={styles.tableWrap}>
+              <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                 <table className={styles.table}>
                   <thead>
                     <tr>
@@ -832,7 +832,7 @@ function PostsPanel({
             {shiftNeeds.length === 0 ? (
               <UiState variant="empty" title="Nenhuma necessidade por turno cadastrada" detail="Sem cadastro, o dimensionamento de posto não é inferido." />
             ) : (
-              <div className={styles.tableWrap}>
+              <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                 <table className={styles.table}>
                   <thead>
                     <tr>
@@ -868,7 +868,7 @@ function PostsPanel({
         {allocations.length === 0 ? (
           <UiState variant="empty" title="Nenhuma alocação registrada ainda" detail="A consulta foi respondida pelo servidor e não encontrou alocações no seu escopo." />
         ) : (
-          <div className={styles.tableWrap}>
+          <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
             <table className={styles.table}>
               <thead>
                 <tr>
@@ -916,7 +916,7 @@ function JourneyPanel({ workRules, qualifications, validations }: { workRules: W
                 Nenhuma regra aprovada e ativa: jornada, descanso, jornada semanal e dias consecutivos não estão sendo aplicados.
               </p>
             )}
-            <div className={styles.tableWrap}>
+            <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
               <table className={styles.table}>
                 <thead>
                   <tr>
@@ -961,7 +961,7 @@ function JourneyPanel({ workRules, qualifications, validations }: { workRules: W
         {qualifications.length === 0 ? (
           <UiState variant="empty" title="Nenhuma qualificação cadastrada" detail="Alocar com cargo/função exige habilitação registrada e dentro da validade." />
         ) : (
-          <div className={styles.tableWrap}>
+          <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
             <table className={styles.table}>
               <thead>
                 <tr>
@@ -999,7 +999,7 @@ function JourneyPanel({ workRules, qualifications, validations }: { workRules: W
         {validations.length === 0 ? (
           <UiState variant="empty" title="Nenhum bloqueio de validação registrado" />
         ) : (
-          <div className={styles.tableWrap}>
+          <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
             <table className={styles.table}>
               <thead>
                 <tr>
@@ -1046,7 +1046,7 @@ function DimensioningPanel({
             {dimensionings.length === 0 ? (
               <UiState variant="empty" title="Nenhum dimensionamento registrado" detail="Sem registro por faixa de tempo, cobertura não é inferida." />
             ) : (
-              <div className={styles.tableWrap}>
+              <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                 <table className={styles.table}>
                   <thead>
                     <tr>
@@ -1120,7 +1120,7 @@ function DimensioningPanel({
             {gaps.length === 0 ? (
               <UiState variant="empty" title="Nenhuma lacuna de cobertura registrada" detail="Ausência de lacuna registrada não é prova de cobertura — é ausência de registro." />
             ) : (
-              <div className={styles.tableWrap}>
+              <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                 <table className={styles.table}>
                   <thead>
                     <tr>
@@ -1185,7 +1185,7 @@ function SchedulesPanel({
             {scheduleVersions.length === 0 ? (
               <UiState variant="empty" title="Nenhuma versão de escala registrada" detail="Sem versão, não há calendário — nada é presumido." />
             ) : (
-              <div className={styles.tableWrap}>
+              <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                 <table className={styles.table}>
                   <thead>
                     <tr>
@@ -1279,7 +1279,7 @@ function SchedulesPanel({
                   }
                   return (
                     <>
-                      <div className={styles.tableWrap}>
+                      <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                         <table className={styles.table}>
                           <thead>
                             <tr>
@@ -1354,7 +1354,7 @@ function SchedulesPanel({
                       {employees.length === 0 ? (
                         <UiState variant="empty" title="Nenhum profissional com entrada nesta versão" detail="Ciência pressupõe escala publicada com entradas." />
                       ) : (
-                        <div className={styles.tableWrap}>
+                        <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                           <table className={styles.table}>
                             <thead>
                               <tr>
@@ -1416,7 +1416,7 @@ function SchedulesPanel({
                   <UiState variant="empty" title="Nenhuma transição registrada para esta versão" />
                 ) : null}
                 {!detailLoading && !detailError && scheduleHistory.length > 0 ? (
-                  <div className={styles.tableWrap}>
+                  <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                     <table className={styles.table}>
                       <thead>
                         <tr>
@@ -1462,7 +1462,7 @@ function CoveragePanel({ coverages }: { coverages: CoverageRequest[] }) {
       {coverages.length === 0 ? (
         <UiState variant="empty" title="Nenhuma pendência de cobertura registrada" />
       ) : (
-        <div className={styles.tableWrap}>
+        <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
           <table className={styles.table}>
             <thead>
               <tr>
@@ -1496,7 +1496,7 @@ function HandoverPanel({ handovers }: { handovers: Handover[] }) {
       {handovers.length === 0 ? (
         <UiState variant="empty" title="Nenhuma passagem de plantão registrada" />
       ) : (
-        <div className={styles.tableWrap}>
+        <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
           <table className={styles.table}>
             <thead>
               <tr>
@@ -1530,7 +1530,7 @@ function OccurrencePanel({ occurrences }: { occurrences: Occurrence[] }) {
       {occurrences.length === 0 ? (
         <UiState variant="empty" title="Nenhuma ocorrência registrada no livro" />
       ) : (
-        <div className={styles.tableWrap}>
+        <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
           <table className={styles.table}>
             <thead>
               <tr>
@@ -1566,7 +1566,7 @@ function ChecklistPanel({ checklists }: { checklists: ChecklistInstance[] }) {
       {checklists.length === 0 ? (
         <UiState variant="empty" title="Nenhuma execução de checklist registrada" />
       ) : (
-        <div className={styles.tableWrap}>
+        <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
           <table className={styles.table}>
             <thead>
               <tr>

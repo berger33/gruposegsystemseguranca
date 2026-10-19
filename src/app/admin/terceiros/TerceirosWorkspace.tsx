@@ -765,7 +765,7 @@ export default function TerceirosWorkspace() {
                     <span className={styles.metricLabel}>Sem contrato canônico vinculado</span>
                   </li>
                 </ul>
-                <div className={styles.tableWrap}>
+                <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                   <table className={styles.table} data-testid="terceiros-tabela">
                     <caption>
                       Terceiros da jornada canônica. Situação, vínculo de contrato, acesso derivado
