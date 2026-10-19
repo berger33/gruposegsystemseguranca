@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import UiState from "../../../components/ui/UiState";
+import UiActionDialog, { type UiActionDialogRequest } from "../../../components/ui/UiActionDialog";
 import { opsErrorFootnote, type OpsErrorDescriptor } from "../../../lib/ops-vocabulary.mjs";
 import { opsRequest } from "../../../lib/ops-request";
 
@@ -31,6 +32,7 @@ export default function OpsAdvanced3Client() {
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [events, setEvents] = useState<MonEvent[]>([]);
   const [msg, setMsg] = useState("");
+  const [actionDialog, setActionDialog] = useState<UiActionDialogRequest | null>(null);
   // UX-07 (correção pontual, sem mudar URL/método/payload): antes, qualquer
   // falha de leitura (rede fora do ar, 500, 503 de auditoria) era engolida
   // pelo `.catch(()=>({definitions:[]}))` de cada fetch — a tela mostrava
@@ -87,13 +89,27 @@ export default function OpsAdvanced3Client() {
   async function createProposal() {
     try { await api("/api/hr/ops-assisted-proposals","POST",{ contract_id:propForm.contract_id, company_id:propForm.company_id||null, unit_id:propForm.unit_id||null, period_start:propForm.period_start, period_end:propForm.period_end, motives:propForm.motives }); setMsg("Proposta escala assistida criada - regras validadas verificadas"); loadAll(); } catch(e:any){ setMsg("Erro proposta: "+e.message); }
   }
-  async function reviewProposal(id:string) {
-    const reviewed_by = prompt("Revisor humano (obrigatório antes publicar):"); if(!reviewed_by) return;
-    try { await api("/api/hr/ops-assisted-proposals","PATCH",{ id, status:"em_analise", reviewed_by }); setMsg("Proposta em análise humana"); loadAll(); } catch(e:any){ setMsg(e.message); }
+  function reviewProposal(id:string) {
+    setActionDialog({
+      key:`review-proposal-${id}`, title:"Revisar proposta de escala", submitLabel:"Iniciar análise humana",
+      description:"A proposta precisa de revisão humana antes da publicação. Identifique a pessoa responsável.",
+      fields:[{ name:"reviewed_by", label:"Responsável pela revisão", required:true, maxLength:200 }],
+      onSubmit:async ({ reviewed_by }) => {
+        await api("/api/hr/ops-assisted-proposals","PATCH",{ id, status:"em_analise", reviewed_by });
+        setMsg("Proposta em análise humana"); setActionDialog(null); void loadAll();
+      },
+    });
   }
-  async function publishProposal(id:string) {
-    const reviewed_by = prompt("Responsável publicação (revisão humana obrigatória, conflitos apresentados):"); if(!reviewed_by) return;
-    try { await api("/api/hr/ops-assisted-proposals","PATCH",{ id, status:"publicado", reviewed_by, motives:"Publicação confirmada após revisão humana dos conflitos" }); setMsg("Escala assistida publicada"); loadAll(); } catch(e:any){ setMsg("Erro publicar: "+e.message); }
+  function publishProposal(id:string) {
+    setActionDialog({
+      key:`publish-proposal-${id}`, title:"Publicar proposta de escala", submitLabel:"Confirmar publicação",
+      description:"Confirme quem revisou as regras e os conflitos apresentados antes de publicar a escala assistida.",
+      fields:[{ name:"reviewed_by", label:"Responsável pela publicação", required:true, maxLength:200 }],
+      onSubmit:async ({ reviewed_by }) => {
+        await api("/api/hr/ops-assisted-proposals","PATCH",{ id, status:"publicado", reviewed_by, motives:"Publicação confirmada após revisão humana dos conflitos" });
+        setMsg("Escala assistida publicada"); setActionDialog(null); void loadAll();
+      },
+    });
   }
   async function loadConflicts(proposal_id:string) {
     try { const d=await api("/api/hr/ops-assisted-conflicts?proposal_id="+proposal_id,"GET"); if(d.conflicts) setConflicts(d.conflicts); const eD=await api("/api/hr/ops-assisted-entries?proposal_id="+proposal_id,"GET"); if(eD.entries) setEntries(eD.entries); } catch {}
@@ -133,21 +149,43 @@ export default function OpsAdvanced3Client() {
   async function createEvent() {
     try { await api("/api/hr/ops-monitoring-events","POST",{ connector_id:evForm.connector_id||null, event_type:evForm.event_type, severity:evForm.severity, post_id:evForm.post_id||null, company_id:evForm.company_id||null, occurred_at:evForm.occurred_at||new Date().toISOString(), notes:evForm.notes, is_synthetic:true, payload:{ info:"evento sintético; não é central 24h nem produz despacho externo" } }); setMsg("Evento monitoramento via conector fila criado - não é central 24h"); loadAll(); } catch(e:any){ setMsg("Erro evento: "+e.message); }
   }
-  async function ackEvent(id:string) {
-    const acknowledged_by = prompt("Responsável reconhecimento:"); if(!acknowledged_by) return;
-    try { await api("/api/hr/ops-monitoring-events","PATCH",{ id, status:"reconhecido", acknowledged_by }); setMsg("Evento reconhecido"); loadAll(); } catch(e:any){ setMsg(e.message); }
+  function ackEvent(id:string) {
+    setActionDialog({
+      key:`ack-event-${id}`, title:"Reconhecer evento sintético", submitLabel:"Reconhecer evento",
+      description:"Identifique a pessoa responsável pelo reconhecimento. Este fluxo não substitui uma central 24 horas.",
+      fields:[{ name:"acknowledged_by", label:"Responsável pelo reconhecimento", required:true, maxLength:200 }],
+      onSubmit:async ({ acknowledged_by }) => {
+        await api("/api/hr/ops-monitoring-events","PATCH",{ id, status:"reconhecido", acknowledged_by });
+        setMsg("Evento reconhecido"); setActionDialog(null); void loadAll();
+      },
+    });
   }
-  async function treatEvent(id:string) {
-    const treatment_notes = prompt("Tratamento interno do evento sintético:"); if(!treatment_notes) return;
-    try { await api("/api/hr/ops-monitoring-events","PATCH",{ id, status:"em_tratamento", treatment_notes }); setMsg("Evento sintético em tratamento"); loadAll(); } catch(e:any){ setMsg(e.message); }
+  function treatEvent(id:string) {
+    setActionDialog({
+      key:`treat-event-${id}`, title:"Registrar tratamento do evento", submitLabel:"Iniciar tratamento",
+      description:"Descreva o tratamento interno deste evento sintético. Não registre segredos ou dados desnecessários.",
+      fields:[{ name:"treatment_notes", label:"Tratamento interno", required:true, multiline:true, maxLength:2000 }],
+      onSubmit:async ({ treatment_notes }) => {
+        await api("/api/hr/ops-monitoring-events","PATCH",{ id, status:"em_tratamento", treatment_notes });
+        setMsg("Evento sintético em tratamento"); setActionDialog(null); void loadAll();
+      },
+    });
   }
-  async function closeEvent(id:string) {
-    const closed_by = prompt("Responsável pelo encerramento:"); if(!closed_by) return;
-    try { await api("/api/hr/ops-monitoring-events","PATCH",{ id, status:"resolvido", closed_by, treatment_notes:"Tratamento sintético concluído sem despacho externo" }); setMsg("Evento sintético encerrado"); loadAll(); } catch(e:any){ setMsg(e.message); }
+  function closeEvent(id:string) {
+    setActionDialog({
+      key:`close-event-${id}`, title:"Encerrar evento sintético", submitLabel:"Confirmar encerramento",
+      description:"Identifique quem confirmou o encerramento. O registro indicará que não houve despacho externo.",
+      fields:[{ name:"closed_by", label:"Responsável pelo encerramento", required:true, maxLength:200 }],
+      onSubmit:async ({ closed_by }) => {
+        await api("/api/hr/ops-monitoring-events","PATCH",{ id, status:"resolvido", closed_by, treatment_notes:"Tratamento sintético concluído sem despacho externo" });
+        setMsg("Evento sintético encerrado"); setActionDialog(null); void loadAll();
+      },
+    });
   }
 
   return (
     <section style={{ marginTop:24, padding:16, border:"1px solid #999", borderRadius:8 }}>
+      <UiActionDialog request={actionDialog} onCancel={() => setActionDialog(null)} />
       <h2 style={{ color:"var(--theme-accent)" }}>OPS-13/14/15/16 — Métricas, Escalas Assistidas, Limpeza, Monitoramento</h2>
       {loadError ? (
         <UiState

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import UiState from "../../../components/ui/UiState";
+import UiActionDialog, { type UiActionDialogRequest } from "../../../components/ui/UiActionDialog";
 import { opsErrorFootnote, type OpsErrorDescriptor } from "../../../lib/ops-vocabulary.mjs";
 import { opsRequest } from "../../../lib/ops-request";
 
@@ -23,6 +24,7 @@ export default function OpsAdvanced2Client() {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [msg, setMsg] = useState("");
+  const [actionDialog, setActionDialog] = useState<UiActionDialogRequest | null>(null);
   // UX-07 (correção pontual, sem mudar URL/método/payload): antes, qualquer
   // falha de leitura (rede fora do ar, 500, 503 de auditoria) era engolida
   // pelo `.catch(()=>({visits:[]}))` de cada fetch — a tela mostrava "nenhum
@@ -62,11 +64,19 @@ export default function OpsAdvanced2Client() {
       setMsg("Visita supervisão criada"); loadAll();
     } catch(e:any){ setMsg("Erro visita: "+e.message); }
   }
-  async function verifyVisit(id:string) {
-    const verified_by = prompt("Responsável verificação (decisão humana):");
-    if (!verified_by) return;
-    const verification_notes = prompt("Notas verificação:")||"";
-    try { await api("/api/hr/ops-supervision-visits","PATCH",{ id, status:"pendente_verificacao", verified_by, verification_notes }); setMsg("Visita em verificação"); loadAll(); } catch(e:any){ setMsg(e.message); }
+  function verifyVisit(id:string) {
+    setActionDialog({
+      key:`verify-visit-${id}`, title:"Verificar visita de supervisão", submitLabel:"Registrar verificação",
+      description:"Identifique quem tomou a decisão humana. As notas são opcionais e integram o registro de verificação.",
+      fields:[
+        { name:"verified_by", label:"Responsável pela verificação", required:true, maxLength:200 },
+        { name:"verification_notes", label:"Notas da verificação", multiline:true, maxLength:2000 },
+      ],
+      onSubmit:async ({ verified_by, verification_notes }) => {
+        await api("/api/hr/ops-supervision-visits","PATCH",{ id, status:"pendente_verificacao", verified_by, verification_notes });
+        setMsg("Visita em verificação"); setActionDialog(null); void loadAll();
+      },
+    });
   }
   async function realizeVisit(id:string) {
     try { await api("/api/hr/ops-supervision-visits","PATCH",{ id, status:"realizada" }); setMsg("Visita realizada"); loadAll(); } catch(e:any){ setMsg(e.message); }
@@ -87,10 +97,16 @@ export default function OpsAdvanced2Client() {
   async function loadActionPlans() {
     try { const d=await api("/api/hr/ops-supervision-action-plans","GET"); if(d.actionPlans) setActionPlans(d.actionPlans); } catch {}
   }
-  async function verifyActionPlan(id:string) {
-    const verified_by = prompt("Responsável verificação plano (humano):");
-    if (!verified_by) return;
-    try { await api("/api/hr/ops-supervision-action-plans","PATCH",{ id, status:"verificado", verified_by }); setMsg("Plano verificado"); loadActionPlans(); } catch(e:any){ setMsg(e.message); }
+  function verifyActionPlan(id:string) {
+    setActionDialog({
+      key:`verify-plan-${id}`, title:"Verificar plano de ação", submitLabel:"Confirmar verificação",
+      description:"A verificação exige a identificação da pessoa responsável pela decisão humana.",
+      fields:[{ name:"verified_by", label:"Responsável pela verificação", required:true, maxLength:200 }],
+      onSubmit:async ({ verified_by }) => {
+        await api("/api/hr/ops-supervision-action-plans","PATCH",{ id, status:"verificado", verified_by });
+        setMsg("Plano verificado"); setActionDialog(null); void loadActionPlans();
+      },
+    });
   }
 
   // OPS-10
@@ -114,10 +130,16 @@ export default function OpsAdvanced2Client() {
   async function loadPoints(patrol_id:string) {
     try { const d=await api("/api/hr/ops-patrol-points?patrol_id="+patrol_id,"GET"); if(d.points) setPoints(d.points); } catch {}
   }
-  async function verifyPoint(id:string) {
-    const verified_by = prompt("Responsável verificação ponto (GPS/QR isolado não prova execução):");
-    if (!verified_by) return;
-    try { await api("/api/hr/ops-patrol-points","PATCH",{ id, verified_by, status:"visitado" }); setMsg("Ponto verificado humano"); loadAll(); } catch(e:any){ setMsg(e.message); }
+  function verifyPoint(id:string) {
+    setActionDialog({
+      key:`verify-point-${id}`, title:"Verificar ponto de ronda", submitLabel:"Confirmar verificação humana",
+      description:"GPS ou QR isolado não prova execução. Identifique quem conferiu as evidências antes de marcar o ponto como visitado.",
+      fields:[{ name:"verified_by", label:"Responsável pela verificação", required:true, maxLength:200 }],
+      onSubmit:async ({ verified_by }) => {
+        await api("/api/hr/ops-patrol-points","PATCH",{ id, verified_by, status:"visitado" });
+        setMsg("Ponto verificado humano"); setActionDialog(null); void loadAll();
+      },
+    });
   }
 
   // OPS-11
@@ -142,18 +164,41 @@ export default function OpsAdvanced2Client() {
       loadAll();
     } catch(e:any){ setMsg("Erro relatório: "+e.message); }
   }
-  async function reviewReport(id:string) {
-    const reviewed_by = prompt("Revisor conteúdo:"); if(!reviewed_by) return;
-    try { await api("/api/hr/ops-client-reports","PATCH",{ id, status:"em_revisao", reviewed_by }); setMsg("Relatório em revisão"); loadAll(); } catch(e:any){ setMsg(e.message); }
+  function reviewReport(id:string) {
+    setActionDialog({
+      key:`review-report-${id}`, title:"Revisar conteúdo do relatório", submitLabel:"Iniciar revisão",
+      description:"Identifique a pessoa responsável pela revisão humana do conteúdo.",
+      fields:[{ name:"reviewed_by", label:"Revisor do conteúdo", required:true, maxLength:200 }],
+      onSubmit:async ({ reviewed_by }) => {
+        await api("/api/hr/ops-client-reports","PATCH",{ id, status:"em_revisao", reviewed_by });
+        setMsg("Relatório em revisão"); setActionDialog(null); void loadAll();
+      },
+    });
   }
-  async function privacyReviewReport(id:string) {
-    const privacy_reviewed_by = prompt("Responsável revisão privacidade:"); if(!privacy_reviewed_by) return;
-    const privacy_review_notes = prompt("Notas privacidade:")||"";
-    try { await api("/api/hr/ops-client-reports","PATCH",{ id, privacy_reviewed_by, privacy_review_notes }); setMsg("Revisão privacidade registrada"); loadAll(); } catch(e:any){ setMsg(e.message); }
+  function privacyReviewReport(id:string) {
+    setActionDialog({
+      key:`privacy-report-${id}`, title:"Registrar revisão de privacidade", submitLabel:"Registrar revisão",
+      description:"Confirme quem revisou os dados pessoais. As notas são opcionais e ficam associadas ao registro.",
+      fields:[
+        { name:"privacy_reviewed_by", label:"Responsável pela revisão de privacidade", required:true, maxLength:200 },
+        { name:"privacy_review_notes", label:"Notas de privacidade", multiline:true, maxLength:2000 },
+      ],
+      onSubmit:async ({ privacy_reviewed_by, privacy_review_notes }) => {
+        await api("/api/hr/ops-client-reports","PATCH",{ id, privacy_reviewed_by, privacy_review_notes });
+        setMsg("Revisão privacidade registrada"); setActionDialog(null); void loadAll();
+      },
+    });
   }
-  async function approveReport(id:string) {
-    const approved_by = prompt("Aprovador (cliente só recebe aprovado próprio contrato):"); if(!approved_by) return;
-    try { await api("/api/hr/ops-client-reports","PATCH",{ id, status:"aprovado", approved_by }); setMsg("Relatório aprovado para cliente"); loadAll(); } catch(e:any){ setMsg(e.message); }
+  function approveReport(id:string) {
+    setActionDialog({
+      key:`approve-report-${id}`, title:"Aprovar relatório para o cliente", submitLabel:"Aprovar relatório",
+      description:"O cliente só recebe relatório aprovado do próprio contrato. Identifique a pessoa que tomou esta decisão.",
+      fields:[{ name:"approved_by", label:"Responsável pela aprovação", required:true, maxLength:200 }],
+      onSubmit:async ({ approved_by }) => {
+        await api("/api/hr/ops-client-reports","PATCH",{ id, status:"aprovado", approved_by });
+        setMsg("Relatório aprovado para cliente"); setActionDialog(null); void loadAll();
+      },
+    });
   }
   async function sendReport(id:string) {
     try { await api("/api/hr/ops-client-reports","PATCH",{ id, status:"enviado" }); setMsg("Relatório enviado ao cliente (aprovado)"); loadAll(); } catch(e:any){ setMsg(e.message); }
@@ -161,6 +206,7 @@ export default function OpsAdvanced2Client() {
 
   return (
     <section style={{ marginTop:24, padding:16, border:"1px solid #ccc", borderRadius:8 }}>
+      <UiActionDialog request={actionDialog} onCancel={() => setActionDialog(null)} />
       <h2 style={{ color:"var(--theme-accent)" }}>OPS-09/10/11/12 — Supervisão, Rondas, Chaves, Relatórios Cliente</h2>
       {loadError ? (
         <UiState
