@@ -79,12 +79,13 @@ O caso prova, com duas marcas distintas do **mesmo dia** (`2026-10-05T14:32:00Z`
 
 ```text
 ok 28 - E3 browser: carimbos timestamptz saem em São Paulo com o fuso declarado e o ISO preservado, sem colidir
-  duration_ms: 5019.081258
+  duration_ms: 4943.537075
 1..28
 # tests 28
 # pass 28
 # fail 0
-UX_OPS_TAP_SUMMARY: pass=28 fail=0 skipped=0 todo=0 minimo_exigido=19
+# duration_ms 155177.775615
+UX_OPS_TAP_SUMMARY: pass=28 fail=0 skipped=0 todo=0 minimo_exigido=28
 UX_OPS_TEST_EXIT: 0
 QA_PG_TEMP_CLEANED: true
 ```
@@ -108,9 +109,12 @@ Entre o RED e o GREEN, **duas** execuções completas reprovaram um caso **herda
 - no RED, esse caso passou em **4,2 s**;
 - isolado (padrão `07D-1 massa sintética|carregamento inicial|2xx sem a lista canônica no painel inicial`), passou **3/3**;
 - com `UX_OPS_07D_UI_TIMEOUT=90000`, passou em **3,9 s** (gate 28/28);
-- a execução GREEN canônica seguinte, **com o timeout padrão**, passou **28/28** em 152 s.
+- a execução GREEN canônica seguinte, **com o timeout padrão**, passou **28/28** em 152 s;
+- a execução canônica final, já com `MINIMUM_CASES=28`, passou **28/28** em 155 s, com o caso E3 em **4,9 s**.
 
 Nenhum caso, asserção ou timeout foi alterado. A leitura honesta é: instabilidade ambiental do caso herdado no sandbox (compilação/dev-server), não regressão funcional do fluxo exercitado — que esta fatia não toca. Fica registrada como **E3-R2** (seção 6) para observação em CI.
+
+O mesmo tipo de instabilidade apareceu uma vez no gate **L06**: a primeira execução completa morreu em `browserType.launch: Target page, context or browser has been closed` com `<process did exit: exitCode=null, signal=SIGSEGV>` — **antes de qualquer asserção** da Fatia B. A reexecução imediata, sem nenhuma alteração de código, passou **9/9**. O log da falha é `/tmp/e3-l06.log`; o da reexecução, `/tmp/e3-l06b.log`. Nenhum teste foi pulado, afrouxado ou reordenado por causa disso.
 
 ## 3. Gates executados (saída real desta sessão)
 
@@ -118,8 +122,8 @@ Nenhum caso, asserção ou timeout foi alterado. A leitura honesta é: instabili
 |---|---|
 | `npm ci` | 83 pacotes, 0 vulnerabilidades |
 | `npm run test:ux-ops:pg` (RED) | `pass=27 fail=1`; caso E3 com a mensagem da seção 2.1 |
-| `npm run test:ux-ops:pg` (GREEN, timeout padrão) | **28/28**, `pass=28 fail=0 skipped=0 todo=0 minimo_exigido=19`, `UX_OPS_TEST_EXIT: 0`, `QA_PG_TEMP_CLEANED: true` |
-| `npm run test:l06-delivery:pg` | **9/9**, `L06_DELIVERY_TEST_EXIT: 0`, `QA_L06_PG_TEMP_CLEANED: true` — nenhuma asserção de data herdada editada |
+| `npm run test:ux-ops:pg` (GREEN, timeout padrão, `MINIMUM_CASES=28`) | **28/28**, `pass=28 fail=0 skipped=0 todo=0 minimo_exigido=28`, `UX_OPS_TEST_EXIT: 0`, `QA_PG_TEMP_CLEANED: true` (155 s; caso E3 em 4,9 s) |
+| `npm run test:l06-delivery:pg` | **9/9**, `L06_DELIVERY_TEST_EXIT: 0`, `QA_L06_PG_TEMP_CLEANED: true` — nenhuma asserção de data herdada editada. Uma execução anterior morreu em `browserType.launch` (SIGSEGV, antes de qualquer asserção) e foi repetida sem mudança de código (seção 2.4) |
 | `npm test` | **973/973** (968 herdados + 5 novos), `fail 0`, `skipped 0`, `todo 0` |
 | `npm run typecheck` | exit **0**, sem diagnóstico |
 | `npm run build` | `✓ Generating static pages (105/105)`, sem erro |
@@ -134,6 +138,7 @@ Nenhum caso, asserção ou timeout foi alterado. A leitura honesta é: instabili
 - **07D-1/07D-2** continuam verdes, incluindo os estados honestos de leitura, a idempotência da ciência, o selo `Ciente desde` e as capturas de teclado.
 - **Nada de API/servidor/banco:** URLs, métodos, payloads, respostas, ordenação, filtros, estados de domínio, RBAC, sessão, auditoria e migrações **não** foram tocados. Nenhuma migração nova.
 - **Datas de calendário** (`DATE`) da rota: 19 ocorrências de `slice(0, 10)` preservadas, byte a byte iguais à base.
+- **Runner do gate**: única mudança fora da exibição, `MINIMUM_CASES` 19 → 28 em `scripts/qa-ux-ops-postgres.mjs`, para que os 8 casos da 07D-2 e o caso E3 também contem como prova. É endurecimento do gate, não afrouxamento.
 - **Textos de botão, mensagens e conteúdo de negócio:** inalterados.
 - **Sem asserção afrouxada, sem teste pulado, sem skip/todo.**
 
@@ -152,7 +157,7 @@ Nenhum caso, asserção ou timeout foi alterado. A leitura honesta é: instabili
 |---|---|---|
 | **E3-CRM** | fora do escopo, registrado | `src/app/admin/crm/OpportunitySummary.tsx:82` — `new Date(...).toISOString().slice(0, 16)` preenche `<input type="datetime-local">`. É formato de **entrada** de formulário, família própria; exige decisão antes de qualquer mudança. |
 | **E3-R1** | fora do escopo, registrado | `OperacaoWorkspace.tsx:1478` — `cov.coverage_date \|\| String(cov.requested_at).slice(0, 10)`: `requested_at` é `TIMESTAMPTZ` exibido só como data, sem hora e sem fuso. Defeito adjacente da mesma família, fora das 7 ocorrências autorizadas. |
-| **E3-R2** | observado, sem reparo | Instabilidade do caso herdado 07D-1 sob o timeout padrão de 45 s no sandbox (seção 2.4). Não alterar timeout/asserção sem decisão; observar em CI. |
+| **E3-R2** | observado, sem reparo | Instabilidade ambiental no sandbox: caso herdado 07D-1 sob o timeout padrão de 45 s e uma morte de `browserType.launch` por SIGSEGV no L06, ambas sem reprodução após reexecução (seção 2.4). Não alterar timeout/asserção sem decisão; observar em CI. |
 | **E9** | limitado a 1 h1 | Quebra de palavra em cabeçalhos a 768 px (`UiWorkspace.module.css:11`). **Não reproduz defeito na base atual** (conforme o pedido); permanece apenas o registro do `h1`, sem código e sem conclusão de acessibilidade. |
 | **PU4** | sem medição | O probe da 09E amostra só 7 tags e só o estado inicial; `dt`, `span`, `footer`, `.field span`, `.hint` e `.error` ficam **sem medição** — o que não é aprovação. |
 | **PU5** | sem reparo | Especificidade: `.steps li` vence `.stepActive`/`.stepDone`; as etapas não se distinguem por cor. |
