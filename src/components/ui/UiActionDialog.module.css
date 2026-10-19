@@ -1,0 +1,59 @@
+.dialog {
+  width: min(560px, calc(100% - 24px));
+  max-height: min(720px, calc(100dvh - 24px));
+  overflow: auto;
+  padding: 0;
+  border: 1px solid var(--ux-color-border, #cbd5e1);
+  border-radius: 16px;
+  background: var(--ux-color-surface, #fff);
+  color: var(--ux-color-text, #172033);
+  box-shadow: 0 24px 64px rgb(10 23 52 / 28%);
+}
+
+.dialog::backdrop { background: rgb(10 23 52 / 62%); }
+.form { display: grid; gap: 18px; padding: clamp(18px, 4vw, 28px); }
+.form h2 { margin: 0; font-size: clamp(20px, 4vw, 26px); line-height: 1.2; }
+.description { margin: 8px 0 0; color: var(--ux-color-muted, #526078); line-height: 1.55; }
+.field { display: grid; gap: 7px; font-weight: 700; }
+.field input,
+.field textarea {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--ux-color-border, #aeb9c8);
+  border-radius: 8px;
+  background: var(--ux-color-canvas, #fff);
+  color: var(--ux-color-text, #172033);
+  font: inherit;
+  font-weight: 400;
+}
+.field textarea { min-height: 104px; resize: vertical; }
+.field small { color: var(--ux-color-muted, #526078); font-weight: 400; line-height: 1.45; }
+.field :is(input, textarea):focus-visible,
+.actions button:focus-visible { outline: 3px solid var(--ux-color-focus, #2563eb); outline-offset: 2px; }
+.error { margin: 0; padding: 12px 14px; border-radius: 8px; background: #fff0f0; color: #8f1717; line-height: 1.5; }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.actions button {
+  min-height: 44px;
+  padding: 9px 16px;
+  border: 1px solid var(--ux-color-border, #aeb9c8);
+  border-radius: 8px;
+  background: var(--ux-color-surface, #fff);
+  color: var(--ux-color-text, #172033);
+  font: inherit;
+  font-weight: 700;
+}
+.actions .primary {
+  border-color: var(--ux-color-brand-strong, #1d4ed8);
+  background: var(--ux-color-brand-strong, #1d4ed8);
+  color: var(--ux-color-canvas, #fff);
+}
+.actions button:disabled { cursor: wait; opacity: .65; }
+
+:global(html[data-admin-theme="night"]) .error { background: #411d25; color: #ffd5dc; }
+:global(html[data-admin-theme="night"]) .actions .primary { color: #111b2b; }
+
+@media (max-width: 480px) {
+  .actions button { flex: 1 1 100%; }
+}
