@@ -120,6 +120,10 @@ async function login(email) {
 }
 
 async function launchBrowser() {
+  const executablePath = process.env.UX_KNOWLEDGE_BROWSER_EXECUTABLE_PATH;
+  if (executablePath) {
+    return playwrightChromium.launch({ executablePath, headless: true });
+  }
   let last;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
@@ -586,6 +590,42 @@ test('UX-PRO-08D: medições 320/390/768/1440px, tema dia/noite e percurso de te
           assert.ok(entry?.percursoTeclado?.length > 0);
         }
       }
+    }
+    await context.close();
+  } finally {
+    await browser.close().catch(() => {});
+  }
+});
+
+test('UX-PRO-E8: controles compartilhados preservam contraste no tema noturno em /admin/conhecimento', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openPage(browser, adminCookie, { width: 768, height: 1024 });
+    await page.locator('[data-testid="knowledge-articles-list"]').waitFor();
+    await page.click('[data-admin-theme-toggle="true"]');
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+    const measures = {};
+    measures.activeTab = await contraste08a(page, '[role="tab"][aria-selected="true"]');
+    assert.ok(measures.activeTab >= 4.5, `activeTab no tema noturno: ${measures.activeTab}:1 (mínimo focal 4.5:1)`);
+    const heading = await page.locator('main [data-admin-content="true"] h1').evaluate(element => {
+      const rect = element.getBoundingClientRect();
+      return { text: element.textContent?.trim(), right: Math.round(rect.right), containerRight: Math.round(element.parentElement.getBoundingClientRect().right), scrollWidth: element.scrollWidth, clientWidth: element.clientWidth };
+    });
+    measures.heading768 = heading;
+    assert.ok(heading.right <= heading.containerRight + 1 && heading.scrollWidth <= heading.clientWidth + 1, `E9 cabeçalho excede o contêiner em 768px: ${JSON.stringify(heading)}`);
+    const e8EvidenceDir = process.env.UX_E8_EVIDENCE_DIR;
+    if (e8EvidenceDir) {
+      await mkdir(e8EvidenceDir, { recursive: true });
+      await page.screenshot({ path: path.join(e8EvidenceDir, 'conhecimento-768-noite-e8.png'), fullPage: true });
+      await writeFile(path.join(e8EvidenceDir, 'resumo.json'), `${JSON.stringify({
+        stage: 'UX-PRO-E8', route: '/admin/conhecimento', role: 'admin', viewport: '768x1024', theme: 'night',
+        base: '8306f84326ebb0e3634e6363ee807b1930389019',
+        before: { activeTabContrast: 1.95, screenshot: '../ux-pro-08-conhecimento-evidencias/conhecimento-768-noite.png' },
+        measures,
+        checks: { activeTabContrastMin45: true, heading768WithinContainer: true },
+        evidence: 'Automação Playwright com Chromium local, servidor Next e PostgreSQL descartável; massa de QA.',
+        limitations: 'Inspeção estática e validação automatizada; sem inspeção manual, leitor de tela, aceite humano ou declaração de conformidade WCAG.',
+      }, null, 2)}\n`, 'utf8');
     }
     await context.close();
   } finally {

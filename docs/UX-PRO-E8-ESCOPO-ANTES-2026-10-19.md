@@ -10,7 +10,7 @@
 
 Corrigir **E8**, contraste dos controles ativos compartilhados pelo `UiWorkspace.module.css`, somente no tema administrativo noturno. Evidência integrada em `/admin/conhecimento`: a aba ativa mede `1,95:1` (`#fff` sobre `--ux-color-brand` noturno `#92bdf2`), abaixo de 4,5:1. Fonte: `docs/ux-pro-08-conhecimento-evidencias/resumo.json`, captura `conhecimento-768-noite.png`, viewport 768×1024.
 
-O mesmo CSS aplica texto branco sobre `--ux-color-brand` em `.actions .primary`; essa classe é usada por formulários e ações em várias rotas. A validação medirá também um botão primário realmente montado no workspace de Conhecimento. A correção não altera as cores durante o dia nem as demais semânticas, estados, rotas ou ações.
+No workspace de Conhecimento, os botões primários têm `className="primary"` literal e não recebem a classe local de CSS Modules `.primary`; por isso eles não demonstram a regra `.actions .primary` e foram excluídos do teste focal. Esta fatia corrige somente a aba ativa, efetivamente montada. O seletor de ação compartilhado fica fora do escopo até ser reproduzido em um consumidor que aplique ambas as classes locais.
 
 ## E9 e E5: triagem e separação
 
@@ -26,7 +26,7 @@ O mesmo CSS aplica texto branco sobre `--ux-color-brand` em `.actions .primary`;
 
 ## Plano de teste e evidência
 
-1. Acrescentar primeiro um caso focal de navegador para `/admin/conhecimento` que leia as cores computadas da aba ativa e do botão primário no tema noturno e exija razão ≥4,5:1; executar contra este SHA antes de mudar CSS e registrar a falha exata. O dia deve permanecer inalterado.
+1. Acrescentar primeiro um caso focal de navegador para `/admin/conhecimento` que leia a cor computada da aba ativa no tema noturno e exija razão ≥4,5:1; executar contra este SHA antes de mudar CSS e registrar a falha exata. O dia deve permanecer inalterado.
 2. No mesmo caso, registrar dimensões/retângulos dos cabeçalhos a 768 px e confirmar que a evidência atual não atribui problema a E9. Se outro heading transbordar, documentar o nó real; correção E9 fica condicionada à reprodução e à revisão do menor escopo.
 3. Capturar antes/depois com Chromium local e papel de teste, sem dados reais; separar captura automatizada de inspeção estática e de validação manual.
 4. Executar o gate PostgreSQL/HTTP/Chromium de Conhecimento, gate de preservação dos assistentes se tocar tokens compartilhados, typecheck, build, `qa-wave0-static`, inventário `--check`, regressões focais e `git diff --check`.
@@ -35,3 +35,9 @@ O mesmo CSS aplica texto branco sobre `--ux-color-brand` em `.actions .primary`;
 ## Limites
 
 O número 1,95:1 é evidência automatizada localizada em uma rota/viewport/tema, não auditoria de todos os consumidores. A PR não declara conformidade WCAG, teste com leitores de tela, validação manual, aceite humano, homologação ou prontidão de produção. E9 e E5 permanecem explicitamente separados até serem medidos no código e navegador atuais.
+
+## Execução da linha de base
+
+- O primeiro gate falhou antes dos testes porque o cluster descartável herdou WIN1252; a configuração do próprio gate foi fixada para `UTF8`/locale `C` e usa sempre PostgreSQL temporário.
+- Em 19/10/2026, antes da regra CSS, o gate `npm run test:ux-knowledge:pg` executou 11 testes: 10 passaram e o caso E8 falhou como esperado com `activeTab ... 1.95:1` (limite do teste: 4.5:1). O cabeçalho E9 a 768 px ainda não foi alcançado na asserção porque o caso encerrou no primeiro defeito. Após a correção, a próxima execução medirá ambos.
+- O gate permite Chromium local por `UX_KNOWLEDGE_BROWSER_EXECUTABLE_PATH`; o caminho padrão empacotado permanece inalterado. A captura própria desta fatia é opcional via `UX_E8_EVIDENCE_DIR`.

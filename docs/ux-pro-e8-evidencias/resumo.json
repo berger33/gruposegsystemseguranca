@@ -1,0 +1,28 @@
+{
+  "stage": "UX-PRO-E8",
+  "route": "/admin/conhecimento",
+  "role": "admin",
+  "viewport": "768x1024",
+  "theme": "night",
+  "base": "8306f84326ebb0e3634e6363ee807b1930389019",
+  "measures": {
+    "activeTab": 8.87,
+    "heading768": {
+      "text": "Base de Conhecimento e Procedimentos Operacionais",
+      "right": 713,
+      "containerRight": 737,
+      "scrollWidth": 659,
+      "clientWidth": 659
+    }
+  },
+  "checks": {
+    "activeTabContrastMin45": true,
+    "heading768WithinContainer": true
+  },
+  "evidence": "Automação Playwright com Chromium local, servidor Next e PostgreSQL descartável; massa de QA.",
+  "limitations": "Inspeção estática e validação automatizada; sem inspeção manual, leitor de tela, aceite humano ou declaração de conformidade WCAG.",
+  "before": {
+    "activeTabContrast": 1.95,
+    "screenshot": "../ux-pro-08-conhecimento-evidencias/conhecimento-768-noite.png"
+  }
+}
