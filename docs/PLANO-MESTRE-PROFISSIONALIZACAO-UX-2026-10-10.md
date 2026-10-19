@@ -127,6 +127,8 @@ O registro de 10/10 acima descreve o snapshot `c50a99b` e é histórico. A matri
 - Atualizar inventário, docs de entrada e README; preservar as evidências históricas com data e SHA.
 - Emitir relatório final com cobertura por rota, evidências, checks, falhas/cancelamentos, limitações e aceites ainda necessários.
 
+> **Execução registrada em 19/10/2026:** 10A permanece como auditoria estática dos dez layouts; 10B (capturas das prévias e `/admin/aparencia`, teclado no recorte do Layout 01) foi mergeada na PR #265, SHA `3e9a4eec4fb4b14e70f02bb15e38fddeb07d3774`. A 10C reconcilia README, fechamento e matriz gerada por rota em [`UX-PRO-10C-COBERTURA-ROTAS-2026-10-19.md`](UX-PRO-10C-COBERTURA-ROTAS-2026-10-19.md). O fechamento mantém explícito que a matriz não representa auditoria visual/manual das 100 rotas nem aceite global.
+
 ## Regra de PR, checks e merge — obrigatória em toda fatia
 
 1. Criar branch a partir da `main` mais recente; confirmar base e SHA antes de editar.

@@ -77,6 +77,61 @@ test('UX-PRO-00: percurso explícito do gate é creditado sem alegar cobertura c
   assert.match(f.matrix['/admin/medido'].evidencia, /aceite humano: nao_registrado/);
 });
 
+test('UX-PRO-00: reconcilia resumo complementar 10B por rota, viewport, tema e recorte de teclado', async t => {
+  const f = await fixture(t, {
+    '/layout-preview': '<main><h1>Prévia</h1></main>',
+    '/layout-01': '<main><h1>Layout 01</h1></main>',
+    '/layout-02': '<main><h1>Layout 02</h1></main>',
+    '/admin/aparencia': '<AdminGate data-admin-theme-scope="true" />',
+  });
+  const evidenceDir = path.join(f.directory, 'docs/fixture-evidencias');
+  const dimensions = [
+    { name: '320', width: 320, height: 900 },
+    { name: '390', width: 390, height: 844 },
+    { name: '768', width: 768, height: 1024 },
+    { name: '1440', width: 1440, height: 900 },
+  ];
+  const previewRoutes = dimensions.map(({ name }) => ({
+    route: '/layout-preview?visual=01', viewport: name, status: 200,
+  }));
+  await writeFile(path.join(evidenceDir, 'resumo-layouts.json'), JSON.stringify({
+    viewports: dimensions,
+    routes: [
+      ...previewRoutes,
+      {
+        route: '/layout-01', viewport: '1440', firstFocus: true,
+        percursoTeclado: ['a[href="/admin/aparencia"]', 'a[href="/"]', 'iframe a[href="#inicio"]', 'Shift+Tab a[href="/"]'],
+      },
+    ],
+  }));
+  const adminEvidenceDir = path.join(f.directory, 'docs/admin-evidencias');
+  await mkdir(adminEvidenceDir, { recursive: true });
+  await writeFile(path.join(adminEvidenceDir, 'resumo.json'), JSON.stringify({
+    stage: 'ux-pro-10b',
+    entries: dimensions.flatMap(({ width, height }) => ['claro', 'escuro'].map((requestedTheme) => ({
+      route: '/admin/aparencia', viewport: `${width}x${height}`, requestedTheme,
+    }))),
+  }));
+
+  f.run();
+  const inventoryRows = parseCsv(await readFile(path.join(f.directory, inventory), 'utf8'));
+  const matrixRows = parseCsv(await readFile(path.join(f.directory, matrix), 'utf8'));
+  assert.equal(inventoryRows['/layout-preview'].capturas_stage, 'ux-pro-10b');
+  assert.deepEqual(inventoryRows['/layout-preview'].capturas_viewports.split('|').sort(), [
+    '1440x900', '320x900', '390x844', '768x1024',
+  ]);
+  assert.equal(inventoryRows['/layout-preview?visual=01'], undefined, 'query string não cria rota nova');
+  assert.equal(inventoryRows['/layout-02'].capturas_viewports, '', 'variante renderizada via query não prova a rota direta');
+  assert.equal(inventoryRows['/layout-01'].marcadores_teclado, 'sim');
+  assert.equal(inventoryRows['/layout-01'].capturas_primeiro_foco, 'sim');
+  assert.match(matrixRows['/layout-01'].teclado, /percurso de teclado registrado em navegador/);
+  assert.match(matrixRows['/admin/aparencia'].tema, /capturas automatizadas em tema claro e escuro/);
+  assert.doesNotMatch(matrixRows['/admin/aparencia'].tema, /noite nao comprovado/);
+  assert.doesNotMatch(matrixRows['/admin/aparencia'].lacuna, /tema noturno sem captura/);
+  assert.match(matrixRows['/admin/aparencia'].evidencia, /validacao manual: nao_registrado/);
+  assert.match(matrixRows['/admin/aparencia'].evidencia, /aceite humano: nao_registrado/);
+});
+
 test('UX-PRO-00: nome de captura, primeiro foco e percurso vazio ou inválido não provam percurso', async t => {
   const sources = Object.fromEntries(['foco', 'nome', 'vazio', 'texto', 'branco', 'objeto', 'codigo'].map(name => [
     `/admin/${name}`, name === 'codigo' ? '<main onKeyDown={handle} />' : '<main />',
