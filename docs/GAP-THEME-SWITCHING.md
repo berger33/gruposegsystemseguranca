@@ -1,5 +1,7 @@
 # Gap Resolution: UX-Pro-10B P1 - Theme Switching
 
+> **Retificação (18/10/2026, PR corretiva da #263):** documento movido da raiz para `docs/`. A análise estática abaixo (temas em `src/styles/themes.css`, modos de cor) permanece, mas a **verificação em navegador continua pendente**: troca de tema, persistência e atualização dinâmica do `data-color-mode` não foram testadas pela PR #263 nem por esta correção. Os arquivos `public/visuals/layout-02..10/index.html` criados pela #263 foram removidos como órfãos — somente o visual do Layout 01 existe nesta família. Ver [`UX-PRO-10B-CORRECAO-263-ESCOPO-ANTES-2026-10-18.md`](UX-PRO-10B-CORRECAO-263-ESCOPO-ANTES-2026-10-18.md).
+
 ## Contexto
 - **Gap**: Theme switching (P1)
 - **Arquitetura**: 10 temas definidos em `src/styles/themes.css` + `data-color-mode="claro"|"escuro"|"sistema"`
