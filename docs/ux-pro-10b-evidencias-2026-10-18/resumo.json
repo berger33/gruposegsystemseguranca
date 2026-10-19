@@ -1,0 +1,1778 @@
+{
+  "stage": "ux-pro-10b",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "entries": [
+    {
+      "stage": "ux-pro-10b",
+      "route": "/admin/aparencia",
+      "role": "ti",
+      "viewport": "320x780",
+      "screenshot": "docs\\ux-pro-10b-evidencias-2026-10-18\\w320-claro-aparencia.png",
+      "gateEvidence": null,
+      "requestedTheme": "claro",
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "keyboardSteps": [
+        {
+          "key": "Tab (primeiro)",
+          "tag": "a",
+          "target": "GrupoSEG System",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(217, 231, 247)",
+          "shadow": "none",
+          "outline": "1px auto rgb(16, 16, 16)",
+          "width": 146,
+          "height": 48
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Menu",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "3px solid rgb(145, 201, 255)",
+          "width": 83,
+          "height": 38
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Ativar modo noite",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(169, 198, 230, 0.38)",
+          "shadow": "none",
+          "outline": "3px solid rgb(145, 201, 255)",
+          "width": 124,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Sair",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "1px auto rgb(16, 16, 16)",
+          "width": 66,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(35, 63, 145)",
+          "shadow": "none",
+          "outline": "3px solid rgb(145, 201, 255)",
+          "width": 31,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Abrir site atual",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(35, 63, 145)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 222,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(209, 217, 232)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 122,
+          "height": 290
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(209, 217, 232)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 122,
+          "height": 290
+        },
+        {
+          "key": "Shift+Tab",
+          "tag": "button",
+          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(35, 63, 145)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 122,
+          "height": 290
+        }
+      ],
+      "keyboardActions": [
+        "Enter compara layout 01; nenhum PUT/publicação"
+      ],
+      "percursoTeclado": [
+        "Tab (primeiro): GrupoSEG System",
+        "Tab: Menu",
+        "Tab: Ativar modo noite",
+        "Tab: Sair",
+        "Tab: Início",
+        "Tab: Abrir site atual",
+        "Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
+        "Tab: Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
+        "Shift+Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã"
+      ],
+      "keyboardProblems": [],
+      "theme": {
+        "requested": "claro",
+        "actual": "claro",
+        "adminTheme": "day",
+        "body": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)"
+        },
+        "surface": {
+          "background": "rgb(243, 245, 251)",
+          "color": "rgb(21, 36, 61)"
+        },
+        "scope": "staff"
+      },
+      "themeToggle": {
+        "before": {
+          "pressed": "false",
+          "theme": "day",
+          "stored": "day"
+        },
+        "afterToggle": {
+          "pressed": "true",
+          "theme": "night",
+          "stored": "night"
+        },
+        "afterRestore": {
+          "pressed": "false",
+          "theme": "day",
+          "stored": "day"
+        },
+        "passed": true
+      },
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-10b",
+      "route": "/admin/aparencia",
+      "role": "ti",
+      "viewport": "320x780",
+      "screenshot": "docs\\ux-pro-10b-evidencias-2026-10-18\\w320-escuro-aparencia.png",
+      "gateEvidence": null,
+      "requestedTheme": "escuro",
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "keyboardSteps": [
+        {
+          "key": "Tab (primeiro)",
+          "tag": "a",
+          "target": "GrupoSEG System",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 146,
+          "height": 48
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Menu",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 83,
+          "height": 38
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Ativar modo dia",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(169, 198, 230, 0.38)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 111,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Sair",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 66,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 31,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Abrir site atual",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 222,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 122,
+          "height": 290
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 122,
+          "height": 290
+        },
+        {
+          "key": "Shift+Tab",
+          "tag": "button",
+          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 122,
+          "height": 290
+        }
+      ],
+      "keyboardActions": [
+        "Enter compara layout 01; nenhum PUT/publicação"
+      ],
+      "percursoTeclado": [
+        "Tab (primeiro): GrupoSEG System",
+        "Tab: Menu",
+        "Tab: Ativar modo dia",
+        "Tab: Sair",
+        "Tab: Início",
+        "Tab: Abrir site atual",
+        "Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
+        "Tab: Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
+        "Shift+Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã"
+      ],
+      "keyboardProblems": [],
+      "theme": {
+        "requested": "escuro",
+        "actual": "escuro",
+        "adminTheme": "night",
+        "body": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)"
+        },
+        "surface": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(229, 237, 247)"
+        },
+        "scope": "staff"
+      },
+      "themeToggle": {
+        "before": {
+          "pressed": "true",
+          "theme": "night",
+          "stored": "night"
+        },
+        "afterToggle": {
+          "pressed": "false",
+          "theme": "day",
+          "stored": "day"
+        },
+        "afterRestore": {
+          "pressed": "true",
+          "theme": "night",
+          "stored": "night"
+        },
+        "passed": true
+      },
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-10b",
+      "route": "/admin/aparencia",
+      "role": "ti",
+      "viewport": "390x844",
+      "screenshot": "docs\\ux-pro-10b-evidencias-2026-10-18\\w390-claro-aparencia.png",
+      "gateEvidence": null,
+      "requestedTheme": "claro",
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "keyboardSteps": [
+        {
+          "key": "Tab (primeiro)",
+          "tag": "a",
+          "target": "GrupoSEG System",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(217, 231, 247)",
+          "shadow": "none",
+          "outline": "1px auto rgb(16, 16, 16)",
+          "width": 146,
+          "height": 48
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Menu",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "3px solid rgb(145, 201, 255)",
+          "width": 83,
+          "height": 38
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Ativar modo noite",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(169, 198, 230, 0.38)",
+          "shadow": "none",
+          "outline": "3px solid rgb(145, 201, 255)",
+          "width": 124,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Sair",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "1px auto rgb(16, 16, 16)",
+          "width": 66,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(35, 63, 145)",
+          "shadow": "none",
+          "outline": "3px solid rgb(145, 201, 255)",
+          "width": 31,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Abrir site atual",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(35, 63, 145)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 289,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(209, 217, 232)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 155,
+          "height": 272
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(209, 217, 232)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 155,
+          "height": 272
+        },
+        {
+          "key": "Shift+Tab",
+          "tag": "button",
+          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(35, 63, 145)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 155,
+          "height": 272
+        }
+      ],
+      "keyboardActions": [
+        "Enter compara layout 01; nenhum PUT/publicação"
+      ],
+      "percursoTeclado": [
+        "Tab (primeiro): GrupoSEG System",
+        "Tab: Menu",
+        "Tab: Ativar modo noite",
+        "Tab: Sair",
+        "Tab: Início",
+        "Tab: Abrir site atual",
+        "Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
+        "Tab: Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
+        "Shift+Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã"
+      ],
+      "keyboardProblems": [],
+      "theme": {
+        "requested": "claro",
+        "actual": "claro",
+        "adminTheme": "day",
+        "body": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)"
+        },
+        "surface": {
+          "background": "rgb(243, 245, 251)",
+          "color": "rgb(21, 36, 61)"
+        },
+        "scope": "staff"
+      },
+      "themeToggle": {
+        "before": {
+          "pressed": "false",
+          "theme": "day",
+          "stored": "day"
+        },
+        "afterToggle": {
+          "pressed": "true",
+          "theme": "night",
+          "stored": "night"
+        },
+        "afterRestore": {
+          "pressed": "false",
+          "theme": "day",
+          "stored": "day"
+        },
+        "passed": true
+      },
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-10b",
+      "route": "/admin/aparencia",
+      "role": "ti",
+      "viewport": "390x844",
+      "screenshot": "docs\\ux-pro-10b-evidencias-2026-10-18\\w390-escuro-aparencia.png",
+      "gateEvidence": null,
+      "requestedTheme": "escuro",
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "keyboardSteps": [
+        {
+          "key": "Tab (primeiro)",
+          "tag": "a",
+          "target": "GrupoSEG System",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 146,
+          "height": 48
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Menu",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 83,
+          "height": 38
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Ativar modo dia",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(169, 198, 230, 0.38)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 111,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Sair",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 66,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 31,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Abrir site atual",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 289,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 155,
+          "height": 272
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 155,
+          "height": 272
+        },
+        {
+          "key": "Shift+Tab",
+          "tag": "button",
+          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 155,
+          "height": 272
+        }
+      ],
+      "keyboardActions": [
+        "Enter compara layout 01; nenhum PUT/publicação"
+      ],
+      "percursoTeclado": [
+        "Tab (primeiro): GrupoSEG System",
+        "Tab: Menu",
+        "Tab: Ativar modo dia",
+        "Tab: Sair",
+        "Tab: Início",
+        "Tab: Abrir site atual",
+        "Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
+        "Tab: Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
+        "Shift+Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã"
+      ],
+      "keyboardProblems": [],
+      "theme": {
+        "requested": "escuro",
+        "actual": "escuro",
+        "adminTheme": "night",
+        "body": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)"
+        },
+        "surface": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(229, 237, 247)"
+        },
+        "scope": "staff"
+      },
+      "themeToggle": {
+        "before": {
+          "pressed": "true",
+          "theme": "night",
+          "stored": "night"
+        },
+        "afterToggle": {
+          "pressed": "false",
+          "theme": "day",
+          "stored": "day"
+        },
+        "afterRestore": {
+          "pressed": "true",
+          "theme": "night",
+          "stored": "night"
+        },
+        "passed": true
+      },
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-10b",
+      "route": "/admin/aparencia",
+      "role": "ti",
+      "viewport": "768x1024",
+      "screenshot": "docs\\ux-pro-10b-evidencias-2026-10-18\\w768-claro-aparencia.png",
+      "gateEvidence": null,
+      "requestedTheme": "claro",
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "keyboardSteps": [
+        {
+          "key": "Tab (primeiro)",
+          "tag": "a",
+          "target": "GrupoSEG System",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(217, 231, 247)",
+          "shadow": "none",
+          "outline": "1px auto rgb(16, 16, 16)",
+          "width": 146,
+          "height": 48
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Menu",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "3px solid rgb(145, 201, 255)",
+          "width": 83,
+          "height": 38
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Ativar modo noite",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(169, 198, 230, 0.38)",
+          "shadow": "none",
+          "outline": "3px solid rgb(145, 201, 255)",
+          "width": 124,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Sair",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "1px auto rgb(16, 16, 16)",
+          "width": 66,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(35, 63, 145)",
+          "shadow": "none",
+          "outline": "3px solid rgb(145, 201, 255)",
+          "width": 31,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Abrir site atual",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(35, 63, 145)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 194,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(209, 217, 232)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 322,
+          "height": 257
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(209, 217, 232)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 322,
+          "height": 257
+        },
+        {
+          "key": "Shift+Tab",
+          "tag": "button",
+          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(35, 63, 145)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 322,
+          "height": 257
+        }
+      ],
+      "keyboardActions": [
+        "Enter compara layout 01; nenhum PUT/publicação"
+      ],
+      "percursoTeclado": [
+        "Tab (primeiro): GrupoSEG System",
+        "Tab: Menu",
+        "Tab: Ativar modo noite",
+        "Tab: Sair",
+        "Tab: Início",
+        "Tab: Abrir site atual",
+        "Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
+        "Tab: Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
+        "Shift+Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã"
+      ],
+      "keyboardProblems": [],
+      "theme": {
+        "requested": "claro",
+        "actual": "claro",
+        "adminTheme": "day",
+        "body": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)"
+        },
+        "surface": {
+          "background": "rgb(243, 245, 251)",
+          "color": "rgb(21, 36, 61)"
+        },
+        "scope": "staff"
+      },
+      "themeToggle": {
+        "before": {
+          "pressed": "false",
+          "theme": "day",
+          "stored": "day"
+        },
+        "afterToggle": {
+          "pressed": "true",
+          "theme": "night",
+          "stored": "night"
+        },
+        "afterRestore": {
+          "pressed": "false",
+          "theme": "day",
+          "stored": "day"
+        },
+        "passed": true
+      },
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-10b",
+      "route": "/admin/aparencia",
+      "role": "ti",
+      "viewport": "768x1024",
+      "screenshot": "docs\\ux-pro-10b-evidencias-2026-10-18\\w768-escuro-aparencia.png",
+      "gateEvidence": null,
+      "requestedTheme": "escuro",
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "keyboardSteps": [
+        {
+          "key": "Tab (primeiro)",
+          "tag": "a",
+          "target": "GrupoSEG System",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 146,
+          "height": 48
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Menu",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 83,
+          "height": 38
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Ativar modo dia",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(169, 198, 230, 0.38)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 111,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Sair",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 66,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 31,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Abrir site atual",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 194,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 322,
+          "height": 257
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 322,
+          "height": 257
+        },
+        {
+          "key": "Shift+Tab",
+          "tag": "button",
+          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 322,
+          "height": 257
+        }
+      ],
+      "keyboardActions": [
+        "Enter compara layout 01; nenhum PUT/publicação"
+      ],
+      "percursoTeclado": [
+        "Tab (primeiro): GrupoSEG System",
+        "Tab: Menu",
+        "Tab: Ativar modo dia",
+        "Tab: Sair",
+        "Tab: Início",
+        "Tab: Abrir site atual",
+        "Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
+        "Tab: Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
+        "Shift+Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã"
+      ],
+      "keyboardProblems": [],
+      "theme": {
+        "requested": "escuro",
+        "actual": "escuro",
+        "adminTheme": "night",
+        "body": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)"
+        },
+        "surface": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(229, 237, 247)"
+        },
+        "scope": "staff"
+      },
+      "themeToggle": {
+        "before": {
+          "pressed": "true",
+          "theme": "night",
+          "stored": "night"
+        },
+        "afterToggle": {
+          "pressed": "false",
+          "theme": "day",
+          "stored": "day"
+        },
+        "afterRestore": {
+          "pressed": "true",
+          "theme": "night",
+          "stored": "night"
+        },
+        "passed": true
+      },
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-10b",
+      "route": "/admin/aparencia",
+      "role": "ti",
+      "viewport": "1440x900",
+      "screenshot": "docs\\ux-pro-10b-evidencias-2026-10-18\\w1440-claro-aparencia.png",
+      "gateEvidence": null,
+      "requestedTheme": "claro",
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "keyboardSteps": [
+        {
+          "key": "Tab (primeiro)",
+          "tag": "a",
+          "target": "GrupoSEG System",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(217, 231, 247)",
+          "shadow": "none",
+          "outline": "1px auto rgb(16, 16, 16)",
+          "width": 146,
+          "height": 48
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Ativar modo noite",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(169, 198, 230, 0.38)",
+          "shadow": "none",
+          "outline": "3px solid rgb(145, 201, 255)",
+          "width": 124,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Sair",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "1px auto rgb(16, 16, 16)",
+          "width": 66,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(35, 63, 145)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 220,
+          "height": 45
+        },
+        {
+          "key": "Tab",
+          "tag": "input",
+          "target": "input",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(18, 38, 63)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 177,
+          "height": 24
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Visão e pendências3",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(36, 70, 107)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Clientes e comercial6",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(36, 70, 107)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Entrega de serviços7",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(36, 70, 107)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Pessoas1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(36, 70, 107)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Financeiro e conformidade4",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(36, 70, 107)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 220,
+          "height": 60
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Portais2",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(36, 70, 107)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Sistema2",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(36, 70, 107)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "TI",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(41, 71, 101)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 205,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Aparência do site",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(35, 63, 145)",
+          "shadow": "rgb(35, 63, 145) 3px 0px 0px 0px inset",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 205,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Conhecimento1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(36, 70, 107)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(35, 63, 145)",
+          "shadow": "none",
+          "outline": "3px solid rgb(145, 201, 255)",
+          "width": 31,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Abrir site atual",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(35, 63, 145)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 194,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(209, 217, 232)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 243,
+          "height": 257
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(209, 217, 232)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 243,
+          "height": 257
+        },
+        {
+          "key": "Shift+Tab",
+          "tag": "button",
+          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(35, 63, 145)",
+          "shadow": "none",
+          "outline": "3px solid rgb(49, 90, 202)",
+          "width": 243,
+          "height": 257
+        }
+      ],
+      "keyboardActions": [
+        "Enter compara layout 01; nenhum PUT/publicação"
+      ],
+      "percursoTeclado": [
+        "Tab (primeiro): GrupoSEG System",
+        "Tab: Ativar modo noite",
+        "Tab: Sair",
+        "Tab: Início",
+        "Tab: input",
+        "Tab: Visão e pendências3",
+        "Tab: Clientes e comercial6",
+        "Tab: Entrega de serviços7",
+        "Tab: Pessoas1",
+        "Tab: Financeiro e conformidade4",
+        "Tab: Portais2",
+        "Tab: Sistema2",
+        "Tab: TI",
+        "Tab: Aparência do site",
+        "Tab: Conhecimento1",
+        "Tab: Início",
+        "Tab: Abrir site atual",
+        "Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
+        "Tab: Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
+        "Shift+Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã"
+      ],
+      "keyboardProblems": [],
+      "theme": {
+        "requested": "claro",
+        "actual": "claro",
+        "adminTheme": "day",
+        "body": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)"
+        },
+        "surface": {
+          "background": "rgb(243, 245, 251)",
+          "color": "rgb(21, 36, 61)"
+        },
+        "scope": "staff"
+      },
+      "themeToggle": {
+        "before": {
+          "pressed": "false",
+          "theme": "day",
+          "stored": "day"
+        },
+        "afterToggle": {
+          "pressed": "true",
+          "theme": "night",
+          "stored": "night"
+        },
+        "afterRestore": {
+          "pressed": "false",
+          "theme": "day",
+          "stored": "day"
+        },
+        "passed": true
+      },
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-10b",
+      "route": "/admin/aparencia",
+      "role": "ti",
+      "viewport": "1440x900",
+      "screenshot": "docs\\ux-pro-10b-evidencias-2026-10-18\\w1440-escuro-aparencia.png",
+      "gateEvidence": null,
+      "requestedTheme": "escuro",
+      "firstFocus": {
+        "tag": "a",
+        "text": "GrupoSEG System",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "keyboardSteps": [
+        {
+          "key": "Tab (primeiro)",
+          "tag": "a",
+          "target": "GrupoSEG System",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 146,
+          "height": 48
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Ativar modo dia",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(169, 198, 230, 0.38)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 111,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Sair",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgba(148, 183, 224, 0.35)",
+          "shadow": "none",
+          "outline": "1px auto rgb(149, 202, 255)",
+          "width": 66,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 45
+        },
+        {
+          "key": "Tab",
+          "tag": "input",
+          "target": "input",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 177,
+          "height": 24
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Visão e pendências3",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Clientes e comercial6",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Entrega de serviços7",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Pessoas1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Financeiro e conformidade4",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 60
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Portais2",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Sistema2",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "TI",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 205,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Aparência do site",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(182, 210, 250)",
+          "shadow": "rgb(146, 189, 242) 3px 0px 0px 0px inset",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 205,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "summary",
+          "target": "Conhecimento1",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(229, 237, 247)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 220,
+          "height": 44
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Início",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 31,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "a",
+          "target": "Abrir site atual",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 194,
+          "height": 20
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 243,
+          "height": 257
+        },
+        {
+          "key": "Tab",
+          "tag": "button",
+          "target": "Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(53, 73, 96)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 243,
+          "height": 257
+        },
+        {
+          "key": "Shift+Tab",
+          "tag": "button",
+          "target": "Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã",
+          "visible": true,
+          "focusVisible": true,
+          "fullyVisible": true,
+          "border": "rgb(146, 189, 242)",
+          "shadow": "none",
+          "outline": "3px solid rgb(149, 202, 255)",
+          "width": 243,
+          "height": 257
+        }
+      ],
+      "keyboardActions": [
+        "Enter compara layout 01; nenhum PUT/publicação"
+      ],
+      "percursoTeclado": [
+        "Tab (primeiro): GrupoSEG System",
+        "Tab: Ativar modo dia",
+        "Tab: Sair",
+        "Tab: Início",
+        "Tab: input",
+        "Tab: Visão e pendências3",
+        "Tab: Clientes e comercial6",
+        "Tab: Entrega de serviços7",
+        "Tab: Pessoas1",
+        "Tab: Financeiro e conformidade4",
+        "Tab: Portais2",
+        "Tab: Sistema2",
+        "Tab: TI",
+        "Tab: Aparência do site",
+        "Tab: Conhecimento1",
+        "Tab: Início",
+        "Tab: Abrir site atual",
+        "Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Comparar",
+        "Tab: Central tecnológicaAzul profundo, precisão e linguagem de monitoramento.Layout 02Comparar",
+        "Shift+Tab: Institucional clássicaApresentação institucional clara e tradicional.Layout 01Em comparaçã"
+      ],
+      "keyboardProblems": [],
+      "theme": {
+        "requested": "escuro",
+        "actual": "escuro",
+        "adminTheme": "night",
+        "body": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(0, 0, 0)"
+        },
+        "surface": {
+          "background": "rgba(0, 0, 0, 0)",
+          "color": "rgb(229, 237, 247)"
+        },
+        "scope": "staff"
+      },
+      "themeToggle": {
+        "before": {
+          "pressed": "true",
+          "theme": "night",
+          "stored": "night"
+        },
+        "afterToggle": {
+          "pressed": "false",
+          "theme": "day",
+          "stored": "day"
+        },
+        "afterRestore": {
+          "pressed": "true",
+          "theme": "night",
+          "stored": "night"
+        },
+        "passed": true
+      },
+      "problems": [],
+      "externalBlocked": []
+    }
+  ]
+}

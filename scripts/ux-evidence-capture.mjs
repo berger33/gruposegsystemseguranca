@@ -350,6 +350,21 @@ const STAGES = {
       { route: '/layout-preview?visual=99', role: 'ti', slug: 'layout-preview-invalido', waitFor: 'não foi reconhecido' },
     ],
   },
+  // UX-PRO-10B — authenticated browser pass over the mounted appearance
+  // gallery in both administrative themes. Public preview routes are covered
+  // separately by scripts/ux-pro-10b-browser-evidence.mjs.
+  'ux-pro-10b': {
+    outputDir: path.join('docs', 'ux-pro-10b-evidencias-2026-10-18'),
+    browserMeasurements: true,
+    viewports: [
+      [320, 780], [390, 844], [768, 1024], [1440, 900],
+    ].flatMap(([width, height]) => ['claro', 'escuro'].map(theme => ({
+      name: `w${width}-${theme}`, width, height, theme,
+    }))),
+    targets: [
+      { route: '/admin/aparencia', role: 'ti', slug: 'aparencia', keyboard: 'gallery', waitFor: 'Você pode comparar as propostas' },
+    ],
+  },
 };
 
 const plan = STAGES[stage];
@@ -424,6 +439,29 @@ async function loginCookie(email) {
   if (response.status !== 200) throw new Error(`staff_login_failed_${response.status}`);
   const cookies = response.headers.getSetCookie?.() || [];
   return cookies.map(value => value.split(';')[0]).join('; ');
+}
+
+async function measureAdminThemeToggle(page) {
+  const toggle = page.locator('[data-admin-theme-toggle="true"]');
+  const beforePressed = await toggle.getAttribute('aria-pressed');
+  const beforeTheme = await page.evaluate(() => document.documentElement.dataset.adminTheme || 'day');
+  const beforeStored = await page.evaluate(() => localStorage.getItem('segsystem.admin.appearance.v1'));
+  await toggle.click();
+  const afterPressed = await toggle.getAttribute('aria-pressed');
+  const afterTheme = await page.evaluate(() => document.documentElement.dataset.adminTheme || 'day');
+  const afterStored = await page.evaluate(() => localStorage.getItem('segsystem.admin.appearance.v1'));
+  await toggle.click();
+  const restoredPressed = await toggle.getAttribute('aria-pressed');
+  const restoredTheme = await page.evaluate(() => document.documentElement.dataset.adminTheme || 'day');
+  const restoredStored = await page.evaluate(() => localStorage.getItem('segsystem.admin.appearance.v1'));
+  return {
+    before: { pressed: beforePressed, theme: beforeTheme, stored: beforeStored },
+    afterToggle: { pressed: afterPressed, theme: afterTheme, stored: afterStored },
+    afterRestore: { pressed: restoredPressed, theme: restoredTheme, stored: restoredStored },
+    passed: beforePressed !== afterPressed && beforeTheme !== afterTheme
+      && beforeStored !== afterStored && beforePressed === restoredPressed
+      && beforeTheme === restoredTheme && beforeStored === restoredStored,
+  };
 }
 
 async function jsonRequest(pathname, { method = 'GET', cookie, body, headers = {} } = {}) {
@@ -553,11 +591,18 @@ try {
   // O Chromium empacotado roda com --single-process: reaproveitar o mesmo
   // browser para vários contextos derruba o alvo. Cada captura ganha o seu,
   // seguindo a convenção já adotada pelos testes f03 deste repositório.
-  const launchBrowser = async () => playwrightChromium.launch({
-    executablePath: await packagedChromium.executablePath(),
-    args: packagedChromium.args.filter(arg => arg !== '--disable-web-security'),
-    headless: true,
-  });
+  const launchBrowser = async () => {
+    // Local Windows runs can opt into an already installed Chrome when the
+    // Linux-targeted packaged Chromium cannot execute in that environment.
+    // CI and existing callers retain the packaged Chromium default.
+    const channel = process.env.UX_EVIDENCE_CHROMIUM_CHANNEL;
+    if (channel) return playwrightChromium.launch({ channel, headless: true });
+    return playwrightChromium.launch({
+      executablePath: await packagedChromium.executablePath(),
+      args: packagedChromium.args.filter(arg => arg !== '--disable-web-security'),
+      headless: true,
+    });
+  };
 
   for (const target of plan.targets) {
     for (const viewport of VIEWPORTS) {
@@ -591,6 +636,7 @@ try {
         page.setDefaultNavigationTimeout(90_000);
         let textOverflowCulprits = null;
         const problems = [];
+        const expectedNavigations = [];
         // Recursos de terceiros (ex.: Google Fonts) não têm saída de rede neste
         // ambiente. Isso é limitação do sandbox, não defeito da página: fica
         // registrado em campo separado em vez de contaminar os problemas reais.
@@ -609,6 +655,11 @@ try {
         page.on('requestfailed', request => {
           const url = request.url();
           const entry = `${url.replace(baseUrl, '')} (${request.failure()?.errorText || 'sem detalhe'})`;
+          if (plan.browserMeasurements && url.startsWith(`${baseUrl}/layout-preview?visual=`)
+            && request.failure()?.errorText === 'net::ERR_ABORTED') {
+            expectedNavigations.push(`iframe de comparação substituído durante seleção por teclado: ${entry}`);
+            return;
+          }
           if (url.startsWith(baseUrl)) problems.push(`requisição falhou: ${entry}`);
           else externalBlocked.push(`recurso externo bloqueado: ${entry}`);
         });
@@ -695,8 +746,8 @@ try {
           await page.getByText('Nenhum procedimento encontrado', { exact: true }).waitFor();
         }
         // Teclado: Tab precisa mover o foco para um elemento real e visível.
-        await page.keyboard.press('Tab');
-        const focus = await page.evaluate(() => {
+        await page.bringToFront();
+        const readFocus = () => page.evaluate(() => {
           const element = document.activeElement;
           if (!element || element === document.body) return null;
           const style = window.getComputedStyle(element);
@@ -706,6 +757,13 @@ try {
             outline: style.outlineStyle,
           };
         });
+        let focus = null;
+        let firstFocusAttempts = 0;
+        while (!focus && firstFocusAttempts < 5) {
+          await page.keyboard.press('Tab');
+          firstFocusAttempts += 1;
+          focus = await readFocus();
+        }
         if (!focus) problems.push('Tab não moveu o foco para nenhum elemento');
 
         const publicAudit = plan.publicDiagnostic ? await page.evaluate(includeContrastSamples => {
@@ -749,10 +807,24 @@ try {
             focusables: document.querySelectorAll('a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])').length,
           };
         }, plan.fullContrastSamples === true) : null;
-        const measurements = plan.measurements ? {
+        const measurements = plan.measurements || plan.browserMeasurements ? {
           ...await measureKeyboard(page, target),
           theme: await measureTheme(page, target, viewport.theme),
+          ...(plan.browserMeasurements ? { themeToggle: await measureAdminThemeToggle(page) } : {}),
         } : {};
+        if (plan.browserMeasurements && !measurements.themeToggle?.passed) {
+          problems.push('alternância de tema dia/noite não alternou e restaurou a preferência da sessão de teste');
+        }
+        if (plan.browserMeasurements) {
+          const previewFrame = page.locator('iframe[title^="Prévia do layout"]');
+          await previewFrame.waitFor({ state: 'visible' });
+          const previewSource = await previewFrame.getAttribute('src');
+          if (previewSource !== '/layout-preview?visual=01') {
+            problems.push(`prévia selecionada por teclado não estabilizou em Layout 01: ${previewSource || 'src ausente'}`);
+          }
+          await page.frameLocator('iframe[title^="Prévia do layout"]').frameLocator('iframe')
+            .getByRole('heading', { level: 1 }).first().waitFor({ state: 'visible' });
+        }
         const captureDir = target.outputDir ? path.join(root, target.outputDir) : outputDir;
         await mkdir(captureDir, { recursive: true });
         const file = path.join(captureDir, `${viewport.name}-${target.slug}.png`);
@@ -765,8 +837,11 @@ try {
           viewport: `${viewport.width}x${viewport.height}`,
           screenshot: path.relative(root, file),
           gateEvidence: target.gateEvidence || null,
+          ...(viewport.theme ? { requestedTheme: viewport.theme } : {}),
           ...(plan.publicDiagnostic ? { navigationStatus, theme: viewport.theme, audit: publicAudit } : {}),
+          ...(expectedNavigations.length ? { expectedNavigations } : {}),
           firstFocus: focus,
+          firstFocusAttempts,
           ...(textOverflowCulprits ? { textOverflowCulprits } : {}),
           ...measurements,
           problems,
