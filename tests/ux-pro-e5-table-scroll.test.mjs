@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import ts from 'typescript';
 
@@ -20,11 +19,19 @@ function hasZeroTabIndex(opening, sourceFile) {
   return value === '0' || value === '{0}';
 }
 
+async function listTsxFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const nested = await Promise.all(entries.map(async entry => {
+    const absolutePath = path.join(directory, entry.name);
+    if (entry.isDirectory()) return listTsxFiles(absolutePath);
+    return entry.isFile() && entry.name.endsWith('.tsx') ? [absolutePath] : [];
+  }));
+  return nested.flat().sort((left, right) => left.localeCompare(right));
+}
+
 test('UX-PRO-E5: wrappers de tabela administrativos nomeiam região rolável e recebem foco por teclado', async () => {
-  const files = execFileSync('rg', ['--files', 'src/app/admin', '-g', '*.tsx'], {
-    cwd: root,
-    encoding: 'utf8',
-  }).trim().split(/\r?\n/);
+  const files = (await listTsxFiles(path.join(root, 'src/app/admin')))
+    .map(file => path.relative(root, file).split(path.sep).join('/'));
   const wrappers = [];
 
   for (const file of files) {
