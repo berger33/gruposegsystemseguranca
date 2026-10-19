@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import UiState from "../../../components/ui/UiState";
 import UiActionDialog, { type UiActionDialogRequest } from "../../../components/ui/UiActionDialog";
+import styles from "./OpsAdvancedForms.module.css";
 import { opsErrorFootnote, type OpsErrorDescriptor } from "../../../lib/ops-vocabulary.mjs";
 import { opsRequest } from "../../../lib/ops-request";
 
@@ -221,12 +222,30 @@ export default function OpsAdvanced2Client() {
 
       <h3>OPS-09 Visitas Supervisão</h3>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="post_id UUID" value={visitForm.post_id} onChange={e=>setVisitForm({...visitForm, post_id:e.target.value})} style={{ width:220 }} />
-        <input placeholder="company_id" value={visitForm.company_id} onChange={e=>setVisitForm({...visitForm, company_id:e.target.value})} style={{ width:180 }} />
-        <input placeholder="supervisor_employee_id" value={visitForm.supervisor_employee_id} onChange={e=>setVisitForm({...visitForm, supervisor_employee_id:e.target.value})} style={{ width:200 }} />
-        <input type="date" value={visitForm.scheduled_date} onChange={e=>setVisitForm({...visitForm, scheduled_date:e.target.value})} />
-        <input placeholder="responsável" value={visitForm.responsible_name} onChange={e=>setVisitForm({...visitForm, responsible_name:e.target.value})} />
-        <input placeholder="findings" value={visitForm.findings} onChange={e=>setVisitForm({...visitForm, findings:e.target.value})} style={{ width:200 }} />
+        <label className={styles.field} htmlFor="ops-a2-visit-post-id">
+          <span className={styles.caption}>Posto (UUID)</span>
+          <input id="ops-a2-visit-post-id" placeholder="post_id UUID" value={visitForm.post_id} onChange={e=>setVisitForm({...visitForm, post_id:e.target.value})} style={{ width:220 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-visit-company-id">
+          <span className={styles.caption}>Empresa (ID)</span>
+          <input id="ops-a2-visit-company-id" placeholder="company_id" value={visitForm.company_id} onChange={e=>setVisitForm({...visitForm, company_id:e.target.value})} style={{ width:180 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-visit-supervisor-employee-id">
+          <span className={styles.caption}>Supervisor (ID do funcionário)</span>
+          <input id="ops-a2-visit-supervisor-employee-id" placeholder="supervisor_employee_id" value={visitForm.supervisor_employee_id} onChange={e=>setVisitForm({...visitForm, supervisor_employee_id:e.target.value})} style={{ width:200 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-visit-scheduled-date">
+          <span className={styles.caption}>Data agendada</span>
+          <input id="ops-a2-visit-scheduled-date" type="date" value={visitForm.scheduled_date} onChange={e=>setVisitForm({...visitForm, scheduled_date:e.target.value})} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-visit-responsible-name">
+          <span className={styles.caption}>Responsável</span>
+          <input id="ops-a2-visit-responsible-name" placeholder="responsável" value={visitForm.responsible_name} onChange={e=>setVisitForm({...visitForm, responsible_name:e.target.value})} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-visit-findings">
+          <span className={styles.caption}>Achados da visita</span>
+          <input id="ops-a2-visit-findings" placeholder="findings" value={visitForm.findings} onChange={e=>setVisitForm({...visitForm, findings:e.target.value})} style={{ width:200 }} />
+        </label>
         <button onClick={createVisit}>Criar Visita</button>
         <button onClick={loadAll}>Recarregar</button>
       </div>
@@ -238,10 +257,22 @@ export default function OpsAdvanced2Client() {
 
       <h4>Inspeções da visita</h4>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="visit_id" value={inspForm.visit_id} onChange={e=>setInspForm({...inspForm, visit_id:e.target.value})} style={{ width:220 }} />
-        <input placeholder="título 5..200" value={inspForm.title} onChange={e=>setInspForm({...inspForm, title:e.target.value})} style={{ width:200 }} />
-        <input placeholder="descrição 10..5000" value={inspForm.description} onChange={e=>setInspForm({...inspForm, description:e.target.value})} style={{ width:200 }} />
-        <select value={inspForm.inspection_type} onChange={e=>setInspForm({...inspForm, inspection_type:e.target.value})}><option value="rotina">rotina</option><option value="extraordinaria">extraordinária</option><option value="cliente">cliente</option><option value="interna">interna</option><option value="qualidade">qualidade</option><option value="seguranca">segurança</option></select>
+        <label className={styles.field} htmlFor="ops-a2-insp-visit-id">
+          <span className={styles.caption}>Visita (ID)</span>
+          <input id="ops-a2-insp-visit-id" placeholder="visit_id" value={inspForm.visit_id} onChange={e=>setInspForm({...inspForm, visit_id:e.target.value})} style={{ width:220 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-insp-title">
+          <span className={styles.caption}>Título</span>
+          <input id="ops-a2-insp-title" placeholder="título 5..200" value={inspForm.title} onChange={e=>setInspForm({...inspForm, title:e.target.value})} style={{ width:200 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-insp-description">
+          <span className={styles.caption}>Descrição</span>
+          <input id="ops-a2-insp-description" placeholder="descrição 10..5000" value={inspForm.description} onChange={e=>setInspForm({...inspForm, description:e.target.value})} style={{ width:200 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-insp-inspection-type">
+          <span className={styles.caption}>Tipo de inspeção</span>
+          <select id="ops-a2-insp-inspection-type" value={inspForm.inspection_type} onChange={e=>setInspForm({...inspForm, inspection_type:e.target.value})}><option value="rotina">rotina</option><option value="extraordinaria">extraordinária</option><option value="cliente">cliente</option><option value="interna">interna</option><option value="qualidade">qualidade</option><option value="seguranca">segurança</option></select>
+        </label>
         <button onClick={createInspection}>Criar Inspeção</button>
       </div>
       <ul style={{ fontSize:12, maxHeight:100, overflow:"auto" }}>
@@ -252,13 +283,34 @@ export default function OpsAdvanced2Client() {
 
       <h4>Planos Ação prazo responsável verificação</h4>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="visit_id" value={apForm.visit_id} onChange={e=>setApForm({...apForm, visit_id:e.target.value})} style={{ width:180 }} />
-        <input placeholder="inspection_id" value={apForm.inspection_id} onChange={e=>setApForm({...apForm, inspection_id:e.target.value})} style={{ width:180 }} />
-        <input placeholder="título 5..200" value={apForm.title} onChange={e=>setApForm({...apForm, title:e.target.value})} />
-        <input placeholder="descrição 10..2000" value={apForm.description} onChange={e=>setApForm({...apForm, description:e.target.value})} style={{ width:200 }} />
-        <input placeholder="responsável" value={apForm.responsible_name} onChange={e=>setApForm({...apForm, responsible_name:e.target.value})} />
-        <input type="date" value={apForm.due_date} onChange={e=>setApForm({...apForm, due_date:e.target.value})} />
-        <select value={apForm.priority} onChange={e=>setApForm({...apForm, priority:e.target.value})}><option value="baixa">baixa</option><option value="media">média</option><option value="alta">alta</option><option value="critica">crítica</option></select>
+        <label className={styles.field} htmlFor="ops-a2-ap-visit-id">
+          <span className={styles.caption}>Visita (ID)</span>
+          <input id="ops-a2-ap-visit-id" placeholder="visit_id" value={apForm.visit_id} onChange={e=>setApForm({...apForm, visit_id:e.target.value})} style={{ width:180 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-ap-inspection-id">
+          <span className={styles.caption}>Inspeção (ID)</span>
+          <input id="ops-a2-ap-inspection-id" placeholder="inspection_id" value={apForm.inspection_id} onChange={e=>setApForm({...apForm, inspection_id:e.target.value})} style={{ width:180 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-ap-title">
+          <span className={styles.caption}>Título</span>
+          <input id="ops-a2-ap-title" placeholder="título 5..200" value={apForm.title} onChange={e=>setApForm({...apForm, title:e.target.value})} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-ap-description">
+          <span className={styles.caption}>Descrição</span>
+          <input id="ops-a2-ap-description" placeholder="descrição 10..2000" value={apForm.description} onChange={e=>setApForm({...apForm, description:e.target.value})} style={{ width:200 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-ap-responsible-name">
+          <span className={styles.caption}>Responsável</span>
+          <input id="ops-a2-ap-responsible-name" placeholder="responsável" value={apForm.responsible_name} onChange={e=>setApForm({...apForm, responsible_name:e.target.value})} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-ap-due-date">
+          <span className={styles.caption}>Prazo de conclusão</span>
+          <input id="ops-a2-ap-due-date" type="date" value={apForm.due_date} onChange={e=>setApForm({...apForm, due_date:e.target.value})} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-ap-priority">
+          <span className={styles.caption}>Prioridade</span>
+          <select id="ops-a2-ap-priority" value={apForm.priority} onChange={e=>setApForm({...apForm, priority:e.target.value})}><option value="baixa">baixa</option><option value="media">média</option><option value="alta">alta</option><option value="critica">crítica</option></select>
+        </label>
         <button onClick={createActionPlan}>Criar Plano</button>
         <button onClick={loadActionPlans}>Listar Todos</button>
       </div>
@@ -270,9 +322,18 @@ export default function OpsAdvanced2Client() {
 
       <h3>OPS-10 Rondas e Pontos verificação prevenção replay</h3>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="post_id" value={patrolForm.post_id} onChange={e=>setPatrolForm({...patrolForm, post_id:e.target.value})} style={{ width:220 }} />
-        <input type="date" value={patrolForm.patrol_date} onChange={e=>setPatrolForm({...patrolForm, patrol_date:e.target.value})} />
-        <input placeholder="rota nome" value={patrolForm.route_name} onChange={e=>setPatrolForm({...patrolForm, route_name:e.target.value})} />
+        <label className={styles.field} htmlFor="ops-a2-patrol-post-id">
+          <span className={styles.caption}>Posto (UUID)</span>
+          <input id="ops-a2-patrol-post-id" placeholder="post_id" value={patrolForm.post_id} onChange={e=>setPatrolForm({...patrolForm, post_id:e.target.value})} style={{ width:220 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-patrol-patrol-date">
+          <span className={styles.caption}>Data da ronda</span>
+          <input id="ops-a2-patrol-patrol-date" type="date" value={patrolForm.patrol_date} onChange={e=>setPatrolForm({...patrolForm, patrol_date:e.target.value})} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-patrol-route-name">
+          <span className={styles.caption}>Nome da rota</span>
+          <input id="ops-a2-patrol-route-name" placeholder="rota nome" value={patrolForm.route_name} onChange={e=>setPatrolForm({...patrolForm, route_name:e.target.value})} />
+        </label>
         <button onClick={createPatrol}>Criar Ronda</button>
       </div>
       <ul style={{ fontSize:12, maxHeight:100, overflow:"auto" }}>
@@ -282,14 +343,38 @@ export default function OpsAdvanced2Client() {
       </ul>
 
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="patrol_id" value={pointForm.patrol_id} onChange={e=>setPointForm({...pointForm, patrol_id:e.target.value})} style={{ width:200 }} />
-        <input placeholder="ponto nome 3..200" value={pointForm.point_name} onChange={e=>setPointForm({...pointForm, point_name:e.target.value})} />
-        <input placeholder="qr_code" value={pointForm.qr_code} onChange={e=>setPointForm({...pointForm, qr_code:e.target.value})} style={{ width:120 }} />
-        <input placeholder="lat" value={pointForm.latitude} onChange={e=>setPointForm({...pointForm, latitude:e.target.value})} style={{ width:80 }} />
-        <input placeholder="lng" value={pointForm.longitude} onChange={e=>setPointForm({...pointForm, longitude:e.target.value})} style={{ width:80 }} />
-        <input placeholder="evidence_url" value={pointForm.evidence_url} onChange={e=>setPointForm({...pointForm, evidence_url:e.target.value})} style={{ width:180 }} />
-        <select value={pointForm.location_unavailable} onChange={e=>setPointForm({...pointForm, location_unavailable:e.target.value})}><option value="false">local ok</option><option value="true">local indisponível</option></select>
-        <input placeholder="motivo indisponível" value={pointForm.location_unavailable_reason} onChange={e=>setPointForm({...pointForm, location_unavailable_reason:e.target.value})} style={{ width:180 }} />
+        <label className={styles.field} htmlFor="ops-a2-point-patrol-id">
+          <span className={styles.caption}>Ronda (ID)</span>
+          <input id="ops-a2-point-patrol-id" placeholder="patrol_id" value={pointForm.patrol_id} onChange={e=>setPointForm({...pointForm, patrol_id:e.target.value})} style={{ width:200 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-point-point-name">
+          <span className={styles.caption}>Nome do ponto</span>
+          <input id="ops-a2-point-point-name" placeholder="ponto nome 3..200" value={pointForm.point_name} onChange={e=>setPointForm({...pointForm, point_name:e.target.value})} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-point-qr-code">
+          <span className={styles.caption}>QR code</span>
+          <input id="ops-a2-point-qr-code" placeholder="qr_code" value={pointForm.qr_code} onChange={e=>setPointForm({...pointForm, qr_code:e.target.value})} style={{ width:120 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-point-latitude">
+          <span className={styles.caption}>Latitude</span>
+          <input id="ops-a2-point-latitude" placeholder="lat" value={pointForm.latitude} onChange={e=>setPointForm({...pointForm, latitude:e.target.value})} style={{ width:80 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-point-longitude">
+          <span className={styles.caption}>Longitude</span>
+          <input id="ops-a2-point-longitude" placeholder="lng" value={pointForm.longitude} onChange={e=>setPointForm({...pointForm, longitude:e.target.value})} style={{ width:80 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-point-evidence-url">
+          <span className={styles.caption}>URL da evidência</span>
+          <input id="ops-a2-point-evidence-url" placeholder="evidence_url" value={pointForm.evidence_url} onChange={e=>setPointForm({...pointForm, evidence_url:e.target.value})} style={{ width:180 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-point-location-unavailable">
+          <span className={styles.caption}>Disponibilidade do local</span>
+          <select id="ops-a2-point-location-unavailable" value={pointForm.location_unavailable} onChange={e=>setPointForm({...pointForm, location_unavailable:e.target.value})}><option value="false">local ok</option><option value="true">local indisponível</option></select>
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-point-location-unavailable-reason">
+          <span className={styles.caption}>Motivo da indisponibilidade</span>
+          <input id="ops-a2-point-location-unavailable-reason" placeholder="motivo indisponível" value={pointForm.location_unavailable_reason} onChange={e=>setPointForm({...pointForm, location_unavailable_reason:e.target.value})} style={{ width:180 }} />
+        </label>
         <button onClick={createPoint}>Registrar Ponto (anti-replay + evidência)</button>
       </div>
       <p style={{ fontSize:11, color:"#666" }}>GPS/QR isolado não prova execução - requer evidência auditável e verificação humana. Sistema detecta duplicate_qr &lt;5min e too_fast &lt;30s.</p>
@@ -301,10 +386,22 @@ export default function OpsAdvanced2Client() {
 
       <h3>OPS-11 Chaves, Rádios, Materiais, Equipamentos guarda/transferência/devolução</h3>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="código 3..100 CHV-xxx" value={keyForm.code} onChange={e=>setKeyForm({...keyForm, code:e.target.value})} />
-        <input placeholder="descrição 5..500" value={keyForm.description} onChange={e=>setKeyForm({...keyForm, description:e.target.value})} style={{ width:200 }} />
-        <select value={keyForm.key_type} onChange={e=>setKeyForm({...keyForm, key_type:e.target.value})}><option value="chave">chave</option><option value="radio">rádio</option><option value="equipamento">equipamento</option><option value="material">material</option><option value="ferramenta">ferramenta</option></select>
-        <input placeholder="local" value={keyForm.location} onChange={e=>setKeyForm({...keyForm, location:e.target.value})} />
+        <label className={styles.field} htmlFor="ops-a2-key-code">
+          <span className={styles.caption}>Código do item</span>
+          <input id="ops-a2-key-code" placeholder="código 3..100 CHV-xxx" value={keyForm.code} onChange={e=>setKeyForm({...keyForm, code:e.target.value})} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-key-description">
+          <span className={styles.caption}>Descrição</span>
+          <input id="ops-a2-key-description" placeholder="descrição 5..500" value={keyForm.description} onChange={e=>setKeyForm({...keyForm, description:e.target.value})} style={{ width:200 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-key-key-type">
+          <span className={styles.caption}>Tipo de item</span>
+          <select id="ops-a2-key-key-type" value={keyForm.key_type} onChange={e=>setKeyForm({...keyForm, key_type:e.target.value})}><option value="chave">chave</option><option value="radio">rádio</option><option value="equipamento">equipamento</option><option value="material">material</option><option value="ferramenta">ferramenta</option></select>
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-key-location">
+          <span className={styles.caption}>Local de guarda</span>
+          <input id="ops-a2-key-location" placeholder="local" value={keyForm.location} onChange={e=>setKeyForm({...keyForm, location:e.target.value})} />
+        </label>
         <button onClick={createKey}>Criar Item</button>
       </div>
       <ul style={{ fontSize:12, maxHeight:100, overflow:"auto" }}>
@@ -313,13 +410,34 @@ export default function OpsAdvanced2Client() {
         ))}
       </ul>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="key_id" value={movForm.key_id} onChange={e=>setMovForm({...movForm, key_id:e.target.value})} style={{ width:200 }} />
-        <select value={movForm.movement_type} onChange={e=>setMovForm({...movForm, movement_type:e.target.value})}><option value="retirada">retirada</option><option value="devolucao">devolução</option><option value="transferencia">transferência</option><option value="bloqueio">bloqueio</option><option value="desbloqueio">desbloqueio</option><option value="extravio">extravio</option><option value="reserva">reserva</option><option value="liberacao">liberação</option></select>
-        <input placeholder="from_employee_id" value={movForm.from_employee_id} onChange={e=>setMovForm({...movForm, from_employee_id:e.target.value})} style={{ width:150 }} />
-        <input placeholder="to_employee_id" value={movForm.to_employee_id} onChange={e=>setMovForm({...movForm, to_employee_id:e.target.value})} style={{ width:150 }} />
-        <input placeholder="motivo 10..1000" value={movForm.reason} onChange={e=>setMovForm({...movForm, reason:e.target.value})} style={{ width:200 }} />
-        <input placeholder="finalidade da custódia" value={movForm.purpose} onChange={e=>setMovForm({...movForm, purpose:e.target.value})} style={{ width:200 }} />
-        <input placeholder="autorizado por" value={movForm.authorized_by} onChange={e=>setMovForm({...movForm, authorized_by:e.target.value})} />
+        <label className={styles.field} htmlFor="ops-a2-mov-key-id">
+          <span className={styles.caption}>Item (ID)</span>
+          <input id="ops-a2-mov-key-id" placeholder="key_id" value={movForm.key_id} onChange={e=>setMovForm({...movForm, key_id:e.target.value})} style={{ width:200 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-mov-movement-type">
+          <span className={styles.caption}>Tipo de movimento</span>
+          <select id="ops-a2-mov-movement-type" value={movForm.movement_type} onChange={e=>setMovForm({...movForm, movement_type:e.target.value})}><option value="retirada">retirada</option><option value="devolucao">devolução</option><option value="transferencia">transferência</option><option value="bloqueio">bloqueio</option><option value="desbloqueio">desbloqueio</option><option value="extravio">extravio</option><option value="reserva">reserva</option><option value="liberacao">liberação</option></select>
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-mov-from-employee-id">
+          <span className={styles.caption}>De (ID do funcionário)</span>
+          <input id="ops-a2-mov-from-employee-id" placeholder="from_employee_id" value={movForm.from_employee_id} onChange={e=>setMovForm({...movForm, from_employee_id:e.target.value})} style={{ width:150 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-mov-to-employee-id">
+          <span className={styles.caption}>Para (ID do funcionário)</span>
+          <input id="ops-a2-mov-to-employee-id" placeholder="to_employee_id" value={movForm.to_employee_id} onChange={e=>setMovForm({...movForm, to_employee_id:e.target.value})} style={{ width:150 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-mov-reason">
+          <span className={styles.caption}>Motivo</span>
+          <input id="ops-a2-mov-reason" placeholder="motivo 10..1000" value={movForm.reason} onChange={e=>setMovForm({...movForm, reason:e.target.value})} style={{ width:200 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-mov-purpose">
+          <span className={styles.caption}>Finalidade da custódia</span>
+          <input id="ops-a2-mov-purpose" placeholder="finalidade da custódia" value={movForm.purpose} onChange={e=>setMovForm({...movForm, purpose:e.target.value})} style={{ width:200 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-mov-authorized-by">
+          <span className={styles.caption}>Autorizado por</span>
+          <input id="ops-a2-mov-authorized-by" placeholder="autorizado por" value={movForm.authorized_by} onChange={e=>setMovForm({...movForm, authorized_by:e.target.value})} />
+        </label>
         <button onClick={createMovement}>Registrar Movimento</button>
       </div>
       <ul style={{ fontSize:12, maxHeight:100, overflow:"auto" }}>
@@ -330,16 +448,40 @@ export default function OpsAdvanced2Client() {
 
       <h3>OPS-12 Relatórios Periódicos Cliente revisão conteúdo e privacidade</h3>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="company_id" value={reportForm.company_id} onChange={e=>setReportForm({...reportForm, company_id:e.target.value})} style={{ width:200 }} />
-        <input placeholder="contract_id" value={reportForm.contract_id} onChange={e=>setReportForm({...reportForm, contract_id:e.target.value})} style={{ width:180 }} />
-        <input placeholder="post_id" value={reportForm.post_id} onChange={e=>setReportForm({...reportForm, post_id:e.target.value})} style={{ width:180 }} />
-        <select value={reportForm.report_type} onChange={e=>setReportForm({...reportForm, report_type:e.target.value})}><option value="diario">diário</option><option value="semanal">semanal</option><option value="mensal">mensal</option><option value="extraordinario">extraordinário</option><option value="ocorrencias">ocorrências</option><option value="cobertura">cobertura</option><option value="supervisao">supervisão</option></select>
-        <input type="date" value={reportForm.period_start} onChange={e=>setReportForm({...reportForm, period_start:e.target.value})} />
-        <input type="date" value={reportForm.period_end} onChange={e=>setReportForm({...reportForm, period_end:e.target.value})} />
-        <input placeholder="título 5..200" value={reportForm.title} onChange={e=>setReportForm({...reportForm, title:e.target.value})} style={{ width:200 }} />
+        <label className={styles.field} htmlFor="ops-a2-report-company-id">
+          <span className={styles.caption}>Empresa (ID)</span>
+          <input id="ops-a2-report-company-id" placeholder="company_id" value={reportForm.company_id} onChange={e=>setReportForm({...reportForm, company_id:e.target.value})} style={{ width:200 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-report-contract-id">
+          <span className={styles.caption}>Contrato (ID)</span>
+          <input id="ops-a2-report-contract-id" placeholder="contract_id" value={reportForm.contract_id} onChange={e=>setReportForm({...reportForm, contract_id:e.target.value})} style={{ width:180 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-report-post-id">
+          <span className={styles.caption}>Posto (UUID)</span>
+          <input id="ops-a2-report-post-id" placeholder="post_id" value={reportForm.post_id} onChange={e=>setReportForm({...reportForm, post_id:e.target.value})} style={{ width:180 }} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-report-report-type">
+          <span className={styles.caption}>Tipo de relatório</span>
+          <select id="ops-a2-report-report-type" value={reportForm.report_type} onChange={e=>setReportForm({...reportForm, report_type:e.target.value})}><option value="diario">diário</option><option value="semanal">semanal</option><option value="mensal">mensal</option><option value="extraordinario">extraordinário</option><option value="ocorrencias">ocorrências</option><option value="cobertura">cobertura</option><option value="supervisao">supervisão</option></select>
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-report-period-start">
+          <span className={styles.caption}>Início do período</span>
+          <input id="ops-a2-report-period-start" type="date" value={reportForm.period_start} onChange={e=>setReportForm({...reportForm, period_start:e.target.value})} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-report-period-end">
+          <span className={styles.caption}>Fim do período</span>
+          <input id="ops-a2-report-period-end" type="date" value={reportForm.period_end} onChange={e=>setReportForm({...reportForm, period_end:e.target.value})} />
+        </label>
+        <label className={styles.field} htmlFor="ops-a2-report-title">
+          <span className={styles.caption}>Título</span>
+          <input id="ops-a2-report-title" placeholder="título 5..200" value={reportForm.title} onChange={e=>setReportForm({...reportForm, title:e.target.value})} style={{ width:200 }} />
+        </label>
       </div>
       <div style={{ marginBottom:8 }}>
-        <textarea placeholder="conteúdo 20..10000 - sistema detecta dados pessoais e exige revisão privacidade antes de aprovar/enviar" value={reportForm.content} onChange={e=>setReportForm({...reportForm, content:e.target.value})} style={{ width:"100%", minHeight:60 }} />
+        <label className={styles.field} htmlFor="ops-a2-report-content">
+          <span className={styles.caption}>Conteúdo do relatório</span>
+          <textarea id="ops-a2-report-content" placeholder="conteúdo 20..10000 - sistema detecta dados pessoais e exige revisão privacidade antes de aprovar/enviar" value={reportForm.content} onChange={e=>setReportForm({...reportForm, content:e.target.value})} style={{ width:"100%", minHeight:60 }} />
+        </label>
         <button onClick={createReport}>Criar Relatório Rascunho</button>
       </div>
       <ul style={{ fontSize:12, maxHeight:150, overflow:"auto" }}>

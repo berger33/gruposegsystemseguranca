@@ -694,8 +694,9 @@ export default function OperacaoWorkspace() {
                 {activeTab === "relatorios" && "Relatórios e livro de serviço: liberação somente após aprovação formal."}
               </p>
               <p className={styles.hint}>
-                Área legada mantida como está nesta fatia: formulários próprios, sem rótulo associado em todo campo.
-                Ver pendências declaradas em docs/UX-07-OPERACAO-2026-10-05.md.
+                Área legada: formulários próprios com rótulo associado em cada campo (UX-PRO-E2-C1);
+                o placeholder permanece apenas como dica de formato.
+                As demais pendências da área seguem declaradas em docs/UX-07-OPERACAO-2026-10-05.md.
               </p>
               <OpsAdvanced2Client />
             </section>
@@ -708,8 +709,9 @@ export default function OperacaoWorkspace() {
                 {activeTab === "monitoramento" && "Monitoramento sintético: simulação sem central 24h e sem despacho externo real."}
               </p>
               <p className={styles.hint}>
-                Área legada mantida como está nesta fatia: formulários próprios, sem rótulo associado em todo campo.
-                Ver pendências declaradas em docs/UX-07-OPERACAO-2026-10-05.md.
+                Área legada: formulários próprios com rótulo associado em cada campo (UX-PRO-E2-C1);
+                o placeholder permanece apenas como dica de formato.
+                As demais pendências da área seguem declaradas em docs/UX-07-OPERACAO-2026-10-05.md.
               </p>
               <OpsAdvanced3Client />
             </section>
