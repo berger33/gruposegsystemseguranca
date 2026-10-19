@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import UiBadge, { type UiBadgeTone } from "@/components/ui/UiBadge";
 import UiState from "@/components/ui/UiState";
 import UiTaskWorkspace from "@/components/ui/UiTaskWorkspace";
@@ -40,6 +40,15 @@ type Quotation = {
 };
 type Order = { id: string; protocol: string; quotation_id: string; supplier_name?: string | null; product_name?: string | null; total_price_cents: number; status: string; derived?: { situation?: string; deadline?: { situation?: string } } };
 type Detail = { quotation: Quotation; validities: Array<Record<string, unknown>>; alert_rule: Record<string, unknown> | null; documents: Array<Record<string, unknown>>; orders: Order[] };
+
+const SUPPLIER_TABS = [
+  { id: "quotations", label: "Cotações" },
+  { id: "detail", label: "Detalhe canônico" },
+  { id: "validity", label: "Validade e alertas" },
+  { id: "documents", label: "Referências documentais" },
+  { id: "orders", label: "Pedidos internos" },
+] as const;
+type SupplierTabId = (typeof SUPPLIER_TABS)[number]["id"];
 
 type ResourceKey = "references" | "quotations" | "orders" | "detail";
 
@@ -151,6 +160,7 @@ function tone(value: string): UiBadgeTone {
 }
 
 export default function FornecedoresWorkspace() {
+  const [activeTab, setActiveTab] = useState<SupplierTabId>("quotations");
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -176,6 +186,21 @@ export default function FornecedoresWorkspace() {
   const [deadlineForm, setDeadlineForm] = useState({ order_id: "", due_date: "", source: "registro_interno", source_reference: "", justification: "" });
 
   const productsForSupplier = useMemo(() => products.filter(p => p.supplier_id === quoteForm.supplier_id), [products, quoteForm.supplier_id]);
+
+  function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    const currentIndex = SUPPLIER_TABS.findIndex(tab => tab.id === activeTab);
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % SUPPLIER_TABS.length;
+    if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + SUPPLIER_TABS.length) % SUPPLIER_TABS.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = SUPPLIER_TABS.length - 1;
+    if (nextIndex === null) return;
+
+    event.preventDefault();
+    const nextTab = SUPPLIER_TABS[nextIndex];
+    setActiveTab(nextTab.id);
+    document.getElementById(`fornecedores-tab-${nextTab.id}`)?.focus();
+  }
 
   const commit = useCallback((updater: (current: Record<ResourceKey, ReadState>) => Record<ResourceKey, ReadState>) => {
     const next = updater(statesRef.current);
@@ -361,6 +386,7 @@ export default function FornecedoresWorkspace() {
       onSuccess: data => {
         const id = String((data as { quotation: { id: string } }).quotation.id);
         setSelectedId(id); setQuoteForm({ supplier_id: "", product_id: "", quantity: "1", unit_price: "", notes: "" });
+        setActiveTab("detail");
         return refresh("Cotação confirmada pelo servidor; autoria veio da sessão staff.", id);
       },
     });
@@ -634,11 +660,25 @@ export default function FornecedoresWorkspace() {
           </div>
 
           <nav aria-label="Etapas da jornada de fornecedores" role="tablist" className={styles.tabs}>
-            {['Cotações', 'Detalhe canônico', 'Validade e alertas', 'Referências documentais', 'Pedidos internos'].map((label, index) => (
-              <button key={label} type="button" role="tab" aria-selected={index === 0} tabIndex={index === 0 ? 0 : -1} className={index === 0 ? styles.tabActive : styles.tab}>{label}</button>
+            {SUPPLIER_TABS.map(tab => (
+              <button
+                key={tab.id}
+                id={`fornecedores-tab-${tab.id}`}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                aria-controls={`fornecedores-panel-${tab.id}`}
+                tabIndex={activeTab === tab.id ? 0 : -1}
+                className={activeTab === tab.id ? styles.tabActive : styles.tab}
+                onClick={() => setActiveTab(tab.id)}
+                onKeyDown={handleTabKeyDown}
+              >
+                {tab.label}
+              </button>
             ))}
           </nav>
 
+          <div id="fornecedores-panel-quotations" className={styles.tabPanel} role="tabpanel" aria-labelledby="fornecedores-tab-quotations" tabIndex={0} hidden={activeTab !== "quotations"}>
           <section className={styles.panel} aria-labelledby="fornecedores-nova-cotacao">
             <h2 className={styles.panelTitle} id="fornecedores-nova-cotacao">Nova cotação interna</h2>
             {resourceBand("references")}
@@ -687,7 +727,6 @@ export default function FornecedoresWorkspace() {
             </form>
           </section>
 
-          <div className={styles.layout}>
             <section className={styles.panel} aria-labelledby="fornecedores-cotacoes">
               <h2 className={styles.panelTitle} id="fornecedores-cotacoes">Cotações</h2>
               {resourceBand("quotations")}
@@ -707,7 +746,7 @@ export default function FornecedoresWorkspace() {
                             type="button"
                             className={local.quoteButton}
                             data-selected={selectedId === q.id ? "true" : "false"}
-                            onClick={() => setSelectedId(q.id)}
+                            onClick={() => { setSelectedId(q.id); setActiveTab("detail"); }}
                           >
                             <span className={local.quoteProtocol}>{q.protocol}</span>
                             <span>{q.supplier_name || "Fornecedor não retornado"} · {q.product_name || "Produto não retornado"}</span>
@@ -720,7 +759,9 @@ export default function FornecedoresWorkspace() {
                 )
               ) : null}
             </section>
+          </div>
 
+          <div id="fornecedores-panel-detail" className={styles.tabPanel} role="tabpanel" aria-labelledby="fornecedores-tab-detail" tabIndex={0} hidden={activeTab !== "detail"}>
             <div className={styles.stackWide}>
               <section className={styles.panel} aria-labelledby="fornecedores-detalhe">
                 <div className={styles.rowWrap}>
@@ -795,7 +836,10 @@ export default function FornecedoresWorkspace() {
                   </div>
                 ) : null}
               </section>
+            </div>
+          </div>
 
+          <div id="fornecedores-panel-validity" className={styles.tabPanel} role="tabpanel" aria-labelledby="fornecedores-tab-validity" tabIndex={0} hidden={activeTab !== "validity"}>
               {quote ? (
                 <section className={styles.panel} aria-labelledby="fornecedores-validade">
                   <h2 className={styles.panelTitle} id="fornecedores-validade">Validade e alerta</h2>
@@ -847,8 +891,10 @@ export default function FornecedoresWorkspace() {
                     </form>
                   ) : null}
                 </section>
-              ) : null}
+              ) : <UiState variant="empty" title="Selecione uma cotação para consultar validade e alertas." detail="Abra a etapa Cotações e selecione um registro. Nenhuma validade é estimada." />}
+          </div>
 
+          <div id="fornecedores-panel-documents" className={styles.tabPanel} role="tabpanel" aria-labelledby="fornecedores-tab-documents" tabIndex={0} hidden={activeTab !== "documents"}>
               {quote ? (
                 <section className={styles.panel} aria-labelledby="fornecedores-documentos">
                   <h2 className={styles.panelTitle} id="fornecedores-documentos">Referências documentais</h2>
@@ -888,10 +934,10 @@ export default function FornecedoresWorkspace() {
                     </div>
                   </form>
                 </section>
-              ) : null}
-            </div>
+              ) : <UiState variant="empty" title="Selecione uma cotação para consultar referências documentais." detail="Abra a etapa Cotações e selecione um registro. Nenhum arquivo é presumido ou enviado." />}
           </div>
 
+          <div id="fornecedores-panel-orders" className={styles.tabPanel} role="tabpanel" aria-labelledby="fornecedores-tab-orders" tabIndex={0} hidden={activeTab !== "orders"}>
           <section className={styles.panel} aria-labelledby="fornecedores-pedidos">
             <h2 className={styles.panelTitle} id="fornecedores-pedidos">Pedidos internos</h2>
             {resourceBand("orders")}
@@ -960,6 +1006,7 @@ export default function FornecedoresWorkspace() {
               </form>
             ) : null}
           </section>
+          </div>
         </>
       )}
     </UiTaskWorkspace>
