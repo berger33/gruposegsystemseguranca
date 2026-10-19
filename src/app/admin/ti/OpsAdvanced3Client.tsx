@@ -5,6 +5,10 @@ import UiActionDialog, { type UiActionDialogRequest } from "../../../components/
 import { opsErrorFootnote, type OpsErrorDescriptor } from "../../../lib/ops-vocabulary.mjs";
 import { opsRequest } from "../../../lib/ops-request";
 
+// UX-PRO-E2-C1 (rótulos persistentes): cada controle dos formulários legados
+// abaixo recebeu id + <label htmlFor> visível agrupados em <span> colunar; o
+// placeholder permanece como dica. URLs, métodos, payloads, estados, mensagens,
+// recargas e avisos de decisão humana/privacidade/sintético seguem intactos.
 type MetricDef = { id:string; name:string; metric_type:string; source:string; window_type:string; description:string|null; is_active:boolean; };
 type Snapshot = { id:string; metric_type:string; source:string; window_type:string; period_start:string; period_end:string; value:number; unit:string|null; status:string; };
 type Reinc = { id:string; post_id:string|null; metric_type:string; occurrence_count:number; first_date:string; last_date:string; days_between:number; is_reincidence:boolean; };
@@ -200,49 +204,130 @@ export default function OpsAdvanced3Client() {
 
       <h3>OPS-13 Métricas cobertura, tempo descoberto, incidentes, visitas, reincidência fonte janela</h3>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="nome métrica 3..200" value={defForm.name} onChange={e=>setDefForm({...defForm, name:e.target.value})} style={{ width:200 }} />
-        <select value={defForm.metric_type} onChange={e=>setDefForm({...defForm, metric_type:e.target.value})}><option value="cobertura">cobertura</option><option value="tempo_descoberto">tempo_descoberto</option><option value="incidentes">incidentes</option><option value="visitas">visitas</option><option value="reincidencia">reincidência</option><option value="sla">sla</option></select>
-        <select value={defForm.source} onChange={e=>setDefForm({...defForm, source:e.target.value})}><option value="escala">escala</option><option value="cobertura">cobertura</option><option value="ocorrencia">ocorrência</option><option value="supervisao">supervisão</option><option value="ronda">ronda</option><option value="checklist">checklist</option><option value="manual">manual</option><option value="sistema">sistema</option></select>
-        <select value={defForm.window_type} onChange={e=>setDefForm({...defForm, window_type:e.target.value})}><option value="diario">diário</option><option value="semanal">semanal</option><option value="mensal">mensal</option><option value="trimestral">trimestral</option><option value="anual">anual</option><option value="personalizado">personalizado</option></select>
-        <input placeholder="descrição" value={defForm.description} onChange={e=>setDefForm({...defForm, description:e.target.value})} style={{ width:180 }} />
-        <input placeholder="fórmula de cálculo" value={defForm.calculation_formula} onChange={e=>setDefForm({...defForm, calculation_formula:e.target.value})} style={{ width:260 }} />
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-def-name">Nome da métrica</label>
+          <input id="ops3-def-name" placeholder="nome métrica 3..200" value={defForm.name} onChange={e=>setDefForm({...defForm, name:e.target.value})} style={{ width:200 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-def-type">Tipo de métrica</label>
+          <select id="ops3-def-type" value={defForm.metric_type} onChange={e=>setDefForm({...defForm, metric_type:e.target.value})}><option value="cobertura">cobertura</option><option value="tempo_descoberto">tempo_descoberto</option><option value="incidentes">incidentes</option><option value="visitas">visitas</option><option value="reincidencia">reincidência</option><option value="sla">sla</option></select>
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-def-source">Fonte</label>
+          <select id="ops3-def-source" value={defForm.source} onChange={e=>setDefForm({...defForm, source:e.target.value})}><option value="escala">escala</option><option value="cobertura">cobertura</option><option value="ocorrencia">ocorrência</option><option value="supervisao">supervisão</option><option value="ronda">ronda</option><option value="checklist">checklist</option><option value="manual">manual</option><option value="sistema">sistema</option></select>
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-def-window">Janela de medição</label>
+          <select id="ops3-def-window" value={defForm.window_type} onChange={e=>setDefForm({...defForm, window_type:e.target.value})}><option value="diario">diário</option><option value="semanal">semanal</option><option value="mensal">mensal</option><option value="trimestral">trimestral</option><option value="anual">anual</option><option value="personalizado">personalizado</option></select>
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-def-description">Descrição</label>
+          <input id="ops3-def-description" placeholder="descrição" value={defForm.description} onChange={e=>setDefForm({...defForm, description:e.target.value})} style={{ width:180 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-def-formula">Fórmula de cálculo</label>
+          <input id="ops3-def-formula" placeholder="fórmula de cálculo" value={defForm.calculation_formula} onChange={e=>setDefForm({...defForm, calculation_formula:e.target.value})} style={{ width:260 }} />
+        </span>
         <button onClick={createDef}>Criar Definição (fonte+janela+fórmula)</button>
       </div>
       <ul style={{ fontSize:12, maxHeight:80, overflow:"auto" }}>{defs.map(d=>(<li key={d.id}>{d.name} {d.metric_type} fonte {d.source} janela {d.window_type} {d.is_active?"ativo":""}</li>))}</ul>
 
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="definition_id" value={snapForm.definition_id} onChange={e=>setSnapForm({...snapForm, definition_id:e.target.value})} style={{ width:180 }} />
-        <select value={snapForm.metric_type} onChange={e=>setSnapForm({...snapForm, metric_type:e.target.value})}><option value="cobertura">cobertura</option><option value="tempo_descoberto">tempo_descoberto</option><option value="incidentes">incidentes</option><option value="visitas">visitas</option><option value="reincidencia">reincidência</option></select>
-        <select value={snapForm.source} onChange={e=>setSnapForm({...snapForm, source:e.target.value})}><option value="escala">escala</option><option value="cobertura">cobertura</option><option value="ocorrencia">ocorrência</option><option value="supervisao">supervisão</option><option value="ronda">ronda</option></select>
-        <select value={snapForm.window_type} onChange={e=>setSnapForm({...snapForm, window_type:e.target.value})}><option value="diario">diário</option><option value="semanal">semanal</option><option value="mensal">mensal</option></select>
-        <input type="date" value={snapForm.period_start} onChange={e=>setSnapForm({...snapForm, period_start:e.target.value})} />
-        <input type="date" value={snapForm.period_end} onChange={e=>setSnapForm({...snapForm, period_end:e.target.value})} />
-        <input placeholder="valor" type="number" value={snapForm.value} onChange={e=>setSnapForm({...snapForm, value:e.target.value})} style={{ width:80 }} />
-        <input placeholder="unit %" value={snapForm.unit} onChange={e=>setSnapForm({...snapForm, unit:e.target.value})} style={{ width:60 }} />
-        <input placeholder="post_id" value={snapForm.post_id} onChange={e=>setSnapForm({...snapForm, post_id:e.target.value})} style={{ width:150 }} />
-        <select value={snapForm.completeness_status} onChange={e=>setSnapForm({...snapForm, completeness_status:e.target.value})}><option value="completo">completo</option><option value="parcial">parcial</option><option value="incompleto">incompleto</option></select>
-        <input placeholder="motivo da incompletude" value={snapForm.incompleteness_reason} onChange={e=>setSnapForm({...snapForm, incompleteness_reason:e.target.value})} style={{ width:240 }} />
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-snap-definition">Definição (ID)</label>
+          <input id="ops3-snap-definition" placeholder="definition_id" value={snapForm.definition_id} onChange={e=>setSnapForm({...snapForm, definition_id:e.target.value})} style={{ width:180 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-snap-type">Tipo de métrica</label>
+          <select id="ops3-snap-type" value={snapForm.metric_type} onChange={e=>setSnapForm({...snapForm, metric_type:e.target.value})}><option value="cobertura">cobertura</option><option value="tempo_descoberto">tempo_descoberto</option><option value="incidentes">incidentes</option><option value="visitas">visitas</option><option value="reincidencia">reincidência</option></select>
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-snap-source">Fonte</label>
+          <select id="ops3-snap-source" value={snapForm.source} onChange={e=>setSnapForm({...snapForm, source:e.target.value})}><option value="escala">escala</option><option value="cobertura">cobertura</option><option value="ocorrencia">ocorrência</option><option value="supervisao">supervisão</option><option value="ronda">ronda</option></select>
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-snap-window">Janela de medição</label>
+          <select id="ops3-snap-window" value={snapForm.window_type} onChange={e=>setSnapForm({...snapForm, window_type:e.target.value})}><option value="diario">diário</option><option value="semanal">semanal</option><option value="mensal">mensal</option></select>
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-snap-period-start">Início do período</label>
+          <input id="ops3-snap-period-start" type="date" value={snapForm.period_start} onChange={e=>setSnapForm({...snapForm, period_start:e.target.value})} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-snap-period-end">Fim do período</label>
+          <input id="ops3-snap-period-end" type="date" value={snapForm.period_end} onChange={e=>setSnapForm({...snapForm, period_end:e.target.value})} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-snap-value">Valor</label>
+          <input id="ops3-snap-value" placeholder="valor" type="number" value={snapForm.value} onChange={e=>setSnapForm({...snapForm, value:e.target.value})} style={{ width:80 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-snap-unit">Unidade</label>
+          <input id="ops3-snap-unit" placeholder="unit %" value={snapForm.unit} onChange={e=>setSnapForm({...snapForm, unit:e.target.value})} style={{ width:60 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-snap-post">Posto (ID)</label>
+          <input id="ops3-snap-post" placeholder="post_id" value={snapForm.post_id} onChange={e=>setSnapForm({...snapForm, post_id:e.target.value})} style={{ width:150 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-snap-completeness">Completude</label>
+          <select id="ops3-snap-completeness" value={snapForm.completeness_status} onChange={e=>setSnapForm({...snapForm, completeness_status:e.target.value})}><option value="completo">completo</option><option value="parcial">parcial</option><option value="incompleto">incompleto</option></select>
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-snap-incompleteness-reason">Motivo da incompletude</label>
+          <input id="ops3-snap-incompleteness-reason" placeholder="motivo da incompletude" value={snapForm.incompleteness_reason} onChange={e=>setSnapForm({...snapForm, incompleteness_reason:e.target.value})} style={{ width:240 }} />
+        </span>
         <button onClick={createSnap}>Criar Snapshot (fonte+janela+valor)</button>
       </div>
       <ul style={{ fontSize:12, maxHeight:80, overflow:"auto" }}>{snaps.map(s=>(<li key={s.id}>{s.metric_type} {s.source} {s.window_type} {s.period_start}→{s.period_end} {s.value}{s.unit} {s.status}</li>))}</ul>
 
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="post_id reincidência" value={reincForm.post_id} onChange={e=>setReincForm({...reincForm, post_id:e.target.value})} style={{ width:180 }} />
-        <input type="date" value={reincForm.first_date} onChange={e=>setReincForm({...reincForm, first_date:e.target.value})} />
-        <input type="date" value={reincForm.last_date} onChange={e=>setReincForm({...reincForm, last_date:e.target.value})} />
-        <input placeholder="count" type="number" value={reincForm.occurrence_count} onChange={e=>setReincForm({...reincForm, occurrence_count:e.target.value})} style={{ width:60 }} />
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-reinc-post">Posto (ID)</label>
+          <input id="ops3-reinc-post" placeholder="post_id reincidência" value={reincForm.post_id} onChange={e=>setReincForm({...reincForm, post_id:e.target.value})} style={{ width:180 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-reinc-first">Primeira ocorrência</label>
+          <input id="ops3-reinc-first" type="date" value={reincForm.first_date} onChange={e=>setReincForm({...reincForm, first_date:e.target.value})} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-reinc-last">Última ocorrência</label>
+          <input id="ops3-reinc-last" type="date" value={reincForm.last_date} onChange={e=>setReincForm({...reincForm, last_date:e.target.value})} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-reinc-count">Quantidade de ocorrências</label>
+          <input id="ops3-reinc-count" placeholder="count" type="number" value={reincForm.occurrence_count} onChange={e=>setReincForm({...reincForm, occurrence_count:e.target.value})} style={{ width:60 }} />
+        </span>
         <button onClick={createReinc}>Registrar Reincidência</button>
       </div>
       <ul style={{ fontSize:12, maxHeight:80, overflow:"auto" }}>{reincs.map(r=>(<li key={r.id}>post {r.post_id?.slice(0,8)} {r.occurrence_count}x {r.first_date}→{r.last_date} {r.days_between}d {r.is_reincidence?"REINCIDÊNCIA":""}</li>))}</ul>
 
       <h3>OPS-14 Escalas assistidas/automáticas depois regras validadas conflitos motivos revisão humana antes publicar</h3>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="contract_id ativo" value={propForm.contract_id} onChange={e=>setPropForm({...propForm, contract_id:e.target.value})} style={{ width:180 }} />
-        <input placeholder="company_id" value={propForm.company_id} onChange={e=>setPropForm({...propForm, company_id:e.target.value})} style={{ width:180 }} />
-        <input placeholder="unit_id" value={propForm.unit_id} onChange={e=>setPropForm({...propForm, unit_id:e.target.value})} style={{ width:180 }} />
-        <input type="date" value={propForm.period_start} onChange={e=>setPropForm({...propForm, period_start:e.target.value})} />
-        <input type="date" value={propForm.period_end} onChange={e=>setPropForm({...propForm, period_end:e.target.value})} />
-        <input placeholder="motivos" value={propForm.motives} onChange={e=>setPropForm({...propForm, motives:e.target.value})} style={{ width:200 }} />
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-prop-contract">Contrato (ID)</label>
+          <input id="ops3-prop-contract" placeholder="contract_id ativo" value={propForm.contract_id} onChange={e=>setPropForm({...propForm, contract_id:e.target.value})} style={{ width:180 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-prop-company">Empresa (ID)</label>
+          <input id="ops3-prop-company" placeholder="company_id" value={propForm.company_id} onChange={e=>setPropForm({...propForm, company_id:e.target.value})} style={{ width:180 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-prop-unit">Unidade (ID)</label>
+          <input id="ops3-prop-unit" placeholder="unit_id" value={propForm.unit_id} onChange={e=>setPropForm({...propForm, unit_id:e.target.value})} style={{ width:180 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-prop-period-start">Início do período</label>
+          <input id="ops3-prop-period-start" type="date" value={propForm.period_start} onChange={e=>setPropForm({...propForm, period_start:e.target.value})} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-prop-period-end">Fim do período</label>
+          <input id="ops3-prop-period-end" type="date" value={propForm.period_end} onChange={e=>setPropForm({...propForm, period_end:e.target.value})} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-prop-motives">Motivos</label>
+          <input id="ops3-prop-motives" placeholder="motivos" value={propForm.motives} onChange={e=>setPropForm({...propForm, motives:e.target.value})} style={{ width:200 }} />
+        </span>
         <button onClick={createProposal}>Gerar Proposta Assistida (valida regras aprovadas)</button>
       </div>
       <ul style={{ fontSize:12, maxHeight:100, overflow:"auto" }}>
@@ -251,11 +336,26 @@ export default function OpsAdvanced3Client() {
         ))}
       </ul>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="proposal_id" value={entryForm.proposal_id} onChange={e=>setEntryForm({...entryForm, proposal_id:e.target.value})} style={{ width:200 }} />
-        <input placeholder="post_id" value={entryForm.post_id} onChange={e=>setEntryForm({...entryForm, post_id:e.target.value})} style={{ width:180 }} />
-        <input placeholder="employee_id" value={entryForm.employee_id} onChange={e=>setEntryForm({...entryForm, employee_id:e.target.value})} style={{ width:180 }} />
-        <input type="date" value={entryForm.entry_date} onChange={e=>setEntryForm({...entryForm, entry_date:e.target.value})} />
-        <input placeholder="shift_template_id" value={entryForm.shift_template_id} onChange={e=>setEntryForm({...entryForm, shift_template_id:e.target.value})} style={{ width:180 }} />
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-entry-proposal">Proposta (ID)</label>
+          <input id="ops3-entry-proposal" placeholder="proposal_id" value={entryForm.proposal_id} onChange={e=>setEntryForm({...entryForm, proposal_id:e.target.value})} style={{ width:200 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-entry-post">Posto (ID)</label>
+          <input id="ops3-entry-post" placeholder="post_id" value={entryForm.post_id} onChange={e=>setEntryForm({...entryForm, post_id:e.target.value})} style={{ width:180 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-entry-employee">Colaborador (ID)</label>
+          <input id="ops3-entry-employee" placeholder="employee_id" value={entryForm.employee_id} onChange={e=>setEntryForm({...entryForm, employee_id:e.target.value})} style={{ width:180 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-entry-date">Data do lançamento</label>
+          <input id="ops3-entry-date" type="date" value={entryForm.entry_date} onChange={e=>setEntryForm({...entryForm, entry_date:e.target.value})} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-entry-shift">Modelo de turno (ID)</label>
+          <input id="ops3-entry-shift" placeholder="shift_template_id" value={entryForm.shift_template_id} onChange={e=>setEntryForm({...entryForm, shift_template_id:e.target.value})} style={{ width:180 }} />
+        </span>
         <button onClick={createEntry}>Adicionar Entrada (valida sobreposição/indisp/habilitação)</button>
       </div>
       <ul style={{ fontSize:12, maxHeight:80, overflow:"auto" }}>{entries.map(en=>(<li key={en.id}>{en.entry_date} post {en.post_id.slice(0,6)} emp {en.employee_id?.slice(0,6)||"-"} {en.status} {en.conflict_type?`CONFLITO ${en.conflict_type}`:""} {en.is_valid?"":"INVÁLIDO"}</li>))}</ul>
@@ -263,61 +363,148 @@ export default function OpsAdvanced3Client() {
 
       <h3>OPS-15 Supervisão limpeza rotinas por ambiente consumo não conformidades</h3>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="post_id" value={envForm.post_id} onChange={e=>setEnvForm({...envForm, post_id:e.target.value})} style={{ width:180 }} />
-        <input placeholder="nome ambiente 3..200" value={envForm.name} onChange={e=>setEnvForm({...envForm, name:e.target.value})} />
-        <select value={envForm.environment_type} onChange={e=>setEnvForm({...envForm, environment_type:e.target.value})}><option value="banheiro">banheiro</option><option value="escritorio">escritório</option><option value="corredor">corredor</option><option value="copa">copa</option><option value="recepcao">recepção</option><option value="area_externa">área externa</option></select>
-        <input placeholder="área m2" value={envForm.area_m2} onChange={e=>setEnvForm({...envForm, area_m2:e.target.value})} style={{ width:80 }} />
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-env-post">Posto (ID)</label>
+          <input id="ops3-env-post" placeholder="post_id" value={envForm.post_id} onChange={e=>setEnvForm({...envForm, post_id:e.target.value})} style={{ width:180 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-env-name">Nome do ambiente</label>
+          <input id="ops3-env-name" placeholder="nome ambiente 3..200" value={envForm.name} onChange={e=>setEnvForm({...envForm, name:e.target.value})} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-env-type">Tipo de ambiente</label>
+          <select id="ops3-env-type" value={envForm.environment_type} onChange={e=>setEnvForm({...envForm, environment_type:e.target.value})}><option value="banheiro">banheiro</option><option value="escritorio">escritório</option><option value="corredor">corredor</option><option value="copa">copa</option><option value="recepcao">recepção</option><option value="area_externa">área externa</option></select>
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-env-area">Área (m²)</label>
+          <input id="ops3-env-area" placeholder="área m2" value={envForm.area_m2} onChange={e=>setEnvForm({...envForm, area_m2:e.target.value})} style={{ width:80 }} />
+        </span>
         <button onClick={createEnv}>Criar Ambiente</button>
       </div>
       <ul style={{ fontSize:12, maxHeight:80, overflow:"auto" }}>{envs.map(ev=>(<li key={ev.id}>{ev.name} {ev.environment_type} {ev.area_m2}m² <button onClick={()=>{ loadRoutines(ev.id); setRoutForm({...routForm, environment_id:ev.id}); setExecForm({...execForm, environment_id:ev.id}); }}>Rotinas</button></li>))}</ul>
 
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="environment_id" value={routForm.environment_id} onChange={e=>setRoutForm({...routForm, environment_id:e.target.value})} style={{ width:180 }} />
-        <input placeholder="título rotina 5..200" value={routForm.title} onChange={e=>setRoutForm({...routForm, title:e.target.value})} style={{ width:200 }} />
-        <select value={routForm.routine_type} onChange={e=>setRoutForm({...routForm, routine_type:e.target.value})}><option value="limpeza">limpeza</option><option value="desinfeccao">desinfecção</option><option value="reposicao">reposição</option><option value="inspecao">inspeção</option></select>
-        <select value={routForm.frequency} onChange={e=>setRoutForm({...routForm, frequency:e.target.value})}><option value="diaria">diária</option><option value="semanal">semanal</option><option value="por_turno">por turno</option><option value="sob_demanda">sob demanda</option></select>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-rout-environment">Ambiente (ID)</label>
+          <input id="ops3-rout-environment" placeholder="environment_id" value={routForm.environment_id} onChange={e=>setRoutForm({...routForm, environment_id:e.target.value})} style={{ width:180 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-rout-title">Título da rotina</label>
+          <input id="ops3-rout-title" placeholder="título rotina 5..200" value={routForm.title} onChange={e=>setRoutForm({...routForm, title:e.target.value})} style={{ width:200 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-rout-type">Tipo de rotina</label>
+          <select id="ops3-rout-type" value={routForm.routine_type} onChange={e=>setRoutForm({...routForm, routine_type:e.target.value})}><option value="limpeza">limpeza</option><option value="desinfeccao">desinfecção</option><option value="reposicao">reposição</option><option value="inspecao">inspeção</option></select>
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-rout-frequency">Frequência</label>
+          <select id="ops3-rout-frequency" value={routForm.frequency} onChange={e=>setRoutForm({...routForm, frequency:e.target.value})}><option value="diaria">diária</option><option value="semanal">semanal</option><option value="por_turno">por turno</option><option value="sob_demanda">sob demanda</option></select>
+        </span>
         <button onClick={createRoutine}>Criar Rotina</button>
       </div>
       <ul style={{ fontSize:12, maxHeight:80, overflow:"auto" }}>{routines.map(r=>(<li key={r.id}>{r.title} {r.routine_type} {r.frequency} <button onClick={()=>setExecForm({...execForm, routine_id:r.id})}>+Exec</button></li>))}</ul>
 
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="routine_id" value={execForm.routine_id} onChange={e=>setExecForm({...execForm, routine_id:e.target.value})} style={{ width:180 }} />
-        <input placeholder="environment_id" value={execForm.environment_id} onChange={e=>setExecForm({...execForm, environment_id:e.target.value})} style={{ width:180 }} />
-        <input placeholder="employee_id" value={execForm.employee_id} onChange={e=>setExecForm({...execForm, employee_id:e.target.value})} style={{ width:180 }} />
-        <input placeholder="score 0..100" value={execForm.score} onChange={e=>setExecForm({...execForm, score:e.target.value})} style={{ width:80 }} />
-        <input placeholder="consumo qtd" value={execForm.consumption_quantity} onChange={e=>setExecForm({...execForm, consumption_quantity:e.target.value})} style={{ width:80 }} />
-        <input placeholder="consumo desc" value={execForm.consumption_description} onChange={e=>setExecForm({...execForm, consumption_description:e.target.value})} />
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-exec-routine">Rotina (ID)</label>
+          <input id="ops3-exec-routine" placeholder="routine_id" value={execForm.routine_id} onChange={e=>setExecForm({...execForm, routine_id:e.target.value})} style={{ width:180 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-exec-environment">Ambiente (ID)</label>
+          <input id="ops3-exec-environment" placeholder="environment_id" value={execForm.environment_id} onChange={e=>setExecForm({...execForm, environment_id:e.target.value})} style={{ width:180 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-exec-employee">Colaborador (ID)</label>
+          <input id="ops3-exec-employee" placeholder="employee_id" value={execForm.employee_id} onChange={e=>setExecForm({...execForm, employee_id:e.target.value})} style={{ width:180 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-exec-score">Nota</label>
+          <input id="ops3-exec-score" placeholder="score 0..100" value={execForm.score} onChange={e=>setExecForm({...execForm, score:e.target.value})} style={{ width:80 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-exec-consumption-quantity">Consumo (quantidade)</label>
+          <input id="ops3-exec-consumption-quantity" placeholder="consumo qtd" value={execForm.consumption_quantity} onChange={e=>setExecForm({...execForm, consumption_quantity:e.target.value})} style={{ width:80 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-exec-consumption-description">Consumo (descrição)</label>
+          <input id="ops3-exec-consumption-description" placeholder="consumo desc" value={execForm.consumption_description} onChange={e=>setExecForm({...execForm, consumption_description:e.target.value})} />
+        </span>
         <button onClick={createExec}>Registrar Execução (consumo)</button>
       </div>
       <ul style={{ fontSize:12, maxHeight:80, overflow:"auto" }}>{execs.map(ex=>(<li key={ex.id}>{ex.executed_at.slice(0,10)} score {ex.score} consumo {ex.consumption_quantity} nc {ex.nonconformity_count} <button onClick={()=>setNcForm({...ncForm, execution_id:ex.id, environment_id:ex.environment_id})}>+NC</button></li>))}</ul>
 
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="execution_id" value={ncForm.execution_id} onChange={e=>setNcForm({...ncForm, execution_id:e.target.value})} style={{ width:180 }} />
-        <input placeholder="environment_id" value={ncForm.environment_id} onChange={e=>setNcForm({...ncForm, environment_id:e.target.value})} style={{ width:180 }} />
-        <input placeholder="tipo 3..100" value={ncForm.type} onChange={e=>setNcForm({...ncForm, type:e.target.value})} />
-        <input placeholder="descrição 10..2000" value={ncForm.description} onChange={e=>setNcForm({...ncForm, description:e.target.value})} style={{ width:200 }} />
-        <select value={ncForm.severity} onChange={e=>setNcForm({...ncForm, severity:e.target.value})}><option value="baixa">baixa</option><option value="media">média</option><option value="alta">alta</option><option value="critica">crítica</option></select>
-        <input placeholder="responsável" value={ncForm.responsible_name} onChange={e=>setNcForm({...ncForm, responsible_name:e.target.value})} />
-        <input type="date" value={ncForm.due_date} onChange={e=>setNcForm({...ncForm, due_date:e.target.value})} />
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-nc-execution">Execução (ID)</label>
+          <input id="ops3-nc-execution" placeholder="execution_id" value={ncForm.execution_id} onChange={e=>setNcForm({...ncForm, execution_id:e.target.value})} style={{ width:180 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-nc-environment">Ambiente (ID)</label>
+          <input id="ops3-nc-environment" placeholder="environment_id" value={ncForm.environment_id} onChange={e=>setNcForm({...ncForm, environment_id:e.target.value})} style={{ width:180 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-nc-type">Tipo</label>
+          <input id="ops3-nc-type" placeholder="tipo 3..100" value={ncForm.type} onChange={e=>setNcForm({...ncForm, type:e.target.value})} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-nc-description">Descrição</label>
+          <input id="ops3-nc-description" placeholder="descrição 10..2000" value={ncForm.description} onChange={e=>setNcForm({...ncForm, description:e.target.value})} style={{ width:200 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-nc-severity">Severidade</label>
+          <select id="ops3-nc-severity" value={ncForm.severity} onChange={e=>setNcForm({...ncForm, severity:e.target.value})}><option value="baixa">baixa</option><option value="media">média</option><option value="alta">alta</option><option value="critica">crítica</option></select>
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-nc-responsible">Responsável</label>
+          <input id="ops3-nc-responsible" placeholder="responsável" value={ncForm.responsible_name} onChange={e=>setNcForm({...ncForm, responsible_name:e.target.value})} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-nc-due">Prazo</label>
+          <input id="ops3-nc-due" type="date" value={ncForm.due_date} onChange={e=>setNcForm({...ncForm, due_date:e.target.value})} />
+        </span>
         <button onClick={createNc}>Registrar Não Conformidade (reincidência)</button>
       </div>
       <ul style={{ fontSize:12, maxHeight:80, overflow:"auto" }}>{ncs.map(n=>(<li key={n.id}>{n.type} {n.severity} {n.status} {n.is_reincidence?"REINCIDÊNCIA":""} {n.description.slice(0,40)}</li>))}</ul>
 
       <h3>OPS-16 Eventos monitoramento via conector fila reconhecimento escalonamento não é central 24h não armazena vídeo</h3>
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="nome conector 3..200" value={connForm.name} onChange={e=>setConnForm({...connForm, name:e.target.value})} />
-        <select value={connForm.connector_type} onChange={e=>setConnForm({...connForm, connector_type:e.target.value})}><option value="cftv">cftv</option><option value="alarme">alarme</option><option value="controle_acesso">controle acesso</option><option value="sensor">sensor</option><option value="botao_panico">botão pânico</option><option value="api_externa">api externa</option><option value="manual">manual</option></select>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-conn-name">Nome do conector</label>
+          <input id="ops3-conn-name" placeholder="nome conector 3..200" value={connForm.name} onChange={e=>setConnForm({...connForm, name:e.target.value})} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-conn-type">Tipo de conector</label>
+          <select id="ops3-conn-type" value={connForm.connector_type} onChange={e=>setConnForm({...connForm, connector_type:e.target.value})}><option value="cftv">cftv</option><option value="alarme">alarme</option><option value="controle_acesso">controle acesso</option><option value="sensor">sensor</option><option value="botao_panico">botão pânico</option><option value="api_externa">api externa</option><option value="manual">manual</option></select>
+        </span>
         <button onClick={createConn}>Criar Conector (vídeo não armazenado)</button>
       </div>
       <ul style={{ fontSize:12, maxHeight:80, overflow:"auto" }}>{connectors.map(c=>(<li key={c.id}>{c.name} {c.connector_type} {c.status} {c.last_event_at?.slice(0,10)||"sem eventos"}</li>))}</ul>
 
       <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-        <input placeholder="connector_id" value={evForm.connector_id} onChange={e=>setEvForm({...evForm, connector_id:e.target.value})} style={{ width:180 }} />
-        <select value={evForm.event_type} onChange={e=>setEvForm({...evForm, event_type:e.target.value})}><option value="intrusao">intrusão sintética</option><option value="falha_equipamento">falha de equipamento sintética</option><option value="panico_simulado">pânico simulado</option></select>
-        <select value={evForm.severity} onChange={e=>setEvForm({...evForm, severity:e.target.value})}><option value="info">info</option><option value="baixa">baixa</option><option value="media">média</option><option value="alta">alta</option><option value="critica">crítica</option></select>
-        <input placeholder="post_id" value={evForm.post_id} onChange={e=>setEvForm({...evForm, post_id:e.target.value})} style={{ width:150 }} />
-        <input type="datetime-local" value={evForm.occurred_at} onChange={e=>setEvForm({...evForm, occurred_at:e.target.value})} />
-        <input placeholder="notas" value={evForm.notes} onChange={e=>setEvForm({...evForm, notes:e.target.value})} />
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-ev-connector">Conector (ID)</label>
+          <input id="ops3-ev-connector" placeholder="connector_id" value={evForm.connector_id} onChange={e=>setEvForm({...evForm, connector_id:e.target.value})} style={{ width:180 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-ev-type">Tipo de evento</label>
+          <select id="ops3-ev-type" value={evForm.event_type} onChange={e=>setEvForm({...evForm, event_type:e.target.value})}><option value="intrusao">intrusão sintética</option><option value="falha_equipamento">falha de equipamento sintética</option><option value="panico_simulado">pânico simulado</option></select>
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-ev-severity">Severidade</label>
+          <select id="ops3-ev-severity" value={evForm.severity} onChange={e=>setEvForm({...evForm, severity:e.target.value})}><option value="info">info</option><option value="baixa">baixa</option><option value="media">média</option><option value="alta">alta</option><option value="critica">crítica</option></select>
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-ev-post">Posto (ID)</label>
+          <input id="ops3-ev-post" placeholder="post_id" value={evForm.post_id} onChange={e=>setEvForm({...evForm, post_id:e.target.value})} style={{ width:150 }} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-ev-occurred">Ocorrido em</label>
+          <input id="ops3-ev-occurred" type="datetime-local" value={evForm.occurred_at} onChange={e=>setEvForm({...evForm, occurred_at:e.target.value})} />
+        </span>
+        <span style={{ display:"flex", flexDirection:"column", gap:2, fontSize:12 }}>
+          <label htmlFor="ops3-ev-notes">Notas</label>
+          <input id="ops3-ev-notes" placeholder="notas" value={evForm.notes} onChange={e=>setEvForm({...evForm, notes:e.target.value})} />
+        </span>
         <button onClick={createEvent}>Criar Evento via Conector Fila</button>
       </div>
       <p style={{ fontSize:11, color:"#666" }}>Não construir substituto de central 24h ou armazenar vídeo sem projeto específico. Conector apenas fila reconhecimento escalonamento.</p>
