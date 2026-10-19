@@ -1,7 +1,7 @@
 # UX-PRO-10C — reconciliação documental e cobertura por rota
 
-**Data da conferência:** 19/10/2026  
-**Base:** `main` após a UX-PRO-10B, SHA `3e9a4eec4fb4b14e70f02bb15e38fddeb07d3774` (merge da PR #265).  
+**Data da conferência:** 19/10/2026
+**Base:** `main` após a UX-PRO-10B, SHA `3e9a4eec4fb4b14e70f02bb15e38fddeb07d3774` (merge da PR #265).
 **Escopo:** reconciliar o fechamento UX-PRO-10, o README e os artefatos reproduzíveis de inventário. Nenhuma tela, API, permissão, autenticação, dado de negócio ou publicação foi alterada.
 
 ## Antes e depois
