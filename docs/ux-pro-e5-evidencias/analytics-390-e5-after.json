@@ -1,0 +1,90 @@
+{
+  "route": "/admin/analytics",
+  "role": "admin",
+  "phase": "after",
+  "geometry": {
+    "clientWidth": 301,
+    "scrollWidth": 842,
+    "maxScrollLeft": 541,
+    "role": "region",
+    "label": "Tabela com rolagem horizontal",
+    "tabIndex": 0
+  },
+  "focus": {
+    "outlineStyle": "solid",
+    "outlineWidth": 3
+  },
+  "keyboardReachable": true,
+  "matrix": {
+    "day": {
+      "320": {
+        "documentOverflowPx": 0,
+        "wrapperClientWidth": 234,
+        "wrapperScrollWidth": 842,
+        "role": "region",
+        "label": "Tabela com rolagem horizontal",
+        "tabIndex": 0
+      },
+      "390": {
+        "documentOverflowPx": 0,
+        "wrapperClientWidth": 301,
+        "wrapperScrollWidth": 842,
+        "role": "region",
+        "label": "Tabela com rolagem horizontal",
+        "tabIndex": 0
+      },
+      "768": {
+        "documentOverflowPx": 0,
+        "wrapperClientWidth": 625,
+        "wrapperScrollWidth": 625,
+        "role": "region",
+        "label": "Tabela com rolagem horizontal",
+        "tabIndex": 0
+      },
+      "1440": {
+        "documentOverflowPx": 0,
+        "wrapperClientWidth": 994,
+        "wrapperScrollWidth": 994,
+        "role": "region",
+        "label": "Tabela com rolagem horizontal",
+        "tabIndex": 0
+      }
+    },
+    "night": {
+      "320": {
+        "documentOverflowPx": 0,
+        "wrapperClientWidth": 234,
+        "wrapperScrollWidth": 842,
+        "role": "region",
+        "label": "Tabela com rolagem horizontal",
+        "tabIndex": 0
+      },
+      "390": {
+        "documentOverflowPx": 0,
+        "wrapperClientWidth": 301,
+        "wrapperScrollWidth": 842,
+        "role": "region",
+        "label": "Tabela com rolagem horizontal",
+        "tabIndex": 0
+      },
+      "768": {
+        "documentOverflowPx": 0,
+        "wrapperClientWidth": 625,
+        "wrapperScrollWidth": 625,
+        "role": "region",
+        "label": "Tabela com rolagem horizontal",
+        "tabIndex": 0
+      },
+      "1440": {
+        "documentOverflowPx": 0,
+        "wrapperClientWidth": 994,
+        "wrapperScrollWidth": 994,
+        "role": "region",
+        "label": "Tabela com rolagem horizontal",
+        "tabIndex": 0
+      }
+    }
+  },
+  "evidence": "Playwright Chromium com app HTTP e PostgreSQL temporário; massa sintética criada pelo gate via API canônica.",
+  "limitations": "Capturas e medições automatizadas; sem validação manual, leitor de tela ou aceite humano."
+}

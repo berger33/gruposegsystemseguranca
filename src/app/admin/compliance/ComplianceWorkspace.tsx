@@ -777,7 +777,7 @@ export default function ComplianceWorkspace() {
                     <span className={styles.metricLabel}>Declaradas críticas</span>
                   </li>
                 </ul>
-                <div className={styles.tableWrap}>
+                <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                   <table className={styles.table} data-testid="compliance-obligations-table">
                     <caption>
                       Obrigações declaradas pela equipe, da mais recente à mais antiga. A situação é
@@ -846,7 +846,7 @@ export default function ComplianceWorkspace() {
               />
             ) : null}
             {documents.phase === "ready" && documentItems.length > 0 ? (
-              <div className={styles.tableWrap}>
+              <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                 <table className={styles.table} data-testid="compliance-documents-table">
                   <caption>
                     Referências canônicas devolvidas pelo servidor, ordenadas pelo vencimento. Versão
@@ -1286,7 +1286,7 @@ export default function ComplianceWorkspace() {
               />
             ) : null}
             {tasks.phase === "ready" && taskItems.length > 0 ? (
-              <div className={styles.tableWrap}>
+              <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                 <table className={styles.table} data-testid="compliance-tasks-table">
                   <caption>
                     Tarefas criadas pela avaliação temporal do servidor, uma por referência, período de
@@ -1389,7 +1389,7 @@ export default function ComplianceWorkspace() {
               />
             ) : null}
             {plans.phase === "ready" && planItems.length > 0 ? (
-              <div className={styles.tableWrap}>
+              <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                 <table className={styles.table} data-testid="compliance-plans-table">
                   <caption>
                     Planos de ação devolvidos pelo servidor, do prazo mais próximo ao mais distante. O
@@ -1674,7 +1674,7 @@ export default function ComplianceWorkspace() {
                     detail="Cada execução agendada grava uma linha própria; a ausência de linha significa que nenhuma rodou neste banco."
                   />
                 ) : (
-                  <div className={styles.tableWrap}>
+                  <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                     <table className={styles.table} data-testid="compliance-runs-table">
                       <caption>Execuções agendadas registradas pelo servidor, da mais recente à mais antiga.</caption>
                       <thead>

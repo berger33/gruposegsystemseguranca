@@ -676,7 +676,7 @@ function AccountTable({ accounts, onSelect }: { accounts: Account[]; onSelect: (
     );
   }
   return (
-    <div className={styles.tableWrap}>
+    <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
       <table data-testid="finance-receivables-table" className={styles.table}>
         <caption>Contas a receber no escopo da sua sessão.</caption>
         <thead>
@@ -708,7 +708,7 @@ function AccountTable({ accounts, onSelect }: { accounts: Account[]; onSelect: (
 
 function PaymentTable({ payments }: { payments: Payment[] }) {
   return (
-    <div className={styles.tableWrap}>
+    <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
       <table data-testid="finance-payments-table" className={styles.table}>
         <caption>Baixas e estornos registrados, na ordem em que o servidor devolveu.</caption>
         <thead>

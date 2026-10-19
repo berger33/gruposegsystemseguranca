@@ -373,7 +373,7 @@ export function AnalyticsWorkspace() {
                     </span>
                   </li>
                 </ul>
-                <div className={styles.tableWrap}>
+                <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                   <table className={styles.table} data-testid="analytics-list-table">
                     <caption>
                       Experimentos de origem canônica EXT-11 devolvidos pelo servidor, do mais recente ao mais
@@ -680,7 +680,7 @@ export function AnalyticsWorkspace() {
                     Sem vencedor e sem significância: o servidor remove os campos legados de resultado e de
                     vencedor da resposta, e esta tela não calcula taxa alguma — {honestPercent(null)}.
                   </p>
-                  <div className={styles.tableWrap}>
+                  <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                     <table className={styles.table} data-testid="analytics-variants">
                       <caption>Agregado por variante, contado a partir das observações reais registradas.</caption>
                       <thead>
@@ -709,7 +709,7 @@ export function AnalyticsWorkspace() {
                   <div className={styles.padded}>
                     <h3 className={styles.cardTitle}>Observações reais</h3>
                     {selected.observations?.length ? (
-                      <div className={styles.tableWrap}>
+                      <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                         <table className={styles.table}>
                           <caption>
                             Cada linha veio de um registro operacional interno declarado. O servidor recusa

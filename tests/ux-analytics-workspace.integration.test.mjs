@@ -34,7 +34,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import pg from 'pg';
 import { chromium as playwrightChromium } from 'playwright';
@@ -115,6 +115,8 @@ async function revokeGrant(identityId, permission, revokedBy) {
 // sai com SIGSEGV no próprio lançamento. A segunda tentativa não enfraquece
 // asserção alguma: só repete o `launch`.
 async function launchBrowser() {
+  const executablePath = process.env.UX_ANALYTICS_BROWSER_EXECUTABLE_PATH;
+  if (executablePath) return playwrightChromium.launch({ executablePath, headless: true });
   let ultimo;
   for (let tentativa = 0; tentativa < 3; tentativa++) {
     try {
@@ -526,6 +528,82 @@ test('browser: em 390px a tela de analytics não produz transbordo horizontal', 
     const transbordo = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     assert.ok(transbordo <= 1, `transbordo de ${transbordo}px em /admin/analytics`);
     await capture(page, 'mobile-analytics-390px');
+    await context.close();
+  });
+});
+
+test('UX-PRO-E5 browser: tabela de experimentos rolável em 390px tem região acessível e alcançável por Tab', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrir(browser, adminCookie, { width: 390, height: 844 });
+    const table = page.locator('[data-testid="analytics-list-table"]');
+    await table.waitFor();
+    const wrapper = table.locator('xpath=..');
+    const geometry = await wrapper.evaluate(element => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      maxScrollLeft: element.scrollWidth - element.clientWidth,
+      role: element.getAttribute('role'),
+      label: element.getAttribute('aria-label'),
+      tabIndex: element.tabIndex,
+    }));
+    const e5EvidenceDir = process.env.UX_E5_EVIDENCE_DIR;
+    const phase = process.env.UX_E5_CAPTURE_PHASE || 'after';
+    if (e5EvidenceDir) await mkdir(e5EvidenceDir, { recursive: true });
+    assert.ok(geometry.maxScrollLeft > 0, `pré-condição: a tabela deve rolar horizontalmente em 390px: ${JSON.stringify(geometry)}`);
+    assert.equal(geometry.role, 'region', `role da região: ${JSON.stringify(geometry)}`);
+    assert.ok(geometry.label?.trim(), `nome acessível da região: ${JSON.stringify(geometry)}`);
+    assert.equal(geometry.tabIndex, 0, `tabIndex da região: ${JSON.stringify(geometry)}`);
+
+    await page.evaluate(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); });
+    let reachedByTab = false;
+    for (let step = 0; step < 120 && !reachedByTab; step++) {
+      await page.keyboard.press('Tab');
+      reachedByTab = await wrapper.evaluate(element => element === document.activeElement);
+    }
+    assert.ok(reachedByTab, 'a região da tabela precisa ser alcançável pelo percurso de Tab');
+    const focus = await wrapper.evaluate(element => ({ outlineStyle: getComputedStyle(element).outlineStyle, outlineWidth: parseFloat(getComputedStyle(element).outlineWidth) || 0 }));
+    assert.ok(focus.outlineStyle !== 'none' && focus.outlineWidth >= 1, `foco visível na região rolável: ${JSON.stringify(focus)}`);
+    if (e5EvidenceDir) await page.screenshot({ path: path.join(e5EvidenceDir, `analytics-390-e5-${phase}.png`), fullPage: true });
+
+    const matrix = { day: {}, night: {} };
+    for (const theme of ['day', 'night']) {
+      const currentTheme = await page.evaluate(() => document.documentElement.dataset.adminTheme || 'day');
+      if (currentTheme !== theme) {
+        await page.click('[data-admin-theme-toggle="true"]');
+        await page.waitForFunction(expected => (document.documentElement.dataset.adminTheme || 'day') === expected, theme);
+      }
+      for (const width of [320, 390, 768, 1440]) {
+        await page.setViewportSize({ width, height: width < 500 ? 844 : 900 });
+        const measurement = await page.evaluate(() => {
+          const table = document.querySelector('[data-testid="analytics-list-table"]');
+          const region = table?.parentElement;
+          return {
+            documentOverflowPx: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+            wrapperClientWidth: region?.clientWidth ?? null,
+            wrapperScrollWidth: region?.scrollWidth ?? null,
+            role: region?.getAttribute('role') ?? null,
+            label: region?.getAttribute('aria-label') ?? null,
+            tabIndex: region?.tabIndex ?? null,
+          };
+        });
+        assert.ok(measurement.documentOverflowPx <= 1, `transbordo de documento ${measurement.documentOverflowPx}px em ${width}px tema ${theme}`);
+        assert.equal(measurement.role, 'region');
+        assert.ok(measurement.label?.trim());
+        assert.equal(measurement.tabIndex, 0);
+        matrix[theme][width] = measurement;
+      }
+      if (theme === 'night' && e5EvidenceDir) {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.screenshot({ path: path.join(e5EvidenceDir, `analytics-390-e5-${phase}-night.png`), fullPage: true });
+      }
+    }
+    if (e5EvidenceDir) {
+      await writeFile(path.join(e5EvidenceDir, `analytics-390-e5-${phase}.json`), `${JSON.stringify({
+        route: '/admin/analytics', role: 'admin', phase, geometry, focus, keyboardReachable: true, matrix,
+        evidence: 'Playwright Chromium com app HTTP e PostgreSQL temporário; massa sintética criada pelo gate via API canônica.',
+        limitations: 'Capturas e medições automatizadas; sem validação manual, leitor de tela ou aceite humano.',
+      }, null, 2)}\n`, 'utf8');
+    }
     await context.close();
   });
 });

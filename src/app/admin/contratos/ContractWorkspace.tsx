@@ -409,7 +409,7 @@ export default function ContractWorkspace() {
             ) : contratos.itens.length === 0 ? (
           <UiState variant="empty" title="Nenhum contrato acessível" detail="A leitura funcionou e nenhum contrato está na sua carteira." />
         ) : (
-          <div className={styles.tableWrap}>
+          <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
             <table className={styles.table} data-testid="contracts-table">
               <caption className={styles.visuallyHidden}>Contratos acessíveis à sua carteira</caption>
               <thead>

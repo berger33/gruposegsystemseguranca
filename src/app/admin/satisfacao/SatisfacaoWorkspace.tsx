@@ -557,7 +557,7 @@ export default function SatisfacaoWorkspace() {
                     <span className={styles.metricLabel}>Ainda aguardando resposta do cliente</span>
                   </li>
                 </ul>
-                <div className={styles.tableWrap}>
+                <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
                   <table className={styles.table} data-testid="satisfacao-surveys-table">
                     <caption>
                       Pesquisas da jornada canônica, da mais recente à mais antiga. Situação,
