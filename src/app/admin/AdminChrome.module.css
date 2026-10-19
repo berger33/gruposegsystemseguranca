@@ -46,7 +46,7 @@
 .sideLinks { display: grid; gap: 2px; padding: 3px 0 9px 15px; }
 .sideLink { display: block; padding: 9px 11px; border-radius: 8px; color: #294765; font-size: 13px; line-height: 1.35; text-decoration: none; }
 .sideLink:hover, .sideLink[aria-current='page'] { background: #dcebf9; color: #233f91; font-weight: 700; }
-.sideNav :is(a, button, summary):focus-visible { outline: var(--ux-focus-ring-width) solid var(--ux-color-focus); outline-offset: var(--ux-focus-ring-offset-nav); }
+.sideNav :is(a, button, summary, input):focus-visible { outline: var(--ux-focus-ring-width) solid var(--ux-color-focus); outline-offset: var(--ux-focus-ring-offset-nav); }
 .breadcrumb a:focus-visible, .menuToggle:focus-visible { outline: var(--ux-focus-ring-width) solid var(--ux-color-focus-on-dark); outline-offset: var(--ux-focus-ring-offset-nav); }
 .noResults { margin: 6px 4px; color: #52677a; font-size: 13px; line-height: 1.5; }
 .breadcrumb { display: flex; align-items: center; gap: 8px; min-height: 30px; margin: 0 0 10px; color: #d9e7f7; font-size: 13px; }

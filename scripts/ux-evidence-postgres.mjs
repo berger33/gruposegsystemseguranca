@@ -44,6 +44,10 @@ const password = randomBytes(24).toString('hex');
 const postgres = new EmbeddedPostgres({
   databaseDir: path.join(directory, 'data'), port, user: 'seg_qa', password,
   persistent: false, postgresFlags: ['-c', 'listen_addresses=127.0.0.1'],
+  // The Windows Portuguese default may create a WIN1252 cluster, which cannot
+  // apply the repository's UTF-8 SQL migrations. This disposable QA cluster
+  // uses the invariant C locale with UTF-8; it is not a locale behavior test.
+  ...(process.platform === 'win32' ? { initdbFlags: ['--locale=C', '--encoding=UTF8'] } : {}),
   onLog: () => {},
   onError: error => console.error('UX_EVIDENCE_PG_ENGINE_ERROR', String(error).replaceAll(password, '[redacted]').slice(0, 300)),
 });
