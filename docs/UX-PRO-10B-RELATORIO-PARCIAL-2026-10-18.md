@@ -1,8 +1,8 @@
 # UX-PRO-10B — relatório parcial e bloqueio de validação
 
-**Data:** 18/10/2026  
-**Base:** `origin/main` em `d3f8e1711a37b8acbb0b147f5d30f5bbee9655b3` (merge da PR #264)  
-**Branch:** `arena/ux-pro-10b-browser-20261018`  
+**Data:** 18/10/2026
+**Base:** `origin/main` em `d3f8e1711a37b8acbb0b147f5d30f5bbee9655b3` (merge da PR #264)
+**Branch:** `arena/ux-pro-10b-browser-20261018`
 **Status:** implementação e evidências locais preservadas; bloqueada antes da PR por falhas no `npm test`.
 
 ## Escopo executado
