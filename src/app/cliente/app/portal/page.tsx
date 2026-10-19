@@ -1,6 +1,6 @@
 export default function ClientePortalPage() {
   return (
-    <main style={{ padding: 24, maxWidth: 900, margin: "0 auto", fontFamily: "var(--theme-font)", color: "var(--theme-fg)", background: "var(--theme-bg)", borderRadius: "var(--theme-radius)", boxShadow: "var(--theme-shadow)" }}>
+    <div style={{ padding: 24, maxWidth: 900, margin: "0 auto", fontFamily: "var(--theme-font)", color: "var(--theme-fg)", background: "var(--theme-bg)", borderRadius: "var(--theme-radius)", boxShadow: "var(--theme-shadow)" }}>
       <h1 style={{ color: "var(--theme-accent)" }}>Portal do Cliente — Camada 1</h1>
       <p>Vínculo verificado no servidor (sessão + grant + conta ativa). Acesso restrito por contrato e/ou unidade conforme configuração do administrador.</p>
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16, marginTop: 16 }}>
@@ -19,6 +19,6 @@ export default function ClientePortalPage() {
       <div style={{ marginTop: 24, padding: 12, borderLeft: "4px solid var(--theme-accent)", background: "rgba(0,0,0,0.03)" }}>
         <strong>Regra de ouro aplicada:</strong> o servidor nunca confia em identificadores do navegador; cada consulta exige sessão válida + vínculo ativo + cadastro ativo. Qualquer desvio responde 403 genérico com auditoria <code>authorization_denied</code>.
       </div>
-    </main>
+    </div>
   );
 }
