@@ -549,10 +549,7 @@
       "route": "/layout-01",
       "viewport": "1440",
       "status": 200,
-      "firstFocus": {
-        "tag": "A",
-        "href": "/admin/aparencia"
-      },
+      "firstFocus": true,
       "secondFocus": {
         "tag": "A",
         "href": "/"
@@ -568,7 +565,17 @@
         "parentActiveHref": "/",
         "parentActiveIsIframe": false
       },
-      "screenshot": "layout-01-iframe-1440.png"
+      "screenshot": "layout-01-iframe-1440.png",
+      "firstFocusTarget": {
+        "tag": "A",
+        "href": "/admin/aparencia"
+      },
+      "percursoTeclado": [
+        "parent A href=/admin/aparencia",
+        "parent A href=/",
+        "iframe A href=#inicio",
+        "Shift+Tab parent A href=/"
+      ]
     }
   ],
   "browserErrors": [],
@@ -576,5 +583,6 @@
     "The /admin/aparencia authenticated gallery and its day/night controls were not exercised; no user credentials or session were supplied.",
     "Public color-mode CSS is not equivalent to a product-operated theme switch; no publication setting was changed.",
     "Automated focus traversal is not manual keyboard acceptance or a complete WCAG audit."
-  ]
+  ],
+  "stage": "ux-pro-10b"
 }

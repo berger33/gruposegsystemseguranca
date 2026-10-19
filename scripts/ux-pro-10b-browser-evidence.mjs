@@ -84,10 +84,25 @@ try {
     parentActiveIsIframe: document.activeElement === document.querySelector('iframe'),
   }));
   await page.screenshot({ path: path.join(outputDir, 'layout-01-iframe-1440.png'), fullPage: false });
-  results.push({ route: '/layout-01', viewport: '1440', status: response?.status() ?? null, firstFocus, secondFocus, iframeFocus, reverseFocus, screenshot: 'layout-01-iframe-1440.png' });
+  results.push({
+    route: '/layout-01', viewport: '1440', status: response?.status() ?? null,
+    firstFocus: Boolean(firstFocus?.tag && secondFocus?.tag && iframeFocus.parentActiveIsIframe),
+    percursoTeclado: [
+      `parent ${firstFocus?.tag || 'sem foco'} href=${firstFocus?.href || ''}`,
+      `parent ${secondFocus?.tag || 'sem foco'} href=${secondFocus?.href || ''}`,
+      `iframe ${iframeFocus.childActiveTag || 'sem foco'} href=${iframeFocus.childActiveHref || ''}`,
+      `Shift+Tab parent ${reverseFocus.parentActiveTag || 'sem foco'} href=${reverseFocus.parentActiveHref || ''}`,
+    ],
+    firstFocusTarget: firstFocus,
+    secondFocusTarget: secondFocus,
+    iframeFocus,
+    reverseFocus,
+    screenshot: 'layout-01-iframe-1440.png',
+  });
   await context.close();
 
   const summary = {
+    stage: 'ux-pro-10b',
     generatedAt: new Date().toISOString(),
     baseUrl,
     method: 'Automated Playwright Chromium browser inspection; no authentication; no manual human validation.',

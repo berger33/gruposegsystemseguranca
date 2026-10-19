@@ -2,6 +2,8 @@
 
 > **Registro histórico com retificação (18/10/2026, PR corretiva da #263):** documento movido da raiz para `docs/`. A auditoria estática abaixo é preservada como histórico, mas dois pontos **não** valem como conclusão: (1) o item 5 das pendências de navegador pressupunha iframes em todos os layouts ("as layouts apontam para `/visuals/layout-XX/index.html`") — medido no código, **só o Layout 01** faz isso; (2) a UX-PRO-10B (teclado, tema, zoom em navegador) **continua pendente** e não foi resolvida pela PR #263 — os arquivos `public/visuals/layout-02..10` que ela criou eram órfãos e foram removidos por decisão do proprietário. Ver [`UX-PRO-10B-CORRECAO-263-ESCOPO-ANTES-2026-10-18.md`](UX-PRO-10B-CORRECAO-263-ESCOPO-ANTES-2026-10-18.md).
 
+> **Atualização de continuidade (19/10/2026):** a pendência 10B foi fechada pela PR #265 e pelo merge `3e9a4eec4fb4b14e70f02bb15e38fddeb07d3774`. O conteúdo restante abaixo continua sendo o registro da inspeção estática de 17/10: ele não foi ampliado retroativamente para significar auditoria visual das 100 rotas. A cobertura vigente por rota está na [matriz UX-PRO-00](UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv) e na [reconciliação final 10C](UX-PRO-10C-COBERTURA-ROTAS-2026-10-19.md).
+
 ## Branch e Contexto
 - **Branch**: `arena/58196766-gruposegsystemseguranca-uxpro10-a`
 - **Base**: `d1bba3e` ( após merge da PR #262)

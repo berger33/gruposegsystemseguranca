@@ -3,8 +3,8 @@
  * UX-PRO-00 — inventário vigente de rotas e matriz de cobertura.
  *
  * Fonte de verdade: o código em `src/app` + os registros legíveis por máquina
- * que já existem no repositório (`docs/<stage>-evidencias/resumo.json` de capturas visuais e
- * os filtros `paths:` dos workflows em `.github/workflows`).
+ * que já existem no repositório (`resumo.json`/`resumo-layouts.json` de capturas
+ * visuais e os filtros `paths:` dos workflows em `.github/workflows`).
  *
  * Nada aqui é inferido de documentação narrativa. Quando uma informação não
  * tem fonte legível por máquina (validação manual, aceite humano) o gerador
@@ -210,7 +210,9 @@ async function workflowGates() {
 /** Capturas visuais legíveis por máquina: `docs/<stage>-evidencias/resumo.json`. */
 async function visualCaptures() {
   const byRoute = new Map();
-  const files = (await walk(docsRoot)).filter((file) => file.endsWith('resumo.json')).sort();
+  const files = (await walk(docsRoot))
+    .filter((file) => file.endsWith('resumo.json') || file.endsWith('resumo-layouts.json'))
+    .sort();
   for (const file of files) {
     let parsed;
     try {
@@ -218,15 +220,38 @@ async function visualCaptures() {
     } catch {
       continue;
     }
-    for (const entry of parsed.entries || []) {
+    // UX-PRO-10B public previews use a companion format: `routes` plus named
+    // viewport dimensions. Query variants render through one mounted Next
+    // route, so coverage is attributed to its pathname, not to a new route.
+    const entries = Array.isArray(parsed.entries) ? parsed.entries
+      : (Array.isArray(parsed.routes) ? parsed.routes : []);
+    const viewportSizes = new Map((parsed.viewports || []).map((viewport) => [
+      String(viewport.name), `${viewport.width}x${viewport.height}`,
+    ]));
+    const stage = parsed.stage || (path.basename(file) === 'resumo-layouts.json'
+      ? 'ux-pro-10b'
+      : path.basename(path.dirname(file)));
+    for (const entry of entries) {
       if (!entry.route) continue;
-      const record = byRoute.get(entry.route) || { stages: new Set(), viewports: new Set(), firstFocus: false, keyboardTraversal: false, files: new Set() };
-      record.stages.add(parsed.stage || path.basename(path.dirname(file)));
-      record.viewports.add(entry.viewport || 'sem_viewport');
+      let route;
+      try {
+        route = new URL(entry.route, 'http://ux-pro-inventory.local').pathname;
+      } catch {
+        continue;
+      }
+      const record = byRoute.get(route) || {
+        stages: new Set(), viewports: new Set(), themes: new Set(),
+        firstFocus: false, keyboardTraversal: false, files: new Set(),
+      };
+      record.stages.add(stage);
+      record.viewports.add(viewportSizes.get(String(entry.viewport)) || entry.viewport || 'sem_viewport');
+      const requestedTheme = entry.requestedTheme || entry.theme?.requested
+        || (typeof entry.theme === 'string' ? entry.theme : null);
+      if (requestedTheme) record.themes.add(String(requestedTheme).toLowerCase());
       if (entry.firstFocus) record.firstFocus = true;
       if (hasKeyboardTraversal(entry)) record.keyboardTraversal = true;
       record.files.add(rel(file));
-      byRoute.set(entry.route, record);
+      byRoute.set(route, record);
     }
   }
   return byRoute;
@@ -345,8 +370,13 @@ function matrixRow(row) {
   const component = row.componentes_ui_compartilhados
     ? `componentes compartilhados: ${row.componentes_ui_compartilhados}`
     : 'sem componente UI compartilhado detectado no diretório da rota';
+  const capturedThemes = captures.get(row.rota)?.themes || new Set();
+  const hasDayCapture = [...capturedThemes].some((theme) => /claro|day|light/.test(theme));
+  const hasNightCapture = [...capturedThemes].some((theme) => /escuro|night|dark/.test(theme));
   const theme = row.escopo_tema_administrativo === 'sim'
-    ? 'dentro do escopo admin (tokens dia/noite); noite nao comprovado por captura'
+    ? (hasDayCapture && hasNightCapture
+      ? 'dentro do escopo admin; capturas automatizadas em tema claro e escuro (sem aceite manual)'
+      : 'dentro do escopo admin (tokens dia/noite); noite nao comprovado por captura')
     : 'fora do escopo do tema administrativo';
   const viewports = row.capturas_viewports ? row.capturas_viewports.split('|') : [];
   const covered = REQUIRED_VIEWPORTS.filter((width) => viewports.some((viewport) => viewport.startsWith(`${width}x`)));
@@ -379,7 +409,9 @@ function matrixRow(row) {
   if (!row.gates_automatizados) gaps.push('sem gate automatizado que alcance a rota');
   if (!row.capturas_viewports) gaps.push('sem captura visual');
   else gaps.push(`captura ausente em ${REQUIRED_VIEWPORTS.filter((width) => !covered.includes(width)).map((width) => `${width}px`).join('/') || '—'}`);
-  if (row.escopo_tema_administrativo === 'sim') gaps.push('tema noturno sem captura');
+  if (row.escopo_tema_administrativo === 'sim') {
+    if (!(hasDayCapture && hasNightCapture)) gaps.push('tema noturno sem captura');
+  }
   else gaps.push('fora do escopo do tema administrativo; identidade da area nao verificada');
   gaps.push(recordedKeyboard ? 'teclado limitado ao recorte registrado no gate' : 'percurso de teclado nao verificado');
   gaps.push('estados nao exercitados em navegador');

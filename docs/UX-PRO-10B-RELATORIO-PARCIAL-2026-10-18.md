@@ -1,5 +1,7 @@
 # UX-PRO-10B — relatório parcial e bloqueio de validação
 
+> **Atualização (19/10/2026):** este relatório preserva abaixo o retrato de 18/10, quando `npm test` local ainda estava bloqueado por `EPERM`. A PR #265 confirmou a suíte no CI Linux, recebeu 43/43 checks concluídos com sucesso e foi mesclada em `3e9a4eec4fb4b14e70f02bb15e38fddeb07d3774`. O gate de expansão que falhou inicialmente foi reexecutado e passou. A revisão técnica ficou registrada na PR sem alegar aceite humano. A 10B está concluída; o histórico de bloqueio abaixo não descreve o estado atual. Veja o [fechamento 10C](UX-PRO-10C-CLOSEOUT.md).
+
 **Data:** 18/10/2026
 **Base:** `origin/main` em `d3f8e1711a37b8acbb0b147f5d30f5bbee9655b3` (merge da PR #264)
 **Branch:** `arena/ux-pro-10b-browser-20261018`

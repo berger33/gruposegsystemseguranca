@@ -104,13 +104,15 @@ test('a matriz cobre todas as rotas e nunca inventa validação manual nem aceit
     assert.ok(row.lacuna.length > 0, `rota sem lacuna declarada: ${row.rota}`);
   }
 
-  // Captura visual só pode vir de um resumo.json que já existe no repositório.
+  // Captura visual só pode vir de um resumo legível por máquina já versionado.
   for (const row of matrix.filter((entry) => entry.classe_evidencia === 'captura visual')) {
-    const stage = row.evidencia.match(/captura visual: ([^ ]+) @/)[1];
+    const stages = row.evidencia.match(/captura visual: ([^ ]+) @/)[1].split('|');
     const directories = await readdir(path.join(root, 'docs'));
-    assert.ok(
-      directories.some((name) => name.startsWith(`${stage}-evidencias`)),
-      `captura declarada sem pasta de evidências: ${stage}`,
-    );
+    for (const stage of stages) {
+      assert.ok(
+        directories.some((name) => name.startsWith(`${stage}-evidencias`)),
+        `captura declarada sem pasta de evidências: ${stage}`,
+      );
+    }
   }
 });
