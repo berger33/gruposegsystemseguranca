@@ -42,3 +42,10 @@ A apresentação e o contrato visual do conteúdo não mudam: classes CSS, tabel
 ## Limitações atuais
 
 O inventário estático demonstra omissão de semântica em JSX, não comprova overflow real em todas as tabelas/estados. A evidência automatizada de navegador cobre um caminho montado representativo em Analytics; leitores de tela, todos os dados e estados de todos os 12 módulos e validação manual permanecem fora desta prova. A suíte completa do Windows pode falhar por `EPERM` em testes alheios de criação de symlink; isso deve ser reportado separadamente, sem apagar ou pular essas asserções.
+
+## Execução da linha de base
+
+- A varredura AST TypeScript identificou 51 ocorrências em 14 arquivos: 6 wrappers externos de Patrimônio já delegam ao `UiTableScroll`, 5 wrappers de Integration Logs já estão completos, 1 wrapper de Incidentes tem foco/rótulo sem role, e os outros 39 não têm atributos de região/foco.
+- Antes de mudar qualquer JSX de workspace, o gate isolado `UX_ANALYTICS_TEST_PATTERN='UX-PRO-E5 browser' npm run test:ux-analytics:pg` subiu servidor real, PostgreSQL temporário UTF-8 e Chromium local. Em `/admin/analytics` (admin, 390×844, dia), a tabela rolou horizontalmente: wrapper `clientWidth=301`, `scrollWidth=842`, `maxScrollLeft=541`; o DOM confirmou `role=null`, `aria-label=null`, `tabIndex=-1`. O teste falhou como esperado ao exigir `role="region"`.
+- Captura anterior automatizada: `docs/ux-pro-e5-evidencias/analytics-390-e5-before.png`; medições reproduzíveis em `analytics-390-e5-before.json`. A imagem inclui a indicação visual de compilação do Next em desenvolvimento; os valores de geometria vieram diretamente do DOM.
+- O primeiro gate criou cluster com locale WIN1252 e migração falhou antes da suíte; a configuração do gate foi corrigida para UTF-8/locale `C`, e o teste foi repetido com sucesso até a asserção E5.

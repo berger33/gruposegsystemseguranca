@@ -1,0 +1,17 @@
+{
+  "route": "/admin/analytics",
+  "role": "admin",
+  "viewport": "390x844",
+  "theme": "day",
+  "phase": "before",
+  "geometry": {
+    "clientWidth": 301,
+    "scrollWidth": 842,
+    "maxScrollLeft": 541,
+    "role": null,
+    "label": null,
+    "tabIndex": -1
+  },
+  "evidence": "Playwright Chromium com app HTTP e PostgreSQL temporário; massa sintética criada pelo gate via API canônica.",
+  "limitations": "Captura e medições automatizadas; não equivale a validação manual nem a teste com leitor de tela."
+}

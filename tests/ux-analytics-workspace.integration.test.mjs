@@ -34,7 +34,7 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import pg from 'pg';
 import { chromium as playwrightChromium } from 'playwright';
@@ -115,6 +115,8 @@ async function revokeGrant(identityId, permission, revokedBy) {
 // sai com SIGSEGV no próprio lançamento. A segunda tentativa não enfraquece
 // asserção alguma: só repete o `launch`.
 async function launchBrowser() {
+  const executablePath = process.env.UX_ANALYTICS_BROWSER_EXECUTABLE_PATH;
+  if (executablePath) return playwrightChromium.launch({ executablePath, headless: true });
   let ultimo;
   for (let tentativa = 0; tentativa < 3; tentativa++) {
     try {
@@ -526,6 +528,49 @@ test('browser: em 390px a tela de analytics não produz transbordo horizontal', 
     const transbordo = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     assert.ok(transbordo <= 1, `transbordo de ${transbordo}px em /admin/analytics`);
     await capture(page, 'mobile-analytics-390px');
+    await context.close();
+  });
+});
+
+test('UX-PRO-E5 browser: tabela de experimentos rolável em 390px tem região acessível e alcançável por Tab', { skip: !RUN }, async () => {
+  await comNavegador(async browser => {
+    const { context, page } = await abrir(browser, adminCookie, { width: 390, height: 844 });
+    const table = page.locator('[data-testid="analytics-list-table"]');
+    await table.waitFor();
+    const wrapper = table.locator('xpath=..');
+    const geometry = await wrapper.evaluate(element => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      maxScrollLeft: element.scrollWidth - element.clientWidth,
+      role: element.getAttribute('role'),
+      label: element.getAttribute('aria-label'),
+      tabIndex: element.tabIndex,
+    }));
+    const e5EvidenceDir = process.env.UX_E5_EVIDENCE_DIR;
+    if (e5EvidenceDir) {
+      await mkdir(e5EvidenceDir, { recursive: true });
+      const phase = process.env.UX_E5_CAPTURE_PHASE || 'after';
+      await page.screenshot({ path: path.join(e5EvidenceDir, `analytics-390-e5-${phase}.png`), fullPage: true });
+      await writeFile(path.join(e5EvidenceDir, `analytics-390-e5-${phase}.json`), `${JSON.stringify({
+        route: '/admin/analytics', role: 'admin', viewport: '390x844', theme: 'day', phase, geometry,
+        evidence: 'Playwright Chromium com app HTTP e PostgreSQL temporário; massa sintética criada pelo gate via API canônica.',
+        limitations: 'Captura e medições automatizadas; não equivale a validação manual nem a teste com leitor de tela.',
+      }, null, 2)}\n`, 'utf8');
+    }
+    assert.ok(geometry.maxScrollLeft > 0, `pré-condição: a tabela deve rolar horizontalmente em 390px: ${JSON.stringify(geometry)}`);
+    assert.equal(geometry.role, 'region', `role da região: ${JSON.stringify(geometry)}`);
+    assert.ok(geometry.label?.trim(), `nome acessível da região: ${JSON.stringify(geometry)}`);
+    assert.equal(geometry.tabIndex, 0, `tabIndex da região: ${JSON.stringify(geometry)}`);
+
+    await page.evaluate(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); });
+    let reachedByTab = false;
+    for (let step = 0; step < 120 && !reachedByTab; step++) {
+      await page.keyboard.press('Tab');
+      reachedByTab = await wrapper.evaluate(element => element === document.activeElement);
+    }
+    assert.ok(reachedByTab, 'a região da tabela precisa ser alcançável pelo percurso de Tab');
+    const focus = await wrapper.evaluate(element => ({ outlineStyle: getComputedStyle(element).outlineStyle, outlineWidth: parseFloat(getComputedStyle(element).outlineWidth) || 0 }));
+    assert.ok(focus.outlineStyle !== 'none' && focus.outlineWidth >= 1, `foco visível na região rolável: ${JSON.stringify(focus)}`);
     await context.close();
   });
 });
