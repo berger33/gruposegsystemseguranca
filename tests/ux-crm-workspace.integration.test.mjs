@@ -511,15 +511,15 @@ test('browser: filtro sem resultado mostra estado vazio, diferente de falha', { 
 // converte corretamente UTC → America/Sao_Paulo no valor do input,
 // o rótulo (America/Sao_Paulo) é visível e a conversão atravessa a virada do dia.
 //
-// Testa apenas a oportunidade da madrugada (02:30Z → 23:30 dia anterior em SP)
-// que é o caso limite de virada de dia civil.
+// Usa data futura (novembro/2026) para evitar filtro de ações passadas no funil.
+// 02:30Z em novembro = 23:30 do dia anterior em SP (UTC-3 fixo, sem horário de verão).
 
 test('browser E3-CRM: next_action_date 02:30Z vira 23:30 dia anterior em SP, rótulo visível', { skip: !RUN }, async () => {
   const staff = await provisionStaff(pool, { role: 'comercial' });
   const cookie = await loginHttp(staff.email);
 
-  // Cria oportunidade com next_action_date = 02:30Z do dia 5
-  // Em SP (UTC-3 em outubro) isso é 23:30 do dia 4 — virada de dia civil.
+  // Cria oportunidade com next_action_date = 02:30Z de novembro (futuro)
+  // Em SP (UTC-3 fixo, sem horário de verão) isso é 23:30 do dia anterior — virada de dia civil.
   const company = await api('/api/crm/companies', {
     method: 'POST', cookie,
     body: { displayName: `Condomínio E3-CRM`, city: 'Barueri', type: 'prospect', segment: 'Condomínio' },
@@ -531,9 +531,12 @@ test('browser E3-CRM: next_action_date 02:30Z vira 23:30 dia anterior em SP, ró
     method: 'POST', cookie,
     body: {
       company_id: companyId,
-      title: 'E3-CRM Madrugada',
+      title: 'E3-CRM Madrugada Futura',
+      service_name: 'Segurança desarmada',
+      need_description: 'Teste virada de dia',
+      priority: 'alta',
       next_action: 'Verificar virada',
-      next_action_date: '2026-10-05T02:30:00Z', // 02:30Z = 23:30 dia 4 em SP (outubro = UTC-3)
+      next_action_date: '2026-11-05T02:30:00Z', // 02:30Z = 23:30 dia 4 em SP (UTC-3 fixo)
     },
   });
   assert.equal(opp.status, 201);
@@ -544,7 +547,7 @@ test('browser E3-CRM: next_action_date 02:30Z vira 23:30 dia anterior em SP, ró
     await loginBrowser(page, staff.email);
     await page.goto('/admin/crm', { waitUntil: 'domcontentloaded', timeout: 90_000 });
     await page.waitForSelector('#crm-funil', { timeout: 90_000 });
-    await page.waitForSelector('text=E3-CRM Madrugada', { timeout: 60_000 });
+    await page.waitForSelector('text=E3-CRM Madrugada Futura', { timeout: 60_000 });
 
     // Abre a oportunidade (mesmo padrão dos testes existentes)
     await page.locator('button', { hasText: 'Abrir oportunidade' }).first().click();
@@ -557,8 +560,8 @@ test('browser E3-CRM: next_action_date 02:30Z vira 23:30 dia anterior em SP, ró
     const input = page.locator('input[type="datetime-local"]').first();
     await input.waitFor({ state: 'visible', timeout: 20_000 });
     const valor = await input.inputValue();
-    assert.equal(valor, '2026-10-04T23:30',
-      `02:30Z deve virar 2026-10-04T23:30 em SP (virada de dia), veio ${valor}`);
+    assert.equal(valor, '2026-11-04T23:30',
+      `02:30Z deve virar 2026-11-04T23:30 em SP (virada de dia), veio ${valor}`);
 
     // Verifica rótulo de fuso visível
     const label = await page.locator('label:has(input[type="datetime-local"])').first().textContent();
