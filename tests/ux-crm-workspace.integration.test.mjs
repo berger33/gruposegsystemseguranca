@@ -511,6 +511,9 @@ test('browser: filtro sem resultado mostra estado vazio, diferente de falha', { 
 // converte corretamente UTC ↔ America/Sao_Paulo, duas marcas do mesmo dia
 // não colidem, o rótulo (America/Sao_Paulo) é visível e o round-trip
 // (salvar → recarregar) preserva o instante original.
+//
+// Seletores robustos: usa o título da oportunidade para encontrar o botão
+// "Abrir oportunidade" correto, evitando flakiness por ordem de lista.
 
 test('browser E3-CRM: next_action_date converte UTC ↔ America/Sao_Paulo, não colide 02:30Z vs 14:32Z, rótulo visível e round-trip preserva', { skip: !RUN }, async () => {
   const staff = await provisionStaff(pool, { role: 'comercial' });
@@ -550,6 +553,20 @@ test('browser E3-CRM: next_action_date converte UTC ↔ America/Sao_Paulo, não 
   assert.equal(oppDiurno.status, 201);
   const oppDiurnoId = oppDiurno.body?.opportunity?.id || oppDiurno.body?.id;
 
+  // Função auxiliar: abre oportunidade pelo título exato
+  async function abrirOportunidadePorTitulo(page, titulo) {
+    // Encontra a linha da oportunidade pelo título e clica no botão "Abrir oportunidade" dessa linha
+    const linha = page.locator('tr, .crm-funil-card, [data-testid^="crm-oportunidade-"]').filter({ hasText: titulo }).first();
+    await linha.waitFor({ state: 'visible', timeout: 30_000 });
+    const botaoAbrir = linha.locator('button', { hasText: 'Abrir oportunidade' }).first();
+    await botaoAbrir.waitFor({ state: 'visible', timeout: 10_000 });
+    await botaoAbrir.click();
+    await page.waitForSelector('#crm-detalhe', { timeout: 30_000 });
+    await page.waitForSelector('#crm-tab-resumo', { timeout: 20_000 });
+    await page.click('#crm-tab-resumo');
+    await page.waitForSelector('#crm-painel-resumo', { timeout: 20_000 });
+  }
+
   try {
     const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
@@ -559,12 +576,8 @@ test('browser E3-CRM: next_action_date converte UTC ↔ America/Sao_Paulo, não 
     await page.waitForSelector('text=E3-CRM Madrugada', { timeout: 60_000 });
     await page.waitForSelector('text=E3-CRM Diurno', { timeout: 60_000 });
 
-    // Abre a oportunidade da madrugada
-    await page.locator('button', { hasText: 'Abrir oportunidade' }).first().click();
-    await page.waitForSelector('#crm-detalhe', { timeout: 30_000 });
-    await page.waitForSelector('#crm-tab-resumo', { timeout: 20_000 });
-    await page.click('#crm-tab-resumo');
-    await page.waitForSelector('#crm-painel-resumo', { timeout: 20_000 });
+    // Abre a oportunidade da madrugada pelo título
+    await abrirOportunidadePorTitulo(page, 'E3-CRM Madrugada');
 
     // Verifica o campo datetime-local mostra hora de São Paulo (23:30 do dia 4)
     const inputMadrugada = page.locator('input[type="datetime-local"]').first();
@@ -578,14 +591,12 @@ test('browser E3-CRM: next_action_date converte UTC ↔ America/Sao_Paulo, não 
     assert.match(labelMadrugada || '', /\(America\/Sao_Paulo\)/,
       'rótulo de fuso (America/Sao_Paulo) precisa estar visível ao lado do campo');
 
-    // Fecha e abre a oportunidade diurna
+    // Fecha
     await page.click('button:has-text("Fechar oportunidade")');
     await page.waitForSelector('#crm-detalhe', { state: 'detached', timeout: 20_000 });
-    await page.locator('button', { hasText: 'Abrir oportunidade' }).nth(1).click();
-    await page.waitForSelector('#crm-detalhe', { timeout: 30_000 });
-    await page.waitForSelector('#crm-tab-resumo', { timeout: 20_000 });
-    await page.click('#crm-tab-resumo');
-    await page.waitForSelector('#crm-painel-resumo', { timeout: 20_000 });
+
+    // Abre a oportunidade diurna pelo título
+    await abrirOportunidadePorTitulo(page, 'E3-CRM Diurno');
 
     // Verifica o campo datetime-local mostra hora de São Paulo (11:32 do dia 5)
     const inputDiurno = page.locator('input[type="datetime-local"]').first();
@@ -605,11 +616,7 @@ test('browser E3-CRM: next_action_date converte UTC ↔ America/Sao_Paulo, não 
     // Fecha e reabre para confirmar persistência
     await page.click('button:has-text("Fechar oportunidade")');
     await page.waitForSelector('#crm-detalhe', { state: 'detached', timeout: 20_000 });
-    await page.locator('button', { hasText: 'Abrir oportunidade' }).nth(1).click();
-    await page.waitForSelector('#crm-detalhe', { timeout: 30_000 });
-    await page.waitForSelector('#crm-tab-resumo', { timeout: 20_000 });
-    await page.click('#crm-tab-resumo');
-    await page.waitForSelector('#crm-painel-resumo', { timeout: 20_000 });
+    await abrirOportunidadePorTitulo(page, 'E3-CRM Diurno');
 
     const inputDiurnoRecarregado = page.locator('input[type="datetime-local"]').first();
     const valorDiurnoRecarregado = await inputDiurnoRecarregado.inputValue();
