@@ -117,11 +117,13 @@ test('UX-PRO-E3 varredura: as sete exibições usam o auxiliar e as colunas DATE
   assert.match(fonte, /from "\.\.\/\.\.\/\.\.\/lib\/ops-dates\.mjs"/,
     'a rota precisa importar o auxiliar de datas da tela');
 
-  // Sete linhas, oito marcas: a janela da lacuna tem início e fim (dois
-  // `<Stamp>`), e o selo de ciência usa o mesmo par de auxiliares inline para
-  // preservar o prefixo herdado "Ciente desde".
-  assert.equal((fonte.match(/<Stamp value=/g) || []).length, 7,
-    'as seis linhas de célula precisam passar pelo componente de carimbo (a sétima, o selo, usa os auxiliares inline)');
+  // Sete linhas da E3 + fallback `requested_at` da E3-R1 = oito `<Stamp value=`:
+  // a janela da lacuna tem início e fim (dois `<Stamp>`), `CoveragePanel` usa
+  // `<Stamp value={cov.requested_at} />` quando `coverage_date` é ausente, e o
+  // selo de ciência usa o mesmo par de auxiliares inline para preservar o
+  // prefixo herdado "Ciente desde".
+  assert.equal((fonte.match(/<Stamp value=/g) || []).length, 8,
+    'as sete linhas de célula (incluindo o fallback de CoveragePanel) precisam passar pelo componente de carimbo');
   assert.equal((fonte.match(/opsIsoStamp\(ack\.acknowledged_at\)/g) || []).length, 1,
     'o ISO secundário precisa continuar visível também no selo de ciência');
   assert.equal((fonte.match(/opsDateTime\(/g) || []).length, 2,
@@ -131,11 +133,11 @@ test('UX-PRO-E3 varredura: as sete exibições usam o auxiliar e as colunas DATE
   assert.ok(!fonte.includes('slice(0, 16)'),
     'nenhuma exibição pode voltar ao ISO fatiado sem fuso');
 
-  // As datas de CALENDÁRIO (`DATE`) desta rota ficam fora da fatia e precisam
-  // continuar exatamente como estavam: 19 ocorrências em 15 linhas na base
-  // medida (`git show HEAD:...` também tem 19).
+  // As datas de CALENDÁRIO (`DATE`) desta rota ficam fora da conversão e
+  // continuam com `slice(0, 10)` (19 ocorrências em 15 linhas, agora todas em
+  // colunas `DATE`, incluindo `String(cov.coverage_date).slice(0, 10)`).
   assert.equal((fonte.match(/slice\(0, 10\)/g) || []).length, 19,
-    'as datas de calendário da rota não fazem parte desta fatia');
+    'as 19 ocorrências de slice(0, 10) permanecem restritas a datas de calendário');
 
   // O rótulo herdado do selo de ciência continua prefixado por "Ciente desde".
   assert.ok(fonte.includes('`Ciente desde ${opsDateTime(ack.acknowledged_at)}`'),
@@ -145,4 +147,45 @@ test('UX-PRO-E3 varredura: as sete exibições usam o auxiliar e as colunas DATE
   const fonteCrm = await readFile(crm, 'utf8');
   assert.ok(fonteCrm.includes('toISOString().slice(0, 16)'),
     'E3-CRM precisa continuar fora desta fatia');
+});
+
+test('UX-PRO-E3-R1 fallback de cobertura: 02:30Z e 14:32Z não colidem, viram dia em SP e preservam DATE sem conversão', () => {
+  const stampMadrugada = '2026-10-05T02:30:00Z';
+  const stampDiurno = '2026-10-05T14:32:00Z';
+  const renderizarCelulaCobertura = (cov) => (
+    cov.coverage_date
+      ? String(cov.coverage_date).slice(0, 10)
+      : `${opsDateTime(cov.requested_at)} · ${opsIsoStamp(cov.requested_at)}`
+  );
+
+  const celulaMadrugada = renderizarCelulaCobertura({ coverage_date: null, requested_at: stampMadrugada });
+  const celulaDiurno = renderizarCelulaCobertura({ coverage_date: null, requested_at: stampDiurno });
+
+  assert.notEqual(celulaMadrugada, celulaDiurno);
+  assert.equal(celulaMadrugada, '04/10/2026 23:30 (America/Sao_Paulo) · 2026-10-05T02:30:00Z');
+  assert.equal(celulaDiurno, '05/10/2026 11:32 (America/Sao_Paulo) · 2026-10-05T14:32:00Z');
+  assert.notEqual(celulaMadrugada, '2026-10-05');
+  assert.notEqual(celulaDiurno, '2026-10-05');
+
+  // Quando `coverage_date` (`DATE`) existe, permanece em ISO sem passar por `opsDateTime`.
+  assert.equal(
+    renderizarCelulaCobertura({ coverage_date: '2026-10-08', requested_at: stampMadrugada }),
+    '2026-10-08',
+  );
+  assert.equal(
+    renderizarCelulaCobertura({ coverage_date: '2026-10-08T00:00:00.000Z', requested_at: stampMadrugada }),
+    '2026-10-08',
+  );
+});
+
+test('UX-PRO-E3-R1 varredura: CoveragePanel preserva coverage_date (DATE) e usa Stamp para requested_at', async () => {
+  const fonte = await readFile(workspace, 'utf8');
+  assert.ok(
+    !fonte.includes('String(cov.requested_at).slice(0, 10)'),
+    'requested_at (TIMESTAMPTZ) não pode mais ser truncado com slice(0, 10)',
+  );
+  assert.ok(
+    fonte.includes('cov.coverage_date ? String(cov.coverage_date).slice(0, 10) : <Stamp value={cov.requested_at} />'),
+    'CoveragePanel precisa manter String(cov.coverage_date).slice(0, 10) para DATE e usar <Stamp value={cov.requested_at} /> no fallback',
+  );
 });

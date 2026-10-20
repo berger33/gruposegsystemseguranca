@@ -1490,7 +1490,7 @@ function CoveragePanel({ coverages }: { coverages: CoverageRequest[] }) {
             <tbody>
               {coverages.map(cov => (
                 <tr key={cov.id}>
-                  <td>{cov.coverage_date || String(cov.requested_at).slice(0, 10)}</td>
+                  <td>{cov.coverage_date ? String(cov.coverage_date).slice(0, 10) : <Stamp value={cov.requested_at} />}</td>
                   <td><StatusBadge label={coverageRequestStatusLabel(cov.status)} tone={coverageRequestStatusTone(cov.status)} /></td>
                   <td>{cov.responsible_name || "—"}</td>
                   <td>{cov.reason || "Ausência/falta"}</td>
