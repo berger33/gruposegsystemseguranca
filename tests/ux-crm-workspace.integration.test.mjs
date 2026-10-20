@@ -511,7 +511,8 @@ test('browser: filtro sem resultado mostra estado vazio, diferente de falha', { 
 // converte corretamente UTC → America/Sao_Paulo no valor do input,
 // o rótulo (America/Sao_Paulo) é visível e a conversão atravessa a virada do dia.
 //
-// Usa data futura (novembro/2026) para evitar filtro de ações passadas no funil.
+// Usa seedFunnel (padrão dos testes que passam) + PATCH para definir
+// next_action_date. Data futura (novembro/2026) evita filtro de ações passadas.
 // 02:30Z em novembro = 23:30 do dia anterior em SP (UTC-3 fixo, sem horário de verão).
 //
 // Seletores robustos: evita :has() (suporte variável), usa localização por proximidade.
@@ -520,28 +521,19 @@ test('browser E3-CRM: next_action_date 02:30Z vira 23:30 dia anterior em SP, ró
   const staff = await provisionStaff(pool, { role: 'comercial' });
   const cookie = await loginHttp(staff.email);
 
-  // Cria oportunidade com next_action_date = 02:30Z de novembro (futuro)
-  // Em SP (UTC-3 fixo, sem horário de verão) isso é 23:30 do dia anterior — virada de dia civil.
-  const company = await api('/api/crm/companies', {
-    method: 'POST', cookie,
-    body: { displayName: `Condomínio E3-CRM`, city: 'Barueri', type: 'prospect', segment: 'Condomínio' },
-  });
-  assert.equal(company.status, 201);
-  const companyId = company.body?.company?.id || company.body?.id;
+  // Cria oportunidade base via seedFunnel (mesmo padrão dos testes que passam)
+  const { opportunityId } = await seedFunnel(cookie, 'E3-CRM-Madrugada-Futura');
 
-  const opp = await api('/api/crm/opportunities', {
-    method: 'POST', cookie,
+  // Atualiza a oportunidade com next_action_date = 02:30Z de novembro (futuro)
+  // Em SP (UTC-3 fixo, sem horário de verão) isso é 23:30 do dia anterior — virada de dia civil.
+  const patch = await api(`/api/crm/opportunities/${opportunityId}`, {
+    method: 'PATCH', cookie,
     body: {
-      company_id: companyId,
-      title: 'E3-CRM Madrugada Futura',
-      service_name: 'Segurança desarmada',
-      need_description: 'Teste virada de dia',
-      priority: 'alta',
       next_action: 'Verificar virada',
       next_action_date: '2026-11-05T02:30:00Z', // 02:30Z = 23:30 dia 4 em SP (UTC-3 fixo)
     },
   });
-  assert.equal(opp.status, 201);
+  assert.equal(patch.status, 200, `PATCH next_action_date: ${JSON.stringify(patch.body)}`);
 
   try {
     const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
@@ -549,7 +541,7 @@ test('browser E3-CRM: next_action_date 02:30Z vira 23:30 dia anterior em SP, ró
     await loginBrowser(page, staff.email);
     await page.goto('/admin/crm', { waitUntil: 'domcontentloaded', timeout: 90_000 });
     await page.waitForSelector('#crm-funil', { timeout: 90_000 });
-    await page.waitForSelector('text=E3-CRM Madrugada Futura', { timeout: 60_000 });
+    await page.waitForSelector('text=Portaria 24h E3-CRM-Madrugada-Futura', { timeout: 60_000 });
 
     // Abre a oportunidade (mesmo padrão dos testes existentes)
     await page.locator('button', { hasText: 'Abrir oportunidade' }).first().click();
