@@ -1,0 +1,26 @@
+name: UX-PRO-07E-2-ALVO alvo de toque financeiro (fin11-retry e fin10-retry)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/app/admin/financeiro/**'
+      - 'src/components/ui/UiWorkspace.module.css'
+      - 'src/styles/ux-tokens.css'
+      - 'tests/ux-finance-workspace.integration.test.mjs'
+      - 'scripts/qa-ux-pro-07e2-alvo-postgres.mjs'
+      - '.github/workflows/ux-pro-07e2-alvo-delivery.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - name: PostgreSQL descartavel, HTTP real, Chromium e auditoria TAP (minimo 46)
+        run: node scripts/qa-ux-pro-07e2-alvo-postgres.mjs

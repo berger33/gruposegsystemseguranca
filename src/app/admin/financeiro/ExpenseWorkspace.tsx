@@ -155,7 +155,9 @@ export default function ExpenseWorkspace() {
         {error ? (
           <div data-testid="fin10-error" role="alert" className={styles.spacedBelow}>
             <strong>{error}</strong>{" "}
-            <button data-testid="fin10-retry" onClick={()=>load()} disabled={loading}>Tentar novamente</button>
+            {/* UX-PRO-07E-2-ALVO: só apresentação — a classe dá ao botão o alvo de 44px
+                do token --ux-height-target. Texto, data-testid, disabled e onClick permanecem os mesmos. */}
+            <button className={styles.alertAction} data-testid="fin10-retry" onClick={()=>load()} disabled={loading}>Tentar novamente</button>
           </div>
         ) : null}
         <ul className={`listPane ${styles.scrollList}`} data-testid="fin10-expenses">

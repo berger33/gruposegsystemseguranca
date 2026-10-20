@@ -266,6 +266,41 @@
 .knowledgeListItem:first-child { border-top: 0; padding-top: 0; }
 .knowledgeListItem > span:last-child { color: var(--ux-color-muted); font-size: .8125rem; }
 
+/* UX-PRO-07E-2-ALVO: alvo de toque dos botões "Tentar novamente" legados de
+   /admin/financeiro (`fin11-retry` em FiscalWorkspace.tsx e `fin10-retry` em
+   ExpenseWorkspace.tsx). Os dois vivem dentro de um `div[role="alert"]`, fora
+   de `.actions`, então a única regra de alvo deste módulo (`.actions button`,
+   acima) nunca os alcançou: renderizavam com a caixa nativa do navegador,
+   medida em 29px nos 4 viewports e nos dois temas.
+
+   São as MESMAS declarações de `.actions button` — inclusive a altura mínima
+   pelo token de projeto `--ux-height-target` (44px, src/styles/ux-tokens.css)
+   — para manter coerência visual com o resto do portal administrativo.
+   `box-sizing: border-box` é global, então 44px já incluem padding e borda.
+
+   Classe NOVA e aditiva: nenhuma regra existente foi editada, nenhum token novo
+   foi criado e nenhuma outra superfície muda de aparência — só os botões que
+   passarem a referenciá-la. Nada aqui altera dado, permissão, texto, destino,
+   `data-testid`, estado desabilitado ou handler. */
+.alertAction {
+  min-height: var(--ux-height-target, 44px);
+  min-width: var(--ux-height-target, 44px);
+  max-width: 100%;
+  padding: 8px 16px;
+  border: 1px solid var(--ux-color-brand);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-surface);
+  color: var(--ux-color-brand);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.alertAction:disabled { opacity: .7; cursor: default; }
+
 @media (max-width: 600px) {
   .knowledgeCardHeader, .knowledgeDetailHeader { align-items: flex-start; }
   .knowledgeCardHeader > :last-child, .knowledgeDetailHeader > :last-child { max-width: 100%; }

@@ -115,7 +115,8 @@ export default function FiscalWorkspace() {
   return <section data-testid="fin11-fiscal">
     <h2>Integração contábil/fiscal mediante provedor</h2>
     <p>O provedor e a obrigação são entidades separadas. A obrigação não é assumida: ela é determinada pela atividade do contrato através de uma regra explícita, podendo ser NFS-e, NF-e, NFC-e, CT-e ou outra obrigação. Nada aqui emite documento fiscal real — o ambiente é sandbox e as respostas são sintéticas.</p>
-    {error&&<div role="alert" data-testid="fin11-error"><p>{error}</p><button type="button" data-testid="fin11-retry" disabled={loading} onClick={()=>void load()}>Tentar novamente</button></div>}
+    {error&&<div role="alert" data-testid="fin11-error"><p>{error}</p>{/* UX-PRO-07E-2-ALVO: só apresentação — a classe dá ao botão o alvo de 44px
+      do token --ux-height-target. Texto, type, data-testid, disabled e onClick permanecem os mesmos. */}<button type="button" className={styles.alertAction} data-testid="fin11-retry" disabled={loading} onClick={()=>void load()}>Tentar novamente</button></div>}
     {notice&&<p role="status" data-testid="fin11-notice">{notice}</p>}
     {loading&&<p data-testid="fin11-loading">Carregando dados fiscais…</p>}
 
