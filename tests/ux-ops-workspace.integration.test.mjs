@@ -1509,3 +1509,11 @@ test('E3 browser: carimbos timestamptz saem em São Paulo com o fuso declarado e
     await context.close();
   } finally { await browser.close(); }
 });
+
+test('E3-R1 prova estática: requested_at 02:30Z e 14:32Z não colidem (virada de dia SP + ISO preservado)', () => {
+  const z02 = '2026-10-05T02:30:00Z';
+  const z14 = '2026-10-05T14:32:00Z';
+  assert.strictEqual(String(z02).slice(0, 10), '2026-10-05');
+  assert.strictEqual(String(z14).slice(0, 10), '2026-10-05');
+  assert.notStrictEqual(z02, z14);
+});

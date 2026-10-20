@@ -120,8 +120,8 @@ test('UX-PRO-E3 varredura: as sete exibições usam o auxiliar e as colunas DATE
   // Sete linhas, oito marcas: a janela da lacuna tem início e fim (dois
   // `<Stamp>`), e o selo de ciência usa o mesmo par de auxiliares inline para
   // preservar o prefixo herdado "Ciente desde".
-  assert.equal((fonte.match(/<Stamp value=/g) || []).length, 7,
-    'as seis linhas de célula precisam passar pelo componente de carimbo (a sétima, o selo, usa os auxiliares inline)');
+  assert.equal((fonte.match(/<Stamp value=/g) || []).length, 8,
+    'as sete linhas de célula + E3-R1 precisam passar pelo componente de carimbo (a oitava, o selo, usa os auxiliares inline)');
   assert.equal((fonte.match(/opsIsoStamp\(ack\.acknowledged_at\)/g) || []).length, 1,
     'o ISO secundário precisa continuar visível também no selo de ciência');
   assert.equal((fonte.match(/opsDateTime\(/g) || []).length, 2,

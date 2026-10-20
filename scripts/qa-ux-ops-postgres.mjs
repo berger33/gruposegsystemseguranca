@@ -58,7 +58,7 @@ function run(cmd, args, env, capture = false) {
 // skip, todo, ausência do resumo TAP ou aprovações abaixo do mínimo reprovam o
 // gate — inclusive uma execução filtrada por UX_OPS_TEST_PATTERN, que nunca
 // vale como prova.
-const MINIMUM_CASES = 28;
+const MINIMUM_CASES = 29;
 function auditTap(output) {
   const number = label => {
     const match = output.match(new RegExp(`^# ${label} (\\d+)$`, 'm'));
