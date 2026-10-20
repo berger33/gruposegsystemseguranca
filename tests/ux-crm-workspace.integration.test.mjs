@@ -513,6 +513,8 @@ test('browser: filtro sem resultado mostra estado vazio, diferente de falha', { 
 //
 // Usa data futura (novembro/2026) para evitar filtro de ações passadas no funil.
 // 02:30Z em novembro = 23:30 do dia anterior em SP (UTC-3 fixo, sem horário de verão).
+//
+// Seletores robustos: evita :has() (suporte variável), usa localização por proximidade.
 
 test('browser E3-CRM: next_action_date 02:30Z vira 23:30 dia anterior em SP, rótulo visível', { skip: !RUN }, async () => {
   const staff = await provisionStaff(pool, { role: 'comercial' });
@@ -563,9 +565,11 @@ test('browser E3-CRM: next_action_date 02:30Z vira 23:30 dia anterior em SP, ró
     assert.equal(valor, '2026-11-04T23:30',
       `02:30Z deve virar 2026-11-04T23:30 em SP (virada de dia), veio ${valor}`);
 
-    // Verifica rótulo de fuso visível
-    const label = await page.locator('label:has(input[type="datetime-local"])').first().textContent();
-    assert.match(label || '', /\(America\/Sao_Paulo\)/,
+    // Verifica rótulo de fuso visível — evita :has(), usa label adjacente ao input
+    const label = page.locator('label').filter({ hasText: 'Próxima ação' }).first();
+    await label.waitFor({ state: 'visible', timeout: 10_000 });
+    const labelText = await label.textContent();
+    assert.match(labelText || '', /\(America\/Sao_Paulo\)/,
       'rótulo de fuso (America/Sao_Paulo) precisa estar visível ao lado do campo');
 
     await capture(page, 'desktop-e3-crm-datetime-local');
