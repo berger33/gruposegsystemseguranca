@@ -1876,3 +1876,263 @@ test('UX-PRO-07F-1 browser: as datas em pt-BR não produzem transbordo em 1440/7
     await writeFile(path.join(evidenceDir, '07f1-resumo.json'), `${JSON.stringify(resumo, null, 2)}\n`, 'utf8');
   }
 });
+
+// ---------------------------------------------------------------------------
+// UX-PRO-07E-2-ALVO — casos NOVOS, acrescentados APÓS os 44 herdados.
+//
+// Todo o conteúdo anterior permanece byte a byte (SHA-256 da base
+// bcc1771e69f8788e969e29326968ac24cf7b1fe8b1462610e572ede4138cbbf7): nenhuma
+// asserção herdada foi editada, removida ou afrouxada. Em particular, o caso
+// "UX-PRO-07E-2 browser: a falha declarada do grupo fiscal ..." continua
+// medindo `alturaRepetir` apenas como OBSERVAÇÃO (`> 0`), como foi escrito em
+// 15/10 — aquele registro histórico não é reescrito por esta fatia.
+//
+// O que estes casos provam: os dois botões "Tentar novamente" legados de
+// /admin/financeiro — `fin11-retry` (`FiscalWorkspace.tsx:118`) e `fin10-retry`
+// (`ExpenseWorkspace.tsx:158`), ambos SEM classe e portanto com a caixa nativa
+// do navegador (~29px) — passam a ter alvo de toque >= 44px de altura E de
+// largura, com rótulo de contraste >= 4,5:1 nos temas dia e noite, sem
+// transbordo do documento acima de 1px, nos 4 viewports canônicos.
+//
+// Limiar revalidado ANTES do RED, não inventado aqui:
+//   - token de projeto `--ux-height-target: 44px` (src/styles/ux-tokens.css:57),
+//     já consumido por AdminThemeToggle.module.css:6 e Comercial.module.css:68;
+//   - gate vizinho `measureSurface()`/`measuredProblems()` em
+//     tests/ux-emergency-workspace.integration.test.mjs (alvo >= 44, contraste
+//     >= 4,5, transbordo <= 1).
+//
+// Nada de comportamento é tocado: o segundo caso prova que repetir continua
+// recuperando a leitura real nos dois botões, com texto, `data-testid`,
+// `disabled`-state e destino intactos.
+//
+// Injeção somente em `window.fetch` da página e somente em GET, como nos casos
+// herdados: servidor, banco, proxy e escritas permanecem reais e intactos.
+// ---------------------------------------------------------------------------
+
+const ALVO_MINIMO_PX = 44;
+const CONTRASTE_MINIMO = 4.5;
+const TRANSBORDO_MAXIMO_PX = 1;
+const VIEWPORTS_ALVO = [[1440, 900, '1440'], [768, 1024, '768'], [390, 844, '390'], [320, 844, '320']];
+const REGRAS_ALVO = [
+  { match: '/api/fin/fiscal-activity-rules', body: { rules: 'não é uma lista' } },
+  { match: '/api/fin/expenses', body: { expenses: null } },
+];
+
+async function temaAtual(page) {
+  return (await page.locator('html').getAttribute('data-admin-theme')) || 'day';
+}
+
+/** Alterna pelo controle REAL da tela (AdminThemeToggle), não por estilo inline. */
+async function aplicarTema(page, tema) {
+  if (await temaAtual(page) === tema) return;
+  await page.locator('[data-admin-theme-toggle="true"]').first().click();
+  await page.waitForFunction(
+    esperado => (document.documentElement.dataset.adminTheme || 'day') === esperado,
+    tema,
+    { timeout: 20_000 },
+  );
+}
+
+async function medirTransbordo(page) {
+  return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+}
+
+/**
+ * Mede o alvo e o contraste do rótulo de um botão no próprio navegador, com o
+ * mesmo método de `contrast()` do gate vizinho (ux-emergency): a cor de fundo
+ * é a primeira não transparente na cadeia de ancestrais.
+ */
+async function medirBotao(page, seletor) {
+  const locator = page.locator(seletor).first();
+  await locator.waitFor({ timeout: 30_000 });
+  return locator.evaluate(node => {
+    const rect = node.getBoundingClientRect();
+    const style = getComputedStyle(node);
+    const parse = value => (value.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+    const luminance = rgb => {
+      const values = rgb.map(value => {
+        const channel = value / 255;
+        return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * values[0] + 0.7152 * values[1] + 0.0722 * values[2];
+    };
+    const backgroundOf = element => {
+      let current = element;
+      while (current) {
+        const value = getComputedStyle(current).backgroundColor;
+        if (value && !/rgba\([^)]*,\s*0\s*\)$/.test(value) && value !== 'transparent') return parse(value);
+        current = current.parentElement;
+      }
+      return [255, 255, 255];
+    };
+    const foreground = parse(style.color);
+    const back = backgroundOf(node);
+    const [lighter, darker] = [luminance(foreground), luminance(back)].sort((a, b) => b - a);
+    return {
+      alturaPx: Math.round(rect.height),
+      larguraPx: Math.round(rect.width),
+      contraste: Math.round(((lighter + 0.05) / (darker + 0.05)) * 100) / 100,
+      texto: (node.textContent || '').trim(),
+      tagName: node.tagName.toLowerCase(),
+      testid: node.getAttribute('data-testid'),
+      disabled: node.disabled === true,
+      minHeightComputado: style.minHeight,
+      corTexto: style.color,
+      corFundo: getComputedStyle(node).backgroundColor,
+    };
+  });
+}
+
+function problemasAlvo(item) {
+  const problems = [];
+  if (!Number.isFinite(item.alturaPx) || item.alturaPx < ALVO_MINIMO_PX) {
+    problems.push(`alturaPx=${item.alturaPx} abaixo de ${ALVO_MINIMO_PX}px`);
+  }
+  if (!Number.isFinite(item.larguraPx) || item.larguraPx < ALVO_MINIMO_PX) {
+    problems.push(`larguraPx=${item.larguraPx} abaixo de ${ALVO_MINIMO_PX}px`);
+  }
+  if (!Number.isFinite(item.contraste) || item.contraste < CONTRASTE_MINIMO) {
+    problems.push(`contraste=${item.contraste}:1 abaixo de ${CONTRASTE_MINIMO}:1`);
+  }
+  if (Number.isFinite(item.transbordoDocumentoPx) && item.transbordoDocumentoPx > TRANSBORDO_MAXIMO_PX) {
+    problems.push(`transbordoDocumentoPx=${item.transbordoDocumentoPx}px acima de ${TRANSBORDO_MAXIMO_PX}px`);
+  }
+  return problems;
+}
+
+test('UX-PRO-07E-2-ALVO browser: os botões "Tentar novamente" de FIN-11 e FIN-10 têm alvo >= 44px nos 4 viewports, dia e noite', { skip: !RUN, timeout: 420_000 }, async () => {
+  const medicoes = [];
+  for (const [width, height, nome] of VIEWPORTS_ALVO) {
+    // Um browser por largura, pela mesma limitação do --single-process.
+    const browser = await launchBrowser();
+    try {
+      const { context, page } = await openFinanceInvalidBody(browser, financeCookie, {
+        width, height, rules: REGRAS_ALVO,
+      });
+
+      // FIN-11 — aba "Fiscal e obrigações", falha declarada com botão de repetir.
+      await gotoTab07e2(page, 'fiscal');
+      await settle07e2(page, '[data-testid="fin11-fiscal"]', ['[data-testid="fin11-error"]']);
+      for (const tema of ['day', 'night']) {
+        await aplicarTema(page, tema);
+        const medicao = await medirBotao(page, '[data-testid="fin11-retry"]');
+        const transbordoDocumentoPx = await medirTransbordo(page);
+        await capture(page, `07e2-alvo-fin11-retry-${tema === 'night' ? 'noite' : 'dia'}-${nome}`);
+        medicoes.push({ botao: 'fin11-retry', width, height, nome, tema, transbordoDocumentoPx, ...medicao });
+      }
+
+      // FIN-10 — aba "Despesas e compras", mesmo estado de falha declarada.
+      await gotoTab07e2(page, 'expenses');
+      await settle07e2(page, '[data-testid="fin10-policy"]', ['[data-testid="fin10-error"]']);
+      for (const tema of ['night', 'day']) {
+        await aplicarTema(page, tema);
+        const medicao = await medirBotao(page, '[data-testid="fin10-retry"]');
+        const transbordoDocumentoPx = await medirTransbordo(page);
+        await capture(page, `07e2-alvo-fin10-retry-${tema === 'night' ? 'noite' : 'dia'}-${nome}`);
+        medicoes.push({ botao: 'fin10-retry', width, height, nome, tema, transbordoDocumentoPx, ...medicao });
+      }
+      await context.close();
+    } finally { await browser.close(); }
+  }
+
+  // 2 botões × 2 temas × 4 viewports = 16 medições; nenhuma pode faltar.
+  assert.equal(medicoes.length, 16, `esperava 16 medições (2 botões × 2 temas × 4 viewports), obtidas ${medicoes.length}`);
+  const tabela = medicoes
+    .map(item => `${item.botao} ${item.nome}px ${item.tema}: altura=${item.alturaPx}px largura=${item.larguraPx}px contraste=${item.contraste}:1 transbordo=${item.transbordoDocumentoPx}px disabled=${item.disabled}`)
+    .join('\n  ');
+
+  for (const item of medicoes) {
+    const onde = `${item.botao} em ${item.width}x${item.height} no tema ${item.tema}`;
+    // Identidade preservada: o reparo é só de apresentação.
+    assert.equal(item.tagName, 'button', `${onde}: o alvo precisa continuar sendo um <button> nativo`);
+    assert.equal(item.texto, 'Tentar novamente', `${onde}: o rótulo não pode mudar`);
+    assert.equal(item.testid, item.botao, `${onde}: o data-testid não pode mudar`);
+    assert.equal(item.disabled, false, `${onde}: com a leitura já assentada o botão precisa continuar habilitado`);
+    assert.ok(item.alturaPx >= ALVO_MINIMO_PX,
+      `${onde}: altura do alvo de ${item.alturaPx}px abaixo do limiar da casa (${ALVO_MINIMO_PX}px)\n  ${tabela}`);
+    assert.ok(item.larguraPx >= ALVO_MINIMO_PX,
+      `${onde}: largura do alvo de ${item.larguraPx}px abaixo do limiar da casa (${ALVO_MINIMO_PX}px)\n  ${tabela}`);
+    assert.ok(item.contraste >= CONTRASTE_MINIMO,
+      `${onde}: contraste do rótulo de ${item.contraste}:1 abaixo de ${CONTRASTE_MINIMO}:1\n  ${tabela}`);
+    assert.ok(item.transbordoDocumentoPx <= TRANSBORDO_MAXIMO_PX,
+      `${onde}: transbordo do documento de ${item.transbordoDocumentoPx}px acima de ${TRANSBORDO_MAXIMO_PX}px\n  ${tabela}`);
+  }
+
+  if (evidenceDir) {
+    const { writeFile } = await import('node:fs/promises');
+    const resumo = {
+      stage: 'ux-pro-07-financeiro',
+      generatedBy: 'gate PostgreSQL descartável + HTTP real + Chromium (scripts/qa-ux-pro-07e2-alvo-postgres.mjs)',
+      notes: [
+        'UX-PRO-07E-2-ALVO: alvo de toque dos botões "Tentar novamente" legados de /admin/financeiro (fin11-retry e fin10-retry).',
+        'Estado medido: falha declarada de leitura (2xx sem a lista canônica), injetada somente em window.fetch e somente em GET.',
+        'Tema alternado pelo controle real da tela (AdminThemeToggle), não por estilo inline.',
+        'problems é DERIVADO das medições desta entrada (alvo < 44px, contraste < 4,5:1, transbordo > 1px), nunca um literal.',
+        'Arquivo próprio (não sobrescreve resumo.json da 07E-1, 07e2-resumo.json da 07E-2 nem 07f1-resumo.json).',
+        'Medições automatizadas: não equivalem a auditoria WCAG completa, a aceite humano nem a homologação.',
+      ],
+      entries: medicoes.map(item => ({
+        stage: 'ux-pro-07-financeiro',
+        route: '/admin/financeiro',
+        role: 'financeiro',
+        viewport: `${item.width}x${item.height}`,
+        theme: item.tema,
+        screenshot: `${evidenceDir}/07e2-alvo-${item.botao}-${item.tema === 'night' ? 'noite' : 'dia'}-${item.nome}.png`,
+        problems: problemasAlvo(item),
+        state: 'falha_declarada_com_botao_de_repetir',
+        button: item.botao,
+        alturaAlvoPx: item.alturaPx,
+        larguraAlvoPx: item.larguraPx,
+        menorAlvoPx: Math.min(item.alturaPx, item.larguraPx),
+        contrasteRotulo: item.contraste,
+        transbordoDocumentoPx: item.transbordoDocumentoPx,
+        minHeightComputado: item.minHeightComputado,
+        corTexto: item.corTexto,
+        corFundo: item.corFundo,
+        disabled: item.disabled,
+      })),
+    };
+    await writeFile(path.join(evidenceDir, '07e2-alvo-resumo.json'), `${JSON.stringify(resumo, null, 2)}\n`, 'utf8');
+  }
+});
+
+test('UX-PRO-07E-2-ALVO browser: o reparo do alvo não muda comportamento — repetir recupera a leitura real em FIN-11 e FIN-10', { skip: !RUN, timeout: 240_000 }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openFinanceInvalidBody(browser, financeCookie, { rules: REGRAS_ALVO });
+
+    // FIN-11: falha declarada -> solta a injeção -> repetir recupera de verdade.
+    await gotoTab07e2(page, 'fiscal');
+    await settle07e2(page, '[data-testid="fin11-fiscal"]', ['[data-testid="fin11-error"]']);
+    const antesFin11 = await textOf(page, '[data-testid="fin11-fiscal"]');
+    assert.match(antesFin11, /invalid_finance_response/,
+      `a falha declarada precisa estar visível antes de repetir; texto: "${antesFin11.slice(0, 240)}"`);
+    await releaseInvalidBody(page, '/api/fin/fiscal-activity-rules');
+    await page.locator('[data-testid="fin11-retry"]').first().click();
+    await settle07e2(page, '[data-testid="fin11-fiscal"]', ['[data-testid="fin11-rules-table"]'], { extraMs: 1_200 });
+    assert.equal(await page.locator('[data-testid="fin11-error"]').count(), 0,
+      'depois de repetir com a leitura real disponível, a falha declarada precisa desaparecer');
+    assert.equal(await page.locator('[data-testid="fin11-rules-unavailable"]').count(), 0,
+      'o marcador de indisponibilidade não pode sobreviver a uma leitura confirmada');
+    const depoisFin11 = await textOf(page, '[data-testid="fin11-fiscal"]');
+    assert.doesNotMatch(depoisFin11, /invalid_finance_response/, 'a repetição precisa refazer a leitura de verdade');
+    await capture(page, '07e2-alvo-fin11-retry-recuperou');
+
+    // FIN-10: mesma prova no outro botão.
+    await gotoTab07e2(page, 'expenses');
+    await settle07e2(page, '[data-testid="fin10-policy"]', ['[data-testid="fin10-error"]']);
+    const antesFin10 = await textOf(page, '[data-testid="fin10-error"]');
+    assert.match(antesFin10, /invalid_finance_response/,
+      `a falha declarada do FIN-10 precisa estar visível antes de repetir; texto: "${antesFin10.slice(0, 240)}"`);
+    await releaseInvalidBody(page, '/api/fin/expenses');
+    await page.locator('[data-testid="fin10-retry"]').first().click();
+    await settle07e2(page, '[data-testid="fin10-policy"]', ['[data-testid="fin10-expenses"]'], { extraMs: 1_200 });
+    assert.equal(await page.locator('[data-testid="fin10-error"]').count(), 0,
+      'depois de repetir com a leitura real disponível, o canal de erro do FIN-10 precisa desaparecer');
+    const depoisFin10 = await textOf(page, '[data-testid="fin10-expenses"]');
+    assert.doesNotMatch(depoisFin10, /invalid_finance_response/, 'a repetição do FIN-10 precisa refazer a leitura de verdade');
+    await capture(page, '07e2-alvo-fin10-retry-recuperou');
+
+    await context.close();
+  } finally { await browser.close(); }
+});
