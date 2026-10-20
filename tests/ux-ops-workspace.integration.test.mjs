@@ -1509,3 +1509,144 @@ test('E3 browser: carimbos timestamptz saem em São Paulo com o fuso declarado e
     await context.close();
   } finally { await browser.close(); }
 });
+
+// ============================================================================
+// UX-PRO-E3-R1 — fallback `requested_at` (`TIMESTAMPTZ`) em `CoveragePanel`
+// (`OperacaoWorkspace.tsx:1493`). Quando `coverage_date` (`DATE`) é `null`, o
+// carimbo `requested_at` não pode ser truncado em `slice(0, 10)` sem hora/fuso:
+// `2026-10-05T02:30:00Z` e `2026-10-05T14:32:00Z` não podem colidir em
+// `2026-10-05`, `02:30Z` precisa virar o dia em `America/Sao_Paulo`
+// (`04/10/2026 23:30 (America/Sao_Paulo)`), o ISO original precisa permanecer
+// na mesma célula (` · ISO`) e `coverage_date` preenchida (`DATE`) permanece em
+// ISO sem passar por `opsDateTime`.
+// ============================================================================
+const E3_R1_STAMP_ROLLOVER = '2026-10-05T02:30:00Z';
+const E3_R1_STAMP_DAY = '2026-10-05T14:32:00Z';
+const E3_R1_LOCAL_ROLLOVER = '04/10/2026 23:30 (America/Sao_Paulo)';
+const E3_R1_LOCAL_DAY = '05/10/2026 11:32 (America/Sao_Paulo)';
+
+test('E3-R1 browser: CoveragePanel com coverage_date=null exibe requested_at em America/Sao_Paulo + ISO na célula sem colidir 02:30Z e 14:32Z e preserva DATE', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'pt-BR' });
+    const separator = tiCookie.indexOf('=');
+    await context.addCookies([{ name: tiCookie.slice(0, separator), value: tiCookie.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    page.setDefaultTimeout(45_000);
+    page.setDefaultNavigationTimeout(90_000);
+    await page.addInitScript(({ rollover, daytime }) => {
+      const original = window.fetch.bind(window);
+      const respond = body => new Response(JSON.stringify(body), {
+        status: 200, headers: { 'content-type': 'application/json' },
+      });
+      window.fetch = async (input, init) => {
+        const raw = typeof input === 'string' ? input : (input?.url || '');
+        const method = String(init?.method || (typeof input !== 'string' ? input?.method : '') || 'GET').toUpperCase();
+        let url;
+        try { url = new URL(raw, location.origin); } catch { return original(input, init); }
+        if (method !== 'GET' || url.pathname !== '/api/ops/coverage-requests') return original(input, init);
+        const response = await original(input, init);
+        if (!response.ok) return response;
+        const data = await response.clone().json().catch(() => null);
+        if (!data || typeof data !== 'object') return response;
+        return respond({
+          ...data,
+          requests: [
+            {
+              id: 'e3-r1-virada',
+              post_id: 'e3-r1-post',
+              coverage_date: null,
+              requested_at: rollover,
+              status: 'pendente',
+              responsible_name: 'Plantão madrugada',
+              reason: 'Virada de dia em São Paulo',
+            },
+            {
+              id: 'e3-r1-diurno',
+              post_id: 'e3-r1-post',
+              coverage_date: null,
+              requested_at: daytime,
+              status: 'aprovada',
+              responsible_name: 'Plantão diurno',
+              reason: 'Mesmo dia UTC',
+            },
+            {
+              id: 'e3-r1-date',
+              post_id: 'e3-r1-post',
+              coverage_date: '2026-10-08',
+              requested_at: rollover,
+              status: 'pendente',
+              responsible_name: 'Escala planejada',
+              reason: 'Data de calendário explícita',
+            },
+          ],
+        });
+      };
+    }, { rollover: E3_R1_STAMP_ROLLOVER, daytime: E3_R1_STAMP_DAY });
+
+    await page.goto(`${baseUrl}/admin/operacao`, { waitUntil: 'domcontentloaded' });
+    await page.locator('[role="tablist"]').waitFor();
+    await page.getByRole('tab', { name: 'Cobertura', exact: true }).click();
+
+    const painel = page.locator('section[aria-labelledby="coverage-title"]');
+    await painel.locator('table').waitFor();
+    const linhas = painel.locator('tbody tr');
+    assert.equal(await linhas.count(), 3);
+
+    const celulaVirada = (await linhas.nth(0).locator('td').first().innerText()).trim();
+    const celulaDiurno = (await linhas.nth(1).locator('td').first().innerText()).trim();
+    const celulaData = (await linhas.nth(2).locator('td').first().innerText()).trim();
+
+    assert.notEqual(
+      celulaVirada,
+      celulaDiurno,
+      `requested_at distintos (02:30Z vs 14:32Z) com coverage_date=null não podem colidir na mesma data truncada; recebido: virada=${JSON.stringify(celulaVirada)} vs diurno=${JSON.stringify(celulaDiurno)}`,
+    );
+    assert.match(
+      celulaVirada,
+      new RegExp(escape07d(E3_R1_LOCAL_ROLLOVER)),
+      `requested_at 02:30Z precisa virar 04/10/2026 23:30 (America/Sao_Paulo); recebido: ${JSON.stringify(celulaVirada)}`,
+    );
+    assert.ok(
+      celulaVirada.includes(E3_R1_STAMP_ROLLOVER),
+      `o ISO original de 02:30Z precisa continuar visível na célula; recebido: ${JSON.stringify(celulaVirada)}`,
+    );
+    assert.notEqual(celulaVirada, '2026-10-05');
+    assert.equal(
+      (await linhas.nth(0).locator('td').first().locator('span').textContent()) || '',
+      ` · ${E3_R1_STAMP_ROLLOVER}`,
+      'o ISO secundário de 02:30Z precisa sair na mesma célula com prefixo " · "',
+    );
+
+    assert.match(
+      celulaDiurno,
+      new RegExp(escape07d(E3_R1_LOCAL_DAY)),
+      `requested_at 14:32Z precisa sair 05/10/2026 11:32 (America/Sao_Paulo); recebido: ${JSON.stringify(celulaDiurno)}`,
+    );
+    assert.ok(
+      celulaDiurno.includes(E3_R1_STAMP_DAY),
+      `o ISO original de 14:32Z precisa continuar visível na célula; recebido: ${JSON.stringify(celulaDiurno)}`,
+    );
+    assert.notEqual(celulaDiurno, '2026-10-05');
+    assert.equal(
+      (await linhas.nth(1).locator('td').first().locator('span').textContent()) || '',
+      ` · ${E3_R1_STAMP_DAY}`,
+      'o ISO secundário de 14:32Z precisa sair na mesma célula com prefixo " · "',
+    );
+
+    assert.equal(
+      celulaData,
+      '2026-10-08',
+      `coverage_date (DATE) preenchida deve permanecer em ISO sem conversão de fuso; recebido: ${JSON.stringify(celulaData)}`,
+    );
+    assert.equal(
+      await linhas.nth(2).locator('td').first().locator('span').count(),
+      0,
+      'coverage_date (DATE) não deve renderizar carimbo ISO secundário',
+    );
+
+    await context.close();
+  } finally {
+    await browser.close();
+  }
+});
