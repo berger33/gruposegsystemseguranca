@@ -505,6 +505,123 @@ test('browser: filtro sem resultado mostra estado vazio, diferente de falha', { 
 });
 
 // ---------------------------------------------------------------------------
+// UX-PRO-E3-CRM — datetime-local em America/Sao_Paulo com rótulo de fuso
+//
+// O que este teste prova: o campo "Data da próxima ação" (datetime-local)
+// converte corretamente UTC ↔ America/Sao_Paulo, duas marcas do mesmo dia
+// não colidem, o rótulo (America/Sao_Paulo) é visível e o round-trip
+// (salvar → recarregar) preserva o instante original.
+
+test('browser E3-CRM: next_action_date converte UTC ↔ America/Sao_Paulo, não colide 02:30Z vs 14:32Z, rótulo visível e round-trip preserva', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(staff.email);
+
+  // Cria duas oportunidades com next_action_date em UTC que caem no mesmo dia em SP:
+  // - 02:30Z do dia 5 = 23:30 do dia 4 em SP (virada de dia)
+  // - 14:32Z do dia 5 = 11:32 do dia 5 em SP (diurno)
+  const company = await api('/api/crm/companies', {
+    method: 'POST', cookie,
+    body: { displayName: `Condomínio E3-CRM`, city: 'Barueri', type: 'prospect', segment: 'Condomínio' },
+  });
+  assert.equal(company.status, 201);
+  const companyId = company.body?.company?.id || company.body?.id;
+
+  const oppMadrugada = await api('/api/crm/opportunities', {
+    method: 'POST', cookie,
+    body: {
+      company_id: companyId,
+      title: 'E3-CRM Madrugada',
+      next_action: 'Verificar virada',
+      next_action_date: '2026-10-05T02:30:00Z', // 02:30Z = 23:30 dia 4 em SP
+    },
+  });
+  assert.equal(oppMadrugada.status, 201);
+  const oppMadrugadaId = oppMadrugada.body?.opportunity?.id || oppMadrugada.body?.id;
+
+  const oppDiurno = await api('/api/crm/opportunities', {
+    method: 'POST', cookie,
+    body: {
+      company_id: companyId,
+      title: 'E3-CRM Diurno',
+      next_action: 'Verificar diurno',
+      next_action_date: '2026-10-05T14:32:00Z', // 14:32Z = 11:32 dia 5 em SP
+    },
+  });
+  assert.equal(oppDiurno.status, 201);
+  const oppDiurnoId = oppDiurno.body?.opportunity?.id || oppDiurno.body?.id;
+
+  try {
+    const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/crm', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('#crm-funil', { timeout: 90_000 });
+    await page.waitForSelector('text=E3-CRM Madrugada', { timeout: 60_000 });
+    await page.waitForSelector('text=E3-CRM Diurno', { timeout: 60_000 });
+
+    // Abre a oportunidade da madrugada
+    await page.locator('button', { hasText: 'Abrir oportunidade' }).first().click();
+    await page.waitForSelector('#crm-detalhe', { timeout: 30_000 });
+    await page.waitForSelector('#crm-tab-resumo', { timeout: 20_000 });
+    await page.click('#crm-tab-resumo');
+    await page.waitForSelector('#crm-painel-resumo', { timeout: 20_000 });
+
+    // Verifica o campo datetime-local mostra hora de São Paulo (23:30 do dia 4)
+    const inputMadrugada = page.locator('input[type="datetime-local"]').first();
+    await inputMadrugada.waitFor({ state: 'visible', timeout: 20_000 });
+    const valorMadrugada = await inputMadrugada.inputValue();
+    assert.equal(valorMadrugada, '2026-10-04T23:30',
+      `madrugada 02:30Z deve virar 2026-10-04T23:30 em SP, veio ${valorMadrugada}`);
+
+    // Verifica rótulo de fuso visível
+    const labelMadrugada = await page.locator('label:has(input[type="datetime-local"])').first().textContent();
+    assert.match(labelMadrugada || '', /\(America\/Sao_Paulo\)/,
+      'rótulo de fuso (America/Sao_Paulo) precisa estar visível ao lado do campo');
+
+    // Fecha e abre a oportunidade diurna
+    await page.click('button:has-text("Fechar oportunidade")');
+    await page.waitForSelector('#crm-detalhe', { state: 'detached', timeout: 20_000 });
+    await page.locator('button', { hasText: 'Abrir oportunidade' }).nth(1).click();
+    await page.waitForSelector('#crm-detalhe', { timeout: 30_000 });
+    await page.waitForSelector('#crm-tab-resumo', { timeout: 20_000 });
+    await page.click('#crm-tab-resumo');
+    await page.waitForSelector('#crm-painel-resumo', { timeout: 20_000 });
+
+    // Verifica o campo datetime-local mostra hora de São Paulo (11:32 do dia 5)
+    const inputDiurno = page.locator('input[type="datetime-local"]').first();
+    await inputDiurno.waitFor({ state: 'visible', timeout: 20_000 });
+    const valorDiurno = await inputDiurno.inputValue();
+    assert.equal(valorDiurno, '2026-10-05T11:32',
+      `diurno 14:32Z deve virar 2026-10-05T11:32 em SP, veio ${valorDiurno}`);
+
+    // As duas marcas NÃO podem colidir (mesmo dia UTC, dias diferentes em SP)
+    assert.notEqual(valorMadrugada, valorDiurno,
+      '02:30Z e 14:32Z não podem colidir no mesmo valor de input');
+
+    // Round-trip: salva a oportunidade diurna sem alterar e recarrega
+    await page.click('button:has-text("Salvar campos da oportunidade")');
+    await page.waitForSelector('text=Campos da oportunidade atualizados', { timeout: 20_000 });
+
+    // Fecha e reabre para confirmar persistência
+    await page.click('button:has-text("Fechar oportunidade")');
+    await page.waitForSelector('#crm-detalhe', { state: 'detached', timeout: 20_000 });
+    await page.locator('button', { hasText: 'Abrir oportunidade' }).nth(1).click();
+    await page.waitForSelector('#crm-detalhe', { timeout: 30_000 });
+    await page.waitForSelector('#crm-tab-resumo', { timeout: 20_000 });
+    await page.click('#crm-tab-resumo');
+    await page.waitForSelector('#crm-painel-resumo', { timeout: 20_000 });
+
+    const inputDiurnoRecarregado = page.locator('input[type="datetime-local"]').first();
+    const valorDiurnoRecarregado = await inputDiurnoRecarregado.inputValue();
+    assert.equal(valorDiurnoRecarregado, '2026-10-05T11:32',
+      `round-trip deve preservar 2026-10-05T11:32, veio ${valorDiurnoRecarregado}`);
+
+    await capture(page, 'desktop-e3-crm-datetime-local');
+    await context.close();
+  } finally { /* o navegador é compartilhado e fechado no after() */ }
+});
+
+// ---------------------------------------------------------------------------
 // UX-PRO-06 — funil de oportunidades (/admin/crm): estados de leitura
 //
 // O que estes testes provam: uma atualização que falha NÃO apaga o funil já

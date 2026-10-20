@@ -143,10 +143,20 @@ test('UX-PRO-E3 varredura: as sete exibições usam o auxiliar e as colunas DATE
   assert.ok(fonte.includes('`Ciente desde ${opsDateTime(ack.acknowledged_at)}`'),
     'o selo de ciência precisa preservar o prefixo textual herdado');
 
-  // Resíduo declarado E3-CRM: formato de ENTRADA de formulário, família própria.
+  // E3-CRM: agora corrigido nesta fatia — usa crm-dates.mjs e não tem mais toISOString().slice(0, 16).
   const fonteCrm = await readFile(crm, 'utf8');
-  assert.ok(fonteCrm.includes('toISOString().slice(0, 16)'),
-    'E3-CRM precisa continuar fora desta fatia');
+  assert.match(fonteCrm, /from \"\.\.\/\.\.\/\.\.\/lib\/crm-dates\.mjs\"/,
+    'E3-CRM precisa importar crm-dates.mjs');
+  assert.ok(fonteCrm.includes('crmDateTimeForInput('),
+    'E3-CRM precisa usar crmDateTimeForInput na leitura');
+  assert.ok(fonteCrm.includes('crmDateTimeFromInput('),
+    'E3-CRM precisa usar crmDateTimeFromInput na escrita');
+  assert.ok(!fonteCrm.includes('toISOString().slice(0, 16)'),
+    'E3-CRM não pode mais usar toISOString().slice(0, 16)');
+  assert.ok(!fonteCrm.includes('new Date(form.next_action_date).toISOString()'),
+    'E3-CRM não pode mais usar new Date(...).toISOString() direto no save');
+  assert.ok(fonteCrm.includes('CRM_TIMEZONE_LABEL') || fonteCrm.includes('(America/Sao_Paulo)'),
+    'E3-CRM precisa ter rótulo de fuso visível');
 });
 
 test('UX-PRO-E3-R1 fallback de cobertura: 02:30Z e 14:32Z não colidem, viram dia em SP e preservam DATE sem conversão', () => {
