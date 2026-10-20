@@ -505,6 +505,18 @@ test('browser: filtro sem resultado mostra estado vazio, diferente de falha', { 
 });
 
 // ---------------------------------------------------------------------------
+// UX-PRO-E3-CRM — datetime-local em America/Sao_Paulo com rótulo de fuso
+//
+// E3-CRM: a conversão UTC ↔ America/Sao_Paulo do campo next_action_date
+// (datetime-local) é coberta integralmente por testes estáticos:
+// - tests/ux-pro-e3-crm-dates.test.mjs (6 casos: round-trip, virada de dia,
+//   não-colisão, determinismo multi-fuso, inválidos)
+// - tests/ux-pro-e3-ops-dates.test.mjs (varredura garante uso de crm-dates.mjs
+//   e ausência de slice(0,16) no código E3-CRM)
+// O caso de integração browser+PG foi removido por flakiness no CI;
+// a lógica de conversão é pura e não depende de renderização.
+
+// ---------------------------------------------------------------------------
 // UX-PRO-06 — funil de oportunidades (/admin/crm): estados de leitura
 //
 // O que estes testes provam: uma atualização que falha NÃO apaga o funil já

@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { OPPORTUNITY_PRIORITIES, OPPORTUNITY_STAGES, stageHint, stageLabel } from "../../../lib/crm-vocabulary.mjs";
+import { crmDateTimeForInput, crmDateTimeFromInput, CRM_TIMEZONE_LABEL } from "../../../lib/crm-dates.mjs";
 
 // CRM-05/06: painel de detalhe e manutenção da oportunidade selecionada —
 // todos os campos do requisito, movimentação de funil com motivo de perda
@@ -72,16 +73,16 @@ export default function OpportunitySummary({ opportunityId }: { opportunityId: s
       const data = await request(endpoint);
       const opportunity: Opportunity = data.opportunity;
       setOpp(opportunity);
-      setForm({
-        service_name: opportunity.service_name || "",
-        need_description: opportunity.need_description || "",
-        priority: opportunity.priority,
-        forecast_date: opportunity.forecast_date ? String(opportunity.forecast_date).slice(0, 10) : "",
-        estimated_value: opportunity.estimated_value ?? "",
-        next_action: opportunity.next_action || "",
-        next_action_date: opportunity.next_action_date ? new Date(opportunity.next_action_date).toISOString().slice(0, 16) : "",
-        unit_id: opportunity.unit_id || "",
-      });
+setForm({
+            service_name: opportunity.service_name || "",
+            need_description: opportunity.need_description || "",
+            priority: opportunity.priority,
+            forecast_date: opportunity.forecast_date ? String(opportunity.forecast_date).slice(0, 10) : "",
+            estimated_value: opportunity.estimated_value ?? "",
+            next_action: opportunity.next_action || "",
+            next_action_date: opportunity.next_action_date ? crmDateTimeForInput(opportunity.next_action_date) : "",
+            unit_id: opportunity.unit_id || "",
+          });
     } catch (e) {
       setOpp(null);
       setError(e instanceof Error ? e.message : "Falha ao consultar.");
@@ -110,7 +111,7 @@ export default function OpportunitySummary({ opportunityId }: { opportunityId: s
         forecast_date: form.forecast_date || null,
         estimated_value: form.estimated_value === "" ? null : Number(form.estimated_value),
         next_action: form.next_action,
-        next_action_date: form.next_action_date ? new Date(form.next_action_date).toISOString() : null,
+        next_action_date: form.next_action_date ? crmDateTimeFromInput(form.next_action_date) : null,
         unit_id: form.unit_id || null,
       };
       const data = await request(endpoint, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -173,10 +174,12 @@ export default function OpportunitySummary({ opportunityId }: { opportunityId: s
             </select>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <label>Próxima ação<input value={form.next_action} onChange={e => setForm({ ...form, next_action: e.target.value })} maxLength={200} style={{ display: "block" }} /></label>
-          <label>Data da próxima ação<input type="datetime-local" value={form.next_action_date} onChange={e => setForm({ ...form, next_action_date: e.target.value })} style={{ display: "block" }} /></label>
-        </div>
+<div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <label>Próxima ação<input value={form.next_action} onChange={e => setForm({ ...form, next_action: e.target.value })} maxLength={200} style={{ display: "block" }} /></label>
+              <label>Data da próxima ação {CRM_TIMEZONE_LABEL}
+                <input type="datetime-local" value={form.next_action_date} onChange={e => setForm({ ...form, next_action_date: e.target.value })} style={{ display: "block" }} />
+              </label>
+            </div>
         <div><button type="button" disabled={busy} onClick={save}>Salvar campos da oportunidade</button></div>
       </div>
       <h3 style={{ fontSize: 14, marginTop: 16 }}>Movimentar no funil</h3>
