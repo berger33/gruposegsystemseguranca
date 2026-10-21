@@ -175,23 +175,23 @@
   letter-spacing: .02em;
 }
 
-.stepActive {
+.steps li.stepActive {
   border-color: var(--blue) !important;
   color: var(--text);
   box-shadow: 0 6px 18px #1a5db21f;
 }
 
-.stepActive span {
+.steps li.stepActive span {
   background: var(--blue);
   color: #fff;
 }
 
-.stepDone {
+.steps li.stepDone {
   color: #3c6b4f;
   border-color: #cfe4d8;
 }
 
-.stepDone span {
+.steps li.stepDone span {
   background: #d9f0e4;
   color: #2f7a4d;
 }

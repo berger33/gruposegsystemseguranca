@@ -152,6 +152,22 @@ test('UX-PRO-09E PU3: textos medidos do simulador passam de 4,5:1 e números em 
   assert.equal(muted, '#5a7189', '--muted é token compartilhado: mudou, o gate inteiro do público precisa ser relido');
 });
 
+test('UX-PRO-09E PU5: estado ativo e concluído vencem a regra base do indicador', () => {
+  const active = simulatorRule('.steps li.stepActive');
+  const done = simulatorRule('.steps li.stepDone');
+  const activeMarker = simulatorRule('.steps li.stepActive span');
+  const doneMarker = simulatorRule('.steps li.stepDone span');
+
+  assert.equal(active.declarations.color, 'var(--text)');
+  assert.equal(active.declarations['border-color'], 'var(--blue) !important');
+  assert.equal(activeMarker.declarations.background, 'var(--blue)');
+  assert.equal(activeMarker.declarations.color, '#fff');
+  assert.equal(done.declarations.color, '#3c6b4f');
+  assert.equal(done.declarations['border-color'], '#cfe4d8');
+  assert.equal(doneMarker.declarations.background, '#d9f0e4');
+  assert.equal(doneMarker.declarations.color, '#2f7a4d');
+});
+
 test('UX-PRO-09E PU1: os dois blocos que estouravam o documento a 320 px quebram a palavra e mantêm o conteúdo', () => {
   const contato = source('src/app/contato/page.tsx');
   const faq = source('src/app/faq/page.tsx');
