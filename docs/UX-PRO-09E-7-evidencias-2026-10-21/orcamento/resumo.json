@@ -1,0 +1,966 @@
+{
+  "stage": "ux-pro-09e-7",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "route": "/orcamento",
+  "limitations": [
+    "Navegador chromium em win32; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/orcamento",
+      "viewport": "320x780",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\orcamento\\w320-day-orcamento.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/orcamento",
+      "viewport": "320x780",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\orcamento\\w320-night-orcamento.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/orcamento",
+      "viewport": "390x844",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\orcamento\\w390-day-orcamento.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/orcamento",
+      "viewport": "390x844",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\orcamento\\w390-night-orcamento.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/orcamento",
+      "viewport": "768x1024",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\orcamento\\w768-day-orcamento.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/orcamento",
+      "viewport": "768x1024",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\orcamento\\w768-night-orcamento.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/orcamento",
+      "viewport": "1440x900",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\orcamento\\w1440-day-orcamento.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/orcamento",
+      "viewport": "1440x900",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\orcamento\\w1440-night-orcamento.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 20
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    }
+  ]
+}

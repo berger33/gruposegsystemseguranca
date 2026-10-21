@@ -316,6 +316,32 @@ const STAGES = {
       outputDir: `${process.env.UX_EVIDENCE_09E_DIR || 'docs/UX-PRO-09E-evidencias-2026-10-16'}/${target.slug}`,
     })),
   },
+  // UX-PRO-09E-7 — probe textual executado em etapa opt-in e isolada. Este
+  // stage mantém as 14 rotas e os oito viewports da auditoria pública, mas
+  // escreve em diretório próprio e marca toda amostra em que o scanner rodou.
+  'ux-pro-09e-7': {
+    outputDir: process.env.UX_EVIDENCE_09E7_DIR || 'docs/UX-PRO-09E-7-evidencias-2026-10-21',
+    publicDiagnostic: true,
+    attributeTextOverflow: true,
+    probeTextOverflowWithoutDocumentOverflow: true,
+    reportTextOverflowProbe: true,
+    viewports: [320, 390, 768, 1440].flatMap(width => ['day', 'night'].map(theme => ({
+      name: `w${width}-${theme}`, width, height: width >= 768 ? (width === 768 ? 1024 : 900) : (width === 320 ? 780 : 844), theme,
+    }))),
+    targets: [
+      { route: '/', slug: 'home' }, { route: '/contato', slug: 'contato' },
+      { route: '/conteudos', slug: 'conteudos' }, { route: '/conteudos/diagnostico-sem-conteudo', slug: 'conteudo-dinamico' },
+      { route: '/faq', slug: 'faq' }, { route: '/orcamento', slug: 'orcamento' },
+      { route: '/pacotes', slug: 'pacotes' }, { route: '/privacidade', slug: 'privacidade' },
+      { route: '/proposta/aceite/diagnostico-token-invalido', slug: 'aceite-token-sintetico-invalido' },
+      { route: '/segmentos', slug: 'segmentos' }, { route: '/segmentos/condominio', slug: 'segmento-condominio' },
+      { route: '/servicos', slug: 'servicos' }, { route: '/servicos/Segurança%20Desarmada', slug: 'servico-seguranca-desarmada' },
+      { route: '/simulador', slug: 'simulador' },
+    ].map(target => ({
+      ...target,
+      outputDir: `${process.env.UX_EVIDENCE_09E7_DIR || 'docs/UX-PRO-09E-7-evidencias-2026-10-21'}/${target.slug}`,
+    })),
+  },
   // UX-PRO-09B — diagnóstico visual público, sem sessão e sem alteração de produto.
   'ux-pro-09b': {
     outputDir: 'docs/UX-PRO-09B-evidencias-2026-10-16',
@@ -637,6 +663,7 @@ try {
         page.setDefaultTimeout(45_000);
         page.setDefaultNavigationTimeout(90_000);
         let textOverflowCulprits = null;
+        let textOverflowCandidates = null;
         const problems = [];
         const expectedNavigations = [];
         // Recursos de terceiros (ex.: Google Fonts) não têm saída de rede neste
@@ -688,6 +715,40 @@ try {
           scrollWidth: document.documentElement.scrollWidth,
           clientWidth: document.documentElement.clientWidth,
         }));
+        if (plan.attributeTextOverflow && (plan.probeTextOverflowWithoutDocumentOverflow
+          || overflow.scrollWidth > overflow.clientWidth + 1)) {
+          // O scanner opt-in também registra páginas sem overflow do documento.
+          // Assim a captura distingue "medido sem ocorrência" de "não medido".
+          // Só promovemos a atribuição a problema quando há overflow global real.
+          const textCulprits = await page.evaluate(limit => {
+            const found = [];
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+            let node;
+            while ((node = walker.nextNode())) {
+              const owner = node.parentElement;
+              if (!owner) continue;
+              const style = getComputedStyle(owner);
+              if (style.visibility === 'hidden' || style.display === 'none') continue;
+              const range = document.createRange();
+              range.selectNodeContents(node);
+              for (const rect of range.getClientRects()) {
+                if (rect.width === 0 || rect.right <= limit + 1) continue;
+                found.push({
+                  selector: `${owner.tagName.toLowerCase()}${owner.className && typeof owner.className === 'string' && owner.className.trim() ? `.${owner.className.trim().split(/\s+/).join('.')}` : ''}`,
+                  right: Math.round(rect.right),
+                  width: Math.round(rect.width),
+                  fragment: (node.textContent || '').trim().slice(0, 48),
+                });
+                break;
+              }
+            }
+            return found.sort((a, b) => b.right - a.right).slice(0, 4);
+          }, overflow.clientWidth);
+          if (plan.reportTextOverflowProbe) textOverflowCandidates = textCulprits;
+          if (textCulprits.length && overflow.scrollWidth > overflow.clientWidth + 1) {
+            textOverflowCulprits = textCulprits;
+          }
+        }
         if (overflow.scrollWidth > overflow.clientWidth + 1) {
           // Nomear o culpado: sem isto a evidência diz "transborda" e não ajuda a corrigir.
           const culprits = await page.evaluate(limit => {
@@ -707,40 +768,8 @@ try {
           }, overflow.clientWidth);
           const detail = culprits.map(item => `${item.selector}@${item.right}px`).join(' , ') || 'elemento não identificado';
           problems.push(`rolagem horizontal do documento: ${overflow.scrollWidth} > ${overflow.clientWidth} (${detail})`);
-          // A 09E acrescenta a atribuição por execução de texto. O laço acima mede
-          // apenas retângulos de elementos, então uma palavra mais larga que a
-          // coluna (ex.: um e-mail sem espaço) estoura o documento sem que nenhum
-          // elemento tenha rect além do limite — foi assim que /faq ficou "sem
-          // culpado". Aqui cada nó de texto é medido pelo próprio Range de linha.
-          if (plan.attributeTextOverflow) {
-            const textCulprits = await page.evaluate(limit => {
-              const found = [];
-              const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-              let node;
-              while ((node = walker.nextNode())) {
-                const owner = node.parentElement;
-                if (!owner) continue;
-                const style = getComputedStyle(owner);
-                if (style.visibility === 'hidden' || style.display === 'none') continue;
-                const range = document.createRange();
-                range.selectNodeContents(node);
-                for (const rect of range.getClientRects()) {
-                  if (rect.width === 0 || rect.right <= limit + 1) continue;
-                  found.push({
-                    selector: `${owner.tagName.toLowerCase()}${owner.className && typeof owner.className === 'string' && owner.className.trim() ? `.${owner.className.trim().split(/\s+/).join('.')}` : ''}`,
-                    right: Math.round(rect.right),
-                    width: Math.round(rect.width),
-                    fragment: (node.textContent || '').trim().slice(0, 48),
-                  });
-                  break;
-                }
-              }
-              return found.sort((a, b) => b.right - a.right).slice(0, 4);
-            }, overflow.clientWidth);
-            if (textCulprits.length) {
-              problems.push(`overflow atribuído a execução de texto: ${textCulprits.map(item => `${item.selector} "${item.fragment}" rect=${item.width}px fim=${item.right}px`).join(' | ')}`);
-              textOverflowCulprits = textCulprits;
-            }
+          if (textOverflowCulprits?.length) {
+            problems.push(`overflow atribuído a execução de texto: ${textOverflowCulprits.map(item => `${item.selector} "${item.fragment}" rect=${item.width}px fim=${item.right}px`).join(' | ')}`);
           }
         }
 
@@ -847,6 +876,8 @@ try {
           ...(expectedNavigations.length ? { expectedNavigations } : {}),
           firstFocus: focus,
           firstFocusAttempts,
+          ...(plan.reportTextOverflowProbe ? { textOverflowProbed: true } : {}),
+          ...(plan.reportTextOverflowProbe ? { textOverflowCandidates } : {}),
           ...(textOverflowCulprits ? { textOverflowCulprits } : {}),
           ...measurements,
           problems,
