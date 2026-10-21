@@ -1,7 +1,7 @@
 # UX-PRO-09E PU4 — medição textual ampliada
 
-**Base:** `main` `fb174f93996944c0b11e64553b4dc81c64a90856`  
-**Escopo registrado antes do código:** [escopo PU4](UX-PRO-09E-PU4-ESCOPO-ANTES-2026-10-21.md), commit `5546d6d`.  
+**Base:** `main` `fb174f93996944c0b11e64553b4dc81c64a90856`
+**Escopo registrado antes do código:** [escopo PU4](UX-PRO-09E-PU4-ESCOPO-ANTES-2026-10-21.md), commit `5546d6d`.
 **Resultado:** ampliação aditiva do probe e captura das 14 rotas públicas do estágio 09E. Nenhum componente, cor, rota, contrato, dado ou fluxo do produto foi alterado.
 
 ## Antes e depois

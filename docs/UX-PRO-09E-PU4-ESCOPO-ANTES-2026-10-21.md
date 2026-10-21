@@ -1,7 +1,7 @@
 # UX-PRO-09E PU4 — escopo e validação (antes)
 
-**Base:** `origin/main` `fb174f93996944c0b11e64553b4dc81c64a90856`  
-**Superfície:** somente o coletor `scripts/ux-evidence-capture.mjs`, no estágio opt-in `ux-pro-09e`, e seus testes/documentos próprios.  
+**Base:** `origin/main` `fb174f93996944c0b11e64553b4dc81c64a90856`
+**Superfície:** somente o coletor `scripts/ux-evidence-capture.mjs`, no estágio opt-in `ux-pro-09e`, e seus testes/documentos próprios.
 **Objetivo:** medir texto visível em estados de rota realmente capturados para PU4, incluindo seletores hoje omitidos (`dt`, `span`, `footer`, `.field span`, `.hint`, `.error`), sem tratar falta de amostra como aprovação.
 
 ## Fronteira e riscos
