@@ -1,0 +1,1166 @@
+{
+  "stage": "ux-pro-09e-7",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "route": "/conteudos/diagnostico-sem-conteudo",
+  "limitations": [
+    "Navegador chromium em win32; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/conteudos/diagnostico-sem-conteudo",
+      "viewport": "320x780",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\conteudo-dinamico\\w320-day-conteudo-dinamico.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Conteúdos | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conteúdo"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 99,
+        "states": {
+          "loading": true,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdo",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Carregando…",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 6
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/conteudos/diagnostico-sem-conteudo",
+      "viewport": "320x780",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\conteudo-dinamico\\w320-night-conteudo-dinamico.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Conteúdos | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conteúdo"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 99,
+        "states": {
+          "loading": true,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdo",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Carregando…",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 6
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/conteudos/diagnostico-sem-conteudo",
+      "viewport": "390x844",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\conteudo-dinamico\\w390-day-conteudo-dinamico.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Conteúdos | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conteúdo"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 122,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdo",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Este conteúdo não está disponível.",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 6
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/conteudos/diagnostico-sem-conteudo",
+      "viewport": "390x844",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\conteudo-dinamico\\w390-night-conteudo-dinamico.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Conteúdos | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conteúdo"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 99,
+        "states": {
+          "loading": true,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdo",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Carregando…",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 6
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/conteudos/diagnostico-sem-conteudo",
+      "viewport": "768x1024",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\conteudo-dinamico\\w768-day-conteudo-dinamico.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Conteúdos | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conteúdo"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 122,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdo",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Este conteúdo não está disponível.",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 6
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/conteudos/diagnostico-sem-conteudo",
+      "viewport": "768x1024",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\conteudo-dinamico\\w768-night-conteudo-dinamico.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Conteúdos | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conteúdo"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 99,
+        "states": {
+          "loading": true,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdo",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Carregando…",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 6
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/conteudos/diagnostico-sem-conteudo",
+      "viewport": "1440x900",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\conteudo-dinamico\\w1440-day-conteudo-dinamico.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Conteúdos | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conteúdo"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 99,
+        "states": {
+          "loading": true,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdo",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Carregando…",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 6
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/conteudos/diagnostico-sem-conteudo",
+      "viewport": "1440x900",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\conteudo-dinamico\\w1440-night-conteudo-dinamico.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Conteúdos | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conteúdo"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 122,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdo",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Este conteúdo não está disponível.",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 6
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    }
+  ]
+}

@@ -33,3 +33,7 @@ O capturador é `scripts/ux-evidence-capture.mjs`; `ux-pro-09e` atualmente confi
 4. Preservar os hashes de `next-env.d.ts` e `tsconfig.json`; reportar separadamente CI, inspeção estática, evidência automatizada e validação manual.
 
 **Antes do código:** o scanner de texto opt-in só é executado quando `scrollWidth > clientWidth + 1`; portanto, amostras sem overflow global não produzem evidência de que a inspeção de texto ocorreu. Nenhuma correção de produto é presumida.
+
+## Reavaliação da validação do inventário
+
+O plano inicial previa não regenerar os CSVs porque não haveria mudança de rota. Depois da captura, `node scripts/ux-pro-00-inventory.mjs --check` apontou corretamente a nova evidência `ux-pro-09e-7` em 10 linhas públicas. O gerador lê `resumo.json` por rota e a matriz é a fonte de cobertura; por isso, o plano foi ajustado para regenerar os dois CSVs reproduzíveis e revisar o diff. O inventário de rotas continua com 100 rotas; não se alterou o gerador nem qualquer rota. A regeneração foi necessária para que as capturas não ficassem fora da matriz.

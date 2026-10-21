@@ -99,7 +99,8 @@
     "test:ux-continuity:pg": "node scripts/qa-ux-continuity-postgres.mjs",
     "test:ux-continuity-client:pg": "node scripts/qa-ux-continuity-client-postgres.mjs",
     "test:ux-pro-09e-pu4": "node --test tests/ux-pro-09e-pu4.test.mjs",
-    "test:ux-pro-09e-pu6": "node --test tests/ux-pro-09e-pu6.test.mjs"
+    "test:ux-pro-09e-pu6": "node --test tests/ux-pro-09e-pu6.test.mjs",
+    "test:ux-pro-09e-7": "node --test tests/ux-pro-09e-7-text-overflow.test.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",

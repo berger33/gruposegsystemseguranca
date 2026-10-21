@@ -1,0 +1,478 @@
+{
+  "stage": "ux-pro-09e-7",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "route": "/segmentos",
+  "limitations": [
+    "Navegador chromium em win32; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/segmentos",
+      "viewport": "320x780",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\segmentos\\w320-day-segmentos.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Segmentos — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Fale sobre seu espaço"
+          },
+          {
+            "level": 2,
+            "text": "Condomínios"
+          },
+          {
+            "level": 2,
+            "text": "Empresas e comércios"
+          },
+          {
+            "level": 2,
+            "text": "Indústrias"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 465,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 17,
+          "resolvedCount": 0,
+          "indeterminateCount": 17,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 5
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Condomínios",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/segmentos",
+      "viewport": "320x780",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\segmentos\\w320-night-segmentos.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Segmentos — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Fale sobre seu espaço"
+          },
+          {
+            "level": 2,
+            "text": "Condomínios"
+          },
+          {
+            "level": 2,
+            "text": "Empresas e comércios"
+          },
+          {
+            "level": 2,
+            "text": "Indústrias"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 465,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 17,
+          "resolvedCount": 0,
+          "indeterminateCount": 17,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 5
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Condomínios",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/segmentos",
+      "viewport": "390x844",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\segmentos\\w390-day-segmentos.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Segmentos — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Fale sobre seu espaço"
+          },
+          {
+            "level": 2,
+            "text": "Condomínios"
+          },
+          {
+            "level": 2,
+            "text": "Empresas e comércios"
+          },
+          {
+            "level": 2,
+            "text": "Indústrias"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 465,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 17,
+          "resolvedCount": 0,
+          "indeterminateCount": 17,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 5
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Condomínios",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/segmentos",
+      "viewport": "390x844",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\segmentos\\w390-night-segmentos.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Segmentos — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Fale sobre seu espaço"
+          },
+          {
+            "level": 2,
+            "text": "Condomínios"
+          },
+          {
+            "level": 2,
+            "text": "Empresas e comércios"
+          },
+          {
+            "level": 2,
+            "text": "Indústrias"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 465,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 17,
+          "resolvedCount": 0,
+          "indeterminateCount": 17,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 5
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Condomínios",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/segmentos",
+      "viewport": "768x1024",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\segmentos\\w768-day-segmentos.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Segmentos — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Fale sobre seu espaço"
+          },
+          {
+            "level": 2,
+            "text": "Condomínios"
+          },
+          {
+            "level": 2,
+            "text": "Empresas e comércios"
+          },
+          {
+            "level": 2,
+            "text": "Indústrias"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 465,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 17,
+          "resolvedCount": 0,
+          "indeterminateCount": 17,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 5
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Condomínios",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/segmentos",
+      "viewport": "768x1024",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\segmentos\\w768-night-segmentos.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Segmentos — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Fale sobre seu espaço"
+          },
+          {
+            "level": 2,
+            "text": "Condomínios"
+          },
+          {
+            "level": 2,
+            "text": "Empresas e comércios"
+          },
+          {
+            "level": 2,
+            "text": "Indústrias"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 465,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 17,
+          "resolvedCount": 0,
+          "indeterminateCount": 17,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 5
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Condomínios",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/segmentos",
+      "viewport": "1440x900",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\segmentos\\w1440-day-segmentos.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Segmentos — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Fale sobre seu espaço"
+          },
+          {
+            "level": 2,
+            "text": "Condomínios"
+          },
+          {
+            "level": 2,
+            "text": "Empresas e comércios"
+          },
+          {
+            "level": 2,
+            "text": "Indústrias"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 465,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 17,
+          "resolvedCount": 0,
+          "indeterminateCount": 17,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 5
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Condomínios",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e-7",
+      "route": "/segmentos",
+      "viewport": "1440x900",
+      "screenshot": "docs\\UX-PRO-09E-7-evidencias-2026-10-21\\segmentos\\w1440-night-segmentos.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Segmentos — Grupo SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Fale sobre seu espaço"
+          },
+          {
+            "level": 2,
+            "text": "Condomínios"
+          },
+          {
+            "level": 2,
+            "text": "Empresas e comércios"
+          },
+          {
+            "level": 2,
+            "text": "Indústrias"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 465,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 17,
+          "resolvedCount": 0,
+          "indeterminateCount": 17,
+          "under45": [],
+          "lowest": []
+        },
+        "focusables": 5
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Condomínios",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "textOverflowProbed": true,
+      "textOverflowCandidates": [],
+      "problems": [],
+      "externalBlocked": []
+    }
+  ]
+}
