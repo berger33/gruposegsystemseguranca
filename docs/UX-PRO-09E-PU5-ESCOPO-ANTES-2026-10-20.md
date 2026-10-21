@@ -1,6 +1,6 @@
 # UX-PRO-09E PU5 — estados de etapa no simulador público
 
-**Data:** 21/10/2026  
+**Data:** 20/10/2026  
 **Base:** `origin/main` `9eff20e6a3e48d62e6ccc8fe626a82ec380d5097`  
 **Escopo:** `/simulador`, somente os estilos dos estados ativo e concluído do indicador de etapas.
 
