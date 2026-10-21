@@ -62,6 +62,7 @@ const postgres = new EmbeddedPostgres({
   user: "seg_qa",
   password,
   persistent: false,
+  initdbFlags: ["--encoding=UTF8"],
   postgresFlags: ["-c", "listen_addresses=127.0.0.1"],
   onLog: () => {},
   onError: (error) => console.error("QA_PG_ENGINE_ERROR", String(error).replaceAll(password, "[redacted]").slice(0, 500)),
