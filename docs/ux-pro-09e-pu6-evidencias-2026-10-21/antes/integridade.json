@@ -1,0 +1,101 @@
+{
+  "summarySha256": "1f8812a071ceceae835274b82d0bd3b0d996de30f8902eb1cebbc455227eb8eb",
+  "screenshots": [
+    {
+      "path": "w320-light-step1.png",
+      "sha256": "5bc494e2f939ea2181346b5d3617fbce0f1942918cf6c6b17391abb1088d0ae9"
+    },
+    {
+      "path": "w320-light-step2.png",
+      "sha256": "98dbcfe626dd7569c441f859e44790d445712e6b83a39c59064b0ef3f0a924c8"
+    },
+    {
+      "path": "w320-light-step3.png",
+      "sha256": "7fee528e8408ade76218c79249c564bdd7f8200812d15c8e63e615dd79b0bcc1"
+    },
+    {
+      "path": "w320-dark-step1.png",
+      "sha256": "5bc494e2f939ea2181346b5d3617fbce0f1942918cf6c6b17391abb1088d0ae9"
+    },
+    {
+      "path": "w320-dark-step2.png",
+      "sha256": "5a9b9a829fe0afd30ba940ce9d7c55d81c827f00e7252ebdc71d33cd9a466d63"
+    },
+    {
+      "path": "w320-dark-step3.png",
+      "sha256": "e008a4a6614f0f560920f868b9fedf44dabae92cb57cfc94e2ff7011051d73c9"
+    },
+    {
+      "path": "w390-light-step1.png",
+      "sha256": "3e42894c54c6c465438b0a705d21365d858d7d59e6333be5417495b995fc23dc"
+    },
+    {
+      "path": "w390-light-step2.png",
+      "sha256": "2aaa76e894ef3ba455b8c16d16ce785b06115cd5d4e47ebe972fba45e26a7eb1"
+    },
+    {
+      "path": "w390-light-step3.png",
+      "sha256": "bd57277d34d1114ee03c0f9ae5791267b09ffbaa949631ecf892027693353b26"
+    },
+    {
+      "path": "w390-dark-step1.png",
+      "sha256": "3e42894c54c6c465438b0a705d21365d858d7d59e6333be5417495b995fc23dc"
+    },
+    {
+      "path": "w390-dark-step2.png",
+      "sha256": "2aaa76e894ef3ba455b8c16d16ce785b06115cd5d4e47ebe972fba45e26a7eb1"
+    },
+    {
+      "path": "w390-dark-step3.png",
+      "sha256": "a8b4768a13fbc6b4678e41b6ac557bb3afb844e6286b2bcf6065d9799fa334d9"
+    },
+    {
+      "path": "w768-light-step1.png",
+      "sha256": "369b4e74be53fa04ba72bf56f67ba5c5f3079a3c0204679b4cf6f52aa2682fe4"
+    },
+    {
+      "path": "w768-light-step2.png",
+      "sha256": "449ab2eeef8d02eb0a1afc45cb12c1303c9b50179403d3660cbcd945a605693b"
+    },
+    {
+      "path": "w768-light-step3.png",
+      "sha256": "13d15e9c1955f78b46d023c2114e3220653b786d4fb18a81e54f82ccc4195dee"
+    },
+    {
+      "path": "w768-dark-step1.png",
+      "sha256": "369b4e74be53fa04ba72bf56f67ba5c5f3079a3c0204679b4cf6f52aa2682fe4"
+    },
+    {
+      "path": "w768-dark-step2.png",
+      "sha256": "8603cd4fb3f86e1a8bb17a9fd77e48ceac035b2901db730a0a69dbada055dab1"
+    },
+    {
+      "path": "w768-dark-step3.png",
+      "sha256": "03971bbf376ee8bd528d59952a7c137171b84499cfd45a3261846a19d6a0eada"
+    },
+    {
+      "path": "w1440-light-step1.png",
+      "sha256": "870be1dfacc6c055a5635a3aaedbb6a951fb9b77665341d9380b09f23bcf1b2d"
+    },
+    {
+      "path": "w1440-light-step2.png",
+      "sha256": "e1aa017c74adf951ffb0557f7c0ffae95663cd24087bea971b5cf68a52f669a5"
+    },
+    {
+      "path": "w1440-light-step3.png",
+      "sha256": "f1c81fe035e06fa075390cb22c8c24044e8eff34c7981ba4f8eab8ffc66e5a02"
+    },
+    {
+      "path": "w1440-dark-step1.png",
+      "sha256": "870be1dfacc6c055a5635a3aaedbb6a951fb9b77665341d9380b09f23bcf1b2d"
+    },
+    {
+      "path": "w1440-dark-step2.png",
+      "sha256": "904bdce262fa54dbbb3e2323e282a7efa810c9acf0593475eb8f3372c00854fb"
+    },
+    {
+      "path": "w1440-dark-step3.png",
+      "sha256": "f1c81fe035e06fa075390cb22c8c24044e8eff34c7981ba4f8eab8ffc66e5a02"
+    }
+  ]
+}
