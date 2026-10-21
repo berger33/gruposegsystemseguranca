@@ -1,0 +1,65 @@
+{
+  "scope": "UX-PRO-09E PU5",
+  "route": "/simulador",
+  "browser": "Microsoft Edge via Playwright, headless, local production build",
+  "keyboard": {
+    "tabFocus": {
+      "tag": "A",
+      "text": "SGRUPO SEG SYSTEMSEGURANÇA INTEGRADA",
+      "outline": "solid"
+    },
+    "enterAdvancedStep": true
+  },
+  "before": {
+    "firstClass": "Simulator-module__Eqzsuq__stepActive",
+    "firstColor": "rgb(17, 47, 82)",
+    "firstBorder": "rgb(26, 93, 178)",
+    "firstMarkerBg": "rgb(26, 93, 178)",
+    "secondClass": "",
+    "secondColor": "rgb(90, 113, 137)",
+    "secondBorder": "rgb(220, 231, 240)",
+    "secondMarkerBg": "rgb(238, 244, 250)"
+  },
+  "after": {
+    "firstClass": "Simulator-module__Eqzsuq__stepDone",
+    "firstColor": "rgb(60, 107, 79)",
+    "firstBorder": "rgb(207, 228, 216)",
+    "firstMarkerBg": "rgb(217, 240, 228)",
+    "secondClass": "Simulator-module__Eqzsuq__stepActive",
+    "secondColor": "rgb(17, 47, 82)",
+    "secondBorder": "rgb(26, 93, 178)",
+    "secondMarkerBg": "rgb(26, 93, 178)"
+  },
+  "initialOverflow": {
+    "scroll": 390,
+    "client": 390
+  },
+  "viewportMetrics": [
+    {
+      "width": 320,
+      "scroll": 320,
+      "client": 320
+    },
+    {
+      "width": 390,
+      "scroll": 390,
+      "client": 390
+    },
+    {
+      "width": 768,
+      "scroll": 768,
+      "client": 768
+    },
+    {
+      "width": 1440,
+      "scroll": 1440,
+      "client": 1440
+    }
+  ],
+  "pageErrors": [],
+  "consoleErrors": [],
+  "limitations": [
+    "Automated browser evidence only; no human manual acceptance is claimed.",
+    "The public simulator has no application theme toggle; day/night comparison is not applicable on this route."
+  ]
+}
