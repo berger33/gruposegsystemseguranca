@@ -1,0 +1,1941 @@
+{
+  "mainSha": "acb4d7f3dfa3cb14eb214821fc6a4357b7e0dbe6",
+  "runtimeBranch": "arena/ux-pro-09e-pu4-20261021",
+  "runtimeHead": "d34c586b54a773f7f6e19fca1c75767a9cf2dadf",
+  "sameBlobs": [
+    "src/components/Layout09.tsx",
+    "src/components/Layout09.module.css",
+    "src/components/SiteVisualRenderer.tsx",
+    "src/app/layout-preview/page.tsx"
+  ],
+  "method": "Automated Google Chrome headless via Playwright on mounted route; local-only selection clicks to reach stages 2 and 3; no form submission, API write, or layout publication.",
+  "results": [
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 320,
+        "height": 900
+      },
+      "colorScheme": "light",
+      "step": 1,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 320,
+        "height": 900,
+        "documentWidth": 320,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 53,
+            "y": 727.125,
+            "width": 26.109375,
+            "height": 8
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": false,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 150.578125,
+            "y": 727.125,
+            "width": 41.5,
+            "height": 8
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": false,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 263.546875,
+            "y": 727.125,
+            "width": 30.453125,
+            "height": 8
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w320-light-step1.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 320,
+        "height": 900
+      },
+      "colorScheme": "light",
+      "step": 2,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 320,
+        "height": 900,
+        "documentWidth": 320,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 53,
+            "y": 134.125,
+            "width": 26.109375,
+            "height": 8
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 150.578125,
+            "y": 134.125,
+            "width": 41.5,
+            "height": 8
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": false,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 263.546875,
+            "y": 134.125,
+            "width": 30.453125,
+            "height": 8
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w320-light-step2.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 320,
+        "height": 900
+      },
+      "colorScheme": "light",
+      "step": 3,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 320,
+        "height": 900,
+        "documentWidth": 320,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 53,
+            "y": 134.125,
+            "width": 26.109375,
+            "height": 8
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 150.578125,
+            "y": 134.125,
+            "width": 41.5,
+            "height": 8
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 263.546875,
+            "y": 134.125,
+            "width": 30.453125,
+            "height": 8
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w320-light-step3.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 320,
+        "height": 900
+      },
+      "colorScheme": "dark",
+      "step": 1,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 320,
+        "height": 900,
+        "documentWidth": 320,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 53,
+            "y": 727.125,
+            "width": 26.109375,
+            "height": 8
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": false,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 150.578125,
+            "y": 727.125,
+            "width": 41.5,
+            "height": 8
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": false,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 263.546875,
+            "y": 727.125,
+            "width": 30.453125,
+            "height": 8
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w320-dark-step1.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 320,
+        "height": 900
+      },
+      "colorScheme": "dark",
+      "step": 2,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 320,
+        "height": 900,
+        "documentWidth": 320,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 53,
+            "y": 134.125,
+            "width": 26.109375,
+            "height": 8
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 150.578125,
+            "y": 134.125,
+            "width": 41.5,
+            "height": 8
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": false,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 263.546875,
+            "y": 134.125,
+            "width": 30.453125,
+            "height": 8
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w320-dark-step2.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 320,
+        "height": 900
+      },
+      "colorScheme": "dark",
+      "step": 3,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 320,
+        "height": 900,
+        "documentWidth": 320,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 53,
+            "y": 134.125,
+            "width": 26.109375,
+            "height": 8
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 150.578125,
+            "y": 134.125,
+            "width": 41.5,
+            "height": 8
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 263.546875,
+            "y": 134.125,
+            "width": 30.453125,
+            "height": 8
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w320-dark-step3.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "colorScheme": "light",
+      "step": 1,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 390,
+        "height": 900,
+        "documentWidth": 390,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 53,
+            "y": 738.3125,
+            "width": 26.109375,
+            "height": 8
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": false,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 185.578125,
+            "y": 738.3125,
+            "width": 41.5,
+            "height": 8
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": false,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 333.546875,
+            "y": 738.3125,
+            "width": 30.453125,
+            "height": 8
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w390-light-step1.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "colorScheme": "light",
+      "step": 2,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 390,
+        "height": 900,
+        "documentWidth": 390,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 53,
+            "y": 133.3125,
+            "width": 26.109375,
+            "height": 8
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 185.578125,
+            "y": 133.3125,
+            "width": 41.5,
+            "height": 8
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": false,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 333.546875,
+            "y": 133.3125,
+            "width": 30.453125,
+            "height": 8
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w390-light-step2.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "colorScheme": "light",
+      "step": 3,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 390,
+        "height": 900,
+        "documentWidth": 390,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 53,
+            "y": 133.3125,
+            "width": 26.109375,
+            "height": 8
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 185.578125,
+            "y": 133.3125,
+            "width": 41.5,
+            "height": 8
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 333.546875,
+            "y": 133.3125,
+            "width": 30.453125,
+            "height": 8
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w390-light-step3.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "colorScheme": "dark",
+      "step": 1,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 390,
+        "height": 900,
+        "documentWidth": 390,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 53,
+            "y": 738.3125,
+            "width": 26.109375,
+            "height": 8
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": false,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 185.578125,
+            "y": 738.3125,
+            "width": 41.5,
+            "height": 8
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": false,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 333.546875,
+            "y": 738.3125,
+            "width": 30.453125,
+            "height": 8
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w390-dark-step1.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "colorScheme": "dark",
+      "step": 2,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 390,
+        "height": 900,
+        "documentWidth": 390,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 53,
+            "y": 133.3125,
+            "width": 26.109375,
+            "height": 8
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 185.578125,
+            "y": 133.3125,
+            "width": 41.5,
+            "height": 8
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": false,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 333.546875,
+            "y": 133.3125,
+            "width": 30.453125,
+            "height": 8
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w390-dark-step2.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "colorScheme": "dark",
+      "step": 3,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 390,
+        "height": 900,
+        "documentWidth": 390,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 53,
+            "y": 133.3125,
+            "width": 26.109375,
+            "height": 8
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 185.578125,
+            "y": 133.3125,
+            "width": 41.5,
+            "height": 8
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": true,
+          "labelFontSize": "5px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "6px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 333.546875,
+            "y": 133.3125,
+            "width": 30.453125,
+            "height": 8
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w390-dark-step3.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "colorScheme": "light",
+      "step": 1,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 768,
+        "height": 900,
+        "documentWidth": 768,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 82.03125,
+            "y": 731.921875,
+            "width": 30.328125,
+            "height": 9
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": false,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 243.953125,
+            "y": 731.921875,
+            "width": 47.203125,
+            "height": 9
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": false,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 422.734375,
+            "y": 731.921875,
+            "width": 38.046875,
+            "height": 9
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w768-light-step1.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "colorScheme": "light",
+      "step": 2,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 768,
+        "height": 900,
+        "documentWidth": 768,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 82.03125,
+            "y": 239.921875,
+            "width": 30.328125,
+            "height": 9
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 243.953125,
+            "y": 239.921875,
+            "width": 47.203125,
+            "height": 9
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": false,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 422.734375,
+            "y": 239.921875,
+            "width": 38.046875,
+            "height": 9
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w768-light-step2.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "colorScheme": "light",
+      "step": 3,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 768,
+        "height": 900,
+        "documentWidth": 768,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 82.03125,
+            "y": 239.921875,
+            "width": 30.328125,
+            "height": 9
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 243.953125,
+            "y": 239.921875,
+            "width": 47.203125,
+            "height": 9
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 422.734375,
+            "y": 239.921875,
+            "width": 38.046875,
+            "height": 9
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w768-light-step3.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "colorScheme": "dark",
+      "step": 1,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 768,
+        "height": 900,
+        "documentWidth": 768,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 82.03125,
+            "y": 731.921875,
+            "width": 30.328125,
+            "height": 9
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": false,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 243.953125,
+            "y": 731.921875,
+            "width": 47.203125,
+            "height": 9
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": false,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 422.734375,
+            "y": 731.921875,
+            "width": 38.046875,
+            "height": 9
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w768-dark-step1.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "colorScheme": "dark",
+      "step": 2,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 768,
+        "height": 900,
+        "documentWidth": 768,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 82.03125,
+            "y": 239.921875,
+            "width": 30.328125,
+            "height": 9
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 243.953125,
+            "y": 239.921875,
+            "width": 47.203125,
+            "height": 9
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": false,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 422.734375,
+            "y": 239.921875,
+            "width": 38.046875,
+            "height": 9
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w768-dark-step2.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "colorScheme": "dark",
+      "step": 3,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 768,
+        "height": 900,
+        "documentWidth": 768,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 82.03125,
+            "y": 239.921875,
+            "width": 30.328125,
+            "height": 9
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 243.953125,
+            "y": 239.921875,
+            "width": 47.203125,
+            "height": 9
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 422.734375,
+            "y": 239.921875,
+            "width": 38.046875,
+            "height": 9
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w768-dark-step3.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "colorScheme": "light",
+      "step": 1,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1440,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 260,
+            "y": 742.484375,
+            "width": 30.328125,
+            "height": 9
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": false,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 545.546875,
+            "y": 742.484375,
+            "width": 47.203125,
+            "height": 9
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": false,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 847.96875,
+            "y": 742.484375,
+            "width": 38.046875,
+            "height": 9
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w1440-light-step1.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "colorScheme": "light",
+      "step": 2,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1440,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 260,
+            "y": 213.484375,
+            "width": 30.328125,
+            "height": 9
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 545.546875,
+            "y": 213.484375,
+            "width": 47.203125,
+            "height": 9
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": false,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 847.96875,
+            "y": 213.484375,
+            "width": 38.046875,
+            "height": 9
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w1440-light-step2.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "colorScheme": "light",
+      "step": 3,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1440,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 260,
+            "y": 213.484375,
+            "width": 30.328125,
+            "height": 9
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 545.546875,
+            "y": 213.484375,
+            "width": 47.203125,
+            "height": 9
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 847.96875,
+            "y": 213.484375,
+            "width": 38.046875,
+            "height": 9
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w1440-light-step3.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "colorScheme": "dark",
+      "step": 1,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1440,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 260,
+            "y": 742.484375,
+            "width": 30.328125,
+            "height": 9
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": false,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 545.546875,
+            "y": 742.484375,
+            "width": 47.203125,
+            "height": 9
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": false,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 847.96875,
+            "y": 742.484375,
+            "width": 38.046875,
+            "height": 9
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w1440-dark-step1.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "colorScheme": "dark",
+      "step": 2,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1440,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 260,
+            "y": 213.484375,
+            "width": 30.328125,
+            "height": 9
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 545.546875,
+            "y": 213.484375,
+            "width": 47.203125,
+            "height": 9
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": false,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(154, 171, 186)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 2.36,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(154, 171, 186)",
+          "numberBackground": "rgb(255, 255, 255)",
+          "numberRatio": 2.36,
+          "rect": {
+            "x": 847.96875,
+            "y": 213.484375,
+            "width": 38.046875,
+            "height": 9
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w1440-dark-step2.png"
+    },
+    {
+      "route": "/layout-preview?visual=09",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "colorScheme": "dark",
+      "step": 3,
+      "httpStatus": 200,
+      "dimensions": {
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1440,
+        "overflow": false
+      },
+      "labels": [
+        {
+          "index": 1,
+          "label": "ESPAÇO",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 260,
+            "y": 213.484375,
+            "width": 30.328125,
+            "height": 9
+          }
+        },
+        {
+          "index": 2,
+          "label": "INTERESSES",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 545.546875,
+            "y": 213.484375,
+            "width": 47.203125,
+            "height": 9
+          }
+        },
+        {
+          "index": 3,
+          "label": "CONTATO",
+          "active": true,
+          "labelFontSize": "6px",
+          "labelFontWeight": "800",
+          "labelColor": "rgb(34, 102, 201)",
+          "labelBackground": "rgb(255, 255, 255)",
+          "labelRatio": 5.51,
+          "numberFontSize": "7px",
+          "numberColor": "rgb(255, 255, 255)",
+          "numberBackground": "rgb(34, 102, 201)",
+          "numberRatio": 5.51,
+          "rect": {
+            "x": 847.96875,
+            "y": 213.484375,
+            "width": 38.046875,
+            "height": 9
+          }
+        }
+      ],
+      "browserErrors": [],
+      "screenshot": "w1440-dark-step3.png"
+    }
+  ],
+  "limitations": [
+    "O Chrome mediu a rota direta /layout-preview?visual=09. A galeria autenticada /admin/aparencia não foi aberta com perfil sintético; a inspeção estática confirma que o iframe da galeria aponta para essa mesma rota e para o Layout09 montado.",
+    "Claro/escuro corresponde a prefers-color-scheme do navegador; não é alternância de tema do produto. O Layout 09 não troca a paleta por essa preferência.",
+    "Capturas são automação headless e incluem o indicador de desenvolvimento do Next.js fora da aplicação. Métricas foram lidas do DOM montado, não da sobreposição.",
+    "Não houve percurso manual de teclado, leitor de tela, zoom, homologação ou aceite humano. Nenhum formulário foi submetido nem houve escrita em API ou publicação de layout.",
+    "O servidor local PGlite emitiu logs repetidos L04_ERROR code 42P01 durante a captura. A causa do log não foi atribuída à prévia; as 24 navegações foram HTTP 200 sem pageerror do browser. O registro permanece como observação do ambiente."
+  ]
+}

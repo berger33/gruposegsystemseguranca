@@ -61,7 +61,7 @@
 .briefingCard { max-width: 1060px; min-height: 560px; display: grid; grid-template-columns: minmax(0, 1.38fr) minmax(250px, .62fr); margin: 0 auto; background: white; border: 1px solid #dbe6ef; border-radius: 7px; box-shadow: 0 18px 48px #173e660e; }
 .wizardMain { min-width: 0; padding: 27px 35px 30px; }
 .progress { display: flex; justify-content: space-between; gap: 12px; }
-.progressStep { display: flex; align-items: center; gap: 8px; color: #9aabba; }
+.progressStep { display: flex; align-items: center; gap: 8px; color: var(--navy-2); }
 .progressStep > span { width: 26px; height: 26px; display: grid; place-items: center; border: 1px solid #c8d7e2; border-radius: 50%; font-size: 7px; font-weight: 800; }
 .progressStep small { font-size: 6px; font-weight: 800; letter-spacing: .12em; }
 .progressActive { color: var(--blue); }
