@@ -1,0 +1,177 @@
+{
+  "stage": "ux-pro-04-pendencias",
+  "generatedAt": "2026-10-21T15:45:29.778Z",
+  "baseUrl": "http://127.0.0.1:3400",
+  "method": "Automated Playwright Chromium browser with synthetic API fixtures; mocked staff session; no product records written; not human review or acceptance.",
+  "viewports": [
+    {
+      "name": "320",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "name": "390",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "768",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "name": "1440",
+      "width": 1440,
+      "height": 900
+    }
+  ],
+  "routes": [
+    {
+      "viewport": "320",
+      "theme": "day",
+      "status": 200,
+      "screenshot": "pendencias-320-dia.png",
+      "width": 320,
+      "documentWidth": 320,
+      "horizontalOverflow": false,
+      "focused": "BODY",
+      "priorityOrder": [
+        "Tarefa crítica de conformidade",
+        "Plano de ação de compliance em atraso"
+      ],
+      "route": "/admin/pendencias"
+    },
+    {
+      "viewport": "320",
+      "theme": "night",
+      "status": 200,
+      "screenshot": "pendencias-320-noite.png",
+      "width": 320,
+      "documentWidth": 320,
+      "horizontalOverflow": false,
+      "route": "/admin/pendencias"
+    },
+    {
+      "viewport": "390",
+      "theme": "day",
+      "status": 200,
+      "screenshot": "pendencias-390-dia.png",
+      "width": 390,
+      "documentWidth": 390,
+      "horizontalOverflow": false,
+      "focused": "BODY",
+      "priorityOrder": [
+        "Tarefa crítica de conformidade",
+        "Plano de ação de compliance em atraso"
+      ],
+      "route": "/admin/pendencias"
+    },
+    {
+      "viewport": "390",
+      "theme": "night",
+      "status": 200,
+      "screenshot": "pendencias-390-noite.png",
+      "width": 390,
+      "documentWidth": 390,
+      "horizontalOverflow": false,
+      "route": "/admin/pendencias"
+    },
+    {
+      "viewport": "390",
+      "theme": "noite",
+      "state": "falha de releitura; dado anterior preservado",
+      "screenshot": "pendencias-390-noite-falha-releitura.png",
+      "route": "/admin/pendencias",
+      "requestedTheme": "dark"
+    },
+    {
+      "viewport": "390",
+      "theme": "dia",
+      "percursoTeclado": [
+        "Justificativa do arquivamento focada",
+        "Tab → Marcar como lida com contorno de foco visível"
+      ],
+      "screenshot": "pendencias-390-teclado.png",
+      "activeTag": "BUTTON",
+      "activeText": "Marcar como lida",
+      "outlineStyle": "solid",
+      "outlineWidth": "3px",
+      "route": "/admin/pendencias",
+      "requestedTheme": "light"
+    },
+    {
+      "viewport": "768",
+      "theme": "day",
+      "status": 200,
+      "screenshot": "pendencias-768-dia.png",
+      "width": 768,
+      "documentWidth": 768,
+      "horizontalOverflow": false,
+      "focused": "BODY",
+      "priorityOrder": [
+        "Tarefa crítica de conformidade",
+        "Plano de ação de compliance em atraso"
+      ],
+      "route": "/admin/pendencias"
+    },
+    {
+      "viewport": "768",
+      "theme": "night",
+      "status": 200,
+      "screenshot": "pendencias-768-noite.png",
+      "width": 768,
+      "documentWidth": 768,
+      "horizontalOverflow": false,
+      "route": "/admin/pendencias"
+    },
+    {
+      "viewport": "1440",
+      "theme": "day",
+      "status": 200,
+      "screenshot": "pendencias-1440-dia.png",
+      "width": 1440,
+      "documentWidth": 1440,
+      "horizontalOverflow": false,
+      "focused": "BODY",
+      "priorityOrder": [
+        "Tarefa crítica de conformidade",
+        "Plano de ação de compliance em atraso"
+      ],
+      "route": "/admin/pendencias"
+    },
+    {
+      "viewport": "1440",
+      "theme": "night",
+      "status": 200,
+      "screenshot": "pendencias-1440-noite.png",
+      "width": 1440,
+      "documentWidth": 1440,
+      "horizontalOverflow": false,
+      "route": "/admin/pendencias"
+    },
+    {
+      "viewport": "1440",
+      "state": "ação de leitura e releitura visual",
+      "verified": true,
+      "route": "/admin/pendencias"
+    },
+    {
+      "viewport": "390",
+      "state": "carregamento inicial; vazio não antecipado",
+      "screenshot": "pendencias-390-carregando.png",
+      "route": "/admin/pendencias"
+    },
+    {
+      "viewport": "390",
+      "state": "vazio após resposta confirmada",
+      "screenshot": "pendencias-390-vazio-confirmado.png",
+      "route": "/admin/pendencias"
+    }
+  ],
+  "browserErrors": [],
+  "limitations": [
+    "The fixtures are synthetic and intercepted in the browser; no authenticated production or PostgreSQL UI session was used.",
+    "The PostgreSQL gate separately exercised real F15 APIs, permissions, identity isolation, idempotency, audit and transactions.",
+    "Automated focus traversal and CSS inspection do not constitute manual keyboard review, WCAG audit or human acceptance."
+  ]
+}
