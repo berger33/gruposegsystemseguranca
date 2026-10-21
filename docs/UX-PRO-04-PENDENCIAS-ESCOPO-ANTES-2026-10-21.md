@@ -33,3 +33,7 @@ A leitura estática do componente encontrou um estado vazio exibido antes de a p
 2. Implementar a correção mínima e executar o gate focal, `npm run test:pendencies:pg`, `npm run typecheck`, `npm test`, `npm run build`, QA estático, inventário e `git diff --check`.
 3. Capturar/revisar em Chromium nos tamanhos 320/390/768/1440, tema claro/escuro e teclado se o ambiente permitir; separar evidência automatizada de inspeção estática e validação manual.
 4. Conferir checks obrigatórios e revisão registrada antes de qualquer merge; se qualquer gate falhar ou ficar pendente, não abrir/mesclar PR nem avançar para outra fatia.
+
+## Nota de execução — ambiente do gate
+
+O teste focal inicial falhou nos quatro critérios contra a base, confirmando os estados ausentes. Na primeira execução de `npm run test:pendencies:pg`, o runner descartável do Windows inicializou PostgreSQL com `WIN1252`; a migração 014 foi recusada por conter um caractere não representável. A correção prevista é fixar `initdbFlags: ["--encoding=UTF8"]` no próprio runner, suportado pela biblioteca `embedded-postgres`. Isso não altera as asserções, os dados, o escopo de teste ou os portões; apenas faz o banco de teste usar a codificação já requerida pelo esquema do sistema. O gate será repetido integralmente após o ajuste.
