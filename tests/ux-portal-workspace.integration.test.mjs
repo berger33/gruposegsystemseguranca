@@ -593,6 +593,101 @@ test('browser: a área do cliente diz "sem vínculo" só depois de uma leitura b
   } finally { await browser.close(); }
 });
 
+test('browser ID3: cobranças não anuncia lista vazia antes de concluir a leitura', { skip: !RUN }, async () => {
+  const accountA = randomUUID();
+  const accountB = randomUUID();
+  const grantA = randomUUID();
+  const grantB = randomUUID();
+  const chargeId = randomUUID();
+  const protocolA = `CHG-CLI-20261021-${randomUUID().slice(0, 4).toUpperCase()}`;
+  await pool.query(
+    "INSERT INTO client_accounts (id, display_name, created_by) VALUES ($1::uuid, 'ID3 Conta A Sintetica', 'ti'), ($2::uuid, 'ID3 Conta B Sintetica', 'ti')",
+    [accountA, accountB],
+  );
+  await pool.query(
+    `INSERT INTO client_access_grants (id, identity_id, client_account_id, reason, granted_by)
+     SELECT $1::uuid, id, $2::uuid, 'fixture sintetica ID3', 'ti' FROM auth_identities WHERE email = $3
+     UNION ALL
+     SELECT $4::uuid, id, $5::uuid, 'fixture sintetica ID3', 'ti' FROM auth_identities WHERE email = $3`,
+    [grantA, accountA, clientEmail, grantB, accountB],
+  );
+  await pool.query(
+    `INSERT INTO cli_charges_v2 (id, protocol, client_account_id, amount_cents, due_date, finance_integration_active)
+     VALUES ($1::uuid, $2, $3::uuid, 12500, '2026-11-15', true)`,
+    [chargeId, protocolA, accountA],
+  );
+
+  const browser = await launchBrowser();
+  try {
+    const context = await browser.newContext({ viewport: { width: 320, height: 844 }, locale: 'pt-BR' });
+    await context.addCookies(clientCookie.split('; ').filter(Boolean).map(item => {
+      const separator = item.indexOf('=');
+      return { name: item.slice(0, separator), value: item.slice(separator + 1), url: baseUrl };
+    }));
+    const page = await context.newPage();
+    page.setDefaultTimeout(15_000);
+    await page.addInitScript(() => {
+      window.__id3EmptySeen = false;
+      const observe = () => {
+        if (document.body?.innerText.includes('Nenhuma cobrança integrada disponível.')) {
+          window.__id3EmptySeen = true;
+        }
+      };
+      new MutationObserver(observe).observe(document, { subtree: true, childList: true, characterData: true });
+      const original = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : (input?.url || '');
+        if (url.includes('/api/client/cobrancas')) {
+          window.__id3CobrancasCalls = (window.__id3CobrancasCalls || 0) + 1;
+          if (window.__id3CobrancasCalls > 1) {
+            window.__id3CobrancasStarted = true;
+            return new Promise(() => {});
+          }
+          window.__id3InitialCobrancasStarted = true;
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        return original(input, init);
+      };
+    });
+    await page.goto(`${baseUrl}/cliente/app/cobrancas`, { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => window.__id3InitialCobrancasStarted === true);
+    await page.waitForTimeout(250);
+    assert.equal(await page.evaluate(() => window.__id3EmptySeen), false,
+      'a primeira leitura pendente não pode ser anunciada como lista vazia');
+    assert.equal(await page.getByText('Nenhuma cobrança integrada disponível.', { exact: true }).count(), 0);
+    await page.getByText(protocolA, { exact: false }).waitFor();
+    await page.getByLabel('Conta de cliente selecionada').selectOption(accountB);
+    await page.waitForFunction(() => window.__id3CobrancasStarted === true);
+    await page.waitForTimeout(250);
+    assert.equal(await page.evaluate(() => window.__id3EmptySeen), false,
+      'enquanto a leitura está pendente, a tela não pode anunciar ausência de cobranças');
+    assert.equal(await page.getByText(protocolA, { exact: false }).count(), 0,
+      'a leitura anterior da conta A não pode continuar visível ao selecionar a conta B');
+    assert.equal(await page.getByText('Nenhuma cobrança integrada disponível.', { exact: true }).count(), 0);
+    const viewportEvidence = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      viewportEvidence.push(await page.evaluate(() => ({
+        width: document.documentElement.clientWidth,
+        horizontalOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      })));
+    }
+    assert.deepEqual(viewportEvidence.map(item => item.width), [320, 390, 768, 1440]);
+    assert.ok(viewportEvidence.every(item => item.horizontalOverflow <= 0),
+      `cobranças não deve transbordar horizontalmente: ${JSON.stringify(viewportEvidence)}`);
+    const breadcrumb = page.getByRole('link', { name: 'Área do cliente' });
+    await breadcrumb.focus();
+    assert.equal(await breadcrumb.evaluate(element => element === document.activeElement), true,
+      'a navegação principal da página pode receber foco pelo teclado');
+    await context.close();
+  } finally {
+    await browser.close();
+    await pool.query('DELETE FROM cli_charges_v2 WHERE id = $1', [chargeId]);
+    await pool.query('DELETE FROM client_access_grants WHERE id = ANY($1::uuid[])', [[grantA, grantB]]);
+    await pool.query('DELETE FROM client_accounts WHERE id = ANY($1::uuid[])', [[accountA, accountB]]);
+  }
+});
+
 test('browser: pedido manual de recuperação distingue falha real, mantém 202 genérico e é operável por teclado', { skip: !RUN }, async () => {
   const browser = await launchBrowser();
   const eligibleEmail = 'qa09a@example.invalid';
