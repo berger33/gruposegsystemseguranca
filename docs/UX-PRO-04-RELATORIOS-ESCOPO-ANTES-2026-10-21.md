@@ -46,3 +46,7 @@ Lacunas observadas no componente atualmente montado:
 2. Implementar apenas em `ReportsWorkspace` e CSS local; validar `npm run test:ext13-reports:pg`, teste focal, `npm run typecheck`, `npm test`, `npm run build`, QA estático, inventário e `git diff --check`.
 3. Se o ambiente permitir, exercitar a rota montada em 320/390/768/1440 px, dia/noite e teclado com dados sintéticos, registrando `resumo.json`; inspeção de imagem automatizada não será chamada de validação manual.
 4. Conferir hashes de `next-env.d.ts`/`tsconfig.json`; publicar PR pequena contra `main`; nenhum merge sem checks obrigatórios verdes e revisão concluída.
+
+## Ajuste de validação registrado antes da alteração do gate
+
+Na primeira execução local do `test:ext13-reports:pg`, o PostgreSQL descartável herdou `WIN1252` do Windows e falhou ao aplicar uma migração UTF-8 existente (byte `0xe2 0x86 0x92`); repetir com `PGCLIENTENCODING=UTF8` não mudou o locale do cluster. Antes de editar o gate, fica registrado o ajuste mínimo de portabilidade: inicializar esse cluster com `--encoding=UTF8 --locale=C`, conforme já feito pelo gate EXT-04. O teste e seus critérios permanecem integrais.
