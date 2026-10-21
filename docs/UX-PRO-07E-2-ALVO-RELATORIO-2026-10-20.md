@@ -170,3 +170,91 @@ Confirmada **duplicata/superada**, sem fechar, sem reabrir, sem comentar e sem r
 ## 13. Declaração final
 
 Nada aqui declara aceite humano, UAT, validação manual ou conformidade WCAG. Homologação e Produção permanecem **NO-GO**. As medições são automatizadas, reproduzíveis pelo gate listado na seção 8, e descrevem apenas o recorte auditado da seção 1.
+
+## 14. Observação de CI — `ux-emergency-postgres-browser` FAILURE (sem atribuição a esta fatia)
+
+> **Por que esta seção não estava no merge:** foi adiada de propósito. Um commit docs-only teria mudado o SHA e "limpado" o check vermelho por filtro de caminho — `docs/**` não está nos `paths:` do workflow de emergencial — e as 25 evidências verdes já anexadas ao SHA auditado seriam perdidas. O conteúdo integral estava preservado nos comentários `6297569344` (2026-10-20T17:58:11Z) e `6302914982` (2026-10-20T22:10:53Z) da PR #281 e é transcrito aqui com fidelidade, sem alterar timeout, asserção, retry, `MINIMUM_CASES` nem workflow.
+
+Registrado nos mesmos termos da disciplina **E3-R2**: sem tocar timeout, asserção, retry ou workflow, e **sem atribuir** a falha a esta mudança, porque os logs não estão acessíveis.
+
+### O que falhou
+
+| Item | Valor |
+|---|---|
+| Check | `ux-emergency-postgres-browser` (workflow "UX emergency delivery") |
+| Run / job | `39466537806` / `118779307585` |
+| `run_attempt` / `conclusion` | `1` / `failure` |
+| Duração | 2m4s (17:29:37Z → 17:31:41Z) |
+| Passo falho | "Apoio emergencial — HTTP real, PostgreSQL descartável e Chromium" (exit code 1) |
+| Passo anterior | "TypeScript" → **success** |
+| Restantes **25 checks** | **pass** no mesmo SHA `9e618dc` |
+
+### Diagnóstico por tempos de etapa, sem logs
+
+| Etapa | Job falho `118779307585` | Job saudável `118477424567` (run `39377048531`) |
+|---|---|---|
+| Set up job + checkout + setup-node + `npm ci` + TypeScript | 40 s, todas `success` | 37 s, todas `success` |
+| Gate emergencial (`npm run test:ux-emergency:pg`) | 17:30:18 → 17:31:39 = **81 s, `failure`** | 05:51:10 → 05:52:35 = **85 s, `success`** |
+
+O gate consumiu ~95% da duração de uma execução saudável antes de falhar. Falha de infraestrutura inicial (PostgreSQL que não sobe, `npm ci`, runner) morreria em segundos — não aos 81 s. Ou seja: morreu no **FIM**, não no setup.
+
+### Os três modos de falha do gate em `scripts/qa-ux-emergency-postgres.mjs`
+
+Linhas 99–149 do script distinguem:
+
+| Saída no log | Causa | Depende do diff desta PR? |
+|---|---|---|
+| `QA_PG_FAILED` | `embedded-postgres` não subiu | não |
+| `UX_EMERGENCY_GATE_REJECTED` | auditoria TAP: `fail>0`, `skipped>0`, `todo>0` ou `<21` casos | possivelmente |
+| `QA_PG_STOP_FAILED` | `postgres.stop()` lançou dentro do `finally` — **reprova o job mesmo com 21/21 passando** | não |
+
+O terceiro modo é coerente com o perfil de tempo observado. **Qual dos três disparou não pode ser determinado**: essa linha está no log do CI, e os hosts de log (`results-receiver.actions.githubusercontent.com`, `productionresultssa7.blob.core.windows.net`) estão fora do allowlist — `gh api .../jobs/<id>/logs` retorna EOF e as annotations trazem apenas `Process completed with exit code 1`. **Nenhuma causa foi atribuída.**
+
+### Por que não há diagnóstico definitivo / nenhuma causa atribuída
+
+- **Logs inacessíveis:** `gh run view --log-failed` e `gh api .../jobs/<id>/logs` terminam em `EOF` — hosts acima fora do allowlist de rede do sandbox.
+- **Rerun bloqueado por permissão:** `gh run rerun --failed` e `POST .../rerun-failed-jobs` → `403 Resource not accessible by integration`; `workflow_dispatch` → `403`. Branch protection também ilegível (`403`).
+- Sem logs completos, **nenhum caso/stack foi identificado**. A falha permanece **não atribuída**.
+
+### Reforço local: 11 execuções verdes no mesmo commit `9e618dc`
+
+Comando idêntico ao do CI (`node scripts/qa-ux-emergency-postgres.mjs`), execuções **sequenciais**:
+
+- 6 nesta sessão (21:59:07Z, 22:00:57Z, 22:02:44Z, 22:04:30Z, 22:06:13Z, 22:08:00Z) → todas `exit=0`, `UX_EMERGENCY_TAP_SUMMARY: pass=21 fail=0 skipped=0 todo=0`, `UX_EMERGENCY_TEST_EXIT: 0`
+- 5 na sessão anterior, incluindo 3 repetições e 1 execução **fria** com `.next` removido → todas `21/21`
+
+Total **11/11 verdes**, todas `pass=21 fail=0 skipped=0 todo=0`.
+
+### O que foi descartado com evidência
+
+- `package.json` / `package-lock.json`: **não tocados** por esta PR (`git diff --stat origin/main...HEAD -- package.json package-lock.json` vazio) → Chromium e PostgreSQL do runner são os mesmos dos 39 runs verdes.
+- Verificação determinística de conteúdo (p. ex. orçamento de CSS): teria falhado também nas 11 execuções locais, no mesmo commit e com os mesmos arquivos.
+- `tests/ux-emergency-workspace.integration.test.mjs` e `scripts/migrate-site-visual.mjs`: **intactos** nesta PR; `migrate-site-visual.mjs` não contém `writeFile`/`mkdir`/`appendFile`.
+- Único arquivo compartilhado tocado: `src/components/ui/UiWorkspace.module.css`, **append-only** (`.alertAction` acrescentado ao fim). `grep -rn "alertAction" src tests scripts` retorna referência **somente** nos 2 botões do financeiro (`fin11-retry`, `fin10-retry`); `/admin/emergencial` **não** referencia a classe. `EmergencyWorkspace.tsx:15` importa o módulo — por isso o workflow disparou via `paths: src/components/ui/**` — mas sem seletor existente alterado não há cascata.
+- Aviso do runner (`ubuntu-latest` → Ubuntu 26, `actions/runner-images#14748`): presente também nos jobs que **passaram**, portanto não diferencia.
+- CSVs de inventário: o runner de emergencial executa apenas `migrate-site-visual.mjs` + o teste de emergencial; grep por `docs/|csv|inventory` em ambos dá vazio.
+- **Todos os outros consumidores do mesmo módulo passaram** no mesmo SHA: `ux-finance-postgres-browser` (3m35s), `ux-knowledge-postgres-browser`, `ux-ops-postgres-browser` (2m21s), `ux-adm-postgres-browser`, `ux-contract-postgres-browser`, `ux-crm-postgres-browser`, `static-and-smoke`, e o gate novo desta fatia **46/46**.
+- Nenhum guarda em `tests/` ou `scripts/` lê `UiWorkspace.module.css` por hash, linhas ou bytes.
+
+### Resolução autorizada pelo proprietário
+
+O proprietário autorizou **fechar e reabrir a PR #281**. O workflow escuta o evento `reopened`, então o CI foi re-disparado **no mesmo SHA** `9e618dc`:
+
+- Run novo `39514172033`, `success`, 2m26s.
+- Rollup final **26/26**, `mergeStateStatus: CLEAN` (merge feito com `gh pr merge 281 --merge` em 2026-10-20T23:24:27Z).
+
+Não foi empurrado commit docs-only para "limpar" o vermelho; não foi pedido rerun para "esverdear" histórico; não foi atribuída falha sem logs completos.
+
+### Histórico do workflow de emergencial
+
+- **1 falha em 41 runs**; a única falha foi este run `39466537806`. Nos 40 runs anteriores, 39 `success` / 1 `failure`; após o `reopened`, 26/26 `success` no SHA auditado.
+
+### O que NÃO foi feito (disciplina E3-R2)
+
+Nenhum timeout alterado; nenhuma asserção afrouxada, removida ou reescrita; nenhum retry adicionado; nenhum workflow editado; nenhum rerun para "esverdear" histórico; **nenhum merge executado com check vermelho** — a guarda permanente exige todos os checks `SUCCESS`.
+
+O caso herdado que mede `alturaRepetir` apenas como observação (`tests/ux-finance-workspace.integration.test.mjs:1296`, `> 0`) permanece **byte a byte**; os primeiros 17.004 bytes do gate seguem com SHA-256 `42dc4da3…`.
+
+### Por que este registro é comentário primeiro e commit depois
+
+Um commit de documentação mudaria o head SHA. Como `docs/**` **não** está nos `paths:` do workflow de emergencial, ele não rerodaria — e as **25 evidências verdes** ficariam anexadas ao SHA antigo, "limpando" o vermelho por efeito colateral de filtro de caminho. Isso seria gaming do check rollup. Por isso o registro viveu primeiro como comentários da PR e só agora, após o veredito novo do CI, é versionado no relatório com o SHA auditado preservado.
