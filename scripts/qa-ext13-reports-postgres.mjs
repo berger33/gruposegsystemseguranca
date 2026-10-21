@@ -62,6 +62,8 @@ const postgres = new EmbeddedPostgres({
   user: "seg_qa",
   password,
   persistent: false,
+  // As migrações são UTF-8; não herde o locale WIN1252 da máquina Windows.
+  initdbFlags: ["--encoding=UTF8", "--locale=C"],
   postgresFlags: ["-c", "listen_addresses=127.0.0.1"],
   onLog: () => {},
   onError: (error) => console.error("QA_PG_ENGINE_ERROR", String(error).replaceAll(password, "[redacted]").slice(0, 500)),
