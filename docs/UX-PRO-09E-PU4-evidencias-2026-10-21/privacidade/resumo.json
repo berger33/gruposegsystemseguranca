@@ -1,0 +1,1974 @@
+{
+  "stage": "ux-pro-09e",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "route": "/privacidade",
+  "limitations": [
+    "Navegador chrome em win32; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09e",
+      "route": "/privacidade",
+      "viewport": "320x780",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\privacidade\\w320-day-privacidade.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Privacidade — minuta para revisão"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 521,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 4,
+          "resolvedCount": 4,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 1,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 7,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 7,
+          "resolvedCount": 7,
+          "indeterminateCount": 0,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de privacidade. Antes da publicação, o responsável deve va",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "O site permanece em",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "noindex",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "no beta. Solicitações sobre dados pessoais devem ser encaminhadas à equipe pelos canais de",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "; esta minuta não substitui a política aprovada nem parecer jurídico.",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "contato",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/privacidade",
+      "viewport": "320x780",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\privacidade\\w320-night-privacidade.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Privacidade — minuta para revisão"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 521,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 4,
+          "resolvedCount": 4,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 1,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 7,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 7,
+          "resolvedCount": 7,
+          "indeterminateCount": 0,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de privacidade. Antes da publicação, o responsável deve va",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "O site permanece em",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "noindex",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "no beta. Solicitações sobre dados pessoais devem ser encaminhadas à equipe pelos canais de",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "; esta minuta não substitui a política aprovada nem parecer jurídico.",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "contato",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/privacidade",
+      "viewport": "390x844",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\privacidade\\w390-day-privacidade.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Privacidade — minuta para revisão"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 521,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 4,
+          "resolvedCount": 4,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 1,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 7,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 7,
+          "resolvedCount": 7,
+          "indeterminateCount": 0,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de privacidade. Antes da publicação, o responsável deve va",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "O site permanece em",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "noindex",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "no beta. Solicitações sobre dados pessoais devem ser encaminhadas à equipe pelos canais de",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "; esta minuta não substitui a política aprovada nem parecer jurídico.",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "contato",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/privacidade",
+      "viewport": "390x844",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\privacidade\\w390-night-privacidade.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Privacidade — minuta para revisão"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 521,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 4,
+          "resolvedCount": 4,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 1,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 7,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 7,
+          "resolvedCount": 7,
+          "indeterminateCount": 0,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de privacidade. Antes da publicação, o responsável deve va",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "O site permanece em",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "noindex",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "no beta. Solicitações sobre dados pessoais devem ser encaminhadas à equipe pelos canais de",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "; esta minuta não substitui a política aprovada nem parecer jurídico.",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "contato",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/privacidade",
+      "viewport": "768x1024",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\privacidade\\w768-day-privacidade.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Privacidade — minuta para revisão"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 521,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 4,
+          "resolvedCount": 4,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 1,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 7,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 7,
+          "resolvedCount": 7,
+          "indeterminateCount": 0,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de privacidade. Antes da publicação, o responsável deve va",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "O site permanece em",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "noindex",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "no beta. Solicitações sobre dados pessoais devem ser encaminhadas à equipe pelos canais de",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "; esta minuta não substitui a política aprovada nem parecer jurídico.",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "contato",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/privacidade",
+      "viewport": "768x1024",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\privacidade\\w768-night-privacidade.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Privacidade — minuta para revisão"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 521,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 4,
+          "resolvedCount": 4,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 1,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 7,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 7,
+          "resolvedCount": 7,
+          "indeterminateCount": 0,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de privacidade. Antes da publicação, o responsável deve va",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "O site permanece em",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "noindex",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "no beta. Solicitações sobre dados pessoais devem ser encaminhadas à equipe pelos canais de",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "; esta minuta não substitui a política aprovada nem parecer jurídico.",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "contato",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/privacidade",
+      "viewport": "1440x900",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\privacidade\\w1440-day-privacidade.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Privacidade — minuta para revisão"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 521,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 4,
+          "resolvedCount": 4,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 1,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 7,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 7,
+          "resolvedCount": 7,
+          "indeterminateCount": 0,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de privacidade. Antes da publicação, o responsável deve va",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "O site permanece em",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "noindex",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "no beta. Solicitações sobre dados pessoais devem ser encaminhadas à equipe pelos canais de",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "; esta minuta não substitui a política aprovada nem parecer jurídico.",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "contato",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/privacidade",
+      "viewport": "1440x900",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\privacidade\\w1440-night-privacidade.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Privacidade — minuta para revisão"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 521,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 4,
+          "resolvedCount": 4,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de priva",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "O site permanece em noindex no beta. Solicitações sobre dados pessoais",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 1,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 7,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 7,
+          "resolvedCount": 7,
+          "indeterminateCount": 0,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Privacidade — minuta para revisão",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Esta página ainda não comprova a aprovação formal da política de privacidade. Antes da publicação, o responsável deve va",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "O site permanece em",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "noindex",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "no beta. Solicitações sobre dados pessoais devem ser encaminhadas à equipe pelos canais de",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "contato",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "; esta minuta não substitui a política aprovada nem parecer jurídico.",
+              "ratio": 17.06,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "contato",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    }
+  ]
+}

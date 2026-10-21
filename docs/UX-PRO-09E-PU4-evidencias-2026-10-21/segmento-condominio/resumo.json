@@ -1,0 +1,742 @@
+{
+  "stage": "ux-pro-09e",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "route": "/segmentos/condominio",
+  "limitations": [
+    "Navegador chrome em win32; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09e",
+      "route": "/segmentos/condominio",
+      "viewport": "320x780",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\segmento-condominio\\w320-day-segmento-condominio.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Segmento não encontrado",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Segmento não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 44,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Segmento não encontrado",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Voltar aos segmentos",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 1,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 2,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Segmento não encontrado",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Voltar aos segmentos",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos segmentos",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/segmentos/condominio",
+      "viewport": "320x780",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\segmento-condominio\\w320-night-segmento-condominio.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Segmento não encontrado",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Segmento não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 44,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Segmento não encontrado",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Voltar aos segmentos",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 1,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 2,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Segmento não encontrado",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Voltar aos segmentos",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos segmentos",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/segmentos/condominio",
+      "viewport": "390x844",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\segmento-condominio\\w390-day-segmento-condominio.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Segmento não encontrado",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Segmento não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 44,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Segmento não encontrado",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Voltar aos segmentos",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 1,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 2,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Segmento não encontrado",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Voltar aos segmentos",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos segmentos",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/segmentos/condominio",
+      "viewport": "390x844",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\segmento-condominio\\w390-night-segmento-condominio.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Segmento não encontrado",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Segmento não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 44,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Segmento não encontrado",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Voltar aos segmentos",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 1,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 2,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Segmento não encontrado",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Voltar aos segmentos",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos segmentos",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/segmentos/condominio",
+      "viewport": "768x1024",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\segmento-condominio\\w768-day-segmento-condominio.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Segmento não encontrado",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Segmento não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 44,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Segmento não encontrado",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Voltar aos segmentos",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 1,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 2,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Segmento não encontrado",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Voltar aos segmentos",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos segmentos",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/segmentos/condominio",
+      "viewport": "768x1024",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\segmento-condominio\\w768-night-segmento-condominio.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Segmento não encontrado",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Segmento não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 44,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Segmento não encontrado",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Voltar aos segmentos",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 1,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 2,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Segmento não encontrado",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Voltar aos segmentos",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos segmentos",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/segmentos/condominio",
+      "viewport": "1440x900",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\segmento-condominio\\w1440-day-segmento-condominio.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Segmento não encontrado",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Segmento não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 44,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Segmento não encontrado",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Voltar aos segmentos",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 1,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 2,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Segmento não encontrado",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Voltar aos segmentos",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos segmentos",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/segmentos/condominio",
+      "viewport": "1440x900",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\segmento-condominio\\w1440-night-segmento-condominio.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Segmento não encontrado",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Segmento não encontrado"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 44,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "lowest": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Segmento não encontrado",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "Voltar aos segmentos",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 1,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 2,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 2,
+          "resolvedCount": 0,
+          "indeterminateCount": 2,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Segmento não encontrado",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Voltar aos segmentos",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Voltar aos segmentos",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    }
+  ]
+}

@@ -1,0 +1,5846 @@
+{
+  "stage": "ux-pro-09e",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "route": "/orcamento",
+  "limitations": [
+    "Navegador chrome em win32; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09e",
+      "route": "/orcamento",
+      "viewport": "320x780",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\orcamento\\w320-day-orcamento.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Monte sua necessidade — PUB-01",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Combine tipo de imóvel e serviços do catálogo único validado. Isto não",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "o catálogo completo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "FAQ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Quantos blocos ou entradas precisam de atenção?",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Segurança DesarmadaPresença preventiva, rondas e proteção patrimonial ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Monitoramento 24 HorasAcompanhamento contínuo e apoio operacional na r",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Câmeras e CFTVProjetos e instalação de sistemas de câmeras dimensionad",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Portaria e Controle de AcessoRotinas de entrada, saída, identificação ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Limpeza e ConservaçãoEquipes para ambientes corporativos, condomínios ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Supervisão e RondaAcompanhamento dos postos, visitas programadas e apo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Nome",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Telefone",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Cidade/bairro",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Detalhes (opcional)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Concordo com o tratamento dos meus dados para atendimento (minuta de p",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Precisa de visita técnica em vez de orçamento por telefone? Use o form",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "formulário de contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 20,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 39,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 39,
+          "resolvedCount": 8,
+          "indeterminateCount": 31,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Monte sua necessidade — PUB-01",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Combine tipo de imóvel e serviços do catálogo único validado. Isto",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "não gera preço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ": o orçamento real depende de qualificação comercial e, quando necessário, vistoria técnica. Consulte também",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "o catálogo completo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "e o",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "FAQ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ".",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Tipo de imóvel",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Quantos blocos ou entradas precisam de atenção?",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Serviços do catálogo (selecione um ou mais)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Segurança Desarmada",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Presença preventiva, rondas e proteção patrimonial com profissionais preparados.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Monitoramento 24 Horas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Acompanhamento contínuo e apoio operacional na resposta a ocorrências.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Câmeras e CFTV",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Projetos e instalação de sistemas de câmeras dimensionados para seu espaço.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Portaria e Controle de Acesso",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Rotinas de entrada, saída, identificação e atendimento para cada operação.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Limpeza e Conservação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Equipes para ambientes corporativos, condomínios e áreas comerciais.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Supervisão e Ronda",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Acompanhamento dos postos, visitas programadas e apoio às equipes.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Resumo:",
+              "ratio": 20.07,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                248,
+                250,
+                252
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "section",
+              "selector": "section",
+              "text": "Selecione ao menos um serviço para prosseguir.",
+              "ratio": 20.07,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                248,
+                250,
+                252
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Nome",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Telefone",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Cidade/bairro",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Detalhes (opcional)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Concordo com o tratamento dos meus dados para atendimento (minuta de privacidade em /privacidade, pendente de aprovação ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Precisa de visita técnica em vez de orçamento por telefone? Use o",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "formulário de contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ", que aceita a mesma API com opção de visita (estados solicitada → em agendamento → confirmada → realizada/cancelada).",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/orcamento",
+      "viewport": "320x780",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\orcamento\\w320-night-orcamento.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Monte sua necessidade — PUB-01",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Combine tipo de imóvel e serviços do catálogo único validado. Isto não",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "o catálogo completo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "FAQ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Quantos blocos ou entradas precisam de atenção?",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Segurança DesarmadaPresença preventiva, rondas e proteção patrimonial ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Monitoramento 24 HorasAcompanhamento contínuo e apoio operacional na r",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Câmeras e CFTVProjetos e instalação de sistemas de câmeras dimensionad",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Portaria e Controle de AcessoRotinas de entrada, saída, identificação ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Limpeza e ConservaçãoEquipes para ambientes corporativos, condomínios ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Supervisão e RondaAcompanhamento dos postos, visitas programadas e apo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Nome",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Telefone",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Cidade/bairro",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Detalhes (opcional)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Concordo com o tratamento dos meus dados para atendimento (minuta de p",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Precisa de visita técnica em vez de orçamento por telefone? Use o form",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "formulário de contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 20,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 39,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 39,
+          "resolvedCount": 8,
+          "indeterminateCount": 31,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Monte sua necessidade — PUB-01",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Combine tipo de imóvel e serviços do catálogo único validado. Isto",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "não gera preço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ": o orçamento real depende de qualificação comercial e, quando necessário, vistoria técnica. Consulte também",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "o catálogo completo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "e o",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "FAQ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ".",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Tipo de imóvel",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Quantos blocos ou entradas precisam de atenção?",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Serviços do catálogo (selecione um ou mais)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Segurança Desarmada",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Presença preventiva, rondas e proteção patrimonial com profissionais preparados.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Monitoramento 24 Horas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Acompanhamento contínuo e apoio operacional na resposta a ocorrências.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Câmeras e CFTV",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Projetos e instalação de sistemas de câmeras dimensionados para seu espaço.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Portaria e Controle de Acesso",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Rotinas de entrada, saída, identificação e atendimento para cada operação.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Limpeza e Conservação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Equipes para ambientes corporativos, condomínios e áreas comerciais.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Supervisão e Ronda",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Acompanhamento dos postos, visitas programadas e apoio às equipes.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Resumo:",
+              "ratio": 20.07,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                248,
+                250,
+                252
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "section",
+              "selector": "section",
+              "text": "Selecione ao menos um serviço para prosseguir.",
+              "ratio": 20.07,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                248,
+                250,
+                252
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Nome",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Telefone",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Cidade/bairro",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Detalhes (opcional)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Concordo com o tratamento dos meus dados para atendimento (minuta de privacidade em /privacidade, pendente de aprovação ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Precisa de visita técnica em vez de orçamento por telefone? Use o",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "formulário de contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ", que aceita a mesma API com opção de visita (estados solicitada → em agendamento → confirmada → realizada/cancelada).",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/orcamento",
+      "viewport": "390x844",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\orcamento\\w390-day-orcamento.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Monte sua necessidade — PUB-01",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Combine tipo de imóvel e serviços do catálogo único validado. Isto não",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "o catálogo completo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "FAQ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Quantos blocos ou entradas precisam de atenção?",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Segurança DesarmadaPresença preventiva, rondas e proteção patrimonial ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Monitoramento 24 HorasAcompanhamento contínuo e apoio operacional na r",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Câmeras e CFTVProjetos e instalação de sistemas de câmeras dimensionad",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Portaria e Controle de AcessoRotinas de entrada, saída, identificação ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Limpeza e ConservaçãoEquipes para ambientes corporativos, condomínios ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Supervisão e RondaAcompanhamento dos postos, visitas programadas e apo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Nome",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Telefone",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Cidade/bairro",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Detalhes (opcional)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Concordo com o tratamento dos meus dados para atendimento (minuta de p",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Precisa de visita técnica em vez de orçamento por telefone? Use o form",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "formulário de contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 20,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 39,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 39,
+          "resolvedCount": 8,
+          "indeterminateCount": 31,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Monte sua necessidade — PUB-01",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Combine tipo de imóvel e serviços do catálogo único validado. Isto",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "não gera preço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ": o orçamento real depende de qualificação comercial e, quando necessário, vistoria técnica. Consulte também",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "o catálogo completo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "e o",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "FAQ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ".",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Tipo de imóvel",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Quantos blocos ou entradas precisam de atenção?",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Serviços do catálogo (selecione um ou mais)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Segurança Desarmada",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Presença preventiva, rondas e proteção patrimonial com profissionais preparados.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Monitoramento 24 Horas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Acompanhamento contínuo e apoio operacional na resposta a ocorrências.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Câmeras e CFTV",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Projetos e instalação de sistemas de câmeras dimensionados para seu espaço.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Portaria e Controle de Acesso",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Rotinas de entrada, saída, identificação e atendimento para cada operação.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Limpeza e Conservação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Equipes para ambientes corporativos, condomínios e áreas comerciais.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Supervisão e Ronda",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Acompanhamento dos postos, visitas programadas e apoio às equipes.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Resumo:",
+              "ratio": 20.07,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                248,
+                250,
+                252
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "section",
+              "selector": "section",
+              "text": "Selecione ao menos um serviço para prosseguir.",
+              "ratio": 20.07,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                248,
+                250,
+                252
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Nome",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Telefone",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Cidade/bairro",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Detalhes (opcional)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Concordo com o tratamento dos meus dados para atendimento (minuta de privacidade em /privacidade, pendente de aprovação ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Precisa de visita técnica em vez de orçamento por telefone? Use o",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "formulário de contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ", que aceita a mesma API com opção de visita (estados solicitada → em agendamento → confirmada → realizada/cancelada).",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/orcamento",
+      "viewport": "390x844",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\orcamento\\w390-night-orcamento.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Monte sua necessidade — PUB-01",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Combine tipo de imóvel e serviços do catálogo único validado. Isto não",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "o catálogo completo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "FAQ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Quantos blocos ou entradas precisam de atenção?",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Segurança DesarmadaPresença preventiva, rondas e proteção patrimonial ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Monitoramento 24 HorasAcompanhamento contínuo e apoio operacional na r",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Câmeras e CFTVProjetos e instalação de sistemas de câmeras dimensionad",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Portaria e Controle de AcessoRotinas de entrada, saída, identificação ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Limpeza e ConservaçãoEquipes para ambientes corporativos, condomínios ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Supervisão e RondaAcompanhamento dos postos, visitas programadas e apo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Nome",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Telefone",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Cidade/bairro",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Detalhes (opcional)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Concordo com o tratamento dos meus dados para atendimento (minuta de p",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Precisa de visita técnica em vez de orçamento por telefone? Use o form",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "formulário de contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 20,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 39,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 39,
+          "resolvedCount": 8,
+          "indeterminateCount": 31,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Monte sua necessidade — PUB-01",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Combine tipo de imóvel e serviços do catálogo único validado. Isto",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "não gera preço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ": o orçamento real depende de qualificação comercial e, quando necessário, vistoria técnica. Consulte também",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "o catálogo completo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "e o",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "FAQ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ".",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Tipo de imóvel",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Quantos blocos ou entradas precisam de atenção?",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Serviços do catálogo (selecione um ou mais)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Segurança Desarmada",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Presença preventiva, rondas e proteção patrimonial com profissionais preparados.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Monitoramento 24 Horas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Acompanhamento contínuo e apoio operacional na resposta a ocorrências.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Câmeras e CFTV",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Projetos e instalação de sistemas de câmeras dimensionados para seu espaço.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Portaria e Controle de Acesso",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Rotinas de entrada, saída, identificação e atendimento para cada operação.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Limpeza e Conservação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Equipes para ambientes corporativos, condomínios e áreas comerciais.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Supervisão e Ronda",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Acompanhamento dos postos, visitas programadas e apoio às equipes.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Resumo:",
+              "ratio": 20.07,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                248,
+                250,
+                252
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "section",
+              "selector": "section",
+              "text": "Selecione ao menos um serviço para prosseguir.",
+              "ratio": 20.07,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                248,
+                250,
+                252
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Nome",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Telefone",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Cidade/bairro",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Detalhes (opcional)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Concordo com o tratamento dos meus dados para atendimento (minuta de privacidade em /privacidade, pendente de aprovação ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Precisa de visita técnica em vez de orçamento por telefone? Use o",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "formulário de contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ", que aceita a mesma API com opção de visita (estados solicitada → em agendamento → confirmada → realizada/cancelada).",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/orcamento",
+      "viewport": "768x1024",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\orcamento\\w768-day-orcamento.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Monte sua necessidade — PUB-01",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Combine tipo de imóvel e serviços do catálogo único validado. Isto não",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "o catálogo completo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "FAQ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Quantos blocos ou entradas precisam de atenção?",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Segurança DesarmadaPresença preventiva, rondas e proteção patrimonial ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Monitoramento 24 HorasAcompanhamento contínuo e apoio operacional na r",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Câmeras e CFTVProjetos e instalação de sistemas de câmeras dimensionad",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Portaria e Controle de AcessoRotinas de entrada, saída, identificação ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Limpeza e ConservaçãoEquipes para ambientes corporativos, condomínios ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Supervisão e RondaAcompanhamento dos postos, visitas programadas e apo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Nome",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Telefone",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Cidade/bairro",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Detalhes (opcional)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Concordo com o tratamento dos meus dados para atendimento (minuta de p",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Precisa de visita técnica em vez de orçamento por telefone? Use o form",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "formulário de contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 20,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 39,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 39,
+          "resolvedCount": 8,
+          "indeterminateCount": 31,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Monte sua necessidade — PUB-01",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Combine tipo de imóvel e serviços do catálogo único validado. Isto",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "não gera preço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ": o orçamento real depende de qualificação comercial e, quando necessário, vistoria técnica. Consulte também",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "o catálogo completo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "e o",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "FAQ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ".",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Tipo de imóvel",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Quantos blocos ou entradas precisam de atenção?",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Serviços do catálogo (selecione um ou mais)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Segurança Desarmada",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Presença preventiva, rondas e proteção patrimonial com profissionais preparados.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Monitoramento 24 Horas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Acompanhamento contínuo e apoio operacional na resposta a ocorrências.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Câmeras e CFTV",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Projetos e instalação de sistemas de câmeras dimensionados para seu espaço.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Portaria e Controle de Acesso",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Rotinas de entrada, saída, identificação e atendimento para cada operação.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Limpeza e Conservação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Equipes para ambientes corporativos, condomínios e áreas comerciais.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Supervisão e Ronda",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Acompanhamento dos postos, visitas programadas e apoio às equipes.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Resumo:",
+              "ratio": 20.07,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                248,
+                250,
+                252
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "section",
+              "selector": "section",
+              "text": "Selecione ao menos um serviço para prosseguir.",
+              "ratio": 20.07,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                248,
+                250,
+                252
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Nome",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Telefone",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Cidade/bairro",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Detalhes (opcional)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Concordo com o tratamento dos meus dados para atendimento (minuta de privacidade em /privacidade, pendente de aprovação ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Precisa de visita técnica em vez de orçamento por telefone? Use o",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "formulário de contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ", que aceita a mesma API com opção de visita (estados solicitada → em agendamento → confirmada → realizada/cancelada).",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/orcamento",
+      "viewport": "768x1024",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\orcamento\\w768-night-orcamento.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Monte sua necessidade — PUB-01",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Combine tipo de imóvel e serviços do catálogo único validado. Isto não",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "o catálogo completo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "FAQ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Quantos blocos ou entradas precisam de atenção?",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Segurança DesarmadaPresença preventiva, rondas e proteção patrimonial ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Monitoramento 24 HorasAcompanhamento contínuo e apoio operacional na r",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Câmeras e CFTVProjetos e instalação de sistemas de câmeras dimensionad",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Portaria e Controle de AcessoRotinas de entrada, saída, identificação ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Limpeza e ConservaçãoEquipes para ambientes corporativos, condomínios ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Supervisão e RondaAcompanhamento dos postos, visitas programadas e apo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Nome",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Telefone",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Cidade/bairro",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Detalhes (opcional)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Concordo com o tratamento dos meus dados para atendimento (minuta de p",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Precisa de visita técnica em vez de orçamento por telefone? Use o form",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "formulário de contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 20,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 39,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 39,
+          "resolvedCount": 8,
+          "indeterminateCount": 31,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Monte sua necessidade — PUB-01",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Combine tipo de imóvel e serviços do catálogo único validado. Isto",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "não gera preço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ": o orçamento real depende de qualificação comercial e, quando necessário, vistoria técnica. Consulte também",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "o catálogo completo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "e o",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "FAQ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ".",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Tipo de imóvel",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Quantos blocos ou entradas precisam de atenção?",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Serviços do catálogo (selecione um ou mais)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Segurança Desarmada",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Presença preventiva, rondas e proteção patrimonial com profissionais preparados.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Monitoramento 24 Horas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Acompanhamento contínuo e apoio operacional na resposta a ocorrências.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Câmeras e CFTV",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Projetos e instalação de sistemas de câmeras dimensionados para seu espaço.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Portaria e Controle de Acesso",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Rotinas de entrada, saída, identificação e atendimento para cada operação.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Limpeza e Conservação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Equipes para ambientes corporativos, condomínios e áreas comerciais.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Supervisão e Ronda",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Acompanhamento dos postos, visitas programadas e apoio às equipes.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Resumo:",
+              "ratio": 20.07,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                248,
+                250,
+                252
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "section",
+              "selector": "section",
+              "text": "Selecione ao menos um serviço para prosseguir.",
+              "ratio": 20.07,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                248,
+                250,
+                252
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Nome",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Telefone",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Cidade/bairro",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Detalhes (opcional)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Concordo com o tratamento dos meus dados para atendimento (minuta de privacidade em /privacidade, pendente de aprovação ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Precisa de visita técnica em vez de orçamento por telefone? Use o",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "formulário de contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ", que aceita a mesma API com opção de visita (estados solicitada → em agendamento → confirmada → realizada/cancelada).",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/orcamento",
+      "viewport": "1440x900",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\orcamento\\w1440-day-orcamento.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Monte sua necessidade — PUB-01",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Combine tipo de imóvel e serviços do catálogo único validado. Isto não",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "o catálogo completo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "FAQ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Quantos blocos ou entradas precisam de atenção?",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Segurança DesarmadaPresença preventiva, rondas e proteção patrimonial ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Monitoramento 24 HorasAcompanhamento contínuo e apoio operacional na r",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Câmeras e CFTVProjetos e instalação de sistemas de câmeras dimensionad",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Portaria e Controle de AcessoRotinas de entrada, saída, identificação ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Limpeza e ConservaçãoEquipes para ambientes corporativos, condomínios ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Supervisão e RondaAcompanhamento dos postos, visitas programadas e apo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Nome",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Telefone",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Cidade/bairro",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Detalhes (opcional)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Concordo com o tratamento dos meus dados para atendimento (minuta de p",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Precisa de visita técnica em vez de orçamento por telefone? Use o form",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "formulário de contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 20,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 39,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 39,
+          "resolvedCount": 8,
+          "indeterminateCount": 31,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Monte sua necessidade — PUB-01",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Combine tipo de imóvel e serviços do catálogo único validado. Isto",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "não gera preço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ": o orçamento real depende de qualificação comercial e, quando necessário, vistoria técnica. Consulte também",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "o catálogo completo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "e o",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "FAQ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ".",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Tipo de imóvel",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Quantos blocos ou entradas precisam de atenção?",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Serviços do catálogo (selecione um ou mais)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Segurança Desarmada",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Presença preventiva, rondas e proteção patrimonial com profissionais preparados.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Monitoramento 24 Horas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Acompanhamento contínuo e apoio operacional na resposta a ocorrências.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Câmeras e CFTV",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Projetos e instalação de sistemas de câmeras dimensionados para seu espaço.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Portaria e Controle de Acesso",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Rotinas de entrada, saída, identificação e atendimento para cada operação.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Limpeza e Conservação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Equipes para ambientes corporativos, condomínios e áreas comerciais.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Supervisão e Ronda",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Acompanhamento dos postos, visitas programadas e apoio às equipes.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Resumo:",
+              "ratio": 20.07,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                248,
+                250,
+                252
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "section",
+              "selector": "section",
+              "text": "Selecione ao menos um serviço para prosseguir.",
+              "ratio": 20.07,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                248,
+                250,
+                252
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Nome",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Telefone",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Cidade/bairro",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Detalhes (opcional)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Concordo com o tratamento dos meus dados para atendimento (minuta de privacidade em /privacidade, pendente de aprovação ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Precisa de visita técnica em vez de orçamento por telefone? Use o",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "formulário de contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ", que aceita a mesma API com opção de visita (estados solicitada → em agendamento → confirmada → realizada/cancelada).",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/orcamento",
+      "viewport": "1440x900",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\orcamento\\w1440-night-orcamento.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Grupo SEG System | Segurança Integrada em Guarulhos",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Monte sua necessidade — PUB-01"
+          }
+        ],
+        "landmarks": [
+          "main"
+        ],
+        "visibleTextLength": 1473,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 24,
+          "resolvedCount": 6,
+          "indeterminateCount": 18,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "h1",
+              "text": "Monte sua necessidade — PUB-01",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "text": "Combine tipo de imóvel e serviços do catálogo único validado. Isto não",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "o catálogo completo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "FAQ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Quantos blocos ou entradas precisam de atenção?",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Segurança DesarmadaPresença preventiva, rondas e proteção patrimonial ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Monitoramento 24 HorasAcompanhamento contínuo e apoio operacional na r",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Câmeras e CFTVProjetos e instalação de sistemas de câmeras dimensionad",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Portaria e Controle de AcessoRotinas de entrada, saída, identificação ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Limpeza e ConservaçãoEquipes para ambientes corporativos, condomínios ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Supervisão e RondaAcompanhamento dos postos, visitas programadas e apo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Nome",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Telefone",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Cidade/bairro",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Detalhes (opcional)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "text": "Concordo com o tratamento dos meus dados para atendimento (minuta de p",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Precisa de visita técnica em vez de orçamento por telefone? Use o form",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "text": "formulário de contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        },
+        "focusables": 20,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 39,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 39,
+          "resolvedCount": 8,
+          "indeterminateCount": 31,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "h1",
+              "selector": "h1",
+              "text": "Monte sua necessidade — PUB-01",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Combine tipo de imóvel e serviços do catálogo único validado. Isto",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "não gera preço",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ": o orçamento real depende de qualificação comercial e, quando necessário, vistoria técnica. Consulte também",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "o catálogo completo",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "e o",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "FAQ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ".",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Tipo de imóvel",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Condomínio",
+              "ratio": 19.3,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                239,
+                246,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Empresa ou comércio",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Indústria",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Instituição",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Outro",
+              "ratio": 21,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                255,
+                255,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Quantos blocos ou entradas precisam de atenção?",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Serviços do catálogo (selecione um ou mais)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Segurança Desarmada",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Presença preventiva, rondas e proteção patrimonial com profissionais preparados.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Monitoramento 24 Horas",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Acompanhamento contínuo e apoio operacional na resposta a ocorrências.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Câmeras e CFTV",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Projetos e instalação de sistemas de câmeras dimensionados para seu espaço.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Portaria e Controle de Acesso",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Rotinas de entrada, saída, identificação e atendimento para cada operação.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Limpeza e Conservação",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Equipes para ambientes corporativos, condomínios e áreas comerciais.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Supervisão e Ronda",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "span",
+              "selector": "span",
+              "text": "Acompanhamento dos postos, visitas programadas e apoio às equipes.",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "strong",
+              "selector": "strong",
+              "text": "Resumo:",
+              "ratio": 20.07,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                248,
+                250,
+                252
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "section",
+              "selector": "section",
+              "text": "Selecione ao menos um serviço para prosseguir.",
+              "ratio": 20.07,
+              "foreground": "rgb(0, 0, 0)",
+              "background": [
+                248,
+                250,
+                252
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Nome",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Telefone",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Cidade/bairro",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Detalhes (opcional)",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "label",
+              "selector": "label",
+              "text": "Concordo com o tratamento dos meus dados para atendimento (minuta de privacidade em /privacidade, pendente de aprovação ",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "button",
+              "selector": "button",
+              "text": "Solicitar orçamento (protocolo persistido)",
+              "ratio": 5.13,
+              "foreground": "rgb(255, 255, 255)",
+              "background": [
+                11,
+                95,
+                255
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": "Precisa de visita técnica em vez de orçamento por telefone? Use o",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "formulário de contato",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            },
+            {
+              "tag": "p",
+              "selector": "p",
+              "text": ", que aceita a mesma API com opção de visita (estados solicitada → em agendamento → confirmada → realizada/cancelada).",
+              "ratio": null,
+              "foreground": "rgb(0, 0, 0)",
+              "background": "complex/indeterminate",
+              "backgroundResolved": false
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "o catálogo completo",
+        "outline": "auto"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    }
+  ]
+}

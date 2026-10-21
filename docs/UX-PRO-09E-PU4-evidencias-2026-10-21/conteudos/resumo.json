@@ -1,0 +1,2854 @@
+{
+  "stage": "ux-pro-09e",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "route": "/conteudos",
+  "limitations": [
+    "Navegador chrome em win32; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.",
+    "Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.",
+    "Rede externa bloqueada no sandbox; recursos externos podem divergir.",
+    "Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.",
+    "Banco descartável e ambiente local sem sessão; rota de aceite usa token sintético inválido, não um token real."
+  ],
+  "entries": [
+    {
+      "stage": "ux-pro-09e",
+      "route": "/conteudos",
+      "viewport": "320x780",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\conteudos\\w320-day-conteudos.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Conteúdos | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conteúdos publicados"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 142,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdos publicados",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdos publicados",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 6,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 8,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "selector": "main.publication-surface > h1",
+              "text": "Conteúdos publicados",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "main.publication-surface > p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "main.publication-surface > a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/conteudos",
+      "viewport": "320x780",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\conteudos\\w320-night-conteudos.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Conteúdos | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conteúdos publicados"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 142,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdos publicados",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdos publicados",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 6,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 8,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Início",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Conteúdos",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Pacotes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "selector": "main.publication-surface > h1",
+              "text": "Conteúdos publicados",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "main.publication-surface > p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "main.publication-surface > a",
+              "text": "Solicitar atendimento",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/conteudos",
+      "viewport": "390x844",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\conteudos\\w390-day-conteudos.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Conteúdos | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conteúdos publicados"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 111,
+        "states": {
+          "loading": true,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdos publicados",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Carregando…",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdos publicados",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Carregando…",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 6,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 8,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "selector": "main.publication-surface > h1",
+              "text": "Conteúdos publicados",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "main.publication-surface > p",
+              "text": "Carregando…",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "main.publication-surface > a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/conteudos",
+      "viewport": "390x844",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\conteudos\\w390-night-conteudos.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Conteúdos | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conteúdos publicados"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 111,
+        "states": {
+          "loading": true,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdos publicados",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Carregando…",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdos publicados",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Carregando…",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 6,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 8,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Início",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Conteúdos",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Pacotes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "selector": "main.publication-surface > h1",
+              "text": "Conteúdos publicados",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "main.publication-surface > p",
+              "text": "Carregando…",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "main.publication-surface > a",
+              "text": "Solicitar atendimento",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/conteudos",
+      "viewport": "768x1024",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\conteudos\\w768-day-conteudos.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Conteúdos | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conteúdos publicados"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 111,
+        "states": {
+          "loading": true,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdos publicados",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Carregando…",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdos publicados",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Carregando…",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 6,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 8,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "selector": "main.publication-surface > h1",
+              "text": "Conteúdos publicados",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "main.publication-surface > p",
+              "text": "Carregando…",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "main.publication-surface > a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/conteudos",
+      "viewport": "768x1024",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\conteudos\\w768-night-conteudos.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Conteúdos | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conteúdos publicados"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 111,
+        "states": {
+          "loading": true,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdos publicados",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Carregando…",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdos publicados",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Carregando…",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 6,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 8,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "selector": "main.publication-surface > h1",
+              "text": "Conteúdos publicados",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "main.publication-surface > p",
+              "text": "Carregando…",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "main.publication-surface > a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/conteudos",
+      "viewport": "1440x900",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\conteudos\\w1440-day-conteudos.png",
+      "gateEvidence": null,
+      "requestedTheme": "day",
+      "navigationStatus": 200,
+      "theme": "day",
+      "audit": {
+        "title": "Conteúdos | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conteúdos publicados"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 142,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdos publicados",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdos publicados",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 6,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 8,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Início",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Serviços",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Conteúdos",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Pacotes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "selector": "main.publication-surface > h1",
+              "text": "Conteúdos publicados",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "main.publication-surface > p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "main.publication-surface > a",
+              "text": "Solicitar atendimento",
+              "ratio": 15.77,
+              "foreground": "rgb(26, 26, 46)",
+              "background": [
+                247,
+                246,
+                242
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    },
+    {
+      "stage": "ux-pro-09e",
+      "route": "/conteudos",
+      "viewport": "1440x900",
+      "screenshot": "docs\\UX-PRO-09E-PU4-evidencias-2026-10-21\\conteudos\\w1440-night-conteudos.png",
+      "gateEvidence": null,
+      "requestedTheme": "night",
+      "navigationStatus": 200,
+      "theme": "night",
+      "audit": {
+        "title": "Conteúdos | SEG System",
+        "headings": [
+          {
+            "level": 1,
+            "text": "Conteúdos publicados"
+          }
+        ],
+        "landmarks": [
+          "main",
+          "nav[aria-label=Site]"
+        ],
+        "visibleTextLength": 142,
+        "states": {
+          "loading": false,
+          "empty": false,
+          "failure": false
+        },
+        "contrast": {
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "lowest": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdos publicados",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            }
+          ],
+          "samples": [
+            {
+              "tag": "a",
+              "text": "Início",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Conteúdos",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Pacotes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "text": "Conteúdos publicados",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "text": "Solicitar atendimento",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        },
+        "focusables": 6,
+        "textContrast": {
+          "status": "measured",
+          "renderedTextNodeCount": 8,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 8,
+          "resolvedCount": 8,
+          "indeterminateCount": 0,
+          "under45": [],
+          "samples": [
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Início",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Serviços",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Conteúdos",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Pacotes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "a",
+              "text": "Perguntas frequentes",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "h1",
+              "selector": "main.publication-surface > h1",
+              "text": "Conteúdos publicados",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "p",
+              "selector": "main.publication-surface > p",
+              "text": "Não há publicações disponíveis no momento.",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            },
+            {
+              "tag": "a",
+              "selector": "main.publication-surface > a",
+              "text": "Solicitar atendimento",
+              "ratio": 16.96,
+              "foreground": "rgb(248, 250, 252)",
+              "background": [
+                17,
+                24,
+                39
+              ],
+              "backgroundResolved": true
+            }
+          ]
+        }
+      },
+      "firstFocus": {
+        "tag": "a",
+        "text": "Início",
+        "outline": "solid"
+      },
+      "firstFocusAttempts": 1,
+      "problems": [],
+      "externalBlocked": []
+    }
+  ]
+}

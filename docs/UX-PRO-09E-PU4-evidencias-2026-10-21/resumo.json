@@ -1,0 +1,2061 @@
+{
+  "stage": "UX-PRO-09E-PU4",
+  "baseMain": "fb174f93996944c0b11e64553b4dc81c64a90856",
+  "generatedAt": "2026-10-21T04:15:46.164Z",
+  "generatedBy": "scripts/ux-evidence-capture.mjs",
+  "browser": "Google Chrome em Windows",
+  "viewportWidths": [
+    320,
+    390,
+    768,
+    1440
+  ],
+  "themes": [
+    "day",
+    "night"
+  ],
+  "themeMeaning": "prefers-color-scheme apenas; não valida tema controlado pelo produto",
+  "totals": {
+    "routes": 14,
+    "captures": 112,
+    "textSamples": 3768,
+    "resolved": 2500,
+    "indeterminate": 1268,
+    "under45": 136,
+    "unmeasuredVisibleText": 104,
+    "status": {
+      "measured": 112
+    },
+    "tags": {
+      "h1": 112,
+      "p": 732,
+      "strong": 280,
+      "div": 36,
+      "section": 64,
+      "label": 224,
+      "button": 224,
+      "h2": 168,
+      "span": 978,
+      "summary": 56,
+      "a": 558,
+      "li": 64,
+      "small": 88,
+      "em": 72,
+      "h3": 96,
+      "legend": 16
+    }
+  },
+  "signalGroups": [
+    {
+      "selector": "h2#_R_1clritqlbH1_",
+      "text": "Assistente de dúvidas",
+      "ratio": 3.35,
+      "occurrences": 8
+    },
+    {
+      "selector": "span",
+      "text": "RAG",
+      "ratio": 3.56,
+      "occurrences": 8
+    },
+    {
+      "selector": "span",
+      "text": "PUBLICO",
+      "ratio": 3.56,
+      "occurrences": 8
+    },
+    {
+      "selector": "span",
+      "text": "• escopo conferido no servidor",
+      "ratio": 3.56,
+      "occurrences": 8
+    },
+    {
+      "selector": "span",
+      "text": "Somente conteúdo público aprovado e publicado.",
+      "ratio": 3.11,
+      "occurrences": 8
+    },
+    {
+      "selector": "span",
+      "text": "*",
+      "ratio": 3.59,
+      "occurrences": 32
+    },
+    {
+      "selector": "label.consent > span",
+      "text": "Autorizo o registro destes dados para que a equipe do Grupo SEG System responda ao meu pedido. Após o registro, poderei ",
+      "ratio": 3.59,
+      "occurrences": 8
+    },
+    {
+      "selector": "span",
+      "text": "02",
+      "ratio": 2.72,
+      "occurrences": 8
+    },
+    {
+      "selector": "span",
+      "text": "03",
+      "ratio": 2.72,
+      "occurrences": 8
+    },
+    {
+      "selector": "span",
+      "text": "04",
+      "ratio": 2.72,
+      "occurrences": 8
+    },
+    {
+      "selector": "div.Simulator_summaryBlock__nIsJ2 > span",
+      "text": "Serviços",
+      "ratio": 3.17,
+      "occurrences": 8
+    },
+    {
+      "selector": "div.Simulator_summaryBlock__nIsJ2 > span",
+      "text": "Tipo",
+      "ratio": 3.17,
+      "occurrences": 8
+    },
+    {
+      "selector": "footer.Simulator_footer__7GJbA > span",
+      "text": "Grupo SEG System Segurança Integrada · Guarulhos / SP",
+      "ratio": 2.63,
+      "occurrences": 8
+    },
+    {
+      "selector": "footer.Simulator_footer__7GJbA > span",
+      "text": "Prévia em desenvolvimento — nenhum preço é exibido.",
+      "ratio": 2.63,
+      "occurrences": 8
+    }
+  ],
+  "limitations": [
+    "Amostragem cobre o DOM textual renderizado nos estados iniciais dessas capturas, não todos os estados de interação possíveis.",
+    "Razão <4.5 é sinal de triagem, não classificação automática de defeito: tamanho/peso do texto, papel, fundo real e critério aplicável precisam de revisão.",
+    "Fundo em gradiente/imagem/transparência não resolvida permanece indeterminado; texto visível sem retângulo mensurável permanece contabilizado como não medido.",
+    "Não substitui auditoria manual, leitor de tela, zoom, validação em outros navegadores nem aceite humano.",
+    "A rota sintética de aceite inválido registra respostas 404 esperadas no console; nenhum token real foi usado."
+  ],
+  "entries": [
+    {
+      "route": "/proposta/aceite/diagnostico-token-invalido",
+      "viewport": "320x780",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/w320-day-aceite-token-sintetico-invalido.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 5,
+        "resolvedCount": 0,
+        "indeterminateCount": 5,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": [
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "route": "/proposta/aceite/diagnostico-token-invalido",
+      "viewport": "320x780",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/w320-night-aceite-token-sintetico-invalido.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 5,
+        "resolvedCount": 0,
+        "indeterminateCount": 5,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/proposta/aceite/diagnostico-token-invalido",
+      "viewport": "390x844",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/w390-day-aceite-token-sintetico-invalido.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 5,
+        "resolvedCount": 0,
+        "indeterminateCount": 5,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/proposta/aceite/diagnostico-token-invalido",
+      "viewport": "390x844",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/w390-night-aceite-token-sintetico-invalido.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 5,
+        "resolvedCount": 1,
+        "indeterminateCount": 4,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": [
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "route": "/proposta/aceite/diagnostico-token-invalido",
+      "viewport": "768x1024",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/w768-day-aceite-token-sintetico-invalido.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 5,
+        "resolvedCount": 1,
+        "indeterminateCount": 4,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": [
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "route": "/proposta/aceite/diagnostico-token-invalido",
+      "viewport": "768x1024",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/w768-night-aceite-token-sintetico-invalido.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 5,
+        "resolvedCount": 0,
+        "indeterminateCount": 5,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/proposta/aceite/diagnostico-token-invalido",
+      "viewport": "1440x900",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/w1440-day-aceite-token-sintetico-invalido.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 5,
+        "resolvedCount": 1,
+        "indeterminateCount": 4,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": [
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "route": "/proposta/aceite/diagnostico-token-invalido",
+      "viewport": "1440x900",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/w1440-night-aceite-token-sintetico-invalido.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 5,
+        "resolvedCount": 1,
+        "indeterminateCount": 4,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": [
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    {
+      "route": "/contato",
+      "viewport": "320x780",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/w320-day-contato.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 53,
+        "resolvedCount": 37,
+        "indeterminateCount": 16,
+        "under45Count": 5,
+        "unmeasuredVisibleTextCount": 7
+      },
+      "problems": []
+    },
+    {
+      "route": "/contato",
+      "viewport": "320x780",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/w320-night-contato.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 53,
+        "resolvedCount": 37,
+        "indeterminateCount": 16,
+        "under45Count": 5,
+        "unmeasuredVisibleTextCount": 7
+      },
+      "problems": []
+    },
+    {
+      "route": "/contato",
+      "viewport": "390x844",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/w390-day-contato.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 53,
+        "resolvedCount": 37,
+        "indeterminateCount": 16,
+        "under45Count": 5,
+        "unmeasuredVisibleTextCount": 7
+      },
+      "problems": []
+    },
+    {
+      "route": "/contato",
+      "viewport": "390x844",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/w390-night-contato.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 53,
+        "resolvedCount": 37,
+        "indeterminateCount": 16,
+        "under45Count": 5,
+        "unmeasuredVisibleTextCount": 7
+      },
+      "problems": []
+    },
+    {
+      "route": "/contato",
+      "viewport": "768x1024",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/w768-day-contato.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 53,
+        "resolvedCount": 37,
+        "indeterminateCount": 16,
+        "under45Count": 5,
+        "unmeasuredVisibleTextCount": 7
+      },
+      "problems": []
+    },
+    {
+      "route": "/contato",
+      "viewport": "768x1024",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/w768-night-contato.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 53,
+        "resolvedCount": 37,
+        "indeterminateCount": 16,
+        "under45Count": 5,
+        "unmeasuredVisibleTextCount": 7
+      },
+      "problems": []
+    },
+    {
+      "route": "/contato",
+      "viewport": "1440x900",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/w1440-day-contato.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 53,
+        "resolvedCount": 37,
+        "indeterminateCount": 16,
+        "under45Count": 5,
+        "unmeasuredVisibleTextCount": 7
+      },
+      "problems": []
+    },
+    {
+      "route": "/contato",
+      "viewport": "1440x900",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/w1440-night-contato.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 53,
+        "resolvedCount": 37,
+        "indeterminateCount": 16,
+        "under45Count": 5,
+        "unmeasuredVisibleTextCount": 7
+      },
+      "problems": []
+    },
+    {
+      "route": "/conteudos/diagnostico-sem-conteudo",
+      "viewport": "320x780",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/w320-day-conteudo-dinamico.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 8,
+        "resolvedCount": 8,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/conteudos/diagnostico-sem-conteudo",
+      "viewport": "320x780",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/w320-night-conteudo-dinamico.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 8,
+        "resolvedCount": 8,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/conteudos/diagnostico-sem-conteudo",
+      "viewport": "390x844",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/w390-day-conteudo-dinamico.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 8,
+        "resolvedCount": 8,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/conteudos/diagnostico-sem-conteudo",
+      "viewport": "390x844",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/w390-night-conteudo-dinamico.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 8,
+        "resolvedCount": 8,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/conteudos/diagnostico-sem-conteudo",
+      "viewport": "768x1024",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/w768-day-conteudo-dinamico.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 8,
+        "resolvedCount": 8,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/conteudos/diagnostico-sem-conteudo",
+      "viewport": "768x1024",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/w768-night-conteudo-dinamico.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 8,
+        "resolvedCount": 8,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/conteudos/diagnostico-sem-conteudo",
+      "viewport": "1440x900",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/w1440-day-conteudo-dinamico.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 8,
+        "resolvedCount": 8,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/conteudos/diagnostico-sem-conteudo",
+      "viewport": "1440x900",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/w1440-night-conteudo-dinamico.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 8,
+        "resolvedCount": 8,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/conteudos",
+      "viewport": "320x780",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/w320-day-conteudos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 8,
+        "resolvedCount": 8,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/conteudos",
+      "viewport": "320x780",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/w320-night-conteudos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 8,
+        "resolvedCount": 8,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/conteudos",
+      "viewport": "390x844",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/w390-day-conteudos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 8,
+        "resolvedCount": 8,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/conteudos",
+      "viewport": "390x844",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/w390-night-conteudos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 8,
+        "resolvedCount": 8,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/conteudos",
+      "viewport": "768x1024",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/w768-day-conteudos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 8,
+        "resolvedCount": 8,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/conteudos",
+      "viewport": "768x1024",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/w768-night-conteudos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 8,
+        "resolvedCount": 8,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/conteudos",
+      "viewport": "1440x900",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/w1440-day-conteudos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 8,
+        "resolvedCount": 8,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/conteudos",
+      "viewport": "1440x900",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/w1440-night-conteudos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 8,
+        "resolvedCount": 8,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/faq",
+      "viewport": "320x780",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/w320-day-faq.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 54,
+        "resolvedCount": 39,
+        "indeterminateCount": 15,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/faq",
+      "viewport": "320x780",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/w320-night-faq.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 54,
+        "resolvedCount": 39,
+        "indeterminateCount": 15,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/faq",
+      "viewport": "390x844",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/w390-day-faq.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 54,
+        "resolvedCount": 39,
+        "indeterminateCount": 15,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/faq",
+      "viewport": "390x844",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/w390-night-faq.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 54,
+        "resolvedCount": 39,
+        "indeterminateCount": 15,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/faq",
+      "viewport": "768x1024",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/w768-day-faq.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 54,
+        "resolvedCount": 39,
+        "indeterminateCount": 15,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/faq",
+      "viewport": "768x1024",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/w768-night-faq.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 54,
+        "resolvedCount": 39,
+        "indeterminateCount": 15,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/faq",
+      "viewport": "1440x900",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/w1440-day-faq.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 54,
+        "resolvedCount": 39,
+        "indeterminateCount": 15,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/faq",
+      "viewport": "1440x900",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/w1440-night-faq.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 54,
+        "resolvedCount": 39,
+        "indeterminateCount": 15,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/",
+      "viewport": "320x780",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/w320-day-home.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 192,
+        "resolvedCount": 154,
+        "indeterminateCount": 38,
+        "under45Count": 5,
+        "unmeasuredVisibleTextCount": 6
+      },
+      "problems": []
+    },
+    {
+      "route": "/",
+      "viewport": "320x780",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/w320-night-home.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 192,
+        "resolvedCount": 154,
+        "indeterminateCount": 38,
+        "under45Count": 5,
+        "unmeasuredVisibleTextCount": 6
+      },
+      "problems": []
+    },
+    {
+      "route": "/",
+      "viewport": "390x844",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/w390-day-home.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 192,
+        "resolvedCount": 154,
+        "indeterminateCount": 38,
+        "under45Count": 5,
+        "unmeasuredVisibleTextCount": 6
+      },
+      "problems": []
+    },
+    {
+      "route": "/",
+      "viewport": "390x844",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/w390-night-home.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 192,
+        "resolvedCount": 154,
+        "indeterminateCount": 38,
+        "under45Count": 5,
+        "unmeasuredVisibleTextCount": 6
+      },
+      "problems": []
+    },
+    {
+      "route": "/",
+      "viewport": "768x1024",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/w768-day-home.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 195,
+        "resolvedCount": 157,
+        "indeterminateCount": 38,
+        "under45Count": 5,
+        "unmeasuredVisibleTextCount": 6
+      },
+      "problems": []
+    },
+    {
+      "route": "/",
+      "viewport": "768x1024",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/w768-night-home.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 195,
+        "resolvedCount": 157,
+        "indeterminateCount": 38,
+        "under45Count": 5,
+        "unmeasuredVisibleTextCount": 6
+      },
+      "problems": []
+    },
+    {
+      "route": "/",
+      "viewport": "1440x900",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/w1440-day-home.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 203,
+        "resolvedCount": 165,
+        "indeterminateCount": 38,
+        "under45Count": 5,
+        "unmeasuredVisibleTextCount": 6
+      },
+      "problems": []
+    },
+    {
+      "route": "/",
+      "viewport": "1440x900",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/w1440-night-home.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 203,
+        "resolvedCount": 165,
+        "indeterminateCount": 38,
+        "under45Count": 5,
+        "unmeasuredVisibleTextCount": 6
+      },
+      "problems": []
+    },
+    {
+      "route": "/orcamento",
+      "viewport": "320x780",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/w320-day-orcamento.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 39,
+        "resolvedCount": 8,
+        "indeterminateCount": 31,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/orcamento",
+      "viewport": "320x780",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/w320-night-orcamento.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 39,
+        "resolvedCount": 8,
+        "indeterminateCount": 31,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/orcamento",
+      "viewport": "390x844",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/w390-day-orcamento.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 39,
+        "resolvedCount": 8,
+        "indeterminateCount": 31,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/orcamento",
+      "viewport": "390x844",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/w390-night-orcamento.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 39,
+        "resolvedCount": 8,
+        "indeterminateCount": 31,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/orcamento",
+      "viewport": "768x1024",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/w768-day-orcamento.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 39,
+        "resolvedCount": 8,
+        "indeterminateCount": 31,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/orcamento",
+      "viewport": "768x1024",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/w768-night-orcamento.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 39,
+        "resolvedCount": 8,
+        "indeterminateCount": 31,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/orcamento",
+      "viewport": "1440x900",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/w1440-day-orcamento.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 39,
+        "resolvedCount": 8,
+        "indeterminateCount": 31,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/orcamento",
+      "viewport": "1440x900",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/w1440-night-orcamento.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 39,
+        "resolvedCount": 8,
+        "indeterminateCount": 31,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/pacotes",
+      "viewport": "320x780",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/w320-day-pacotes.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 9,
+        "resolvedCount": 9,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/pacotes",
+      "viewport": "320x780",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/w320-night-pacotes.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 9,
+        "resolvedCount": 9,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/pacotes",
+      "viewport": "390x844",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/w390-day-pacotes.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 9,
+        "resolvedCount": 9,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/pacotes",
+      "viewport": "390x844",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/w390-night-pacotes.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 9,
+        "resolvedCount": 9,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/pacotes",
+      "viewport": "768x1024",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/w768-day-pacotes.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 9,
+        "resolvedCount": 9,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/pacotes",
+      "viewport": "768x1024",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/w768-night-pacotes.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 9,
+        "resolvedCount": 9,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/pacotes",
+      "viewport": "1440x900",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/w1440-day-pacotes.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 9,
+        "resolvedCount": 9,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/pacotes",
+      "viewport": "1440x900",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/w1440-night-pacotes.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 9,
+        "resolvedCount": 9,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/privacidade",
+      "viewport": "320x780",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/w320-day-privacidade.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 7,
+        "resolvedCount": 7,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/privacidade",
+      "viewport": "320x780",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/w320-night-privacidade.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 7,
+        "resolvedCount": 7,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/privacidade",
+      "viewport": "390x844",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/w390-day-privacidade.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 7,
+        "resolvedCount": 7,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/privacidade",
+      "viewport": "390x844",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/w390-night-privacidade.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 7,
+        "resolvedCount": 7,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/privacidade",
+      "viewport": "768x1024",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/w768-day-privacidade.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 7,
+        "resolvedCount": 7,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/privacidade",
+      "viewport": "768x1024",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/w768-night-privacidade.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 7,
+        "resolvedCount": 7,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/privacidade",
+      "viewport": "1440x900",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/w1440-day-privacidade.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 7,
+        "resolvedCount": 7,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/privacidade",
+      "viewport": "1440x900",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/w1440-night-privacidade.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 7,
+        "resolvedCount": 7,
+        "indeterminateCount": 0,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/segmentos/condominio",
+      "viewport": "320x780",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/w320-day-segmento-condominio.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 2,
+        "resolvedCount": 0,
+        "indeterminateCount": 2,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/segmentos/condominio",
+      "viewport": "320x780",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/w320-night-segmento-condominio.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 2,
+        "resolvedCount": 0,
+        "indeterminateCount": 2,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/segmentos/condominio",
+      "viewport": "390x844",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/w390-day-segmento-condominio.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 2,
+        "resolvedCount": 0,
+        "indeterminateCount": 2,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/segmentos/condominio",
+      "viewport": "390x844",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/w390-night-segmento-condominio.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 2,
+        "resolvedCount": 0,
+        "indeterminateCount": 2,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/segmentos/condominio",
+      "viewport": "768x1024",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/w768-day-segmento-condominio.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 2,
+        "resolvedCount": 0,
+        "indeterminateCount": 2,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/segmentos/condominio",
+      "viewport": "768x1024",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/w768-night-segmento-condominio.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 2,
+        "resolvedCount": 0,
+        "indeterminateCount": 2,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/segmentos/condominio",
+      "viewport": "1440x900",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/w1440-day-segmento-condominio.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 2,
+        "resolvedCount": 0,
+        "indeterminateCount": 2,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/segmentos/condominio",
+      "viewport": "1440x900",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/w1440-night-segmento-condominio.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 2,
+        "resolvedCount": 0,
+        "indeterminateCount": 2,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/segmentos",
+      "viewport": "320x780",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/w320-day-segmentos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 13,
+        "resolvedCount": 0,
+        "indeterminateCount": 13,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/segmentos",
+      "viewport": "320x780",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/w320-night-segmentos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 13,
+        "resolvedCount": 0,
+        "indeterminateCount": 13,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/segmentos",
+      "viewport": "390x844",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/w390-day-segmentos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 13,
+        "resolvedCount": 0,
+        "indeterminateCount": 13,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/segmentos",
+      "viewport": "390x844",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/w390-night-segmentos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 13,
+        "resolvedCount": 0,
+        "indeterminateCount": 13,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/segmentos",
+      "viewport": "768x1024",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/w768-day-segmentos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 13,
+        "resolvedCount": 0,
+        "indeterminateCount": 13,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/segmentos",
+      "viewport": "768x1024",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/w768-night-segmentos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 13,
+        "resolvedCount": 0,
+        "indeterminateCount": 13,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/segmentos",
+      "viewport": "1440x900",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/w1440-day-segmentos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 13,
+        "resolvedCount": 0,
+        "indeterminateCount": 13,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/segmentos",
+      "viewport": "1440x900",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/w1440-night-segmentos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 13,
+        "resolvedCount": 0,
+        "indeterminateCount": 13,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/servicos/Segurança%20Desarmada",
+      "viewport": "320x780",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/w320-day-servico-seguranca-desarmada.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 2,
+        "resolvedCount": 0,
+        "indeterminateCount": 2,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/servicos/Segurança%20Desarmada",
+      "viewport": "320x780",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/w320-night-servico-seguranca-desarmada.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 2,
+        "resolvedCount": 0,
+        "indeterminateCount": 2,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/servicos/Segurança%20Desarmada",
+      "viewport": "390x844",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/w390-day-servico-seguranca-desarmada.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 2,
+        "resolvedCount": 0,
+        "indeterminateCount": 2,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/servicos/Segurança%20Desarmada",
+      "viewport": "390x844",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/w390-night-servico-seguranca-desarmada.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 2,
+        "resolvedCount": 0,
+        "indeterminateCount": 2,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/servicos/Segurança%20Desarmada",
+      "viewport": "768x1024",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/w768-day-servico-seguranca-desarmada.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 2,
+        "resolvedCount": 0,
+        "indeterminateCount": 2,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/servicos/Segurança%20Desarmada",
+      "viewport": "768x1024",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/w768-night-servico-seguranca-desarmada.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 2,
+        "resolvedCount": 0,
+        "indeterminateCount": 2,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/servicos/Segurança%20Desarmada",
+      "viewport": "1440x900",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/w1440-day-servico-seguranca-desarmada.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 2,
+        "resolvedCount": 0,
+        "indeterminateCount": 2,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/servicos/Segurança%20Desarmada",
+      "viewport": "1440x900",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/w1440-night-servico-seguranca-desarmada.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 2,
+        "resolvedCount": 0,
+        "indeterminateCount": 2,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/servicos",
+      "viewport": "320x780",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/w320-day-servicos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 37,
+        "resolvedCount": 0,
+        "indeterminateCount": 37,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/servicos",
+      "viewport": "320x780",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/w320-night-servicos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 37,
+        "resolvedCount": 0,
+        "indeterminateCount": 37,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/servicos",
+      "viewport": "390x844",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/w390-day-servicos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 37,
+        "resolvedCount": 0,
+        "indeterminateCount": 37,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/servicos",
+      "viewport": "390x844",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/w390-night-servicos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 37,
+        "resolvedCount": 0,
+        "indeterminateCount": 37,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/servicos",
+      "viewport": "768x1024",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/w768-day-servicos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 37,
+        "resolvedCount": 0,
+        "indeterminateCount": 37,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/servicos",
+      "viewport": "768x1024",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/w768-night-servicos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 37,
+        "resolvedCount": 0,
+        "indeterminateCount": 37,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/servicos",
+      "viewport": "1440x900",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/w1440-day-servicos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 37,
+        "resolvedCount": 0,
+        "indeterminateCount": 37,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/servicos",
+      "viewport": "1440x900",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/w1440-night-servicos.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 37,
+        "resolvedCount": 0,
+        "indeterminateCount": 37,
+        "under45Count": 0,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/simulador",
+      "viewport": "320x780",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/w320-day-simulador.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 38,
+        "resolvedCount": 38,
+        "indeterminateCount": 0,
+        "under45Count": 7,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/simulador",
+      "viewport": "320x780",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/w320-night-simulador.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 38,
+        "resolvedCount": 38,
+        "indeterminateCount": 0,
+        "under45Count": 7,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/simulador",
+      "viewport": "390x844",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/w390-day-simulador.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 38,
+        "resolvedCount": 38,
+        "indeterminateCount": 0,
+        "under45Count": 7,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/simulador",
+      "viewport": "390x844",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/w390-night-simulador.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 38,
+        "resolvedCount": 38,
+        "indeterminateCount": 0,
+        "under45Count": 7,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/w768-day-simulador.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 39,
+        "resolvedCount": 39,
+        "indeterminateCount": 0,
+        "under45Count": 7,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/simulador",
+      "viewport": "768x1024",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/w768-night-simulador.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 39,
+        "resolvedCount": 39,
+        "indeterminateCount": 0,
+        "under45Count": 7,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "theme": "day",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/w1440-day-simulador.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 39,
+        "resolvedCount": 39,
+        "indeterminateCount": 0,
+        "under45Count": 7,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    },
+    {
+      "route": "/simulador",
+      "viewport": "1440x900",
+      "theme": "night",
+      "scenario": "renderização inicial da rota; sem envio de formulário",
+      "screenshot": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/w1440-night-simulador.png",
+      "detailFile": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/resumo.json",
+      "textContrast": {
+        "status": "measured",
+        "sampleCount": 39,
+        "resolvedCount": 39,
+        "indeterminateCount": 0,
+        "under45Count": 7,
+        "unmeasuredVisibleTextCount": 0
+      },
+      "problems": []
+    }
+  ]
+}
