@@ -1,8 +1,8 @@
 # UX-PRO-09E-7 — escopo e riscos antes da implementação
 
-**Data:** 21/10/2026  
-**Base:** `main` `0637cd63e25b0a92ec1d05d4f69b76a7574138ce` (merge da PR #286)  
-**Branch:** `ux-pro-09e-7-text-overflow-20261021`  
+**Data:** 21/10/2026
+**Base:** `main` `0637cd63e25b0a92ec1d05d4f69b76a7574138ce` (merge da PR #286)
+**Branch:** `ux-pro-09e-7-text-overflow-20261021`
 **Objetivo:** ampliar de forma opt-in a atribuição de overflow a linhas de texto no capturador visual, em uma etapa isolada, sem alterar as saídas das etapas existentes.
 
 ## Escopo
