@@ -22,6 +22,7 @@ import { chromium as playwrightChromium } from 'playwright';
 import packagedChromium from '@sparticuz/chromium';
 import { provisionStaff, STAFF_TEST_PASSWORD } from '../tests/helpers/staff-login.mjs';
 import { measurementPlan, measureKeyboard, measureTheme } from './ux-pro-08d-measurements.mjs';
+import { measureTextContrast } from './ux-evidence-text-contrast.mjs';
 import { hashPassword } from '../src/lib/client-auth-core.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -297,6 +298,7 @@ const STAGES = {
     publicDiagnostic: true,
     attributeTextOverflow: true,
     fullContrastSamples: true,
+    fullTextContrastSamples: true,
     viewports: [320, 390, 768, 1440].flatMap(width => ['day', 'night'].map(theme => ({
       name: `w${width}-${theme}`, width, height: width >= 768 ? (width === 768 ? 1024 : 900) : (width === 320 ? 780 : 844), theme,
     }))),
@@ -807,6 +809,9 @@ try {
             focusables: document.querySelectorAll('a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])').length,
           };
         }, plan.fullContrastSamples === true) : null;
+        if (publicAudit && plan.fullTextContrastSamples === true) {
+          publicAudit.textContrast = await page.evaluate(measureTextContrast);
+        }
         const measurements = plan.measurements || plan.browserMeasurements ? {
           ...await measureKeyboard(page, target),
           theme: await measureTheme(page, target, viewport.theme),
@@ -863,15 +868,15 @@ try {
   for (const directory of directories) {
     const summaryPath = path.join(root, directory, 'resumo.json');
     const previous = plan.measurements ? JSON.parse(await readFile(summaryPath, 'utf8')) : {};
-    const entries = report.filter(entry => path.dirname(entry.screenshot) === directory);
+        const entries = report.filter(entry => path.resolve(root, path.dirname(entry.screenshot)) === path.resolve(root, directory));
     const summary = plan.measurements ? {
       ...previous,
       measurements08d: { stage, generatedBy: 'scripts/ux-evidence-capture.mjs', baseMain: '3d807a420db6c63c3f754ae02144053e29da1469', date: new Date().toISOString().slice(0, 10) },
       entries: [...(previous.entries || []).filter(entry => entry.stage !== stage), ...entries],
     } : plan.publicDiagnostic ? {
       stage, generatedBy: 'scripts/ux-evidence-capture.mjs', route: entries[0]?.route || null,
-      limitations: [
-        'Chromium headless Linux; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.',
+          limitations: [
+            `Navegador ${process.env.UX_EVIDENCE_CHROMIUM_CHANNEL || 'Chromium empacotado'} em ${process.platform}; day/night representam apenas prefers-color-scheme, não um controle de tema do produto.`,
         'Contraste só é computado quando cor de fundo sólida é resolvida; gradientes/imagens/camadas complexas ficam indeterminados.',
         'Rede externa bloqueada no sandbox; recursos externos podem divergir.',
         'Sem leitor de tela, zoom 200%, teste humano/UAT ou declaração de conformidade WCAG. Nenhum formulário foi enviado.',

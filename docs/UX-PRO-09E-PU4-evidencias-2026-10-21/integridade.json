@@ -1,0 +1,789 @@
+{
+  "algorithm": "SHA-256",
+  "files": [
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/w320-day-aceite-token-sintetico-invalido.png",
+      "bytes": 9038,
+      "sha256": "c3a6607c059d8fcb3a7607c8efebe644cd3006d964391a6f91f0bae094ef114f",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/w320-night-aceite-token-sintetico-invalido.png",
+      "bytes": 9038,
+      "sha256": "c3a6607c059d8fcb3a7607c8efebe644cd3006d964391a6f91f0bae094ef114f",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/w390-day-aceite-token-sintetico-invalido.png",
+      "bytes": 9682,
+      "sha256": "c3b393d40b4e5ecd52864ae8f0b2403c7e3d0065b4afdef8a5bb9f2f1da44fa4",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/w390-night-aceite-token-sintetico-invalido.png",
+      "bytes": 10728,
+      "sha256": "83059899d474e6d20615a771e6466dbaa672d4a57b4422e21dc86d79bfd3b1e4",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/w768-day-aceite-token-sintetico-invalido.png",
+      "bytes": 12259,
+      "sha256": "f2bba1cd5792b59e283fce48b171f0883b5b655ec5b24474211ebc65fcbfbc9d",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/w768-night-aceite-token-sintetico-invalido.png",
+      "bytes": 11334,
+      "sha256": "ed500509946e79ffc502d0deeddf879e2ba0729d5e0993f0ec6cdfb6bad19c2a",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/w1440-day-aceite-token-sintetico-invalido.png",
+      "bytes": 13702,
+      "sha256": "6617f9acd18ac15e91d6ae72c5c13ee3c7e944bba0534fbab95312a675776730",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/aceite-token-sintetico-invalido/w1440-night-aceite-token-sintetico-invalido.png",
+      "bytes": 13702,
+      "sha256": "6617f9acd18ac15e91d6ae72c5c13ee3c7e944bba0534fbab95312a675776730",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/w320-day-contato.png",
+      "bytes": 12660,
+      "sha256": "d46df732631ab8bc8dc10f013313fbc0da676a8a457f8da28ff5a3e049505963",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/w320-night-contato.png",
+      "bytes": 12660,
+      "sha256": "d46df732631ab8bc8dc10f013313fbc0da676a8a457f8da28ff5a3e049505963",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/w390-day-contato.png",
+      "bytes": 14528,
+      "sha256": "ced03e36b04322aa267c1892bba465e030e330c0acb956248565d23a3819e00d",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/w390-night-contato.png",
+      "bytes": 14528,
+      "sha256": "ced03e36b04322aa267c1892bba465e030e330c0acb956248565d23a3819e00d",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/w768-day-contato.png",
+      "bytes": 21886,
+      "sha256": "933c3a943fd70e2de73e3bb34add112fe1bfe51a865fd35c65d068af3b0cdb39",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/w768-night-contato.png",
+      "bytes": 21886,
+      "sha256": "933c3a943fd70e2de73e3bb34add112fe1bfe51a865fd35c65d068af3b0cdb39",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/w1440-day-contato.png",
+      "bytes": 20989,
+      "sha256": "c698f8a0f23049237a4041a986c2571a09a27c37ffcf3c4181bd043b82610efe",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/contato/w1440-night-contato.png",
+      "bytes": 20989,
+      "sha256": "c698f8a0f23049237a4041a986c2571a09a27c37ffcf3c4181bd043b82610efe",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/w320-day-conteudo-dinamico.png",
+      "bytes": 7168,
+      "sha256": "40578c2f4409ff8ae96f123b6e02b6b9d63b13bb0c83eaad6eed7add88f8a7c3",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/w320-night-conteudo-dinamico.png",
+      "bytes": 6970,
+      "sha256": "a0e35fd0086ff1557e902c99c41f9e5f878ae69d572baace7cea2f7aaa1aa489",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/w390-day-conteudo-dinamico.png",
+      "bytes": 8045,
+      "sha256": "cbab4ab16df8649318dffb846475e64c79f8350ea6d5e7d53daaef312817bf8d",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/w390-night-conteudo-dinamico.png",
+      "bytes": 7508,
+      "sha256": "4b7b2580f41be42016603e3d95a9c256a5ec9b5a523b6c66ebc8c616087494ce",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/w768-day-conteudo-dinamico.png",
+      "bytes": 9523,
+      "sha256": "5ab87067afd65b5dc27339eabcd77e082885db411beff67e980bcb4209e1c5e8",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/w768-night-conteudo-dinamico.png",
+      "bytes": 8980,
+      "sha256": "2abd5552d7ad7ee37f85345bad8e0f1a56f455dffac45b954f4c5be41a37dedf",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/w1440-day-conteudo-dinamico.png",
+      "bytes": 11392,
+      "sha256": "512502d902fb8c399eeeb1929e1a8ea64037032d1ae6bdd56e18763985298275",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudo-dinamico/w1440-night-conteudo-dinamico.png",
+      "bytes": 11372,
+      "sha256": "5ffb7d05ef059fbadce69f4b9f0d3cdc89aa73536137a7368538722e4d5998e9",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/w320-day-conteudos.png",
+      "bytes": 8434,
+      "sha256": "be5a62864796cdb594c07c4e917e3ef6bb5d07756bd8c596e6161dd0b405cc3e",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/w320-night-conteudos.png",
+      "bytes": 7919,
+      "sha256": "5f676c700432bb4530a5467cdeb2b1a986d8cbf2e4cf582719e7f34865754df7",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/w390-day-conteudos.png",
+      "bytes": 8563,
+      "sha256": "3335fe06d17b76a379b509ce15d3cddeebc6cf634bee57df070b5b895200f517",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/w390-night-conteudos.png",
+      "bytes": 8014,
+      "sha256": "26fa7e395c96080b4711d72c9d3385c80731bb57666a546bca1c19ae1d641b75",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/w768-day-conteudos.png",
+      "bytes": 10097,
+      "sha256": "65010a9a685d1f67a730368fa4cd4ede5004e3f76990a7c4f03824cb263f63f9",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/w768-night-conteudos.png",
+      "bytes": 9558,
+      "sha256": "a58ece9a6920a3389b777a66ccea940bbeeefc5a07d8ba439c33606da6241f64",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/w1440-day-conteudos.png",
+      "bytes": 13248,
+      "sha256": "cafb4dd798ce8a6444f9d67756772f9e43a0d0b08b68bda472ee6ed6ade4f07e",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/conteudos/w1440-night-conteudos.png",
+      "bytes": 13191,
+      "sha256": "a621bc7e798d5a1899852d15313755724f03951be29007a6e24d473dbfa53cf1",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/w320-day-faq.png",
+      "bytes": 14448,
+      "sha256": "7500fd6962ee374e90676665e28a9b81223c74e6722476f0727974388df68a02",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/w320-night-faq.png",
+      "bytes": 14448,
+      "sha256": "7500fd6962ee374e90676665e28a9b81223c74e6722476f0727974388df68a02",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/w390-day-faq.png",
+      "bytes": 15972,
+      "sha256": "de73c1cf3aa3a4d6c7ae183a2335731d31903703ef06b9b647f61425ec95d506",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/w390-night-faq.png",
+      "bytes": 15972,
+      "sha256": "de73c1cf3aa3a4d6c7ae183a2335731d31903703ef06b9b647f61425ec95d506",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/w768-day-faq.png",
+      "bytes": 24742,
+      "sha256": "7f860616981951b04da1fc33ae6d0ce9d9819126e06537674e573a0405434027",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/w768-night-faq.png",
+      "bytes": 24742,
+      "sha256": "7f860616981951b04da1fc33ae6d0ce9d9819126e06537674e573a0405434027",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/w1440-day-faq.png",
+      "bytes": 26089,
+      "sha256": "f143c71090f000bf727f1884310eaf3b5c0f02b3e92c37577b6573865ed7fe61",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/faq/w1440-night-faq.png",
+      "bytes": 26089,
+      "sha256": "f143c71090f000bf727f1884310eaf3b5c0f02b3e92c37577b6573865ed7fe61",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/w320-day-home.png",
+      "bytes": 26694,
+      "sha256": "84e0bb3a2b1a87cd6e227f040925577ad51e3619fe989832b9f3f7f44ba77a37",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/w320-night-home.png",
+      "bytes": 26694,
+      "sha256": "84e0bb3a2b1a87cd6e227f040925577ad51e3619fe989832b9f3f7f44ba77a37",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/w390-day-home.png",
+      "bytes": 62865,
+      "sha256": "6998f32a950529b52443797c66db2a117068a1221a690f37b406d2d3c173b56d",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/w390-night-home.png",
+      "bytes": 62865,
+      "sha256": "6998f32a950529b52443797c66db2a117068a1221a690f37b406d2d3c173b56d",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/w768-day-home.png",
+      "bytes": 461072,
+      "sha256": "6e288fb98a351bc76f6fe1eb126de13c8b86f48183d3fde39854aa9a7043377c",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/w768-night-home.png",
+      "bytes": 461072,
+      "sha256": "6e288fb98a351bc76f6fe1eb126de13c8b86f48183d3fde39854aa9a7043377c",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/w1440-day-home.png",
+      "bytes": 533485,
+      "sha256": "5ed5d0deadb2b4ad62e7707ad9a7bbc181f7f1ac0b8a3f78bae3e7504fa6e29b",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/home/w1440-night-home.png",
+      "bytes": 533485,
+      "sha256": "5ed5d0deadb2b4ad62e7707ad9a7bbc181f7f1ac0b8a3f78bae3e7504fa6e29b",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/w320-day-orcamento.png",
+      "bytes": 14686,
+      "sha256": "5e8e3959a2fc3648d9b7f288564e3fafc742081d23d8fa30f18ee2225886653f",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/w320-night-orcamento.png",
+      "bytes": 14686,
+      "sha256": "5e8e3959a2fc3648d9b7f288564e3fafc742081d23d8fa30f18ee2225886653f",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/w390-day-orcamento.png",
+      "bytes": 19470,
+      "sha256": "381ef8bd1cbc76376fe5fe65021595b4b1b5c60fb2e519d4d6202e5e74c59770",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/w390-night-orcamento.png",
+      "bytes": 19470,
+      "sha256": "381ef8bd1cbc76376fe5fe65021595b4b1b5c60fb2e519d4d6202e5e74c59770",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/w768-day-orcamento.png",
+      "bytes": 26615,
+      "sha256": "09e22c72d831b505853bb054c6d421c12f55553ddce6fe2d3e68be9401f29181",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/w768-night-orcamento.png",
+      "bytes": 26615,
+      "sha256": "09e22c72d831b505853bb054c6d421c12f55553ddce6fe2d3e68be9401f29181",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/w1440-day-orcamento.png",
+      "bytes": 25722,
+      "sha256": "568dbd2e3dc36447277cdbaff1c05fcc050aa5f19a8688d3fbbc2404b1ca049e",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/orcamento/w1440-night-orcamento.png",
+      "bytes": 25722,
+      "sha256": "568dbd2e3dc36447277cdbaff1c05fcc050aa5f19a8688d3fbbc2404b1ca049e",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/w320-day-pacotes.png",
+      "bytes": 9079,
+      "sha256": "218b9ad4dbedca085b5a80cf6f52bb9b319e47cf14926af29202b3872c4519f1",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/w320-night-pacotes.png",
+      "bytes": 8582,
+      "sha256": "f8948a82c6a5453b5e86dd6247a83db98625cce1fde6a20047522fbda6a199bf",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/w390-day-pacotes.png",
+      "bytes": 9647,
+      "sha256": "8206966318ae0646bf95527158393d111663f5807dae8b7d408a79de537d818c",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/w390-night-pacotes.png",
+      "bytes": 9127,
+      "sha256": "11f947704bad134ef8fa84de89d7ec5d6f3f256e44bfe04843fe96453fda119b",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/w768-day-pacotes.png",
+      "bytes": 11236,
+      "sha256": "4dd8d2654047d135c0e839fe1c242dd7133b1139b2657adb36dffeafd344a0c5",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/w768-night-pacotes.png",
+      "bytes": 10702,
+      "sha256": "364ad2a652a0a522126f34dfe7cda08c63cae7389c4725a9335eb8e4ba79bf55",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/w1440-day-pacotes.png",
+      "bytes": 13907,
+      "sha256": "9c964db7b4e217ae64de76785a2c1ed12a84d1077ab50c89f24d0a38b79e255c",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/pacotes/w1440-night-pacotes.png",
+      "bytes": 13481,
+      "sha256": "04b06fa85314cdc4dc800bf7428ec66e11782ea78798a7782b4ac812e5d3d06a",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/w320-day-privacidade.png",
+      "bytes": 12491,
+      "sha256": "5ad386ecff674509b2039e1f3cf72da6d487cbe3bc6ecb4492e1ea2731a5cfd5",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/w320-night-privacidade.png",
+      "bytes": 12491,
+      "sha256": "5ad386ecff674509b2039e1f3cf72da6d487cbe3bc6ecb4492e1ea2731a5cfd5",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/w390-day-privacidade.png",
+      "bytes": 12978,
+      "sha256": "e91d099221424a4e3079c38fc1db883216dbf2e871922d50fff42ebe67d716ef",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/w390-night-privacidade.png",
+      "bytes": 12978,
+      "sha256": "e91d099221424a4e3079c38fc1db883216dbf2e871922d50fff42ebe67d716ef",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/w768-day-privacidade.png",
+      "bytes": 14647,
+      "sha256": "c75f0ddd6884e14543832da5b544ab2b737b213a84e1589781e3b15e8dcc8b39",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/w768-night-privacidade.png",
+      "bytes": 14647,
+      "sha256": "c75f0ddd6884e14543832da5b544ab2b737b213a84e1589781e3b15e8dcc8b39",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/w1440-day-privacidade.png",
+      "bytes": 17115,
+      "sha256": "bced8fff28abe51e43c0e1fc94ce55e9618224e89fa6fdbe540fc653015c2250",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/privacidade/w1440-night-privacidade.png",
+      "bytes": 17115,
+      "sha256": "bced8fff28abe51e43c0e1fc94ce55e9618224e89fa6fdbe540fc653015c2250",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/w320-day-segmento-condominio.png",
+      "bytes": 7110,
+      "sha256": "358d7d8127985f07f496f9eaabdc4295b2fff34aeb884f147b3043fce55d1f26",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/w320-night-segmento-condominio.png",
+      "bytes": 7110,
+      "sha256": "358d7d8127985f07f496f9eaabdc4295b2fff34aeb884f147b3043fce55d1f26",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/w390-day-segmento-condominio.png",
+      "bytes": 7567,
+      "sha256": "338f6afbf0fc5ca6b54b44321b88c96ca801e4d4820522da958fce6b07c51ac9",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/w390-night-segmento-condominio.png",
+      "bytes": 7567,
+      "sha256": "338f6afbf0fc5ca6b54b44321b88c96ca801e4d4820522da958fce6b07c51ac9",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/w768-day-segmento-condominio.png",
+      "bytes": 9321,
+      "sha256": "c9f16a69a9d6213a8bbcd0becd1160b5ede58046c623371ceba1c530f04d4f7f",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/w768-night-segmento-condominio.png",
+      "bytes": 9321,
+      "sha256": "c9f16a69a9d6213a8bbcd0becd1160b5ede58046c623371ceba1c530f04d4f7f",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/w1440-day-segmento-condominio.png",
+      "bytes": 12100,
+      "sha256": "ae99c9c99922a9d9fce6f179ee8c88734b0abc3c40f614bc34e041f3cad706a1",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmento-condominio/w1440-night-segmento-condominio.png",
+      "bytes": 12100,
+      "sha256": "ae99c9c99922a9d9fce6f179ee8c88734b0abc3c40f614bc34e041f3cad706a1",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/w320-day-segmentos.png",
+      "bytes": 12833,
+      "sha256": "42f23108ff36ca81bbc3c5aa31cb46b39239ec3928133dff4020bfed0e04215d",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/w320-night-segmentos.png",
+      "bytes": 12833,
+      "sha256": "42f23108ff36ca81bbc3c5aa31cb46b39239ec3928133dff4020bfed0e04215d",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/w390-day-segmentos.png",
+      "bytes": 13193,
+      "sha256": "47a6365e805d2ee152c05193873cc9d7dda67b4da6cf7ddd83c32db85a4dfd2a",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/w390-night-segmentos.png",
+      "bytes": 13193,
+      "sha256": "47a6365e805d2ee152c05193873cc9d7dda67b4da6cf7ddd83c32db85a4dfd2a",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/w768-day-segmentos.png",
+      "bytes": 14707,
+      "sha256": "f31ede988ac6205013f4bdc0451e6266a24689fff4706a1190d8747df6dc86d1",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/w768-night-segmentos.png",
+      "bytes": 14707,
+      "sha256": "f31ede988ac6205013f4bdc0451e6266a24689fff4706a1190d8747df6dc86d1",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/w1440-day-segmentos.png",
+      "bytes": 17365,
+      "sha256": "9d991897ab43b20d5392bfe2cdf9256b816f77163c15f24b7987003cebe350c5",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/segmentos/w1440-night-segmentos.png",
+      "bytes": 17365,
+      "sha256": "9d991897ab43b20d5392bfe2cdf9256b816f77163c15f24b7987003cebe350c5",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/w320-day-servico-seguranca-desarmada.png",
+      "bytes": 6907,
+      "sha256": "b7a8a7640740474076b8cb0b7ceb4c7910f39d199d39975732bd559eaaab6981",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/w320-night-servico-seguranca-desarmada.png",
+      "bytes": 6907,
+      "sha256": "b7a8a7640740474076b8cb0b7ceb4c7910f39d199d39975732bd559eaaab6981",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/w390-day-servico-seguranca-desarmada.png",
+      "bytes": 7442,
+      "sha256": "b942deed72cc7d9d600e2dec621d99c8f03736b15874ad852db5b6ff4fa11dd0",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/w390-night-servico-seguranca-desarmada.png",
+      "bytes": 7442,
+      "sha256": "b942deed72cc7d9d600e2dec621d99c8f03736b15874ad852db5b6ff4fa11dd0",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/w768-day-servico-seguranca-desarmada.png",
+      "bytes": 9113,
+      "sha256": "dee121bffe55ad52236206ff35ae4bd38063765bd5522b7d2c753d525ea01ed9",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/w768-night-servico-seguranca-desarmada.png",
+      "bytes": 9113,
+      "sha256": "dee121bffe55ad52236206ff35ae4bd38063765bd5522b7d2c753d525ea01ed9",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/w1440-day-servico-seguranca-desarmada.png",
+      "bytes": 11904,
+      "sha256": "8c8b1529bf8411f5421f6202fb00ebaa7f8ef57b3fc019492feadbf8c261a543",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servico-seguranca-desarmada/w1440-night-servico-seguranca-desarmada.png",
+      "bytes": 11904,
+      "sha256": "8c8b1529bf8411f5421f6202fb00ebaa7f8ef57b3fc019492feadbf8c261a543",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/w320-day-servicos.png",
+      "bytes": 13350,
+      "sha256": "5bf14f1ef6d8af528967e683b3157ca24cfcde4359ff79fd133f5abc14a8c48e",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/w320-night-servicos.png",
+      "bytes": 13350,
+      "sha256": "5bf14f1ef6d8af528967e683b3157ca24cfcde4359ff79fd133f5abc14a8c48e",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/w390-day-servicos.png",
+      "bytes": 16106,
+      "sha256": "3e0da6f9c91772f5412c161a02a742de55289cc0f4eb6256dee9b2db8f7e2f8e",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/w390-night-servicos.png",
+      "bytes": 16106,
+      "sha256": "3e0da6f9c91772f5412c161a02a742de55289cc0f4eb6256dee9b2db8f7e2f8e",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/w768-day-servicos.png",
+      "bytes": 29844,
+      "sha256": "4eba28e66ec6a904ff744d7198807f61ba65a2e641f4d3aa6172470bcf37b060",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/w768-night-servicos.png",
+      "bytes": 29844,
+      "sha256": "4eba28e66ec6a904ff744d7198807f61ba65a2e641f4d3aa6172470bcf37b060",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/w1440-day-servicos.png",
+      "bytes": 32552,
+      "sha256": "1022063d349ee5bb7ab1fb2e6f716dd29fc328154c389b7af305aaba3d4fde8f",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/servicos/w1440-night-servicos.png",
+      "bytes": 32552,
+      "sha256": "1022063d349ee5bb7ab1fb2e6f716dd29fc328154c389b7af305aaba3d4fde8f",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/w320-day-simulador.png",
+      "bytes": 17666,
+      "sha256": "4c0be1fb56030cebdb851011410511784268555d983cb959120c6ab57ced8492",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/w320-night-simulador.png",
+      "bytes": 17666,
+      "sha256": "4c0be1fb56030cebdb851011410511784268555d983cb959120c6ab57ced8492",
+      "width": 320,
+      "height": 780
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/w390-day-simulador.png",
+      "bytes": 19062,
+      "sha256": "6e3a0c508966fdb5fe6eb9d64dd7847a98904135c453ed7b4d9b086a524c8b56",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/w390-night-simulador.png",
+      "bytes": 19062,
+      "sha256": "6e3a0c508966fdb5fe6eb9d64dd7847a98904135c453ed7b4d9b086a524c8b56",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/w768-day-simulador.png",
+      "bytes": 28133,
+      "sha256": "fce7656018ee08f8952e0552472d5162bfb1c3cbd7ba2b9e2134216eac597828",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/w768-night-simulador.png",
+      "bytes": 28133,
+      "sha256": "fce7656018ee08f8952e0552472d5162bfb1c3cbd7ba2b9e2134216eac597828",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/w1440-day-simulador.png",
+      "bytes": 35925,
+      "sha256": "7fef40d61a0f946aa59ef8a4d47576bf2342cc07d1bff2d9447b6cde37de821b",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "path": "docs/UX-PRO-09E-PU4-evidencias-2026-10-21/simulador/w1440-night-simulador.png",
+      "bytes": 35925,
+      "sha256": "7fef40d61a0f946aa59ef8a4d47576bf2342cc07d1bff2d9447b6cde37de821b",
+      "width": 1440,
+      "height": 900
+    }
+  ]
+}
