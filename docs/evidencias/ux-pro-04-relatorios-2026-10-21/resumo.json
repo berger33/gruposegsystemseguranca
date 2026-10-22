@@ -1,0 +1,132 @@
+{
+  "stage": "ux-pro-04-relatorios",
+  "generatedAt": "2026-10-21T17:00:03.590Z",
+  "baseUrl": "http://127.0.0.1:3400",
+  "method": "Automated Playwright Chromium with synthetic API fixture and mocked ti session; no product records written; not human review or acceptance.",
+  "viewports": [
+    {
+      "name": "320",
+      "width": 320,
+      "height": 900
+    },
+    {
+      "name": "390",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "768",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "name": "1440",
+      "width": 1440,
+      "height": 900
+    }
+  ],
+  "routes": [
+    {
+      "viewport": "320",
+      "theme": "day",
+      "status": 200,
+      "screenshot": "relatorios-320-dia.png",
+      "width": 320,
+      "documentWidth": 320,
+      "horizontalOverflow": false,
+      "route": "/admin/relatorios"
+    },
+    {
+      "viewport": "320",
+      "theme": "night",
+      "status": 200,
+      "screenshot": "relatorios-320-noite.png",
+      "width": 320,
+      "documentWidth": 320,
+      "horizontalOverflow": false,
+      "route": "/admin/relatorios"
+    },
+    {
+      "viewport": "390",
+      "theme": "day",
+      "status": 200,
+      "screenshot": "relatorios-390-dia.png",
+      "width": 390,
+      "documentWidth": 390,
+      "horizontalOverflow": false,
+      "route": "/admin/relatorios"
+    },
+    {
+      "viewport": "390",
+      "theme": "night",
+      "status": 200,
+      "screenshot": "relatorios-390-noite.png",
+      "width": 390,
+      "documentWidth": 390,
+      "horizontalOverflow": false,
+      "route": "/admin/relatorios"
+    },
+    {
+      "viewport": "390",
+      "theme": "noite",
+      "state": "falha de releitura; dado anterior preservado",
+      "screenshot": "relatorios-390-noite-falha-releitura.png",
+      "route": "/admin/relatorios"
+    },
+    {
+      "viewport": "390",
+      "state": "nota explícita habilita aprovação; Tab com foco visível",
+      "screenshot": "relatorios-390-teclado.png",
+      "activeLabel": "ComercialOperacionalFinanceiroQualidadeSatisfaçãoConformidade",
+      "outlineStyle": "solid",
+      "outlineWidth": "3px",
+      "route": "/admin/relatorios"
+    },
+    {
+      "viewport": "768",
+      "theme": "day",
+      "status": 200,
+      "screenshot": "relatorios-768-dia.png",
+      "width": 768,
+      "documentWidth": 768,
+      "horizontalOverflow": false,
+      "route": "/admin/relatorios"
+    },
+    {
+      "viewport": "768",
+      "theme": "night",
+      "status": 200,
+      "screenshot": "relatorios-768-noite.png",
+      "width": 768,
+      "documentWidth": 768,
+      "horizontalOverflow": false,
+      "route": "/admin/relatorios"
+    },
+    {
+      "viewport": "1440",
+      "theme": "day",
+      "status": 200,
+      "screenshot": "relatorios-1440-dia.png",
+      "width": 1440,
+      "documentWidth": 1440,
+      "horizontalOverflow": false,
+      "route": "/admin/relatorios"
+    },
+    {
+      "viewport": "1440",
+      "theme": "night",
+      "status": 200,
+      "screenshot": "relatorios-1440-noite.png",
+      "width": 1440,
+      "documentWidth": 1440,
+      "horizontalOverflow": false,
+      "route": "/admin/relatorios"
+    }
+  ],
+  "browserErrors": [],
+  "limitations": [
+    "Session and EXT-13 responses were intercepted synthetic fixtures; production authentication, data and persistence were not tested by these captures.",
+    "The PostgreSQL EXT-13 gate separately exercised real HTTP, RBAC, idempotency, audit and transaction behavior.",
+    "Automated screenshots and focus checks are not manual visual/keyboard review, a complete WCAG audit or human acceptance."
+  ]
+}

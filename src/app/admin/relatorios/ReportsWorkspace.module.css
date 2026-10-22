@@ -1,0 +1,94 @@
+.workspace {
+  display: grid;
+  gap: 1.25rem;
+  color: var(--ux-color-text);
+}
+
+.header,
+.card {
+  min-width: 0;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  border: 1px solid var(--ux-color-border);
+  border-radius: 1rem;
+  background: var(--ux-color-surface);
+}
+
+.header { display: grid; gap: .55rem; }
+.header h1, .card h2, .detail h3, .reportCard h3 { margin: 0; }
+.header h1 { font-size: clamp(1.6rem, 3vw, 2.25rem); line-height: 1.15; }
+.kicker { margin: 0; color: var(--ux-color-muted); font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.lede, .sectionIntro, .boundary, .footnote { margin: 0; color: var(--ux-color-muted); line-height: 1.55; }
+.boundary { padding: .8rem 1rem; border-left: .25rem solid var(--ux-color-warning); border-radius: .35rem; background: color-mix(in srgb, var(--ux-color-warning) 9%, var(--ux-color-surface)); }
+.topGrid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(18rem, .9fr); gap: 1.25rem; align-items: start; }
+.card { display: grid; gap: 1rem; }
+.formGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.fullField { grid-column: 1 / -1; }
+.field { display: grid; min-width: 0; gap: .4rem; color: var(--ux-color-text); font-size: .92rem; font-weight: 650; }
+.field input, .field select, .field textarea {
+  width: 100%; min-width: 0; min-height: 2.75rem; padding: .65rem .75rem;
+  border: 1px solid var(--ux-color-border); border-radius: .55rem;
+  color: var(--ux-color-text); background: var(--ux-color-surface); font: inherit;
+}
+.field textarea { min-height: 5.5rem; resize: vertical; }
+.field small { color: var(--ux-color-muted); font-weight: 400; line-height: 1.45; }
+.primaryButton, .secondaryButton, .linkButton {
+  min-height: 2.65rem; width: fit-content; max-width: 100%; padding: .6rem .9rem;
+  border: 1px solid var(--ux-color-border); border-radius: .55rem; cursor: pointer;
+  color: var(--ux-color-text); background: var(--ux-color-surface); font: inherit; font-weight: 700;
+}
+.primaryButton { border-color: var(--ux-color-brand-strong, #172b68); color: var(--ux-color-surface, #fff); background: var(--ux-color-brand-strong, #172b68); }
+.primaryButton:disabled, .secondaryButton:disabled { cursor: not-allowed; opacity: .58; }
+.linkButton { padding-inline: 0; border: 0; color: var(--ux-color-brand, #233f91); text-align: left; text-decoration: underline; text-underline-offset: .18em; }
+.primaryButton:focus-visible, .secondaryButton:focus-visible, .linkButton:focus-visible,
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible {
+  outline: 3px solid var(--ux-color-focus, #1677d2); outline-offset: 3px;
+}
+.actionGroup { display: grid; gap: .85rem; }
+.sectionHeading, .reportTitleRow, .detailHeader { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.reportList { display: grid; gap: .85rem; }
+.readAt, .protocol { margin: 0; color: var(--ux-color-muted); font-size: .88rem; }
+.reportCard { min-width: 0; padding: 1rem; border: 1px solid var(--ux-color-border); border-radius: .75rem; background: color-mix(in srgb, var(--ux-color-surface) 90%, var(--ux-color-text)); }
+.selectedReport { border-color: var(--ux-color-brand, #233f91); box-shadow: inset .2rem 0 var(--ux-color-brand, #233f91); }
+.reportTitleRow h3 { overflow-wrap: anywhere; }
+.status { display: inline-flex; flex: 0 0 auto; align-items: center; min-height: 1.8rem; padding: .2rem .6rem; border: 1px solid currentColor; border-radius: 999px; font-size: .78rem; font-weight: 750; }
+.success { color: var(--ux-color-success); }
+.warning { color: var(--ux-color-warning); }
+.muted { color: var(--ux-color-muted); }
+.neutral { color: var(--ux-color-text); }
+.reportFacts, .detailFacts, .sourceList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1rem; margin: 1rem 0; }
+.reportFacts div, .detailFacts div, .sourceList div { min-width: 0; }
+.reportFacts dt, .detailFacts dt, .sourceList dt { color: var(--ux-color-muted); font-size: .8rem; }
+.reportFacts dd, .detailFacts dd, .sourceList dd { margin: .2rem 0 0; overflow-wrap: anywhere; font-weight: 650; }
+.detail { display: grid; gap: 1rem; min-width: 0; }
+.detailHeader { padding-bottom: .75rem; border-bottom: 1px solid var(--ux-color-border); }
+.detailHeader h3 { margin-top: .3rem; overflow-wrap: anywhere; }
+.fullFact { grid-column: 1 / -1; }
+.subsection { display: grid; gap: .65rem; min-width: 0; }
+.subsection h4 { margin: 0; }
+.sourceList { grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
+.eventList { display: grid; gap: .8rem; margin: 0; padding-left: 1.4rem; }
+.eventList li { padding-left: .2rem; }
+.eventList li > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; }
+.eventList time { color: var(--ux-color-muted); font-size: .85rem; }
+.eventList p { margin: .25rem 0 0; overflow-wrap: anywhere; }
+.empty, .loading, .notice, .error { margin: 0; padding: .85rem 1rem; border-radius: .6rem; line-height: 1.5; }
+.empty, .loading { color: var(--ux-color-muted); background: color-mix(in srgb, var(--ux-color-text) 5%, var(--ux-color-surface)); }
+.notice { border: 1px solid var(--ux-color-success); color: var(--ux-color-success); }
+.error { display: grid; gap: .45rem; border: 1px solid var(--ux-color-danger-strong, var(--ux-color-error, #b42318)); color: var(--ux-color-text); background: color-mix(in srgb, var(--ux-color-danger-strong, var(--ux-color-error, #b42318)) 8%, var(--ux-color-surface)); }
+.error strong { color: var(--ux-color-danger-strong, var(--ux-color-error, #b42318)); }
+.error small { color: var(--ux-color-muted); }
+
+@media (max-width: 900px) {
+  .topGrid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .workspace { gap: .85rem; }
+  .header, .card { padding: 1rem; border-radius: .75rem; }
+  .formGrid, .reportFacts, .detailFacts { grid-template-columns: minmax(0, 1fr); }
+  .fullField, .fullFact { grid-column: auto; }
+  .sectionHeading, .reportTitleRow, .detailHeader { flex-direction: column; align-items: stretch; }
+  .sectionHeading > button { width: 100%; }
+  .status { width: fit-content; }
+  .primaryButton, .secondaryButton { width: 100%; }
+}
