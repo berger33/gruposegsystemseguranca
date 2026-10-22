@@ -561,6 +561,44 @@ test('browser: a aba Documentos aprova um envio real e a situação muda na tabe
   }
 });
 
+test('browser: RH rejeita um documento com motivo obrigatório e registra o motivo no banco', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const pessoa = await pessoaFicticia('DocumentoRejeitado');
+    const enviado = await api('/api/admin/hr/l03/documents', {
+      method: 'POST', cookie: grantedCookie,
+      body: {
+        employeeId: pessoa.id,
+        filename: 'documento-rejeitado.txt',
+        contentType: 'text/plain',
+        contentBase64: Buffer.from('documento sintetico para rejeicao', 'utf8').toString('base64'),
+        documentKind: 'submission',
+        category: 'admissao',
+        title: 'Documento sintético para devolução',
+      },
+    });
+    assert.equal(enviado.status, 201, `envio deveria retornar 201, veio ${enviado.status}`);
+
+    const { page } = await openRh(browser, grantedCookie);
+    await page.getByRole('tab', { name: 'Documentos' }).click();
+    const linha = page.locator('tr', { hasText: 'Documento sintético para devolução' });
+    await linha.waitFor();
+    const motivo = 'Envie novamente com assinatura legível.';
+    await linha.getByLabel('Motivo da rejeição').focus();
+    await page.keyboard.type(motivo);
+    await linha.getByRole('button', { name: /Rejeitar/i }).click();
+    await page.locator('[role="status"]', { hasText: /rejeitado/i }).waitFor({ timeout: 30_000 });
+
+    const { rows } = await pool.query(
+      'SELECT status,rejection_reason FROM employee_private_documents WHERE id = $1', [enviado.body.document.id]);
+    assert.equal(rows[0].status, 'rejected');
+    assert.equal(rows[0].rejection_reason, motivo);
+    await capture(page, 'desktop-rh-documento-rejeitado');
+  } finally {
+    await browser.close();
+  }
+});
+
 test('browser: a aba Fechamento fecha a competência e diz que não houve pagamento', { skip: !RUN }, async () => {
   const browser = await launchBrowser();
   try {
@@ -636,12 +674,11 @@ test('browser: falha ao ler solicitações do RH não vira vazio e permite repet
     const separator = grantedCookie.indexOf('=');
     await context.addCookies([{ name: grantedCookie.slice(0, separator), value: grantedCookie.slice(separator + 1), url: baseUrl }]);
     const page = await context.newPage();
-    let failOnce = true;
+    let retryRequested = false;
     let interceptedRequestUrl = null;
     await context.route('**/api/admin/hr/l03/self-requests**', async route => {
       interceptedRequestUrl = route.request().url();
-      if (failOnce) {
-        failOnce = false;
+      if (!retryRequested) {
         await route.fulfill({
           status: 503,
           contentType: 'application/json',
@@ -663,6 +700,7 @@ test('browser: falha ao ler solicitações do RH não vira vazio e permite repet
       'falha transitória precisa permitir nova leitura');
     await capture(page, 'desktop-rh-solicitacoes-falha');
 
+    retryRequested = true;
     await falha.getByRole('button', { name: /Tentar carregar novamente/i }).click();
     await page.locator('[data-ui-state="empty"]').waitFor();
     assert.equal(await page.locator('[data-ui-state="error"]').count(), 0,

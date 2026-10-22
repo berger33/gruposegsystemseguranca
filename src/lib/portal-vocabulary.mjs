@@ -876,6 +876,7 @@ export function ticketStatusTone(value) {
 
 /** Situação das solicitações e registros do funcionário. */
 const EMPLOYEE_ITEM_STATUS_LABELS = Object.freeze({
+  pending: 'Pendente',
   pendente: 'Pendente',
   em_analise: 'Em análise',
   aprovada: 'Aprovada',
