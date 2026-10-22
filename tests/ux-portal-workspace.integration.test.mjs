@@ -109,10 +109,10 @@ async function launchBrowser() {
 }
 
 const evidenceDir = process.env.UX_PORTAL_EVIDENCE_DIR || '';
-async function capture(page, nome) {
+async function capture(page, nome, { fullPage = true } = {}) {
   if (!evidenceDir) return;
   await mkdir(evidenceDir, { recursive: true });
-  await page.screenshot({ path: path.join(evidenceDir, `${nome}.png`), fullPage: true });
+  await page.screenshot({ path: path.join(evidenceDir, `${nome}.png`), fullPage });
 }
 
 /**
@@ -2916,4 +2916,131 @@ test('browser: email-change honra os 409 do contrato e descreve o 503 sem mentir
     `ID6c: indisponibilidade não pode aparecer como erro de conexão; veio "${c.notices.join(' | ')}"`);
   assert.deepEqual(c.unhandled, [],
     `ID6c: nenhuma rejeição não tratada é aceita; veio ${JSON.stringify(c.unhandled)}`);
+});
+
+test('browser: funcionário cria solicitação e RH decide com retorno visível ao titular', { skip: !RUN }, async () => {
+  const employeeBrowser = await launchBrowser();
+  let rhBrowser;
+  let funcionarioContext;
+  let rhContext;
+  try {
+    const login = await api('/api/employee/session', {
+      method: 'POST', body: { email: employeeEmail, password: employeePassword },
+    });
+    assert.equal(login.status, 200, 'funcionário sintético precisa autenticar pela rota existente');
+    const employeeSession = login.setCookie.find(value => value.startsWith('seg_employee_session='))?.split(';')[0];
+    assert.ok(employeeSession, 'sessão do titular precisa ser emitida pelo servidor');
+
+    const employeePageResult = await openPage(employeeBrowser, '/funcionario', employeeSession, { width: 390, height: 844 });
+    funcionarioContext = employeePageResult.context;
+    const employeePage = employeePageResult.page;
+    await employeePage.getByRole('tab', { name: 'Pedidos' }).click();
+    await employeePage.getByRole('button', { name: 'Solicitação' }).click();
+    const requestTitle = `Pedido sintético UX-PRO-05 ${randomUUID().slice(0, 8)}`;
+    const description = 'Solicitação criada pelo titular no fluxo integrado de teste.';
+    await employeePage.getByLabel('Assunto').selectOption('beneficio');
+    await employeePage.getByLabel('Título').fill(requestTitle);
+    await employeePage.getByLabel('Descrição').fill(description);
+    await employeePage.getByRole('button', { name: 'Enviar' }).click();
+    await employeePage.locator('[role="status"]', { hasText: 'Recebido com sucesso.' }).waitFor();
+    await employeePage.getByRole('heading', { name: new RegExp(requestTitle) }).waitFor();
+    await capture(employeePage, 'ux-pro-05-titular-pedido-criado-mobile');
+
+    const ownHome = await api('/api/employee/home', { cookie: employeeSession });
+    assert.equal(ownHome.status, 200);
+    const created = ownHome.body.requests.find(item => item.title === requestTitle);
+    assert.ok(created, 'pedido submetido deve aparecer na leitura do titular');
+    assert.equal(created.status, 'solicitado');
+    const ownRecord = await pool.query('SELECT employee_id, status FROM emp_self_requests WHERE id = $1', [created.id]);
+    assert.equal(ownRecord.rows.length, 1);
+    assert.equal(ownRecord.rows[0].employee_id, employee.id, 'a solicitação fica ligada ao titular autenticado');
+
+    rhBrowser = await launchBrowser();
+    const rhPageResult = await openPage(rhBrowser, '/admin/funcionarios', rhCookie, { width: 1440, height: 900 });
+    rhContext = rhPageResult.context;
+    const rhPage = rhPageResult.page;
+    await rhPage.getByRole('tab', { name: 'Equipe' }).focus();
+    for (let index = 0; index < 4; index += 1) await rhPage.keyboard.press('ArrowRight');
+    const requestTab = rhPage.getByRole('tab', { name: 'Solicitações' });
+    assert.equal(await requestTab.getAttribute('aria-selected'), 'true',
+      'o teclado percorre as abas até as solicitações');
+    assert.equal(await requestTab.evaluate(element => element === document.activeElement), true,
+      'o foco acompanha a navegação por teclado');
+    const card = rhPage.locator('article').filter({ hasText: requestTitle });
+    await card.waitFor();
+    assert.match(await card.innerText(), /Aguardando análise/);
+    await card.getByLabel(/Retorno para a pessoa/).fill('Vamos verificar o benefício solicitado pelo titular.');
+    await card.getByRole('button', { name: 'Iniciar análise' }).click();
+    await rhPage.locator('[role="status"]', { hasText: /Análise iniciada/ }).waitFor();
+    await card.locator('[data-ui-badge]').filter({ hasText: 'Em análise' }).waitFor();
+
+    const responseMessage = 'Benefício aprovado após conferência dos critérios internos.';
+    await card.getByLabel(/Retorno para a pessoa/).fill(responseMessage);
+    await card.getByRole('button', { name: 'Aprovar solicitação' }).click();
+    await rhPage.locator('[role="status"]', { hasText: /Solicitação aprovada/ }).waitFor();
+    await card.locator('[data-ui-badge]').filter({ hasText: 'Aprovada' }).waitFor();
+    await capture(rhPage, 'ux-pro-05-rh-solicitacao-aprovada-desktop');
+
+    for (const width of [320, 390, 768, 1440]) {
+      await rhPage.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      const overflow = await rhPage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.ok(overflow <= 1, `${width}px: transbordo horizontal de ${overflow}px na aba Solicitações`);
+      await capture(rhPage, `ux-pro-05-rh-solicitacoes-${width}-day`);
+    }
+    await rhPage.getByRole('button', { name: 'Ativar modo noite' }).click();
+    await rhPage.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+    await rhPage.setViewportSize({ width: 390, height: 844 });
+    await rhPage.waitForTimeout(250); // aguarda a transição de fechamento da navegação móvel
+    assert.equal(await rhPage.getByRole('button', { name: 'Menu' }).getAttribute('aria-expanded'), 'false',
+      'o menu móvel permanece fechado ao apenas alternar tema/viewport');
+    const menuVisual = await rhPage.locator('[data-admin-nav]').evaluate(element => ({
+      visibility: getComputedStyle(element).visibility,
+      transform: getComputedStyle(element).transform,
+      position: getComputedStyle(element).position,
+      left: element.getBoundingClientRect().left,
+      right: element.getBoundingClientRect().right,
+      className: element.className,
+      viewport: window.innerWidth,
+      mobileMedia: window.matchMedia('(max-width: 900px)').matches,
+      navCount: document.querySelectorAll('[data-admin-nav]').length,
+    }));
+    assert.ok(menuVisual.visibility === 'hidden' || menuVisual.right <= 1 || menuVisual.left >= menuVisual.viewport,
+      `a captura de tema noturno não pode mostrar o menu fechado: ${JSON.stringify(menuVisual)}`);
+    const nightOverflow = await rhPage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    assert.ok(nightOverflow <= 1, `tema noturno/390px: transbordo horizontal de ${nightOverflow}px`);
+    await capture(rhPage, 'ux-pro-05-rh-solicitacoes-390-night-viewport', { fullPage: false });
+    await capture(rhPage, 'ux-pro-05-rh-solicitacoes-390-night');
+
+    const persisted = await pool.query(
+      'SELECT status, notes, approved_by_id FROM emp_self_requests WHERE id = $1', [created.id]);
+    assert.equal(persisted.rows[0].status, 'aprovado');
+    assert.equal(persisted.rows[0].notes, responseMessage);
+    const rhSession = await api('/api/admin/session', { cookie: rhCookie });
+    assert.equal(rhSession.status, 200);
+    assert.equal(persisted.rows[0].approved_by_id, rhSession.body.identityId,
+      'a decisão é atribuída à identidade autenticada do RH');
+    const audit = await pool.query(
+      "SELECT count(*)::int AS total FROM audit_log WHERE action = 'emp_self_request_review' AND target = $1",
+      [created.id]);
+    assert.equal(audit.rows[0].total, 2, 'iniciar análise e aprovar deixam eventos de auditoria distintos');
+    const followups = await pool.query(
+      'SELECT status, message FROM emp_self_request_followups WHERE request_id = $1 ORDER BY created_at', [created.id]);
+    assert.deepEqual(followups.rows.map(row => row.status), ['em_analise', 'aprovado']);
+    assert.equal(followups.rows[1].message, responseMessage);
+
+    await employeePage.reload({ waitUntil: 'domcontentloaded' });
+    await employeePage.getByRole('tab', { name: 'Pedidos' }).click();
+    const employeeCard = employeePage.locator('article').filter({ hasText: requestTitle });
+    await employeeCard.locator('p').filter({ hasText: responseMessage }).waitFor();
+    assert.match(await employeeCard.innerText(), /Benefício aprovado após conferência/);
+    assert.match(await employeeCard.innerText(), /APROVADO/);
+    await capture(employeePage, 'ux-pro-05-titular-retorno-mobile');
+    const overflow = await employeePage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    assert.ok(overflow <= 1, `390px: transbordo horizontal de ${overflow}px`);
+  } finally {
+    await rhContext?.close();
+    await funcionarioContext?.close();
+    await rhBrowser?.close();
+    await employeeBrowser.close();
+  }
 });

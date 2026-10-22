@@ -1,0 +1,63 @@
+{
+  "stage": "UX-PRO-05-RH-SOLICITACOES",
+  "date": "2026-10-22",
+  "baseSha": "4566b73cb568020705d01e4ce50307009e75c4d2",
+  "syntheticData": true,
+  "automated": true,
+  "manualReview": false,
+  "humanAcceptance": false,
+  "screenshots": [
+    {
+      "viewport": "390x844",
+      "file": "ux-pro-05-titular-pedido-criado-mobile.png",
+      "theme": "day"
+    },
+    {
+      "viewport": "1440x900",
+      "file": "ux-pro-05-rh-solicitacao-aprovada-desktop.png",
+      "theme": "day"
+    },
+    {
+      "viewport": "320",
+      "file": "ux-pro-05-rh-solicitacoes-320-day.png",
+      "theme": "day"
+    },
+    {
+      "viewport": "390",
+      "file": "ux-pro-05-rh-solicitacoes-390-day.png",
+      "theme": "day"
+    },
+    {
+      "viewport": "768",
+      "file": "ux-pro-05-rh-solicitacoes-768-day.png",
+      "theme": "day"
+    },
+    {
+      "viewport": "1440",
+      "file": "ux-pro-05-rh-solicitacoes-1440-day.png",
+      "theme": "day"
+    },
+    {
+      "viewport": "390",
+      "file": "ux-pro-05-rh-solicitacoes-390-night.png",
+      "theme": "night"
+    },
+    {
+      "viewport": "390x844",
+      "file": "ux-pro-05-titular-retorno-mobile.png",
+      "theme": "day"
+    },
+    {
+      "viewport": "390x844",
+      "file": "ux-pro-05-rh-solicitacoes-390-error.png",
+      "theme": "day",
+      "state": "HTTP 503, lista preservada, repetição oferecida"
+    },
+    {
+      "viewport": "390x844",
+      "file": "ux-pro-05-rh-solicitacoes-390-empty-after-retry.png",
+      "theme": "day",
+      "state": "GET 200 vazio após repetição"
+    }
+  ]
+}

@@ -48,6 +48,9 @@ const password = randomBytes(24).toString('hex');
 const postgres = new EmbeddedPostgres({
   databaseDir: path.join(directory, 'data'),
   port, user: 'seg_qa', password, persistent: false,
+  // Current migrations contain UTF-8 arrows; Windows otherwise inherits the
+  // machine ANSI encoding and cannot apply them to a disposable cluster.
+  initdbFlags: ['--encoding=UTF8'],
   postgresFlags: ['-c', 'listen_addresses=127.0.0.1'],
   onLog: () => {},
   onError: error => console.error('QA_PG_ENGINE_ERROR', String(error).replaceAll(password, '[redacted]').slice(0, 300)),
