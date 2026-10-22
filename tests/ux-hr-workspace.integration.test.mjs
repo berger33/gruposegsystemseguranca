@@ -73,6 +73,8 @@ async function loginHttp(email) {
 // browser entre contextos derruba o alvo. Cada teste abre o seu, como já
 // fazem os gates L04, F03 e UX-03B deste repositório.
 async function launchBrowser() {
+  const executablePath = process.env.UX_HR_BROWSER_EXECUTABLE_PATH;
+  if (executablePath) return await playwrightChromium.launch({ executablePath, headless: true });
   return playwrightChromium.launch({
     executablePath: await packagedChromium.executablePath(),
     args: packagedChromium.args.filter(arg => arg !== '--disable-web-security'),
@@ -622,6 +624,51 @@ test('browser: as abas dos processos legados são um tablist de verdade e dizem 
     assert.match(await painel.innerText(), /Tela legada, exibida como está/i,
       'a tela precisa dizer que aquilo é legado, em vez de disfarçar');
     await capture(page, 'desktop-rh-legado');
+  } finally {
+    await browser.close();
+  }
+});
+
+test('browser: falha ao ler solicitações do RH não vira vazio e permite repetir', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  try {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'pt-BR' });
+    const separator = grantedCookie.indexOf('=');
+    await context.addCookies([{ name: grantedCookie.slice(0, separator), value: grantedCookie.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    let failOnce = true;
+    let interceptedRequestUrl = null;
+    await context.route('**/api/admin/hr/l03/self-requests**', async route => {
+      interceptedRequestUrl = route.request().url();
+      if (failOnce) {
+        failOnce = false;
+        await route.fulfill({
+          status: 503,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'employee_request_list_unavailable' }),
+        });
+        return;
+      }
+      await route.continue();
+    });
+    await page.goto(`${baseUrl}/admin/funcionarios`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('tab', { name: 'Solicitações' }).click();
+
+    assert.ok(interceptedRequestUrl, 'o navegador precisa consultar a rota canônica da fila do RH');
+    const falha = page.getByRole('alert').filter({ hasText: 'não é possível confirmar se houve novas solicitações' });
+    await falha.waitFor();
+    assert.equal(await page.getByText('Nenhuma solicitação no seu escopo', { exact: true }).count(), 0,
+      'falha de consulta não pode ser apresentada como fila vazia');
+    assert.equal(await falha.getByRole('button', { name: /Tentar carregar novamente/i }).count(), 1,
+      'falha transitória precisa permitir nova leitura');
+    await capture(page, 'desktop-rh-solicitacoes-falha');
+
+    await falha.getByRole('button', { name: /Tentar carregar novamente/i }).click();
+    await page.locator('[data-ui-state="empty"]').waitFor();
+    assert.equal(await page.locator('[data-ui-state="error"]').count(), 0,
+      'após uma resposta 200 vazia, só então a interface pode mostrar fila vazia');
+    await capture(page, 'mobile-rh-solicitacoes-vazio');
+    await context.close();
   } finally {
     await browser.close();
   }

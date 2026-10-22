@@ -111,6 +111,8 @@ export default function RhWorkspace() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [docs, setDocs] = useState<Doc[]>([]);
   const [requests, setRequests] = useState<SelfRequest[]>([]);
+  const [requestsLoaded, setRequestsLoaded] = useState(false);
+  const [requestsError, setRequestsError] = useState<HrErrorDescriptor | null>(null);
   const [readState, setReadState] = useState<ReadState>('loading');
   const [readError, setReadError] = useState<HrErrorDescriptor | null>(null);
 
@@ -129,6 +131,15 @@ export default function RhWorkspace() {
       hrRequest<{ documents?: Doc[] }>('/api/admin/hr/l03/documents'),
       hrRequest<{ requests?: SelfRequest[] }>('/api/admin/hr/l03/self-requests'),
     ]);
+    // A fila tem concessão/leitura própria. Falha não pode apagar a última
+    // lista conhecida nem se disfarçar de resposta vazia.
+    if (r.ok) {
+      setRequests(r.data.requests || []);
+      setRequestsError(null);
+    } else {
+      setRequestsError(r.error);
+    }
+    setRequestsLoaded(true);
     // A visão geral manda no estado da página: sem ela não há número honesto
     // para mostrar. Documentos e solicitações podem ter concessões próprias e
     // falhar isoladamente; cada aba diz isso no seu lugar.
@@ -140,7 +151,6 @@ export default function RhWorkspace() {
     }
     setOverview(o.data);
     setDocs(d.ok ? d.data.documents || [] : []);
-    setRequests(r.ok ? r.data.requests || [] : []);
     setReadError(null);
     setReadState('ready');
   }, []);
@@ -300,7 +310,15 @@ export default function RhWorkspace() {
             {tab === 'admissao' ? <Admission employees={employees} run={run} onCredential={setCredential} /> : null}
             {tab === 'escala' ? <Schedule employees={employees} run={run} /> : null}
             {tab === 'ponto' ? <TimeCorrectionReviews employees={employees} /> : null}
-            {tab === 'solicitacoes' ? <RequestReviews requests={requests} run={run} /> : null}
+            {tab === 'solicitacoes' ? (
+              <RequestReviews
+                requests={requests}
+                loaded={requestsLoaded}
+                error={requestsError}
+                onRetry={() => { void refresh('silent'); }}
+                run={run}
+              />
+            ) : null}
             {tab === 'documentos' ? <Documents docs={docs} run={run} /> : null}
             {tab === 'folha' ? <Payroll employees={employees} docs={docs} run={run} /> : null}
             {tab === 'desligamento' ? <Termination employees={employees} run={run} /> : null}
@@ -627,7 +645,15 @@ function Schedule({ employees, run }: { employees: Employee[]; run: RunTask }) {
   );
 }
 
-function RequestReviews({ requests, run }: { requests: SelfRequest[]; run: RunTask }) {
+function RequestReviews({
+  requests, loaded, error: readError, onRetry, run,
+}: {
+  requests: SelfRequest[];
+  loaded: boolean;
+  error: HrErrorDescriptor | null;
+  onRetry: () => void;
+  run: RunTask;
+}) {
   const [messages, setMessages] = useState<Record<string, string>>({});
   const [fieldError, setFieldError] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -667,7 +693,11 @@ function RequestReviews({ requests, run }: { requests: SelfRequest[]; run: RunTa
     }
   }
 
-  if (!requests.length) {
+  if (!loaded) {
+    return <UiState variant="loading" title="Consultando as solicitações no seu escopo…" />;
+  }
+
+  if (!requests.length && !readError) {
     return (
       <UiState
         variant="empty"
@@ -679,6 +709,15 @@ function RequestReviews({ requests, run }: { requests: SelfRequest[]; run: RunTa
 
   return (
     <section className={styles.panel} aria-labelledby="rh-solicitacoes-titulo">
+      {readError ? (
+        <UiState
+          variant={hrErrorVariant(readError)}
+          title={readError.title}
+          detail={`${readError.detail} A lista anterior foi preservada; não é possível confirmar se houve novas solicitações. Resposta do servidor: ${readError.status ? `HTTP ${readError.status}` : 'sem resposta'}${readError.code ? ` (${readError.code})` : ''}.`}
+          retryLabel={readError.canRetry ? 'Tentar carregar novamente' : undefined}
+          onRetry={readError.canRetry ? onRetry : undefined}
+        />
+      ) : null}
       <h3 id="rh-solicitacoes-titulo" className={styles.panelTitle}>
         Solicitações do funcionário ({requests.length})
       </h3>
