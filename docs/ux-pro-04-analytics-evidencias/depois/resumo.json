@@ -1,0 +1,117 @@
+{
+  "stage": "ux-pro-04-analytics",
+  "generatedBy": "tests/ux-analytics-workspace.integration.test.mjs com Chromium, servidor HTTP e PostgreSQL descartável; massa sintética criada pela API canônica",
+  "entries": [
+    {
+      "route": "/admin/analytics",
+      "viewport": "320x844",
+      "requestedTheme": "day",
+      "screenshot": "docs/ux-pro-04-analytics-evidencias/depois/analytics-aprovacao-day-320.png"
+    },
+    {
+      "route": "/admin/analytics",
+      "viewport": "390x844",
+      "requestedTheme": "day",
+      "screenshot": "docs/ux-pro-04-analytics-evidencias/depois/analytics-aprovacao-day-390.png"
+    },
+    {
+      "route": "/admin/analytics",
+      "viewport": "768x900",
+      "requestedTheme": "day",
+      "screenshot": "docs/ux-pro-04-analytics-evidencias/depois/analytics-aprovacao-day-768.png"
+    },
+    {
+      "route": "/admin/analytics",
+      "viewport": "1440x900",
+      "requestedTheme": "day",
+      "screenshot": "docs/ux-pro-04-analytics-evidencias/depois/analytics-aprovacao-day-1440.png",
+      "percursoTeclado": [
+        "Justificativa da aprovação",
+        "Registrar aprovação humana"
+      ]
+    },
+    {
+      "route": "/admin/analytics",
+      "viewport": "320x844",
+      "requestedTheme": "night",
+      "screenshot": "docs/ux-pro-04-analytics-evidencias/depois/analytics-aprovacao-night-320.png"
+    },
+    {
+      "route": "/admin/analytics",
+      "viewport": "390x844",
+      "requestedTheme": "night",
+      "screenshot": "docs/ux-pro-04-analytics-evidencias/depois/analytics-aprovacao-night-390.png"
+    },
+    {
+      "route": "/admin/analytics",
+      "viewport": "768x900",
+      "requestedTheme": "night",
+      "screenshot": "docs/ux-pro-04-analytics-evidencias/depois/analytics-aprovacao-night-768.png"
+    },
+    {
+      "route": "/admin/analytics",
+      "viewport": "1440x900",
+      "requestedTheme": "night",
+      "screenshot": "docs/ux-pro-04-analytics-evidencias/depois/analytics-aprovacao-night-1440.png"
+    }
+  ],
+  "route": "/admin/analytics",
+  "role": "admin",
+  "approvalNoteLength": 70,
+  "noteResetOnExperimentChange": true,
+  "keyboard": {
+    "tabFromNoteReachedApprovalButton": true,
+    "focus": {
+      "outlineStyle": "solid",
+      "outlineWidth": 3
+    }
+  },
+  "matrix": {
+    "day": {
+      "320": {
+        "documentOverflowPx": 0,
+        "noteWidth": 200,
+        "formRight": 260
+      },
+      "390": {
+        "documentOverflowPx": 0,
+        "noteWidth": 266.8125,
+        "formRight": 328.40625
+      },
+      "768": {
+        "documentOverflowPx": 0,
+        "noteWidth": 590.5625,
+        "formRight": 679.28125
+      },
+      "1440": {
+        "documentOverflowPx": 0,
+        "noteWidth": 960,
+        "formRight": 1334
+      }
+    },
+    "night": {
+      "320": {
+        "documentOverflowPx": 0,
+        "noteWidth": 200,
+        "formRight": 260
+      },
+      "390": {
+        "documentOverflowPx": 0,
+        "noteWidth": 266.8125,
+        "formRight": 328.40625
+      },
+      "768": {
+        "documentOverflowPx": 0,
+        "noteWidth": 590.5625,
+        "formRight": 679.28125
+      },
+      "1440": {
+        "documentOverflowPx": 0,
+        "noteWidth": 960,
+        "formRight": 1334
+      }
+    }
+  },
+  "evidence": "Playwright Chromium contra servidor HTTP e PostgreSQL descartável; rascunhos sintéticos criados pela API canônica.",
+  "limitations": "Capturas automatizadas e inspeção estática; não equivalem a validação manual, aceite humano ou homologação."
+}

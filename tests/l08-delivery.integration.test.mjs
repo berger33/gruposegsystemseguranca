@@ -56,7 +56,9 @@ test("L08 Chromium entry smoke serves the real client entry point", async () => 
   child.stdout.on("data", chunk => logs.push(String(chunk)));
   child.stderr.on("data", chunk => logs.push(String(chunk)));
   try {
-    const deadline = Date.now() + 90_000;
+    // The consolidated PostgreSQL gate has already run several Next servers;
+    // allow the final isolated dev server more startup time on loaded CI runners.
+    const deadline = Date.now() + 180_000;
     while (!logs.join("").includes("listening on")) {
       if (child.exitCode !== null) throw new Error(`browser smoke server exited: ${logs.join("")}`);
       if (Date.now() > deadline) throw new Error(`browser smoke server timeout: ${logs.join("")}`);
