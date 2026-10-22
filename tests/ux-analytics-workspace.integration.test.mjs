@@ -607,3 +607,131 @@ test('UX-PRO-E5 browser: tabela de experimentos rolável em 390px tem região ac
     await context.close();
   });
 });
+
+test('browser: aprovação exige e registra a justificativa escrita pela pessoa operadora', { skip: !RUN }, async () => {
+  const draft = await api('/api/ext/analytics/experiments', {
+    method: 'POST', cookie: adminCookie,
+    body: {
+      hypothesis: 'Hipótese sintética para validar justificativa individual de aprovação',
+      description: 'Rascunho sintético criado pelo gate; nenhuma execução externa.',
+      variant_a: 'Fluxo A', variant_b: 'Fluxo B', metric_name: 'tarefas concluídas',
+      privacy_note: 'Métrica agregada, sem dado pessoal ou identificador direto.',
+    },
+  });
+  assert.equal(draft.status, 201);
+  const draftIdForApproval = draft.body.experiment.id;
+
+  await comNavegador(async browser => {
+    const { context, page } = await abrir(browser, adminCookie);
+    await page.getByRole('tab', { name: 'Aprovação e ciclo de vida', exact: true }).click();
+    await page.locator('#analytics-selected').selectOption(draftIdForApproval);
+    await page.locator('[data-testid="analytics-detail"]').waitFor();
+    await capture(page, 'desktop-analytics-aprovacao-formulario-vazio');
+
+    const note = page.getByRole('textbox', { name: 'Justificativa da aprovação' });
+    assert.equal(await note.count(), 1, 'a interface precisa coletar a justificativa de quem aprova');
+    assert.equal(await note.getAttribute('minlength'), '10');
+    assert.equal(await note.getAttribute('maxlength'), '1000');
+    const submit = page.getByRole('button', { name: 'Registrar aprovação humana' });
+    assert.equal(await submit.isDisabled(), true, 'sem justificativa o POST não pode ser iniciado');
+    await note.fill('Rascunho que não deve reutilizar a justificativa anterior.');
+    await page.locator('#analytics-selected').selectOption(draftId);
+    await page.locator('[data-testid="analytics-detail"]').waitFor();
+    assert.equal(await note.inputValue(), '', 'trocar de experimento descarta a nota ainda não enviada');
+    await page.locator('#analytics-selected').selectOption(draftIdForApproval);
+    await page.locator('[data-testid="analytics-detail"]').waitFor();
+    assert.equal(await note.inputValue(), '', 'a justificativa não é reutilizada em outro rascunho');
+    await note.fill('         ');
+    assert.equal(await submit.isDisabled(), true, 'espaços não formam justificativa válida');
+
+    const expectedNote = 'Revisei hipótese, variantes, métrica e minimização para este rascunho.';
+    await note.fill(`  ${expectedNote}  `);
+    assert.equal(await submit.isDisabled(), false);
+    await note.focus();
+    await page.keyboard.press('Tab');
+    assert.equal(await submit.evaluate(element => element === document.activeElement), true,
+      'Tab move do campo de justificativa para a ação de aprovação');
+    const focus = await submit.evaluate(element => ({
+      outlineStyle: getComputedStyle(element).outlineStyle,
+      outlineWidth: parseFloat(getComputedStyle(element).outlineWidth) || 0,
+    }));
+    assert.ok(focus.outlineStyle !== 'none' && focus.outlineWidth >= 1,
+      `foco visível ao aprovar com teclado: ${JSON.stringify(focus)}`);
+
+    const matrix = {};
+    const entries = [];
+    for (const theme of ['day', 'night']) {
+      const currentTheme = await page.evaluate(() => document.documentElement.dataset.adminTheme || 'day');
+      if (currentTheme !== theme) {
+        await page.click('[data-admin-theme-toggle="true"]');
+        await page.waitForFunction(expected =>
+          (document.documentElement.dataset.adminTheme || 'day') === expected, theme);
+      }
+      matrix[theme] = {};
+      for (const width of [320, 390, 768, 1440]) {
+        await page.setViewportSize({ width, height: width < 500 ? 844 : 900 });
+        if (width <= 900) {
+          const menu = page.locator('button[aria-controls="admin-module-nav"]');
+          if (await menu.getAttribute('aria-expanded') === 'true') {
+            await page.getByRole('button', { name: 'Fechar menu' }).click();
+          }
+          await page.waitForFunction(() => {
+            const nav = document.querySelector('[data-admin-nav]');
+            const toggle = document.querySelector('button[aria-controls="admin-module-nav"]');
+            return toggle?.getAttribute('aria-expanded') === 'false' && nav && getComputedStyle(nav).visibility === 'hidden';
+          });
+        }
+        const geometry = await page.evaluate(() => ({
+          documentOverflowPx: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          noteWidth: document.querySelector('#analytics-approval-note')?.getBoundingClientRect().width ?? null,
+          formRight: document.querySelector('[data-testid="analytics-approval-form"]')?.getBoundingClientRect().right ?? null,
+        }));
+        assert.ok(geometry.documentOverflowPx <= 1,
+          `transbordo de documento ${geometry.documentOverflowPx}px em ${width}px tema ${theme}`);
+        assert.ok(geometry.noteWidth > 0 && geometry.formRight <= width + 1,
+          `formulário dentro do viewport ${width}px tema ${theme}: ${JSON.stringify(geometry)}`);
+        matrix[theme][width] = geometry;
+        const screenshotName = `analytics-aprovacao-${theme}-${width}.png`;
+        await capture(page, screenshotName.replace(/\.png$/, ''));
+        entries.push({
+          route: '/admin/analytics',
+          viewport: `${width}x${width < 500 ? 844 : 900}`,
+          requestedTheme: theme,
+          screenshot: path.relative(root, path.resolve(evidenceDir, screenshotName)).replaceAll('\\', '/'),
+          ...(theme === 'day' && width === 1440
+            ? { percursoTeclado: ['Justificativa da aprovação', 'Registrar aprovação humana'] }
+            : {}),
+        });
+      }
+    }
+    if (evidenceDir) {
+      await writeFile(path.join(evidenceDir, 'resumo.json'), `${JSON.stringify({
+        stage: 'ux-pro-04-analytics',
+        generatedBy: 'tests/ux-analytics-workspace.integration.test.mjs com Chromium, servidor HTTP e PostgreSQL descartável; massa sintética criada pela API canônica',
+        entries,
+        route: '/admin/analytics', role: 'admin', approvalNoteLength: expectedNote.length,
+        noteResetOnExperimentChange: true, keyboard: { tabFromNoteReachedApprovalButton: true, focus },
+        matrix, evidence: 'Playwright Chromium contra servidor HTTP e PostgreSQL descartável; rascunhos sintéticos criados pela API canônica.',
+        limitations: 'Capturas automatizadas e inspeção estática; não equivalem a validação manual, aceite humano ou homologação.',
+      }, null, 2)}\n`, 'utf8');
+    }
+
+    const requestPromise = page.waitForRequest(request =>
+      request.url().endsWith(`/api/ext/analytics/experiments/${draftIdForApproval}/approve`) && request.method() === 'POST');
+    await submit.click();
+    const request = await requestPromise;
+    assert.equal(request.postDataJSON().approval_note, expectedNote, 'a UI envia o texto informado, sem conteúdo fixo');
+    await page.getByText(/Aprovação humana registrada/i).waitFor();
+
+    const saved = await pool.query(
+      'SELECT approved_by_identity, approval_note FROM ext_analytics_experiments WHERE id=$1',
+      [draftIdForApproval],
+    );
+    assert.equal(saved.rowCount, 1);
+    assert.equal(saved.rows[0].approved_by_identity, adminStaff.id, 'a identidade vem da sessão autenticada');
+    assert.equal(saved.rows[0].approval_note, expectedNote, 'o texto canônico é exatamente o informado pela pessoa');
+
+    await capture(page, 'desktop-analytics-aprovacao-nota-operadora');
+    await context.close();
+  });
+});

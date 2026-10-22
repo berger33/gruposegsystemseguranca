@@ -140,6 +140,7 @@ export function AnalyticsWorkspace() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [approvalNote, setApprovalNote] = useState("");
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const loadList = useCallback(async () => {
@@ -170,6 +171,7 @@ export function AnalyticsWorkspace() {
   }, [loadList]);
 
   const openCycle = (id: string) => {
+    setApprovalNote("");
     setActive("ciclo");
     void loadDetail(id);
   };
@@ -195,17 +197,14 @@ export function AnalyticsWorkspace() {
     if (result.data?.experiment?.id) await loadDetail(result.data.experiment.id);
   };
 
-  const approve = async (id: string) => {
+  const approve = async (id: string, note: string) => {
     setBusy(true);
     setActionError(null);
     setNotice("");
     const result = await analyticsRequest(`/api/ext/analytics/experiments/${id}/approve`, {
       method: "POST",
       headers: { "content-type": "application/json", "Idempotency-Key": requestKey() },
-      body: JSON.stringify({
-        approval_note:
-          "Aprovação humana registrada após revisão da hipótese, variantes, métrica e minimização.",
-      }),
+      body: JSON.stringify({ approval_note: note.trim() }),
     });
     setBusy(false);
     if (!result.ok) {
@@ -213,6 +212,7 @@ export function AnalyticsWorkspace() {
       return;
     }
     setNotice("Aprovação humana registrada; a execução continua sendo uma transição separada.");
+    setApprovalNote("");
     await loadList();
     await loadDetail(id);
   };
@@ -525,7 +525,12 @@ export function AnalyticsWorkspace() {
               <select
                 id="analytics-selected"
                 value={selectedId}
-                onChange={e => { if (e.target.value) void loadDetail(e.target.value); }}
+                onChange={e => {
+                  if (e.target.value) {
+                    setApprovalNote("");
+                    void loadDetail(e.target.value);
+                  }
+                }}
                 disabled={list.phase !== "ready" || experiments.length === 0}
               >
                 <option value="">Selecione um experimento</option>
@@ -597,38 +602,72 @@ export function AnalyticsWorkspace() {
                       <dd>{honestDateTime(selected.experiment.completed_at)}</dd>
                     </div>
                   </dl>
-                  <div className={styles.actions} data-testid="analytics-cycle-actions">
+                  <div data-testid="analytics-cycle-actions">
                     {selected.experiment.status === "rascunho" && !selected.experiment.approved_at ? (
-                      <button type="button" disabled={busy} onClick={() => void approve(selected.experiment.id)}>
-                        Registrar aprovação humana
-                      </button>
-                    ) : null}
-                    {selected.experiment.status === "rascunho" && selected.experiment.approved_at ? (
-                      <button type="button" disabled={busy} onClick={() => void change(selected.experiment.id, "em_execucao")}>
-                        Iniciar após aprovação
-                      </button>
-                    ) : null}
-                    {selected.experiment.status === "em_execucao" ? (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void change(selected.experiment.id, "rascunho", {
-                          justification: "Execução revertida para revisão humana.",
-                        })}
+                      <form
+                        className={styles.stackWide}
+                        data-testid="analytics-approval-form"
+                        onSubmit={event => {
+                          event.preventDefault();
+                          void approve(selected.experiment.id, approvalNote);
+                        }}
                       >
-                        Reverter para rascunho
-                      </button>
+                        <div className={styles.field}>
+                          <label htmlFor="analytics-approval-note">Justificativa da aprovação</label>
+                          <textarea
+                            id="analytics-approval-note"
+                            name="approval_note"
+                            required
+                            minLength={10}
+                            maxLength={1000}
+                            rows={3}
+                            value={approvalNote}
+                            aria-describedby="analytics-approval-note-hint"
+                            onChange={event => setApprovalNote(event.target.value)}
+                          />
+                          <p id="analytics-approval-note-hint" className={styles.hint}>
+                            Escreva a razão desta decisão. A nota será registrada na trilha; não inclua dados pessoais,
+                            credenciais ou segredos.
+                          </p>
+                        </div>
+                        <div className={styles.actions}>
+                          <button
+                            type="submit"
+                            disabled={busy || approvalNote.trim().length < 10}
+                          >
+                            Registrar aprovação humana
+                          </button>
+                        </div>
+                      </form>
                     ) : null}
                     {selected.experiment.status !== "arquivado" && selected.experiment.status !== "concluido" ? (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void change(selected.experiment.id, "cancelado", {
-                          justification: "Execução cancelada por decisão operacional.",
-                        })}
-                      >
-                        Cancelar
-                      </button>
+                      <div className={styles.actions}>
+                        {selected.experiment.status === "rascunho" && selected.experiment.approved_at ? (
+                          <button type="button" disabled={busy} onClick={() => void change(selected.experiment.id, "em_execucao")}>
+                            Iniciar após aprovação
+                          </button>
+                        ) : null}
+                        {selected.experiment.status === "em_execucao" ? (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void change(selected.experiment.id, "rascunho", {
+                              justification: "Execução revertida para revisão humana.",
+                            })}
+                          >
+                            Reverter para rascunho
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void change(selected.experiment.id, "cancelado", {
+                            justification: "Execução cancelada por decisão operacional.",
+                          })}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
                     ) : null}
                   </div>
                   <p className={styles.footnote}>
