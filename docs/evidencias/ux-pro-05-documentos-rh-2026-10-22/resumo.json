@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "fatia": "UX-PRO-05 — devolução de documentos ao funcionário",
+  "data": "2026-10-22",
+  "baseSha": "5c369da3eb0f7881757a6a54b3743b5532a4393b",
+  "rotas": ["/admin/funcionarios", "/funcionario"],
+  "massa": "sintética; criada pelos gates em PostgreSQL descartável",
+  "automacao": {
+    "hrGateCompleto": { "resultado": "pass", "testes": 15, "falhas": 0, "motor": "Chrome instalado no Windows" },
+    "hrFocalAposRestricaoDeEstado": { "resultado": "pass", "testes": 1, "falhas": 0 },
+    "portalGateCompleto": { "resultado": "pass", "testes": 25, "falhas": 0, "motor": "Edge instalado no Windows" },
+    "portalFocalAposAjustesDeCaptura": { "resultado": "pass", "testes": 1, "falhas": 0 },
+    "suite": { "resultado": "pass", "testes": 993, "falhas": 0, "ignorados": 0 },
+    "typecheck": "pass",
+    "build": { "resultado": "pass", "paginas": 105 },
+    "qaWave0Static": { "resultado": "pass", "itens": 5 },
+    "inventario": { "resultado": "pass", "rotas": 100 }
+  },
+  "medicoes": {
+    "viewports": [320, 390, 768, 1440],
+    "temas": ["day", "night-390"],
+    "overflowDocumento": "<= 1 px em todos os quatro viewports nos portais RH e funcionário",
+    "teclado": "campo de motivo focado e digitado via teclado nos quatro viewports RH; link Baixar focado no portal",
+    "isolamento": "filtro employee_id da sessão inspecionado; endpoint confirmou scope own para o titular sintético, sem um cenário adversarial A/B novo",
+    "auditoria": "um evento employee_private_document_access(actor_kind=staff, action=review) verificado para a rejeição"
+  },
+  "capturas": [
+    "ux-pro-05-documento-rh-em-revisao-320-day.png",
+    "ux-pro-05-documento-rh-em-revisao-390-day.png",
+    "ux-pro-05-documento-rh-em-revisao-768-day.png",
+    "ux-pro-05-documento-rh-em-revisao-1440-day.png",
+    "ux-pro-05-documento-rejeitado-rh-320-day.png",
+    "ux-pro-05-documento-rejeitado-rh-390-day.png",
+    "ux-pro-05-documento-rejeitado-rh-768-day.png",
+    "ux-pro-05-documento-rejeitado-rh-1440-day.png",
+    "ux-pro-05-documento-rejeitado-rh-390-night.png",
+    "ux-pro-05-documento-rejeitado-320-day.png",
+    "ux-pro-05-documento-rejeitado-390-day.png",
+    "ux-pro-05-documento-rejeitado-768-day.png",
+    "ux-pro-05-documento-rejeitado-1440-day.png",
+    "ux-pro-05-documento-rejeitado-titular-390-night.png",
+    "ux-pro-05-documento-rejeitado-card-titular.png"
+  ],
+  "limites": [
+    "Inspeção de imagens automatizadas não é validação manual nem aceite humano.",
+    "A tabela RH permanece horizontalmente rolável em telas estreitas; a página não transborda e o campo foi focado pelo teclado.",
+    "As capturas ocultam o portal de desenvolvimento Next; o recorte do cartão do titular oculta o tablist fixo somente para enquadrar o motivo.",
+    "O teste novo usa um titular sintético e não substitui um teste adversarial A/B específico para documentos.",
+    "Não foram usados arquivos ou dados pessoais reais; operação de produção e leitor de tela não foram validados."
+  ]
+}

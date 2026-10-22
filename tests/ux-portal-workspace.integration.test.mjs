@@ -3044,3 +3044,140 @@ test('browser: funcionário cria solicitação e RH decide com retorno visível 
     await employeeBrowser.close();
   }
 });
+
+test('browser: RH devolve documento com motivo e o portal apresenta o retorno no escopo próprio', { skip: !RUN }, async () => {
+  const employeeBrowser = await launchBrowser();
+  let rhBrowser;
+  let employeeContext;
+  let rhContext;
+  try {
+    const login = await api('/api/employee/session', {
+      method: 'POST', body: { email: employeeEmail, password: employeePassword },
+    });
+    assert.equal(login.status, 200);
+    const employeeSession = login.setCookie.find(value => value.startsWith('seg_employee_session='))?.split(';')[0];
+    assert.ok(employeeSession);
+
+    const documentTitle = `Documento sintético UX-PRO-05 ${randomUUID().slice(0, 8)}`;
+    const uploaded = await api('/api/employee/documents', {
+      method: 'POST', cookie: employeeSession,
+      body: {
+        filename: 'documento-sintetico.txt', contentType: 'text/plain',
+        contentBase64: Buffer.from('conteudo sintetico de teste', 'utf8').toString('base64'),
+        title: documentTitle, category: 'pessoal', documentKind: 'submission',
+      },
+    });
+    assert.equal(uploaded.status, 201, `upload deveria retornar 201, veio ${uploaded.status}`);
+    const documentId = uploaded.body.document.id;
+
+    const employeeOpened = await openPage(employeeBrowser, '/funcionario', employeeSession, { width: 390, height: 844 });
+    employeeContext = employeeOpened.context;
+    await employeeOpened.page.getByRole('tab', { name: 'Docs' }).click();
+    const employeeCard = employeeOpened.page.locator('article').filter({ hasText: documentTitle });
+    await employeeCard.waitFor();
+    assert.match(await employeeCard.innerText(), /Pendente/i);
+
+    rhBrowser = await launchBrowser();
+    const rhOpened = await openPage(rhBrowser, '/admin/funcionarios', rhCookie, { width: 1440, height: 900 });
+    rhContext = rhOpened.context;
+    const rhPage = rhOpened.page;
+    await rhPage.getByRole('tab', { name: 'Documentos' }).click();
+    const row = rhPage.locator('tr', { hasText: documentTitle });
+    await row.waitFor();
+    const rejectionReason = 'Envie uma versão legível e assinada.';
+    const reasonField = row.getByLabel('Motivo da rejeição');
+    await rhPage.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+    const rhReviewEvidence = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await rhPage.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      await reasonField.focus();
+      assert.equal(await reasonField.evaluate(element => element === document.activeElement), true,
+        `${width}px: o campo de retorno permanece acessível pelo teclado`);
+      rhReviewEvidence.push(await rhPage.evaluate(() => ({
+        width: document.documentElement.clientWidth,
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      })));
+      await capture(rhPage, `ux-pro-05-documento-rh-em-revisao-${width}-day`);
+    }
+    assert.deepEqual(rhReviewEvidence.map(value => value.width), [320, 390, 768, 1440]);
+    assert.ok(rhReviewEvidence.every(value => value.overflow <= 1), JSON.stringify(rhReviewEvidence));
+    await rhPage.setViewportSize({ width: 1440, height: 900 });
+    await reasonField.focus();
+    await rhPage.keyboard.type(rejectionReason);
+    await row.getByRole('button', { name: /Rejeitar/i }).click();
+    await rhPage.locator('[role="status"]', { hasText: /rejeitado com motivo registrado/i }).waitFor();
+
+    const persisted = await pool.query(
+      'SELECT employee_id,status,rejection_reason FROM employee_private_documents WHERE id=$1', [documentId]);
+    assert.equal(persisted.rows[0].employee_id, employee.id);
+    assert.equal(persisted.rows[0].status, 'rejected');
+    assert.equal(persisted.rows[0].rejection_reason, rejectionReason);
+    const audit = await pool.query(
+      "SELECT count(*)::int AS total FROM employee_private_document_access WHERE document_id=$1 AND actor_kind='staff' AND action='review'",
+      [documentId]);
+    assert.equal(audit.rows[0].total, 1, 'a revisão do RH mantém o evento de auditoria já existente');
+
+    const employeeRead = await api('/api/employee/documents', { cookie: employeeSession });
+    assert.equal(employeeRead.status, 200);
+    assert.equal(employeeRead.body.scope, 'own');
+    assert.equal(employeeRead.body.documents.find(item => item.id === documentId)?.rejection_reason, rejectionReason);
+    const ownHome = await api('/api/employee/home', { cookie: employeeSession });
+    assert.equal(ownHome.body.documents.find(item => item.id === documentId)?.rejection_reason, rejectionReason);
+
+    await employeeOpened.page.reload({ waitUntil: 'domcontentloaded' });
+    await employeeOpened.page.getByRole('tab', { name: 'Docs' }).click();
+    const returnedCard = employeeOpened.page.locator('article').filter({ hasText: documentTitle });
+    await returnedCard.getByText(rejectionReason, { exact: false }).waitFor();
+    assert.match(await returnedCard.innerText(), /Motivo informado pelo RH/);
+    const returnedReason = employeeOpened.page.getByText(rejectionReason, { exact: false });
+    await returnedCard.evaluate(element => element.scrollIntoView({ block: 'center', inline: 'nearest' }));
+    await employeeOpened.page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+    if (evidenceDir) {
+      const captureStyle = await employeeOpened.page.addStyleTag({ content: '[role="tablist"] { display: none !important; }' });
+      await returnedCard.screenshot({ path: path.join(evidenceDir, 'ux-pro-05-documento-rejeitado-card-titular.png') });
+      await captureStyle.evaluate(element => element.remove());
+    }
+    await capture(employeeOpened.page, 'ux-pro-05-documento-rejeitado-titular-mobile');
+    const rhViewportEvidence = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await rhPage.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      rhViewportEvidence.push(await rhPage.evaluate(() => ({
+        width: document.documentElement.clientWidth,
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      })));
+      await capture(rhPage, `ux-pro-05-documento-rejeitado-rh-${width}-day`);
+    }
+    assert.deepEqual(rhViewportEvidence.map(value => value.width), [320, 390, 768, 1440]);
+    assert.ok(rhViewportEvidence.every(value => value.overflow <= 1), JSON.stringify(rhViewportEvidence));
+    await rhPage.getByRole('button', { name: 'Ativar modo noite' }).click();
+    await rhPage.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+    await rhPage.setViewportSize({ width: 390, height: 844 });
+    await capture(rhPage, 'ux-pro-05-documento-rejeitado-rh-390-night');
+    const viewportEvidence = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await employeeOpened.page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      viewportEvidence.push(await employeeOpened.page.evaluate(() => ({
+        width: document.documentElement.clientWidth,
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      })));
+      await returnedCard.evaluate(element => element.scrollIntoView({ block: 'center', inline: 'nearest' }));
+      await capture(employeeOpened.page, `ux-pro-05-documento-rejeitado-${width}-day`);
+    }
+    assert.deepEqual(viewportEvidence.map(value => value.width), [320, 390, 768, 1440]);
+    assert.ok(viewportEvidence.every(value => value.overflow <= 1), JSON.stringify(viewportEvidence));
+    await employeeOpened.page.getByRole('button', { name: 'Ativar modo noite' }).click();
+    await employeeOpened.page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+    await employeeOpened.page.setViewportSize({ width: 390, height: 844 });
+    await capture(employeeOpened.page, 'ux-pro-05-documento-rejeitado-titular-390-night');
+    const download = employeeOpened.page.locator('article').filter({ hasText: documentTitle })
+      .getByRole('link', { name: /Baixar/ });
+    await download.focus();
+    assert.equal(await download.evaluate(element => element === document.activeElement), true,
+      'o link do documento continua alcançável pelo teclado após a leitura do retorno');
+  } finally {
+    await rhContext?.close();
+    await employeeContext?.close();
+    await rhBrowser?.close();
+    await employeeBrowser.close();
+  }
+});

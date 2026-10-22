@@ -832,6 +832,7 @@ function RequestReviews({
 
 function Documents({ docs, run }: { docs: Doc[]; run: RunTask }) {
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
 
   if (!docs.length) {
     return (
@@ -859,12 +860,31 @@ function Documents({ docs, run }: { docs: Doc[]; run: RunTask }) {
     }
   }
 
+  async function reject(doc: Doc) {
+    if (busyId) return;
+    const rejectionReason = rejectionReasons[doc.id]?.trim() || '';
+    if (rejectionReason.length < 5) return;
+    setBusyId(doc.id);
+    try {
+      const updated = await run(
+        () => api('/api/admin/hr/l03/documents', {
+          method: 'PATCH',
+          body: JSON.stringify({ id: doc.id, status: 'rejected', rejectionReason }),
+        }),
+        `Documento "${doc.title}" rejeitado com motivo registrado para o funcionário.`,
+      );
+      if (updated) setRejectionReasons(current => ({ ...current, [doc.id]: '' }));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <section className={styles.panel} aria-labelledby="rh-documentos-titulo">
       <h3 id="rh-documentos-titulo" className={styles.panelTitle}>Documentos privados ({docs.length})</h3>
       <p className={styles.hint}>
-        Aprovar registra a revisão. Publicar ao titular é um passo distinto e exige fonte autorizada. O
-        download é auditado e o arquivo não tem endereço público.
+        Aprovar registra a revisão. Rejeitar exige motivo e o devolve ao titular. Publicar é um passo
+        distinto, exige fonte autorizada. O download é auditado e o arquivo não tem endereço público.
       </p>
       <div className={styles.tableWrap} role="region" aria-label="Tabela com rolagem horizontal" tabIndex={0}>
         <table className={styles.table}>
@@ -899,6 +919,32 @@ function Documents({ docs, run }: { docs: Doc[]; run: RunTask }) {
                       Aprovar
                       <span className={styles.visuallyHidden}> o documento {doc.title}</span>
                     </button>
+                    {['pending', 'submitted', 'under_review'].includes(doc.status.toLowerCase()) ? (
+                      <>
+                        <div className={styles.field}>
+                          <label htmlFor={`rh-documento-motivo-${doc.id}`}>Motivo da rejeição</label>
+                          <textarea
+                            id={`rh-documento-motivo-${doc.id}`}
+                            className={styles.input}
+                            value={rejectionReasons[doc.id] || ''}
+                            minLength={5}
+                            maxLength={1000}
+                            required
+                            placeholder="Informe o motivo (mínimo 5 caracteres)"
+                            onChange={event => setRejectionReasons(current => ({ ...current, [doc.id]: event.target.value }))}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          disabled={busyId === doc.id || (rejectionReasons[doc.id]?.trim().length || 0) < 5}
+                          aria-busy={busyId === doc.id}
+                          onClick={() => reject(doc)}
+                        >
+                          Rejeitar
+                          <span className={styles.visuallyHidden}> o documento {doc.title}</span>
+                        </button>
+                      </>
+                    ) : null}
                     <a className={styles.button} href={`/api/admin/hr/l03/documents/${doc.id}/download`}>
                       Baixar
                       <span className={styles.visuallyHidden}> o documento {doc.title}</span>

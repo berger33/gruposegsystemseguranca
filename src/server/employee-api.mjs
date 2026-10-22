@@ -298,7 +298,7 @@ export function createEmployeeApi(ctx) {
         db().query(`SELECT id,protocol,handover_date,status,CASE WHEN from_employee_id=$1 THEN 'saida' ELSE 'entrada' END AS direction FROM emp_handover_records WHERE from_employee_id=$1 OR to_employee_id=$1 ORDER BY handover_date DESC LIMIT 30`, [id]),
         db().query(`SELECT id,protocol,category,severity,title,occurred_at,location,status FROM emp_occurrences WHERE employee_id=$1 ORDER BY occurred_at DESC LIMIT 30`, [id]),
         db().query(`SELECT p.id,p.post_location,p.title,p.version,p.content,p.category,EXISTS(SELECT 1 FROM emp_procedure_acknowledgments a WHERE a.procedure_id=p.id AND a.employee_id=$1) AS acknowledged FROM emp_post_procedures p WHERE p.status='publicado' AND p.is_active=TRUE AND (p.post_location='Geral' OR p.post_location IN (SELECT location FROM emp_shift_assignments WHERE employee_id=$1)) ORDER BY p.title LIMIT 50`, [id]),
-        db().query(`SELECT id,document_kind,category,title,competence,version,status,source_label,source_authorized,original_filename,content_type,size_bytes,created_at,published_at FROM employee_private_documents WHERE employee_id=$1 AND (uploaded_by_kind='employee' OR status='published') ORDER BY created_at DESC LIMIT 50`, [id]),
+        db().query(`SELECT id,document_kind,category,title,competence,version,status,rejection_reason,source_label,source_authorized,original_filename,content_type,size_bytes,created_at,published_at FROM employee_private_documents WHERE employee_id=$1 AND (uploaded_by_kind='employee' OR status='published') ORDER BY created_at DESC LIMIT 50`, [id]),
         db().query(`SELECT r.id,r.protocol,r.request_type,r.category,r.title,r.description,r.status,r.due_date,r.response_deadline,r.rejection_reason,r.notes,r.responded_at,r.created_at,
           COALESCE((SELECT jsonb_agg(jsonb_build_object('status',f.status,'message',f.message,'created_at',f.created_at) ORDER BY f.created_at ASC)
             FROM emp_self_request_followups f WHERE f.request_id=r.id), '[]'::jsonb) AS followups
@@ -646,7 +646,7 @@ export function createEmployeeApi(ctx) {
   async function handleEmployeeDocuments(req, res) {
     const session = await employee(req, res); if (!session) return;
     if (req.method === 'GET') {
-      const { rows: documents } = await db().query(`SELECT id,document_kind,category,title,competence,version,status,source_label,source_authorized,original_filename,content_type,size_bytes,created_at,published_at FROM employee_private_documents WHERE employee_id=$1 AND (uploaded_by_kind='employee' OR status='published') ORDER BY created_at DESC`, [session.employeeId]);
+      const { rows: documents } = await db().query(`SELECT id,document_kind,category,title,competence,version,status,rejection_reason,source_label,source_authorized,original_filename,content_type,size_bytes,created_at,published_at FROM employee_private_documents WHERE employee_id=$1 AND (uploaded_by_kind='employee' OR status='published') ORDER BY created_at DESC`, [session.employeeId]);
       return ctx.json(res, 200, { documents, scope: 'own' }, { 'Cache-Control': 'private, no-store' });
     }
     if (req.method !== 'POST') return ctx.json(res, 405, { error: 'method_not_allowed' }, { Allow: 'GET, POST' });
