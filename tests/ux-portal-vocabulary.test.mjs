@@ -24,6 +24,7 @@ import {
   accountStatusTone,
   describePortalError,
   employeeItemStatusLabel,
+  employeeItemStatusTone,
   portalErrorFootnote,
   portalErrorVariant,
   portalShouldSignIn,
@@ -282,4 +283,15 @@ test('UX-06 tela: a área do cliente distingue falha de "sem vínculo"', () => {
 test('UX-06 tela: a área do cliente não anuncia etapa interna de projeto', () => {
   assert.doesNotMatch(clientHome, /Etapa 2/,
     'jargão interno de projeto não pertence à tela de quem é cliente');
+});
+
+test('UX-PRO-05 jornada: situações de ponto e ajuste de jornada têm rótulo e tom em português no portal', () => {
+  assert.equal(employeeItemStatusLabel('solicitado'), 'Aguardando análise');
+  assert.equal(employeeItemStatusTone('solicitado'), 'warning');
+  assert.equal(employeeItemStatusLabel('em_correcao'), 'Em correção');
+  assert.equal(employeeItemStatusTone('em_correcao'), 'warning');
+  assert.equal(employeeItemStatusLabel('corrigido'), 'Corrigido');
+  assert.equal(employeeItemStatusTone('corrigido'), 'success');
+  assert.equal(employeeItemStatusLabel('divergente'), 'Divergente');
+  assert.equal(employeeItemStatusTone('divergente'), 'danger');
 });

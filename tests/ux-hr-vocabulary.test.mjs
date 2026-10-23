@@ -189,3 +189,5 @@ test('sessão expirada é tratada como autenticação, não como permissão', ()
   assert.equal(auth.kind, 'auth');
   assert.equal(auth.canRetry, true);
 });
+
+import './ux-pro-05-ponto-rh-ui.test.mjs';

@@ -711,3 +711,161 @@ test('browser: falha ao ler solicitações do RH não vira vazio e permite repet
     await browser.close();
   }
 });
+
+test('browser: Ponto e ajustes distingue negativa 403 e falha 503 de fila vazia, preserva fila carregada e rotula controles', { skip: !RUN }, async () => {
+  const browserNegado = await launchBrowser();
+  let browserFalha;
+  try {
+    const pessoa = await pessoaFicticia('PontoAjuste');
+    const email = `ponto-${randomUUID().slice(0, 8)}@exemplo.invalid`;
+    const acesso = await api(`/api/admin/hr/employees/${pessoa.id}/access`, {
+      method: 'POST', cookie: grantedCookie, body: { email },
+    });
+    assert.equal(acesso.status, 201);
+    const loginTemp = await api('/api/employee/session', {
+      method: 'POST', body: { email, password: acesso.body.temporaryPassword },
+    });
+    assert.equal(loginTemp.status, 200);
+    const tempCookie = loginTemp.setCookie.find(c => c.startsWith('seg_employee_session='))?.split(';')[0];
+    const senhaDefinitiva = `Ponto-${randomUUID()}!`;
+    const troca = await api('/api/employee/session/password', {
+      method: 'PUT', cookie: tempCookie,
+      body: { currentPassword: acesso.body.temporaryPassword, newPassword: senhaDefinitiva },
+    });
+    assert.equal(troca.status, 200);
+    const loginEmp = await api('/api/employee/session', {
+      method: 'POST', body: { email, password: senhaDefinitiva },
+    });
+    assert.equal(loginEmp.status, 200);
+    const empCookie = loginEmp.setCookie.find(c => c.startsWith('seg_employee_session='))?.split(';')[0];
+
+    const posicao = () => ({ latitude: -23.55052, longitude: -46.63331, accuracy: 12, positionAt: new Date().toISOString() });
+    const entrada = await api('/api/employee/time-clock', {
+      method: 'POST', cookie: empCookie,
+      body: { requestId: randomUUID(), kind: 'entrada', position: posicao() },
+    });
+    assert.equal(entrada.status, 201);
+    const saida = await api('/api/employee/time-clock', {
+      method: 'POST', cookie: empCookie,
+      body: { requestId: randomUUID(), kind: 'saida', position: posicao() },
+    });
+    assert.equal(saida.status, 201);
+
+    const motivoPedido = `Ajuste sintético ${randomUUID().slice(0, 8)} para validar estado de erro`;
+    const pedido = await api('/api/employee/actions/time-correction', {
+      method: 'POST', cookie: empCookie,
+      body: {
+        timeEntryId: entrada.body.timeEntryId,
+        reason: motivoPedido,
+        requestedChanges: { clock_in: '08:00', clock_out: '17:00' },
+      },
+    });
+    assert.equal(pedido.status, 201);
+
+    // 1. Concessão fina real no PostgreSQL: equipe apenas com employees.read abre a aba, vê o pedido,
+    //    recebe 403 real ao tentar decidir (sem employees.write) e, se employees.read é revogada, vê estado negado.
+    const leitorRh = await provisionStaff(pool, { role: 'marcelo' });
+    await pool.query(
+      `DELETE FROM auth_permissions WHERE identity_id = $1 AND permission = 'employees.write'`,
+      [leitorRh.id],
+    );
+    await pool.query(
+      `INSERT INTO auth_permissions (identity_id, permission, scope_type, reason)
+       SELECT $1, 'employees.read', 'organization', 'Leitura sintética de auditoria'
+       WHERE NOT EXISTS (
+         SELECT 1 FROM auth_permissions WHERE identity_id = $1 AND permission = 'employees.read' AND revoked_at IS NULL
+       )`,
+      [leitorRh.id],
+    );
+    const leitorCookie = await loginHttp(leitorRh.email);
+    const negado = await openRh(browserNegado, leitorCookie, { width: 390, height: 844 });
+    await negado.page.getByRole('tab', { name: 'Ponto e ajustes' }).click();
+    const cardLeitor = negado.page.locator('[role="tabpanel"] article').filter({ hasText: motivoPedido });
+    await cardLeitor.waitFor();
+    await cardLeitor.getByRole('button', { name: 'Colocar em análise' }).click();
+    const erroEscrita = cardLeitor.getByRole('alert');
+    await erroEscrita.waitFor();
+    assert.match(await erroEscrita.innerText(), /HTTP 403 \(permission_scope_denied\)/);
+    assert.match(await erroEscrita.innerText(), /Nada foi gravado por esta tentativa/i);
+
+    await pool.query(
+      `UPDATE auth_permissions SET revoked_at = now() WHERE identity_id = $1 AND permission = 'employees.read'`,
+      [leitorRh.id],
+    );
+    await negado.page.getByRole('button', { name: 'Atualizar pedidos' }).click();
+    const alertaNegado = negado.page.locator('[role="tabpanel"] [data-ui-state="denied"]');
+    await alertaNegado.waitFor();
+    assert.match(await alertaNegado.innerText(), /permission_scope_denied/);
+    assert.equal(await negado.page.getByText('Nenhum pedido no seu escopo de acesso', { exact: true }).count(), 0);
+    assert.equal(await alertaNegado.getByRole('button', { name: /Tentar carregar novamente/i }).count(), 0);
+    await browserNegado.close();
+
+    // 2. Falha 503 inicial não vira fila vazia, oferece repetir, e falha posterior preserva a fila carregada.
+    browserFalha = await launchBrowser();
+    const context = await browserFalha.newContext({ viewport: { width: 390, height: 844 }, locale: 'pt-BR' });
+    const separator = grantedCookie.indexOf('=');
+    await context.addCookies([{ name: grantedCookie.slice(0, separator), value: grantedCookie.slice(separator + 1), url: baseUrl }]);
+    const page = await context.newPage();
+    page.setDefaultTimeout(45_000);
+    await page.addInitScript(() => {
+      window.__uxFailTimeCorrections = true;
+      const original = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : (input?.url || '');
+        const method = (init?.method || 'GET').toUpperCase();
+        if (window.__uxFailTimeCorrections && method === 'GET' && url.includes('/api/admin/hr/l03/time-corrections')) {
+          return new Response(JSON.stringify({ error: 'time_clock_unavailable' }), {
+            status: 503,
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+        return original(input, init);
+      };
+    });
+
+    await page.goto(`${baseUrl}/admin/funcionarios`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('tab', { name: 'Ponto e ajustes' }).click();
+
+    const alertaFalha = page.locator('[role="tabpanel"] [data-ui-state="error"]');
+    await alertaFalha.waitFor();
+    assert.match(await alertaFalha.innerText(), /Serviço de ponto indisponível/i);
+    assert.match(await alertaFalha.innerText(), /HTTP 503 \(time_clock_unavailable\)/);
+    assert.equal(await page.getByText('Nenhum pedido no seu escopo de acesso', { exact: true }).count(), 0,
+      'falha 503 inicial jamais pode ser exibida como fila vazia');
+    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+    await capture(page, 'ux-pro-05-ponto-rh-390-error');
+
+    await page.evaluate(() => { window.__uxFailTimeCorrections = false; });
+    await alertaFalha.getByRole('button', { name: /Tentar carregar novamente/i }).click();
+
+    const card = page.locator('[role="tabpanel"] article').filter({ hasText: motivoPedido });
+    await card.waitFor();
+    assert.match(await card.innerText(), /Aguardando análise/i);
+    assert.doesNotMatch(await card.innerText(), /\bsolicitado\b/,
+      'o cartão não deve exibir o token cru solicitado fora dos detalhes técnicos recolhidos');
+
+    const semRotulo = await page.evaluate(() => {
+      const faltando = [];
+      for (const field of document.querySelectorAll('[role="tabpanel"] input, [role="tabpanel"] select, [role="tabpanel"] textarea')) {
+        if (field.type === 'hidden') continue;
+        const id = field.getAttribute('id');
+        const label = id ? document.querySelector(`label[for="${CSS.escape(id)}"]`) : null;
+        const visible = label && label.textContent.trim().length > 0;
+        if (!visible) faltando.push(field.getAttribute('id') || field.outerHTML.slice(0, 80));
+      }
+      return faltando;
+    });
+    assert.deepEqual(semRotulo, [], 'todo controle em Ponto e ajustes precisa de <label for> visível');
+
+    // Simula queda posterior ao recarregar: o cartão já carregado permanece visível junto ao alerta.
+    await page.evaluate(() => { window.__uxFailTimeCorrections = true; });
+    await page.getByRole('button', { name: 'Atualizar pedidos' }).click();
+    await page.locator('[role="tabpanel"] [data-ui-state="error"]').waitFor();
+    assert.match(await page.locator('[role="tabpanel"] [data-ui-state="error"]').innerText(), /lista anterior foi preservada/i);
+    assert.equal(await card.count(), 1, 'falha posterior não pode apagar os pedidos já carregados');
+    await capture(page, 'ux-pro-05-ponto-rh-390-preserved-after-error');
+  } finally {
+    await browserNegado.close().catch(() => {});
+    await browserFalha?.close().catch(() => {});
+  }
+});
