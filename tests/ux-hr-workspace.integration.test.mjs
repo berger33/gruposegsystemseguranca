@@ -869,3 +869,227 @@ test('browser: Ponto e ajustes distingue negativa 403 e falha 503 de fila vazia,
     await browserFalha?.close().catch(() => {});
   }
 });
+
+test('browser: Documentos: falha de leitura preserva lista, loading e vazio só após 200', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  let context;
+  let releaseDocuments = null;
+  try {
+    const pessoa = await pessoaFicticia('DocumentoLeitura');
+    const title = `Documento sintético leitura ${randomUUID().slice(0, 8)}`;
+    const uploaded = await api('/api/admin/hr/l03/documents', {
+      method: 'POST', cookie: grantedCookie,
+      body: {
+        employeeId: pessoa.id,
+        filename: 'documento-leitura.txt',
+        contentType: 'text/plain',
+        contentBase64: Buffer.from('documento sintetico para estados de leitura', 'utf8').toString('base64'),
+        documentKind: 'submission',
+        category: 'admissao',
+        title,
+      },
+    });
+    assert.equal(uploaded.status, 201);
+
+    context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'pt-BR' });
+    const separator = grantedCookie.indexOf('=');
+    await context.addCookies([{ name: grantedCookie.slice(0, separator), value: grantedCookie.slice(separator + 1), url: baseUrl }]);
+    let mode = 'error';
+    await context.route('**/api/admin/hr/l03/documents', async route => {
+      if (route.request().method() !== 'GET') return route.continue();
+      if (mode === 'hold') {
+        await new Promise(resolve => { releaseDocuments = resolve; });
+      }
+      if (mode === 'error') {
+        return route.fulfill({
+          status: 503,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'document_list_unavailable' }),
+        });
+      }
+      if (mode === 'empty') {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ documents: [] }),
+        });
+      }
+      return route.continue();
+    });
+
+    const page = await context.newPage();
+    page.setDefaultTimeout(45_000);
+    const prefix = process.env.UX_HR_EVIDENCE_PREFIX || 'ux-pro-05-documentos-leitura';
+    await page.goto(`${baseUrl}/admin/funcionarios`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('tab', { name: 'Documentos' }).click();
+    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+    const panel = page.locator('#rh-painel-documentos');
+
+    // A captura antecede a asserção para preservar também a evidência do RED.
+    await capture(page, `${prefix}-erro-inicial-390-day`);
+    const initialError = panel.locator('[data-ui-state="error"]');
+    assert.equal(await initialError.count(), 1, '503 inicial precisa aparecer como erro, não como lista vazia');
+    assert.match(await initialError.innerText(), /HTTP 503 \(document_list_unavailable\)/);
+    assert.equal(await panel.getByText('Nenhum documento no seu escopo', { exact: true }).count(), 0);
+
+    mode = 'success';
+    const firstRetry = initialError.getByRole('button', { name: /Tentar carregar novamente/i });
+    await firstRetry.focus();
+    assert.equal(await firstRetry.evaluate(element => element === document.activeElement), true,
+      'a nova tentativa precisa ser alcançável e acionável pelo teclado');
+    await page.keyboard.press('Enter');
+    const row = panel.locator('tr', { hasText: title });
+    await row.waitFor();
+    assert.equal(await panel.locator('[data-ui-state="error"]').count(), 0);
+    await capture(page, `${prefix}-carregado-390-day`);
+
+    // O PATCH segue real até o PostgreSQL; somente a releitura GET seguinte falha.
+    mode = 'error';
+    await row.getByRole('button', { name: /Aprovar/i }).click();
+    const preservedError = panel.locator('[data-ui-state="error"]');
+    await preservedError.waitFor();
+    assert.match(await preservedError.innerText(), /lista anterior foi preservada/i);
+    assert.match(await preservedError.innerText(), /HTTP 503 \(document_list_unavailable\)/);
+    assert.equal(await row.count(), 1, 'a releitura 503 não pode apagar o documento já carregado');
+    const persisted = await pool.query(
+      'SELECT status FROM employee_private_documents WHERE id=$1',
+      [uploaded.body.document.id],
+    );
+    assert.equal(persisted.rows[0].status, 'approved', 'a injeção afeta somente o GET; o PATCH real permanece íntegro');
+    assert.doesNotMatch(
+      await preservedError.innerText(),
+      /nada foi carregado nem gravado/i,
+      'a falha da releitura não pode negar uma gravação que já foi confirmada',
+    );
+
+    const viewportEvidence = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      await page.waitForTimeout(120);
+      viewportEvidence.push(await page.evaluate(() => ({
+        width: document.documentElement.clientWidth,
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      })));
+      await capture(page, `${prefix}-preservado-${width}-day`);
+    }
+    assert.deepEqual(viewportEvidence.map(value => value.width), [320, 390, 768, 1440]);
+    assert.ok(viewportEvidence.every(value => value.overflow <= 1), JSON.stringify(viewportEvidence));
+
+    await page.getByRole('button', { name: 'Ativar modo noite' }).click();
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(450);
+    const nightOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    assert.ok(nightOverflow <= 1, `tema noturno/390px: overflow ${nightOverflow}px`);
+    await capture(page, `${prefix}-preservado-390-night`);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.getByRole('button', { name: 'Ativar modo dia' }).click();
+    await page.waitForFunction(() => !document.documentElement.dataset.adminTheme);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(450);
+
+    // Nova tentativa permanece com os dados anteriores visíveis enquanto o GET está pendente.
+    mode = 'hold';
+    const secondRetry = preservedError.getByRole('button', { name: /Tentar carregar novamente/i });
+    await secondRetry.focus();
+    await page.keyboard.press('Enter');
+    const loading = panel.locator('[data-ui-state="loading"]');
+    await loading.waitFor();
+    assert.match(await loading.innerText(), /Atualizando os documentos/i);
+    assert.equal(await row.count(), 1, 'loading de releitura não pode esconder a última lista conhecida');
+    await capture(page, `${prefix}-loading-390-day`);
+
+    mode = 'empty';
+    for (let attempt = 0; attempt < 100 && !releaseDocuments; attempt += 1) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    assert.ok(releaseDocuments, 'a releitura controlada precisa ter chegado à rota de documentos');
+    releaseDocuments();
+    const empty = panel.locator('[data-ui-state="empty"]');
+    await empty.waitFor();
+    assert.match(await empty.innerText(), /consulta foi respondida pelo servidor/i);
+    assert.equal(await row.count(), 0, 'somente um 200 vazio pode substituir a lista anterior por vazio');
+    assert.equal(await panel.locator('[data-ui-state="error"]').count(), 0);
+    assert.equal(await panel.locator('[data-ui-state="loading"]').count(), 0);
+    await capture(page, `${prefix}-vazio-390-day`);
+  } finally {
+    releaseDocuments?.();
+    await context?.close().catch(() => {});
+    await browser.close().catch(() => {});
+  }
+});
+
+test('browser: Documentos: negativa HTTP preserva fail-closed e vira denied, nunca vazio', { skip: !RUN }, async () => {
+  // Contrato real: quem não tem employees.read não recebe coleção alguma.
+  const deniedResponse = await api('/api/admin/hr/l03/documents', { cookie: deniedCookie });
+  assert.equal(deniedResponse.status, 403);
+  assert.equal(deniedResponse.body.error, 'permission_scope_denied');
+  assert.ok(!('documents' in (deniedResponse.body || {})));
+
+  const browser = await launchBrowser();
+  let context;
+  try {
+    const pessoa = await pessoaFicticia('DocumentoNegado');
+    const title = `Documento sintético negativa ${randomUUID().slice(0, 8)}`;
+    const uploaded = await api('/api/admin/hr/l03/documents', {
+      method: 'POST', cookie: grantedCookie,
+      body: {
+        employeeId: pessoa.id,
+        filename: 'documento-negado.txt',
+        contentType: 'text/plain',
+        contentBase64: Buffer.from('documento sintetico para negativa isolada', 'utf8').toString('base64'),
+        documentKind: 'submission',
+        category: 'admissao',
+        title,
+      },
+    });
+    assert.equal(uploaded.status, 201);
+
+    context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'pt-BR' });
+    const separator = grantedCookie.indexOf('=');
+    await context.addCookies([{ name: grantedCookie.slice(0, separator), value: grantedCookie.slice(separator + 1), url: baseUrl }]);
+    let denyRead = false;
+    await context.route('**/api/admin/hr/l03/documents', async route => {
+      if (denyRead && route.request().method() === 'GET') {
+        return route.fulfill({
+          status: 403,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'permission_scope_denied' }),
+        });
+      }
+      return route.continue();
+    });
+    const page = await context.newPage();
+    page.setDefaultTimeout(45_000);
+    const prefix = process.env.UX_HR_EVIDENCE_PREFIX || 'ux-pro-05-documentos-leitura';
+    await page.goto(`${baseUrl}/admin/funcionarios`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('tab', { name: 'Documentos' }).click();
+    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+    const panel = page.locator('#rh-painel-documentos');
+    const row = panel.locator('tr', { hasText: title });
+    await row.waitFor();
+
+    // A visão geral compartilha employees.read; por isso a resposta 403 isolada é injetada
+    // somente no GET de documentos para exercitar o estado da aba sem derrubar o workspace.
+    denyRead = true;
+    const failedRead = page.waitForResponse(response =>
+      new URL(response.url()).pathname === '/api/admin/hr/l03/documents'
+      && response.request().method() === 'GET'
+      && response.status() === 403);
+    await row.getByRole('button', { name: /Aprovar/i }).click();
+    await failedRead;
+    await page.waitForTimeout(200);
+    await capture(page, `${prefix}-denied-390-day`);
+
+    const denied = panel.locator('[data-ui-state="denied"]');
+    assert.equal(await denied.count(), 1, '403 isolado precisa ser apresentado como acesso negado');
+    assert.match(await denied.innerText(), /HTTP 403 \(permission_scope_denied\)/);
+    assert.equal(await denied.getByRole('button', { name: /Tentar carregar novamente/i }).count(), 0);
+    assert.equal(await row.count(), 0, 'perda de autorização não pode manter documentos sensíveis na tela');
+    assert.equal(await panel.getByText('Nenhum documento no seu escopo', { exact: true }).count(), 0,
+      'negativa não pode virar confirmação de vazio');
+  } finally {
+    await context?.close().catch(() => {});
+    await browser.close().catch(() => {});
+  }
+});
