@@ -688,6 +688,181 @@ test('browser ID3: cobranças não anuncia lista vazia antes de concluir a leitu
   }
 });
 
+test('browser ID3: contratos mantém a leitura na conta ativa e descarta resposta fora de ordem', { skip: !RUN }, async () => {
+  const accountA = randomUUID();
+  const accountB = randomUUID();
+  const grantA = randomUUID();
+  const grantB = randomUUID();
+  const contractA = randomUUID();
+  const titleA = `Contrato sintetico ID3 A ${randomUUID().slice(0, 8)}`;
+  const evidencePrefix = process.env.UX_PORTAL_EVIDENCE_PREFIX || 'ux-pro-id3-contratos-leitura';
+  await pool.query(
+    "INSERT INTO client_accounts (id, display_name, created_by) VALUES ($1::uuid, 'ID3 Contratos Conta A Sintetica', 'ti'), ($2::uuid, 'ID3 Contratos Conta B Sintetica', 'ti')",
+    [accountA, accountB],
+  );
+  await pool.query(
+    `INSERT INTO client_access_grants (id, identity_id, client_account_id, reason, granted_by)
+     SELECT $1::uuid, id, $2::uuid, 'fixture sintetica ID3 contratos', 'ti' FROM auth_identities WHERE email = $3
+     UNION ALL
+     SELECT $4::uuid, id, $5::uuid, 'fixture sintetica ID3 contratos', 'ti' FROM auth_identities WHERE email = $3`,
+    [grantA, accountA, clientEmail, grantB, accountB],
+  );
+  await pool.query(
+    `INSERT INTO client_contracts (id, client_account_id, title, service, status, summary, created_by)
+     VALUES ($1::uuid, $2::uuid, $3, 'Vigilância sintética', 'active', 'Registro fictício exclusivo do teste de leitura por conta.', 'ti')`,
+    [contractA, accountA, titleA],
+  );
+
+  // O servidor real continua sendo a autoridade: A devolve somente o contrato
+  // de A e B devolve uma ausência confirmada. A falha visual procurada está
+  // na reconciliação dessas respostas pelo componente, não no escopo SQL.
+  const responseA = await api(`/api/client/contracts?account=${accountA}`, { cookie: clientCookie });
+  const responseB = await api(`/api/client/contracts?account=${accountB}`, { cookie: clientCookie });
+  assert.equal(responseA.status, 200);
+  assert.deepEqual(responseA.body.contracts.map(contract => contract.title), [titleA]);
+  assert.equal(responseB.status, 200);
+  assert.deepEqual(responseB.body.contracts, []);
+
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'pt-BR' });
+    await context.addCookies(clientCookie.split('; ').filter(Boolean).map(item => {
+      const separator = item.indexOf('=');
+      return { name: item.slice(0, separator), value: item.slice(separator + 1), url: baseUrl };
+    }));
+    const page = await context.newPage();
+    page.setDefaultTimeout(20_000);
+    await page.addInitScript(() => {
+      window.__id3ContractCalls = {};
+      window.__id3ContractPending = {};
+      window.__id3ContractCompleted = {};
+      window.__id3ContractReleases = {};
+      window.__id3HoldContracts = false;
+      const original = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : (input?.url || '');
+        if (!url.includes('/api/client/contracts')) return original(input, init);
+        const account = new URL(url, window.location.origin).searchParams.get('account') || 'unknown';
+        const call = (window.__id3ContractCalls[account] || 0) + 1;
+        window.__id3ContractCalls[account] = call;
+        const key = `${account}:${call}`;
+        if (window.__id3HoldContracts) {
+          window.__id3ContractPending[key] = true;
+          await new Promise(resolve => {
+            window.__id3ContractReleases[key] = () => {
+              delete window.__id3ContractPending[key];
+              resolve();
+            };
+          });
+        }
+        const response = await original(input, init);
+        window.__id3ContractCompleted[key] = true;
+        return response;
+      };
+    });
+    await page.goto(`${baseUrl}/cliente/app/contratos`, { waitUntil: 'domcontentloaded' });
+    await page.getByText(titleA, { exact: true }).waitFor();
+    await capture(page, `${evidencePrefix}-a-carregado-390`);
+
+    // Todas as próximas leituras ficam sob controle do teste. B:1 permanece
+    // pendente para reproduzir a mistura visual A→B no código original.
+    await page.evaluate(() => { window.__id3HoldContracts = true; });
+    const picker = page.getByLabel('Conta de cliente selecionada');
+    await picker.selectOption(accountB);
+    const pendingB1 = `${accountB}:1`;
+    await page.waitForFunction(key => window.__id3ContractPending[key] === true, pendingB1);
+    await capture(page, `${evidencePrefix}-b-pendente-390`);
+    assert.equal(await page.getByText(titleA, { exact: true }).count(), 0,
+      'o contrato de A não pode continuar visível quando B está selecionada e sua leitura está pendente');
+    assert.equal(await page.getByText('Carregando contratos…', { exact: true }).count(), 1);
+    assert.equal(await page.getByText(/Nenhum contrato foi registrado ainda para este cadastro/).count(), 0,
+      'B pendente não pode ser anunciada como B vazia');
+
+    const viewportEvidence = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      await page.waitForTimeout(80);
+      viewportEvidence.push(await page.evaluate(() => {
+        const width = document.documentElement.clientWidth;
+        const horizontalOverflow = document.documentElement.scrollWidth - width;
+        const offendingElements = horizontalOverflow <= 1 ? [] : [...document.querySelectorAll('body *')]
+          .filter(element => {
+            const rect = element.getBoundingClientRect();
+            return rect.right > width + 1 || rect.left < -1;
+          })
+          .slice(0, 12)
+          .map(element => ({
+            tag: element.tagName,
+            className: typeof element.className === 'string' ? element.className : '',
+            text: (element.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 80),
+            left: Math.round(element.getBoundingClientRect().left),
+            right: Math.round(element.getBoundingClientRect().right),
+          }));
+        return { width, horizontalOverflow, offendingElements };
+      }));
+      if (width !== 390) await capture(page, `${evidencePrefix}-b-pendente-${width}`);
+    }
+    assert.deepEqual(viewportEvidence.map(item => item.width), [320, 390, 768, 1440]);
+    assert.ok(viewportEvidence.every(item => item.horizontalOverflow <= 1),
+      `Contratos não deve transbordar horizontalmente: ${JSON.stringify(viewportEvidence)}`);
+
+    await page.evaluate(key => window.__id3ContractReleases[key](), pendingB1);
+    const emptyB = page.getByText(/Nenhum contrato foi registrado ainda para este cadastro/);
+    await emptyB.waitFor();
+    assert.equal(await page.getByText(titleA, { exact: true }).count(), 0);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await capture(page, `${evidencePrefix}-b-vazio-390`);
+
+    // Setas operam o seletor nativo sem mouse. A próxima leitura de A fica
+    // pendente; em seguida a próxima de B é iniciada e concluída primeiro.
+    // A leitura antiga de A, ao chegar por último, não pode vencer B. Os
+    // contadores são lidos do navegador porque o modo dev pode repetir o GET.
+    const nextACall = await page.evaluate(account => (window.__id3ContractCalls[account] || 0) + 1, accountA);
+    const pendingA2 = `${accountA}:${nextACall}`;
+    await picker.focus();
+    await page.keyboard.press('ArrowUp');
+    await page.waitForFunction(key => window.__id3ContractPending[key] === true, pendingA2);
+    assert.equal(await picker.inputValue(), accountA);
+    assert.equal(await picker.evaluate(element => element === document.activeElement), true,
+      'a troca por teclado preserva o foco no seletor de conta');
+    const nextBCall = await page.evaluate(account => (window.__id3ContractCalls[account] || 0) + 1, accountB);
+    const pendingB2 = `${accountB}:${nextBCall}`;
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(key => window.__id3ContractPending[key] === true, pendingB2);
+    assert.equal(await picker.inputValue(), accountB);
+    await page.evaluate(key => window.__id3ContractReleases[key](), pendingB2);
+    await emptyB.waitFor();
+    await page.evaluate(key => window.__id3ContractReleases[key](), pendingA2);
+    await page.waitForFunction(key => window.__id3ContractCompleted[key] === true, pendingA2);
+    await page.waitForTimeout(200);
+    assert.equal(await picker.inputValue(), accountB);
+    assert.equal(await page.getByText(titleA, { exact: true }).count(), 0,
+      'a resposta antiga de A não pode substituir o resultado mais recente de B');
+    assert.equal(await emptyB.count(), 1,
+      'o vazio confirmado da resposta mais recente de B deve permanecer visível');
+    await capture(page, `${evidencePrefix}-b-resposta-fora-de-ordem-390`);
+
+    if (process.env.UX_PORTAL_EVIDENCE_DIR) {
+      await writeFile(path.join(process.env.UX_PORTAL_EVIDENCE_DIR, `${evidencePrefix}-medidas.json`), JSON.stringify({
+        route: '/cliente/app/contratos',
+        serverReadA: { status: responseA.status, contracts: responseA.body.contracts.length },
+        serverReadB: { status: responseB.status, contracts: responseB.body.contracts.length },
+        viewportEvidence,
+        keyboard: 'ArrowUp/ArrowDown no seletor nativo; foco preservado',
+        outOfOrder: `B:${nextBCall} concluída antes de A:${nextACall}; resultado final permaneceu em B`,
+        humanAcceptanceExecuted: false,
+      }, null, 2) + '\n');
+    }
+    await context.close();
+  } finally {
+    await browser?.close();
+    await pool.query('DELETE FROM client_contracts WHERE id = $1', [contractA]);
+    await pool.query('DELETE FROM client_access_grants WHERE id = ANY($1::uuid[])', [[grantA, grantB]]);
+    await pool.query('DELETE FROM client_accounts WHERE id = ANY($1::uuid[])', [[accountA, accountB]]);
+  }
+});
+
 test('browser: pedido manual de recuperação distingue falha real, mantém 202 genérico e é operável por teclado', { skip: !RUN }, async () => {
   const browser = await launchBrowser();
   const eligibleEmail = 'qa09a@example.invalid';

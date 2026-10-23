@@ -1,7 +1,7 @@
 "use client";
 import {workspaceResponse,workspaceFetch} from "@/lib/workspace-response";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BriefcaseBusiness, RotateCw } from "lucide-react";
 import { useClientSpace } from "../ClientSpaceProvider";
 import styles from "../../RealAccess.module.css";
@@ -17,6 +17,9 @@ type Contract = {
   ends_on: string | null;
   created_at: string;
 };
+
+type ContractRead = { accountId: string; contracts: Contract[] };
+type ContractReadError = { accountId: string; message: string };
 
 const contractStatus: Record<Contract["status"], { text: string; chip: string }> = {
   planned: { text: "Planejado", chip: appStyles.chipPlanned },
@@ -37,27 +40,43 @@ function formatDateRange(contract: Contract) {
 
 export default function ClientContractsPage() {
   const { activeAccount, loading, notice, reload } = useClientSpace();
-  const [contracts, setContracts] = useState<Contract[] | null>(null);
-  const [error, setError] = useState("");
+  const [read, setRead] = useState<ContractRead | null>(null);
+  const [readError, setReadError] = useState<ContractReadError | null>(null);
+  const [readLoading, setReadLoading] = useState(false);
+  const latestRequest = useRef(0);
 
   const loadContracts = useCallback(async (accountId: string) => {
-    setError("");
+    const requestId = ++latestRequest.current;
+    setReadLoading(true);
+    setReadError(null);
     try {
       const response = await workspaceFetch(`/api/client/contracts?account=${encodeURIComponent(accountId)}`, { cache: "no-store" });
       if (!response.ok) await workspaceResponse(response);
       const data = (await workspaceResponse(response)) as { contracts: Contract[] };
-      setContracts(data.contracts);
-    } catch (error) { setError(error instanceof Error ? error.message : "Não foi possível carregar seus contratos agora.");
+      if (requestId !== latestRequest.current) return;
+      setRead({ accountId, contracts: data.contracts });
+    } catch (error) {
+      if (requestId !== latestRequest.current) return;
+      setReadError({ accountId, message: error instanceof Error ? error.message : "Não foi possível carregar seus contratos agora." });
+    } finally {
+      if (requestId !== latestRequest.current) return;
+      setReadLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (!activeAccount || activeAccount.status !== "active") {
-      setContracts(null);
+      latestRequest.current += 1;
+      setRead(null);
+      setReadError(null);
+      setReadLoading(false);
       return;
     }
-    loadContracts(activeAccount.id);
+    void loadContracts(activeAccount.id);
   }, [activeAccount, loadContracts]);
+
+  const currentRead = activeAccount?.id === read?.accountId ? read : null;
+  const currentError = activeAccount?.id === readError?.accountId ? readError : null;
 
   if (loading) {
     return (
@@ -94,7 +113,7 @@ export default function ClientContractsPage() {
   }
 
   return (
-    <section className={appStyles.sectionCard} aria-labelledby="contracts-title">
+    <section className={appStyles.sectionCard} aria-labelledby="contracts-title" aria-busy={readLoading}>
       <span className={styles.badge}>
         <BriefcaseBusiness size={12} aria-hidden="true" />
         {activeAccount.display_name}
@@ -112,9 +131,9 @@ export default function ClientContractsPage() {
           Cadastro {activeAccount.status === "suspended" ? "suspenso" : "encerrado"}. Os contratos não são
           exibidos enquanto a situação não é regularizada.
         </div>
-      ) : error ? (
+      ) : currentError ? (
         <p className={`${styles.message} ${styles.messageError}`} role="alert">
-          <span>{error}</span>
+          <span>{currentError.message}</span>
           <button
             className={appStyles.retryButton}
             type="button"
@@ -124,19 +143,19 @@ export default function ClientContractsPage() {
             Tentar novamente
           </button>
         </p>
-      ) : !contracts ? (
-        <div className={appStyles.loadingWrapWide}>
+      ) : readLoading || !currentRead ? (
+        <div className={appStyles.loadingWrapWide} role="status">
           <span className={styles.spinner} aria-hidden="true" />
           Carregando contratos…
         </div>
-      ) : contracts.length === 0 ? (
+      ) : currentRead.contracts.length === 0 ? (
         <div className={appStyles.emptyState}>
           Nenhum contrato foi registrado ainda para este cadastro. Quando a equipe publicar os
           contratos, eles aparecerão aqui automaticamente.
         </div>
       ) : (
         <ul className={appStyles.list}>
-          {contracts.map(contract => {
+          {currentRead.contracts.map(contract => {
             const status = contractStatus[contract.status];
             return (
               <li key={contract.id} className={appStyles.listItem}>

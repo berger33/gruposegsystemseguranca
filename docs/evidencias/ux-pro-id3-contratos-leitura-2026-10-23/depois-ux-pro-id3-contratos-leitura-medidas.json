@@ -1,0 +1,36 @@
+{
+  "route": "/cliente/app/contratos",
+  "serverReadA": {
+    "status": 200,
+    "contracts": 1
+  },
+  "serverReadB": {
+    "status": 200,
+    "contracts": 0
+  },
+  "viewportEvidence": [
+    {
+      "width": 320,
+      "horizontalOverflow": 0,
+      "offendingElements": []
+    },
+    {
+      "width": 390,
+      "horizontalOverflow": 0,
+      "offendingElements": []
+    },
+    {
+      "width": 768,
+      "horizontalOverflow": 0,
+      "offendingElements": []
+    },
+    {
+      "width": 1440,
+      "horizontalOverflow": 0,
+      "offendingElements": []
+    }
+  ],
+  "keyboard": "ArrowUp/ArrowDown no seletor nativo; foco preservado",
+  "outOfOrder": "B:2 concluída antes de A:3; resultado final permaneceu em B",
+  "humanAcceptanceExecuted": false
+}
