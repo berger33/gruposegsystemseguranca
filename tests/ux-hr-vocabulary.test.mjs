@@ -191,3 +191,4 @@ test('sessão expirada é tratada como autenticação, não como permissão', ()
 });
 
 import './ux-pro-05-ponto-rh-ui.test.mjs';
+import './ux-pro-05-documentos-leitura-rh-ui.test.mjs';

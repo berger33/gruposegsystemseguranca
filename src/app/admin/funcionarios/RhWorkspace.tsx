@@ -39,6 +39,7 @@ import {
   documentStatusTone,
   employeeStatusHint,
   employeeStatusLabel,
+  hrErrorFootnote,
   hrErrorVariant,
   isTerminable,
   selfRequestStatusLabel,
@@ -110,6 +111,9 @@ function describeThrown(error: unknown): HrErrorDescriptor | null {
 export default function RhWorkspace() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [docs, setDocs] = useState<Doc[]>([]);
+  const [docsLoaded, setDocsLoaded] = useState(false);
+  const [docsLoading, setDocsLoading] = useState(true);
+  const [docsError, setDocsError] = useState<HrErrorDescriptor | null>(null);
   const [requests, setRequests] = useState<SelfRequest[]>([]);
   const [requestsLoaded, setRequestsLoaded] = useState(false);
   const [requestsError, setRequestsError] = useState<HrErrorDescriptor | null>(null);
@@ -126,11 +130,25 @@ export default function RhWorkspace() {
 
   const refresh = useCallback(async (mode: 'initial' | 'silent' = 'initial') => {
     if (mode === 'initial') setReadState('loading');
+    setDocsLoading(true);
+    setDocsError(null);
     const [o, d, r] = await Promise.all([
       hrRequest<Overview>('/api/admin/hr/l03/overview'),
       hrRequest<{ documents?: Doc[] }>('/api/admin/hr/l03/documents'),
       hrRequest<{ requests?: SelfRequest[] }>('/api/admin/hr/l03/self-requests'),
     ]);
+    // Documentos têm leitura própria: falha transitória não apaga a última
+    // lista conhecida nem se disfarça de resposta vazia. Perda de autenticação
+    // ou autorização permanece fail-closed e remove a coleção sensível da tela.
+    if (d.ok) {
+      setDocs(d.data.documents || []);
+      setDocsError(null);
+    } else {
+      setDocsError(d.error);
+      if (d.error.kind === 'denied' || d.error.kind === 'auth') setDocs([]);
+    }
+    setDocsLoaded(true);
+    setDocsLoading(false);
     // A fila tem concessão/leitura própria. Falha não pode apagar a última
     // lista conhecida nem se disfarçar de resposta vazia.
     if (r.ok) {
@@ -150,7 +168,6 @@ export default function RhWorkspace() {
       return;
     }
     setOverview(o.data);
-    setDocs(d.ok ? d.data.documents || [] : []);
     setReadError(null);
     setReadState('ready');
   }, []);
@@ -319,7 +336,16 @@ export default function RhWorkspace() {
                 run={run}
               />
             ) : null}
-            {tab === 'documentos' ? <Documents docs={docs} run={run} /> : null}
+            {tab === 'documentos' ? (
+              <Documents
+                docs={docs}
+                loaded={docsLoaded}
+                loading={docsLoading}
+                error={docsError}
+                onRetry={() => { void refresh('silent'); }}
+                run={run}
+              />
+            ) : null}
             {tab === 'folha' ? <Payroll employees={employees} docs={docs} run={run} /> : null}
             {tab === 'desligamento' ? <Termination employees={employees} run={run} /> : null}
             {tab === 'processos' ? <HrProcesses /> : null}
@@ -830,17 +856,62 @@ function RequestReviews({
   );
 }
 
-function Documents({ docs, run }: { docs: Doc[]; run: RunTask }) {
+function Documents({
+  docs, loaded, loading, error: readError, onRetry, run,
+}: {
+  docs: Doc[];
+  loaded: boolean;
+  loading: boolean;
+  error: HrErrorDescriptor | null;
+  onRetry: () => void;
+  run: RunTask;
+}) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
+  // O descritor compartilhado também atende escritas. Nesta superfície o erro
+  // é somente da leitura e não pode negar uma mutação já confirmada.
+  const readErrorDetail = readError?.kind === 'retry'
+    ? 'O servidor não concluiu esta consulta de documentos. Isto não é a mesma coisa que não haver registros.'
+    : readError?.detail;
+
+  const feedback = (
+    <>
+      {loading || !loaded ? (
+        <UiState
+          variant="loading"
+          title={loaded ? 'Atualizando os documentos…' : 'Consultando os documentos no seu escopo…'}
+          detail={docs.length
+            ? 'A lista anterior permanece visível enquanto o servidor responde. Ela ainda não foi substituída.'
+            : 'Aguarde a resposta do servidor. Nenhum documento é dado como inexistente antes da leitura.'}
+        />
+      ) : null}
+      {readError ? (
+        <UiState
+          variant={hrErrorVariant(readError)}
+          title={readError.title}
+          detail={`${readErrorDetail} ${docs.length
+            ? 'A lista anterior foi preservada e pode estar desatualizada; a falha nesta releitura não desfaz uma ação já confirmada.'
+            : 'Nenhuma lista foi confirmada; isto não significa que não existam documentos.'} ${hrErrorFootnote(readError)}`}
+          retryLabel={readError.canRetry ? 'Tentar carregar novamente' : undefined}
+          onRetry={readError.canRetry ? onRetry : undefined}
+        />
+      ) : null}
+      {loaded && !loading && !readError && !docs.length ? (
+        <UiState
+          variant="empty"
+          title="Nenhum documento no seu escopo"
+          detail="A consulta foi respondida pelo servidor e não encontrou envios privados aguardando revisão. Documentos de remuneração só aparecem com a concessão employees.compensation.read."
+        />
+      ) : null}
+    </>
+  );
 
   if (!docs.length) {
     return (
-      <UiState
-        variant="empty"
-        title="Nenhum documento no seu escopo"
-        detail="Não há envios privados aguardando revisão. Documentos de remuneração só aparecem com a concessão employees.compensation.read."
-      />
+      <section className={styles.panel} aria-labelledby="rh-documentos-titulo" aria-busy={loading}>
+        <h3 id="rh-documentos-titulo" className={styles.panelTitle}>Documentos privados</h3>
+        {feedback}
+      </section>
     );
   }
 
@@ -880,8 +951,9 @@ function Documents({ docs, run }: { docs: Doc[]; run: RunTask }) {
   }
 
   return (
-    <section className={styles.panel} aria-labelledby="rh-documentos-titulo">
+    <section className={styles.panel} aria-labelledby="rh-documentos-titulo" aria-busy={loading}>
       <h3 id="rh-documentos-titulo" className={styles.panelTitle}>Documentos privados ({docs.length})</h3>
+      {feedback}
       <p className={styles.hint}>
         Aprovar registra a revisão. Rejeitar exige motivo e o devolve ao titular. Publicar é um passo
         distinto, exige fonte autorizada. O download é auditado e o arquivo não tem endereço público.
