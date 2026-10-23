@@ -1093,3 +1093,267 @@ test('browser: Documentos: negativa HTTP preserva fail-closed e vira denied, nun
     await browser.close().catch(() => {});
   }
 });
+
+test('browser: Fechamento e holerite: falha inicial e releitura preservam publicações de folha com alerta explícito e repetição', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  let context;
+  let releaseDocuments = null;
+  const permissionIds = [randomUUID(), randomUUID()];
+  try {
+    await pool.query(
+      `INSERT INTO auth_permissions(id,identity_id,permission,scope_type,reason,granted_by_role)
+       VALUES ($1,$3,'employees.compensation.read','organization','Gate sintético UX-PRO-05 folha','system'),
+              ($2,$3,'employees.compensation.write','organization','Gate sintético UX-PRO-05 folha','system')`,
+      [permissionIds[0], permissionIds[1], grantedRh.id],
+    );
+    const pessoa = await pessoaFicticia('FolhaLeitura');
+
+    context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'pt-BR' });
+    const separator = grantedCookie.indexOf('=');
+    await context.addCookies([{ name: grantedCookie.slice(0, separator), value: grantedCookie.slice(separator + 1), url: baseUrl }]);
+    let mode = 'fail';
+    await context.route('**/api/admin/hr/l03/documents', async route => {
+      if (route.request().method() !== 'GET') return route.continue();
+      if (mode === 'fail') {
+        return route.fulfill({
+          status: 503,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'document_list_unavailable' }),
+        });
+      }
+      if (mode === 'hold') {
+        await new Promise(resolve => { releaseDocuments = resolve; });
+        releaseDocuments = null;
+      }
+      if (mode === 'empty') {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ documents: [] }),
+        });
+      }
+      return route.continue();
+    });
+
+    const page = await context.newPage();
+    page.setDefaultTimeout(45_000);
+    const prefix = process.env.UX_HR_EVIDENCE_PREFIX || 'ux-pro-05-folha-holerite-leitura';
+    await page.goto(`${baseUrl}/admin/funcionarios`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('tab', { name: 'Fechamento e holerite' }).click();
+    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+
+    const panel = page.locator('#rh-painel-folha');
+    const section = panel.locator('section[aria-labelledby="rh-publicacoes-titulo"]');
+    await section.waitFor();
+    await page.waitForTimeout(200);
+    await capture(page, `${prefix}-erro-inicial-390-day`);
+
+    const initialError = section.locator('[data-ui-state="error"]');
+    assert.equal(await initialError.count(), 1, 'falha inicial na consulta de publicações de folha precisa exibir estado de erro explícito');
+    assert.match(await initialError.innerText(), /HTTP 503 \(document_list_unavailable\)/);
+    assert.match(await initialError.innerText(), /não significa ausência de holerites e não desfaz uma ação já confirmada/i);
+    assert.doesNotMatch(await initialError.innerText(), /nada foi carregado nem gravado/i);
+    assert.equal(await section.locator('[data-ui-state="empty"]').count(), 0,
+      'erro inicial em Publicações de folha já registradas não pode coexistir com confirmação de vazio');
+
+    mode = 'empty';
+    const retryInitial = initialError.getByRole('button', { name: /Tentar carregar novamente/i });
+    await retryInitial.focus();
+    await page.keyboard.press('Enter');
+    const emptyState = section.locator('[data-ui-state="empty"]');
+    await emptyState.waitFor();
+    assert.match(await emptyState.innerText(), /Nenhuma publicação de folha visível para a sua sessão/);
+    assert.match(await emptyState.innerText(), /consulta foi respondida pelo servidor/i);
+    assert.equal(await section.locator('[data-ui-state="error"]').count(), 0);
+    await capture(page, `${prefix}-vazio-390-day`);
+
+    mode = 'live';
+    const competence = '2026-10';
+    const publishForm = panel.locator('section[aria-labelledby="rh-holerite-titulo"] form');
+    await publishForm.locator('select[name="employeeId"]').selectOption(pessoa.id);
+    await publishForm.locator('input[name="competence"]').fill(competence);
+    await publishForm.locator('input[name="file"]').setInputFiles({
+      name: `holerite-${competence}.txt`,
+      mimeType: 'text/plain',
+      buffer: Buffer.from(`holerite sintetico ${pessoa.id} ${competence}`, 'utf8'),
+    });
+    await publishForm.getByRole('button', { name: /Enviar de fonte autorizada e publicar/i }).click();
+
+    await page.locator('[role="status"]', { hasText: /Holerite publicado no espaço privado da pessoa titular/i }).waitFor({ timeout: 30_000 });
+    const item = section.locator('li', { hasText: pessoa.display_name });
+    await item.waitFor();
+    assert.match(await item.innerText(), /2026-10/);
+    assert.match(await item.locator('[data-ui-badge]').innerText(), /Publicado ao titular/);
+
+    const { rows: persistedRows } = await pool.query(
+      `SELECT status FROM employee_private_documents WHERE employee_id = $1 AND document_kind = 'payroll'`,
+      [pessoa.id],
+    );
+    assert.equal(persistedRows.length, 1);
+    assert.equal(persistedRows[0].status, 'published');
+
+    mode = 'fail';
+    const failedRefresh = page.waitForResponse(response =>
+      new URL(response.url()).pathname === '/api/admin/hr/l03/documents'
+      && response.request().method() === 'GET'
+      && response.status() === 503);
+    const closureForm = panel.locator('section[aria-labelledby="rh-fechamento-titulo"] form');
+    await closureForm.locator('input[name="competence"]').fill(competence);
+    await closureForm.getByRole('button', { name: /Validar divergências e fechar/i }).click();
+    await failedRefresh;
+    await page.locator('[role="status"]', { hasText: /Competência demonstrativa fechada/i }).waitFor({ timeout: 30_000 });
+
+    const preservedError = section.locator('[data-ui-state="error"]');
+    await preservedError.waitFor();
+    assert.equal(await item.count(), 1, 'publicações de folha já carregadas precisam permanecer visíveis quando a releitura falha');
+    assert.match(await preservedError.innerText(), /lista anterior foi preservada e pode estar desatualizada/i);
+    assert.match(await preservedError.innerText(), /não desfaz uma ação já confirmada/i);
+    assert.match(await preservedError.innerText(), /HTTP 503 \(document_list_unavailable\)/);
+    assert.doesNotMatch(await preservedError.innerText(), /nada foi carregado nem gravado/i);
+
+    const viewportEvidence = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      await page.waitForTimeout(120);
+      viewportEvidence.push(await page.evaluate(() => ({
+        width: document.documentElement.clientWidth,
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      })));
+      await capture(page, `${prefix}-preservado-${width}-day`);
+    }
+    assert.deepEqual(viewportEvidence.map(value => value.width), [320, 390, 768, 1440]);
+    assert.ok(viewportEvidence.every(value => value.overflow <= 1), JSON.stringify(viewportEvidence));
+
+    await page.getByRole('button', { name: 'Ativar modo noite' }).click();
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(450);
+    const nightOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    assert.ok(nightOverflow <= 1, `tema noturno/390px: overflow ${nightOverflow}px`);
+    await capture(page, `${prefix}-preservado-390-night`);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.getByRole('button', { name: 'Ativar modo dia' }).click();
+    await page.waitForFunction(() => !document.documentElement.dataset.adminTheme);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(450);
+
+    mode = 'hold';
+    const secondRetry = preservedError.getByRole('button', { name: /Tentar carregar novamente/i });
+    await secondRetry.focus();
+    await page.keyboard.press('Enter');
+    const loading = section.locator('[data-ui-state="loading"]');
+    await loading.waitFor();
+    assert.equal(await section.getAttribute('aria-busy'), 'true');
+    assert.match(await loading.innerText(), /Atualizando as publicações de folha/i);
+    assert.equal(await item.count(), 1, 'loading de releitura não pode esconder as publicações de folha já carregadas');
+    await capture(page, `${prefix}-loading-390-day`);
+
+    mode = 'live';
+    for (let attempt = 0; attempt < 100 && !releaseDocuments; attempt += 1) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    assert.ok(releaseDocuments, 'a releitura controlada precisa ter chegado à rota de documentos');
+    releaseDocuments();
+    await page.waitForFunction(() => {
+      const target = document.querySelector('section[aria-labelledby="rh-publicacoes-titulo"]');
+      return target && !target.querySelector('[data-ui-state="loading"]') && !target.querySelector('[data-ui-state="error"]');
+    });
+    assert.equal(await item.count(), 1, 'releitura bem-sucedida mantém a publicação de folha visível');
+    assert.equal(await section.locator('[data-ui-state="error"]').count(), 0);
+    assert.equal(await section.locator('[data-ui-state="loading"]').count(), 0);
+  } finally {
+    releaseDocuments?.();
+    await pool?.query(`DELETE FROM auth_permissions WHERE id = ANY($1::uuid[])`, [permissionIds]).catch(() => {});
+    await context?.close().catch(() => {});
+    await browser.close().catch(() => {});
+  }
+});
+
+test('browser: Fechamento e holerite: negativa HTTP 403 limpa publicações em modo fail-closed e vira denied sem repetição', { skip: !RUN }, async () => {
+  const browser = await launchBrowser();
+  let context;
+  const permissionIds = [randomUUID(), randomUUID()];
+  try {
+    await pool.query(
+      `INSERT INTO auth_permissions(id,identity_id,permission,scope_type,reason,granted_by_role)
+       VALUES ($1,$3,'employees.compensation.read','organization','Gate sintético UX-PRO-05 folha 403','system'),
+              ($2,$3,'employees.compensation.write','organization','Gate sintético UX-PRO-05 folha 403','system')`,
+      [permissionIds[0], permissionIds[1], grantedRh.id],
+    );
+    const pessoa = await pessoaFicticia('FolhaNegada');
+    const created = await api('/api/admin/hr/l03/documents', {
+      method: 'POST',
+      cookie: grantedCookie,
+      body: {
+        employeeId: pessoa.id,
+        documentKind: 'payroll',
+        title: 'Holerite 2026-09',
+        category: 'folha',
+        competence: '2026-09',
+        filename: 'holerite-2026-09.txt',
+        contentType: 'text/plain',
+        contentBase64: Buffer.from('holerite sintetico para teste 403', 'utf8').toString('base64'),
+        sourceAuthorized: true,
+        sourceLabel: 'Fonte sintética autorizada para QA',
+      },
+    });
+    assert.equal(created.status, 201);
+    const published = await api('/api/admin/hr/l03/documents', {
+      method: 'PATCH',
+      cookie: grantedCookie,
+      body: { id: created.body.document.id, status: 'published' },
+    });
+    assert.equal(published.status, 200);
+
+    context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'pt-BR' });
+    const separator = grantedCookie.indexOf('=');
+    await context.addCookies([{ name: grantedCookie.slice(0, separator), value: grantedCookie.slice(separator + 1), url: baseUrl }]);
+    let denyRead = false;
+    await context.route('**/api/admin/hr/l03/documents', async route => {
+      if (denyRead && route.request().method() === 'GET') {
+        return route.fulfill({
+          status: 403,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'permission_scope_denied' }),
+        });
+      }
+      return route.continue();
+    });
+
+    const page = await context.newPage();
+    page.setDefaultTimeout(45_000);
+    const prefix = process.env.UX_HR_EVIDENCE_PREFIX || 'ux-pro-05-folha-holerite-leitura';
+    await page.goto(`${baseUrl}/admin/funcionarios`, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('tab', { name: 'Fechamento e holerite' }).click();
+    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+
+    const panel = page.locator('#rh-painel-folha');
+    const section = panel.locator('section[aria-labelledby="rh-publicacoes-titulo"]');
+    const item = section.locator('li', { hasText: pessoa.display_name });
+    await item.waitFor();
+
+    denyRead = true;
+    const deniedRead = page.waitForResponse(response =>
+      new URL(response.url()).pathname === '/api/admin/hr/l03/documents'
+      && response.request().method() === 'GET'
+      && response.status() === 403);
+    const closureForm = panel.locator('section[aria-labelledby="rh-fechamento-titulo"] form');
+    await closureForm.locator('input[name="competence"]').fill('2026-09');
+    await closureForm.getByRole('button', { name: /Validar divergências e fechar/i }).click();
+    await deniedRead;
+    await page.waitForTimeout(200);
+    await capture(page, `${prefix}-denied-390-day`);
+
+    const denied = section.locator('[data-ui-state="denied"]');
+    assert.equal(await denied.count(), 1, '403 isolado precisa ser apresentado como acesso negado em Publicações de folha');
+    assert.match(await denied.innerText(), /HTTP 403 \(permission_scope_denied\)/);
+    assert.equal(await denied.getByRole('button', { name: /Tentar carregar novamente/i }).count(), 0);
+    assert.equal(await item.count(), 0, 'perda de autorização não pode manter publicações de folha sensíveis na tela');
+    assert.equal(await section.locator('[data-ui-state="empty"]').count(), 0,
+      'negativa não pode virar confirmação de vazio em Publicações de folha');
+  } finally {
+    await pool?.query(`DELETE FROM auth_permissions WHERE id = ANY($1::uuid[])`, [permissionIds]).catch(() => {});
+    await context?.close().catch(() => {});
+    await browser.close().catch(() => {});
+  }
+});

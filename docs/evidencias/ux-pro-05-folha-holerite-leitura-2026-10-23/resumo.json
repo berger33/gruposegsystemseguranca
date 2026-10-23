@@ -1,0 +1,30 @@
+{
+  "slice": "UX-PRO-05 — Fechamento e holerite (RH): estados honestos de leitura, releitura preservada, negativa fail-closed e quebra responsiva em 320px em Publicações de folha já registradas",
+  "date": "2026-10-23",
+  "routes": [
+    "/admin/funcionarios"
+  ],
+  "apisPreserved": [
+    "GET /api/admin/hr/l03/documents",
+    "POST /api/admin/hr/l03/documents",
+    "PATCH /api/admin/hr/l03/documents",
+    "POST /api/hr/dp-closures"
+  ],
+  "viewportsVerified": [320, 390, 768, 1440],
+  "maxHorizontalOverflowPx": 0,
+  "themesVerified": ["day", "night"],
+  "captures": [
+    "antes-ux-pro-05-folha-holerite-leitura-erro-inicial-390-day.png",
+    "antes-ux-pro-05-folha-holerite-leitura-denied-390-day.png",
+    "depois-ux-pro-05-folha-holerite-leitura-erro-inicial-390-day.png",
+    "depois-ux-pro-05-folha-holerite-leitura-vazio-390-day.png",
+    "depois-ux-pro-05-folha-holerite-leitura-preservado-320-day.png",
+    "depois-ux-pro-05-folha-holerite-leitura-preservado-390-day.png",
+    "depois-ux-pro-05-folha-holerite-leitura-preservado-768-day.png",
+    "depois-ux-pro-05-folha-holerite-leitura-preservado-1440-day.png",
+    "depois-ux-pro-05-folha-holerite-leitura-preservado-390-night.png",
+    "depois-ux-pro-05-folha-holerite-leitura-loading-390-day.png",
+    "depois-ux-pro-05-folha-holerite-leitura-denied-390-day.png"
+  ],
+  "humanAcceptanceExecuted": false
+}
