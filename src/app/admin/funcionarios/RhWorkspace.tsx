@@ -346,7 +346,17 @@ export default function RhWorkspace() {
                 run={run}
               />
             ) : null}
-            {tab === 'folha' ? <Payroll employees={employees} docs={docs} run={run} /> : null}
+            {tab === 'folha' ? (
+              <Payroll
+                employees={employees}
+                docs={docs}
+                loaded={docsLoaded}
+                loading={docsLoading}
+                error={docsError}
+                onRetry={() => { void refresh('silent'); }}
+                run={run}
+              />
+            ) : null}
             {tab === 'desligamento' ? <Termination employees={employees} run={run} /> : null}
             {tab === 'processos' ? <HrProcesses /> : null}
           </div>
@@ -1032,11 +1042,24 @@ function Documents({
   );
 }
 
-function Payroll({ employees, docs, run }: { employees: Employee[]; docs: Doc[]; run: RunTask }) {
+function Payroll({
+  employees, docs, loaded, loading, error: readError, onRetry, run,
+}: {
+  employees: Employee[];
+  docs: Doc[];
+  loaded: boolean;
+  loading: boolean;
+  error: HrErrorDescriptor | null;
+  onRetry: () => void;
+  run: RunTask;
+}) {
   const base = useId();
   const closure = useSubmitLock();
   const upload = useSubmitLock();
   const payrollDocs = docs.filter(doc => doc.document_kind === 'payroll');
+  const readErrorDetail = readError?.kind === 'retry'
+    ? 'O servidor não concluiu esta consulta das publicações de folha. Isto não é a mesma coisa que não haver registros.'
+    : readError?.detail;
 
   async function onClose(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1137,22 +1160,52 @@ function Payroll({ employees, docs, run }: { employees: Employee[]; docs: Doc[];
         </form>
       </section>
 
-      <section className={`${styles.panel} ${styles.full}`} aria-labelledby="rh-publicacoes-titulo">
-        <h3 id="rh-publicacoes-titulo" className={styles.panelTitle}>Publicações de folha já registradas</h3>
+      <section className={`${styles.panel} ${styles.full}`} aria-labelledby="rh-publicacoes-titulo" aria-busy={loading}>
+        <h3 id="rh-publicacoes-titulo" className={styles.panelTitle}>
+          Publicações de folha já registradas{payrollDocs.length ? ` (${payrollDocs.length})` : ''}
+        </h3>
+        {readError ? (
+          <UiState
+            variant={hrErrorVariant(readError)}
+            title={readError.title}
+            detail={`${readErrorDetail} ${payrollDocs.length
+              ? 'A lista anterior foi preservada e pode estar desatualizada; a falha nesta releitura não desfaz uma ação já confirmada.'
+              : 'Nenhuma lista de publicações foi confirmada; a falha nesta consulta não significa ausência de holerites e não desfaz uma ação já confirmada.'} ${hrErrorFootnote(readError)}`}
+            retryLabel={readError.canRetry ? 'Tentar carregar novamente' : undefined}
+            onRetry={readError.canRetry ? onRetry : undefined}
+          />
+        ) : null}
+        {loading || !loaded ? (
+          <UiState
+            variant="loading"
+            title={loaded ? 'Atualizando as publicações de folha…' : 'Consultando as publicações de folha no seu escopo…'}
+            detail={payrollDocs.length
+              ? 'A lista anterior permanece visível enquanto o servidor responde. Ela ainda não foi substituída.'
+              : 'Aguarde a resposta do servidor. Nenhuma publicação de folha é dada como inexistente antes da leitura.'}
+          />
+        ) : null}
+        {loaded && !loading && !readError && !payrollDocs.length ? (
+          <UiState
+            variant="empty"
+            title="Nenhuma publicação de folha visível para a sua sessão"
+            detail="A consulta foi respondida pelo servidor e não encontrou holerites publicados no seu escopo. Isto pode significar que ainda não há publicação ou que a sua conta não tem a concessão de leitura de remuneração."
+          />
+        ) : null}
         {payrollDocs.length ? (
-          <div className={styles.badgeRow}>
+          <ul className={styles.knowledgeList}>
             {payrollDocs.map(doc => (
-              <UiBadge key={doc.id} tone={documentStatusTone(doc.status)} srPrefix="Publicação">
-                {doc.employee_name} — {doc.competence || 'sem competência'} — {documentStatusLabel(doc.status)}
-              </UiBadge>
+              <li key={doc.id} className={styles.knowledgeListItem}>
+                <div className={styles.rowWrap}>
+                  <strong>{doc.employee_name}</strong>
+                  <span>— {doc.competence || 'sem competência'}</span>
+                  <UiBadge tone={documentStatusTone(doc.status)} srPrefix="Publicação">
+                    {documentStatusLabel(doc.status)}
+                  </UiBadge>
+                </div>
+              </li>
             ))}
-          </div>
-        ) : (
-          <p className={styles.hint}>
-            Nenhuma publicação de folha visível para a sua sessão. Isto pode significar que não há nenhuma ou
-            que a sua conta não tem a concessão de leitura de remuneração.
-          </p>
-        )}
+          </ul>
+        ) : null}
       </section>
     </div>
   );
