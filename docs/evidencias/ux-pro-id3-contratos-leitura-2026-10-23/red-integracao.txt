@@ -1,0 +1,256 @@
+Base: 7e706e67bfbc2be7205720dad7801beac96eda2f
+src diff lines antes do RED integrado: 0
+b69374f50293e8eb425054fe23773f1104b5d3049d2dce127944eb0abe6c7ef7  src/app/cliente/app/contratos/page.tsx
+Comando: UX_PORTAL_TEST_PATTERN=contratos mantém a leitura na conta ativa UX_PORTAL_EVIDENCE_PREFIX=antes-ux-pro-id3-contratos-leitura npm run test:ux-portal:pg
+Ambiente Chromium: AWS_EXECUTION_ENV=AWS_Lambda_nodejs22.x é aplicado pelo runner para usar as bibliotecas AL2023 do lockfile.
+
+> grupo-seg-system@0.1.0 test:ux-portal:pg
+> node scripts/qa-ux-portal-postgres.mjs
+
+node:internal/modules/package_json_reader:314
+  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+        ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'embedded-postgres' imported from /home/user/gruposegsystemseguranca/scripts/qa-ux-portal-postgres.mjs
+    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:314:9)
+    at packageResolve (node:internal/modules/esm/resolve:768:81)
+    at moduleResolve (node:internal/modules/esm/resolve:855:18)
+    at defaultResolve (node:internal/modules/esm/resolve:985:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:747:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:724:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:320:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:182:49) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v22.22.3
+
+RED_INTEGRACAO_EXIT=1
+
+=== SEGUNDA TENTATIVA APÓS npm ci PELO LOCKFILE ===
+Dependência restaurada: embedded-postgres@17.9.0-beta.17 (package-lock inalterado).
+src diff lines: 0
+b69374f50293e8eb425054fe23773f1104b5d3049d2dce127944eb0abe6c7ef7  src/app/cliente/app/contratos/page.tsx
+
+> grupo-seg-system@0.1.0 test:ux-portal:pg
+> node scripts/qa-ux-portal-postgres.mjs
+
+QA_PG_READY: 127.0.0.1:43671/seg_qa_ux_portal; cluster temporário exclusivo; segredo omitido.
+Applied: 001-site-visual.sql
+Applied: 002-public-leads.sql
+Applied: 003-client-access.sql
+Applied: 004-client-space.sql
+Applied: 005-client-security.sql
+Applied: 006-admin-identities.sql
+Applied: 007-opcao-b-funcionarios.sql
+Applied: 008-document-contract-link.sql
+Applied: 009-mfa-challenge.sql
+Applied: 010-rbac-permissions.sql
+Applied: 011-audit-and-notifications.sql
+Applied: 012-integrations-and-catalog.sql
+Applied: 013-pub03-pub04-lead-enhancements.sql
+Applied: 014-crm-core.sql
+Applied: 015-crm-import.sql
+Applied: 016-crm11-catalog-enrichment.sql
+Applied: 017-crm12-equipment.sql
+Applied: 018-crm13-inspection.sql
+Applied: 019-crm14-labor-budget.sql
+Applied: 020-crm15-technical-budget.sql
+Applied: 021-crm16-cost-parameters.sql
+Applied: 022-crm17-price-scenarios.sql
+Applied: 023-crm18-discount-tiers.sql
+Applied: 024-crm19-proposals.sql
+Applied: 025-crm21-proposal-delivery.sql
+Applied: 026-crm22-acceptance-link.sql
+Applied: 027-crm23-contract-idempotent.sql
+Applied: 028-crm24-reports.sql
+Applied: 029-crm25-goals-commissions.sql
+Applied: 030-crm26-commercial-library.sql
+Applied: 031-crm27-partnerships-renewals.sql
+Applied: 032-con01-contract-units-docs.sql
+Applied: 033-con02-contract-posts-sla.sql
+Applied: 034-con03-contract-status-transitions.sql
+Applied: 035-con04-contract-amendments.sql
+Applied: 036-con05-contract-alerts.sql
+Applied: 037-con06-document-obligations.sql
+Applied: 038-con07-implantation-checklist.sql
+Applied: 039-con08-implantation-blocks.sql
+Applied: 040-con09-contract-closure.sql
+Applied: 041-con10-fiscal-dossier.sql
+Applied: 042-con11-management-diary.sql
+Applied: 043-plt05-notifications.sql
+Applied: 044-plt06-observability.sql
+Applied: 045-plt07-healthcheck.sql
+Applied: 046-plt08-backup.sql
+Applied: 047-plt09-privacy.sql
+Applied: 048-plt10-lgpd-requests.sql
+Applied: 049-plt11-retention.sql
+Applied: 050-plt12-incident-response.sql
+Applied: 051-plt13-config-flags.sql
+Applied: 052-plt14-dependencies.sql
+Applied: 053-plt15-integration-logs.sql
+Applied: 054-plt16-operational-budget.sql
+Applied: 055-plt17-env-isolation.sql
+Applied: 056-plt18-maintenance-docs.sql
+Applied: 057-hr01-cadastro-profissional.sql
+Applied: 058-emp01-perfil-proprio.sql
+Applied: 059-hr03-04-06-recrutamento-talentos-dossie.sql
+Applied: 060-hr07-08-09-desligamento-status-ferias.sql
+Applied: 061-hr10-11-12-afastamentos-ponto-banco-horas.sql
+Applied: 062-hr13-14-15-16-beneficios-adiantamentos-saude-integracao.sql
+Applied: 063-hr17-18-19-20-treinamento-competencias-uniformes-fechamento-dp.sql
+Applied: 064-hr21-22-23-24-holerites-avaliacoes-atendimento-indicadores.sql
+Applied: 065-emp02-03-04-05-plantao-escala-jornada-ausencia.sql
+Applied: 066-emp06-07-08-09-troca-passagem-ocorrencia-procedimentos.sql
+Applied: 067-emp10-11-12-13-documentos-holerites-solicitacoes-uniformes.sql
+Applied: 068-emp14-15-16-17-cursos-comunicados-atendimento-confidencial.sql
+Applied: 069-emp18-19-pwa-faq-acessibilidade.sql
+Applied: 070-ops01-02-03-04-estrutura-dimensionamento-escala-validacao.sql
+Applied: 071-ops05-06-07-08-cobertura-passagem-ocorrencia-checklist.sql
+Applied: 072-ops09-10-11-12-supervisao-ronda-chaves-relatorio.sql
+Applied: 073-ops13-14-15-16-metricas-escalas-limpeza-monitoramento.sql
+Applied: 074-cli01-02-03-04-portal-identidade-contatos-contratos-documentos.sql
+Applied: 075-cli05-06-07-08-chamados-visitas-relatorios.sql
+Applied: 076-cli09-10-11-12-13-14-cobrancas-oportunidade-satisfacao-renovacao-modos-seguranca.sql
+Applied: 077-fin01-02-03-04-contas-receber-pagar-recorrencia-pagamento.sql
+Applied: 078-fin05-06-07-08-conciliacao-cobranca-fluxo-custo.sql
+Applied: 079-fin09-10-11-12-resultado-despesa-fiscal-gateway.sql
+Applied: 080-fin13-14-15-16-orcamento-export-fechamento-comissao.sql
+Applied: 081-adm01-02-03-04-05-06-painel-aprovacao.sql
+Applied: 082-adm07-08-09-10-11-12-busca-relatorios-config-metas-diario-expansao.sql
+Applied: 083-ast01-02-03-04-05-06-estoque-reserva-ativo-entrega-requisicao.sql
+Applied: 084-ast07-08-09-10-11-12-inventario-os-manutencao-cftv-limpeza.sql
+Applied: 085-ext01-02-03-04-05-06-frota-terceiros-licitacoes-fornecedores-qualidade-satisfacao.sql
+Applied: 086-ext07-08-09-10-11-12-compliance-conhecimento-expansao-continuidade-analytics-editor.sql
+Applied: 087-ext13-14-15-16-17-relatorio-inteligencia-emergencial-central-biometria-ai10-automacoes.sql
+Applied: 088-pub06-cms-paginas-faq-cases-blog-vagas.sql
+Applied: 089-pub07-temas-preview-publicacao-rollback-preferencia.sql
+Applied: 090-pub08-seo-sitemap-redirects-dominio-noindex.sql
+Applied: 091-pub09-montador-pacote-comparador-servicos-planos.sql
+Applied: 092-pub10-origem-conversao-ab-test-minimizacao.sql
+Applied: 093-cli15-reclamacao-colaborador-canal-restrito-rh-minimo.sql
+Applied: 094-pub02-pub05-paginas-segmento-faq-assistida-handoff.sql
+Applied: 095-ai-rag-cliente-rh-marcelo-ollama-qwen3-bot-modes.sql
+Applied: 096-ai-rag-feedback-custo-token-rollback.sql
+Applied: 097-client-mfa-session.sql
+Applied: 098-client-manual-verification.sql
+Applied: 099-sec-staff-session-hardening.sql
+Applied: 100-l02-local-outbox.sql
+Applied: 101-l02-document-integrity.sql
+Applied: 102-l03-employee-self-service-security.sql
+Applied: 103-l04-comercial-role-widening.sql
+Applied: 104-crm-task-audit.sql
+Applied: 105-crm-interaction-audit.sql
+Applied: 106-crm-interaction-follow-up.sql
+Applied: 107-crm-visit-agenda.sql
+Applied: 108-crm-manual-cadences.sql
+Applied: 109-crm-task-delegation.sql
+Applied: 110-crm-visit-conflict-lead-link.sql
+Applied: 111-crm-opportunity-notes-reopen.sql
+Applied: 112-pub08-seo-redirect-audit-action.sql
+Applied: 113-crm-01-04-audit-actions.sql
+Applied: 114-crm-02-contact-update-audit.sql
+Applied: 115-crm-01-unit-audit.sql
+Applied: 116-crm-03-dedup-review.sql
+Applied: 117-l04-publication-portfolio.sql
+Applied: 118-l05-contract-canonicalization.sql
+Applied: 119-l06-operacao-hardening.sql
+Applied: 120-l06-fatia-b-operacao.sql
+Applied: 121-l06-fatia-c-patrimonio.sql
+Applied: 122-l06-fatia-d-manutencao.sql
+Applied: 123-l06-fatia-e-operacao-avancada.sql
+Applied: 124-fin05-conciliation-hardening.sql
+Applied: 125-fin06-collection-hardening.sql
+Applied: 126-fin07-cashflow-aging-hardening.sql
+Applied: 127-fin08-cost-allocation-hardening.sql
+Applied: 128-fin09-management-result-hardening.sql
+Applied: 129-fin10-expense-hardening.sql
+Applied: 130-fin11-fiscal-hardening.sql
+Applied: 131-fin12-gateway-hardening.sql
+Applied: 132-fin13-budget-hardening.sql
+Applied: 133-fin14-15-16-export-closure-commission-hardening.sql
+Applied: 134-fin13-budget-revision-margin-idempotency.sql
+Applied: 135-fin09-fin12-revalidation-hardening.sql
+Applied: 136-fin10-fin05-policy-history-locks.sql
+Applied: 137-fin14-15-16-ui-idempotency-closure-lock.sql
+Applied: 138-adm01-12-painel-marcelo-decisoes-escopo.sql
+Applied: 139-l08-client-space-atomic-idempotency.sql
+Applied: 140-l08-cli06-08-lifecycle-visits-reports.sql
+Applied: 141-l08-cli10-service-request-portal.sql
+Applied: 142-l08-cli11-satisfaction-portal.sql
+Applied: 143-l08-cli12-renewal-communications-portal.sql
+Applied: 144-l08-cli13-portal-access-modes.sql
+Applied: 145-cli14-account-security.sql
+Applied: 146-l08-cli15-employee-complaint-portal.sql
+Applied: 147-ext01-fleet-canonical-journey.sql
+Applied: 148-ext02-third-parties-canonical-journey.sql
+Applied: 149-ext03-biddings-canonical-journey.sql
+Applied: 150-ext04-supplier-journey.sql
+Applied: 151-ext05-quality-journey.sql
+Applied: 152-ext06-satisfaction-journey.sql
+Applied: 153-ext07-compliance-journey.sql
+Applied: 154-ext07-compliance-hardening.sql
+Applied: 155-ext07-compliance-hardening.sql
+Applied: 156-ext07-scheduled-evaluation.sql
+Applied: 157-f03-employee-request-rh-return.sql
+Applied: 158-f03-client-ticket-acceptance.sql
+Applied: 159-f03-receivable-settlement-report.sql
+Applied: 160-ext08-knowledge-canonical-journey.sql
+Applied: 161-ext09-expansion-canonical-journey.sql
+Applied: 162-ext10-continuity-canonical-journey.sql
+Applied: 163-ext11-analytics-canonical-journey.sql
+Applied: 164-ext12-visual-editor-canonical-journey.sql
+Applied: 165-ext13-reports-canonical-journey.sql
+Applied: 166-ext14-intel-canonical-journey.sql
+Applied: 167-ext15-emergency-canonical-journey.sql
+Applied: 168-ext07-compliance-action-plans.sql
+Applied: 169-ext10-continuity-client-portal.sql
+Applied: 170-ops-internal-pendency-notifications.sql
+Applied: 171-client-offline-access-recovery.sql
+Applied: 172-ext05-quality-client-account-scope.sql
+Applied: 173-ai-rag-client-account-scope.sql
+Applied: 174-auth-permissions-id-default.sql
+Applied: 175-ai-rag-directory-sources.sql
+Applied: 176-employee-geolocation-time-clock.sql
+Applied: 177-site-appearance-administration.sql
+Applied: 178-employee-time-clock-here-address.sql
+Applied: 179-employee-here-end-user-consent.sql
+Applied: 180-marcelo-rh-access.sql
+Migration ledger verified: 001–180 (PostgreSQL only)
+TAP version 13
+# Subtest: browser ID3: contratos mantém a leitura na conta ativa e descarta resposta fora de ordem
+not ok 1 - browser ID3: contratos mantém a leitura na conta ativa e descarta resposta fora de ordem
+  ---
+  duration_ms: 15784.771194
+  type: 'test'
+  location: '/home/user/gruposegsystemseguranca/tests/ux-portal-workspace.integration.test.mjs:691:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    o contrato de A não pode continuar visível quando B está selecionada e sua leitura está pendente
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/user/gruposegsystemseguranca/tests/ux-portal-workspace.integration.test.mjs:776:12)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 16506.748676
+UX_PORTAL_TEST_EXIT: 1
+QA_PG_TEMP_CLEANED: true
+
+RED_INTEGRACAO_SEGUNDA_EXIT=1
+RED focal confirmado pela asserção esperada após restauração pelo lockfile; src permanece intacto.

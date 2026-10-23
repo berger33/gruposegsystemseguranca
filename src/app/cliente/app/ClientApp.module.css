@@ -40,8 +40,10 @@
 .navTools {
   margin-left: auto;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .accountSelect {
@@ -54,6 +56,7 @@
   font-weight: 600;
   font-family: inherit;
   max-width: 260px;
+  min-width: 0;
 }
 
 .logoutButton {

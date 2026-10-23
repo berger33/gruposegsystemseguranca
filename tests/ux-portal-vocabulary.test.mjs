@@ -295,3 +295,5 @@ test('UX-PRO-05 jornada: situações de ponto e ajuste de jornada têm rótulo e
   assert.equal(employeeItemStatusLabel('divergente'), 'Divergente');
   assert.equal(employeeItemStatusTone('divergente'), 'danger');
 });
+
+import './ux-pro-id3-contratos-leitura-ui.test.mjs';
