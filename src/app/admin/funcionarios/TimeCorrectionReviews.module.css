@@ -1,0 +1,101 @@
+.taskContainer {
+  display: grid;
+  gap: 16px;
+}
+
+.sectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.decisionFieldset {
+  margin-top: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.checkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: var(--ux-height-target, 44px);
+  padding: 8px 10px;
+  border: 1px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-canvas);
+}
+
+.checkRow input.checkboxControl {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  min-height: 20px;
+  margin: 2px 0 0;
+  padding: 0;
+  flex: 0 0 auto;
+  accent-color: var(--ux-color-brand);
+}
+
+.checkLabel {
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.technicalDetails {
+  margin-top: 10px;
+  border: 1px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-sm);
+  padding: 8px 12px;
+  background: var(--ux-color-canvas);
+}
+
+.technicalDetails summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--ux-color-brand);
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+.technicalMeta {
+  margin: 8px 0 0;
+  display: grid;
+  gap: 4px;
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+.technicalMeta dt {
+  font-weight: 700;
+  color: var(--ux-color-muted);
+}
+
+.technicalMeta dd {
+  margin: 0 0 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.proofHeading {
+  margin: 12px 0 4px;
+  font-size: 0.9375rem;
+  line-height: 1.35;
+}
+
+.rejectionBlock {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ux-color-border);
+  display: grid;
+  gap: 8px;
+}
+
+:global(html[data-admin-theme="night"] [data-admin-theme-scope="true"]) button.primaryAction {
+  color: var(--ux-color-canvas);
+}

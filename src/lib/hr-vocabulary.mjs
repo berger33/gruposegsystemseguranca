@@ -83,6 +83,34 @@ export const TERMINATION_TYPES = Object.freeze([
   { value: 'outro', label: 'Outro motivo' },
 ]);
 
+/** Tipos de marcação geográfica — espelha `emp_time_punches.kind` (migração 176). */
+export const TIME_PUNCH_KINDS = Object.freeze([
+  { value: 'entrada', label: 'Entrada' },
+  { value: 'saida_intervalo', label: 'Início do intervalo' },
+  { value: 'retorno_intervalo', label: 'Fim do intervalo' },
+  { value: 'saida', label: 'Saída' },
+]);
+
+/** Situação do registro de ponto — espelha `hr_time_entry_status` (migração 061). */
+export const TIME_ENTRY_STATUS = Object.freeze([
+  { value: 'pendente', label: 'Pendente', tone: 'warning' },
+  { value: 'aprovado', label: 'Aprovado', tone: 'success' },
+  { value: 'divergente', label: 'Divergente', tone: 'danger' },
+  { value: 'em_correcao', label: 'Em correção', tone: 'info' },
+  { value: 'corrigido', label: 'Corrigido', tone: 'success' },
+  { value: 'rejeitado', label: 'Rejeitado', tone: 'danger' },
+]);
+
+/** Situação do pedido de ajuste de jornada — espelha `emp_journey_correction_status` (migração 065). */
+export const TIME_CORRECTION_STATUS = Object.freeze([
+  { value: 'solicitado', label: 'Aguardando análise', tone: 'warning' },
+  { value: 'em_analise', label: 'Em análise', tone: 'info' },
+  { value: 'aprovado', label: 'Aprovado', tone: 'success' },
+  { value: 'rejeitado', label: 'Rejeitado', tone: 'danger' },
+  { value: 'cancelado', label: 'Cancelado', tone: 'neutral' },
+  { value: 'concluido', label: 'Concluído', tone: 'success' },
+]);
+
 /** Documentos cuja leitura/escrita exige concessão de remuneração separada. */
 export const COMPENSATION_DOCUMENT_KINDS = Object.freeze(['payroll', 'income_report']);
 
@@ -110,6 +138,11 @@ export function documentStatusLabel(value) { return toLabel(DOCUMENT_STATUS, val
 export function documentStatusTone(value) { return entry(DOCUMENT_STATUS, value)?.tone || 'neutral'; }
 export function documentKindLabel(value) { return toLabel(DOCUMENT_KINDS, value); }
 export function terminationTypeLabel(value) { return toLabel(TERMINATION_TYPES, value); }
+export function timePunchKindLabel(value) { return toLabel(TIME_PUNCH_KINDS, value); }
+export function timeEntryStatusLabel(value) { return toLabel(TIME_ENTRY_STATUS, value); }
+export function timeEntryStatusTone(value) { return entry(TIME_ENTRY_STATUS, value)?.tone || 'neutral'; }
+export function timeCorrectionStatusLabel(value) { return toLabel(TIME_CORRECTION_STATUS, value); }
+export function timeCorrectionStatusTone(value) { return entry(TIME_CORRECTION_STATUS, value)?.tone || 'neutral'; }
 
 /** Situação do cadastro em que ainda faz sentido oferecer desligamento. */
 export function isTerminable(status) {
@@ -131,7 +164,13 @@ const ERROR_MESSAGES = Object.freeze({
   corrected_hours_required: {kind:'invalid',title:'Confira as horas trabalhadas',detail:'Ao alterar horários, informe as horas trabalhadas descontando intervalos.'},
   correction_already_decided: {kind:'conflict',title:'O pedido já foi decidido',detail:'Atualize os pedidos. Uma decisão concluída não pode ser reaplicada.'},
   time_entry_changed: {kind:'conflict',title:'O registro mudou depois do pedido',detail:'O ajuste não foi aplicado. Confira a alteração posterior e solicite uma nova revisão.'},
-  rejection_reason_required: {kind:'invalid',title:'Explique a rejeição',detail:'Informe um motivo com pelo menos cinco caracteres.'},
+  competence_closed: {kind:'conflict',title:'Competência fechada',detail:'Esta competência já foi fechada. Reabra a competência pelo fluxo próprio antes de alterar a jornada.'},
+  correction_not_found: {kind:'invalid',title:'Pedido de ajuste não encontrado',detail:'O pedido não existe mais ou está fora do seu escopo. Atualize a fila.'},
+  time_entry_not_found: {kind:'invalid',title:'Registro de ponto não encontrado',detail:'A jornada associada não foi localizada no seu escopo.'},
+  invalid_correction_decision: {kind:'invalid',title:'Decisão de ajuste inválida',detail:'Escolha colocar em análise, aprovar ou rejeitar um pedido válido.'},
+  invalid_time_changes: {kind:'invalid',title:'Horários ou horas inválidos',detail:'Informe horários válidos e horas trabalhadas entre 0 e 24.'},
+  invalid_employee_id: {kind:'invalid',title:'Identificador inválido',detail:'Selecione um funcionário e um registro válidos para consultar o ponto.'},
+  time_clock_unavailable: {kind:'retry',title:'Serviço de ponto indisponível',detail:'O servidor não conseguiu concluir a consulta ou gravação agora. Isto não é a mesma coisa que não haver registros.'},
   admin_session_required: {
     kind: 'auth',
     title: 'Sessão não reconhecida',
@@ -193,7 +232,7 @@ const ERROR_MESSAGES = Object.freeze({
  */
 export function describeHrError(code, status) {
   const known = code && Object.prototype.hasOwnProperty.call(ERROR_MESSAGES, code) ? ERROR_MESSAGES[code] : null;
-  if (known) return { ...known, code, status, canRetry: known.kind === 'auth' };
+  if (known) return { ...known, code, status, canRetry: known.kind === 'auth' || known.kind === 'retry' };
 
   if (status === 0) {
     return {
@@ -254,4 +293,11 @@ export function describeHrError(code, status) {
 /** Variante visual de `UiState` correspondente à falha classificada. */
 export function hrErrorVariant(descriptor) {
   return descriptor && (descriptor.kind === 'denied' || descriptor.kind === 'auth') ? 'denied' : 'error';
+}
+
+/** Rodapé diagnóstico com status HTTP e código canônico entre parênteses. */
+export function hrErrorFootnote(descriptor) {
+  if (!descriptor) return '';
+  const statusLabel = descriptor.status ? `HTTP ${descriptor.status}` : 'sem resposta';
+  return `Resposta do servidor: ${statusLabel}${descriptor.code ? ` (${descriptor.code})` : ''}.`;
 }

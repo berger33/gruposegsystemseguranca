@@ -1,0 +1,38 @@
+{
+  "slice": "UX-PRO-05 — Ponto e ajustes (RH) e reflexo em Jornada (Portal do funcionário)",
+  "date": "2026-10-23",
+  "routes": [
+    "/admin/funcionarios",
+    "/funcionario"
+  ],
+  "apisPreserved": [
+    "GET /api/admin/hr/l03/time-corrections",
+    "PATCH /api/admin/hr/l03/time-corrections",
+    "GET /api/admin/hr/l03/time-clock?employee_id=<uuid>",
+    "GET /api/admin/hr/l03/time-punches?employee_id=<uuid>&entry_id=<uuid>",
+    "GET /api/employee/time-clock",
+    "POST /api/employee/time-clock",
+    "POST /api/employee/actions/time-correction",
+    "GET /api/employee/home"
+  ],
+  "viewportsVerified": [320, 390, 768, 1440],
+  "maxHorizontalOverflowPx": 0,
+  "themesVerified": ["day", "night"],
+  "captures": [
+    "ux-pro-05-ponto-rh-390-error.png",
+    "ux-pro-05-ponto-rh-390-preserved-after-error.png",
+    "ux-pro-05-ponto-rh-revisao-320-day.png",
+    "ux-pro-05-ponto-rh-revisao-390-day.png",
+    "ux-pro-05-ponto-rh-revisao-768-day.png",
+    "ux-pro-05-ponto-rh-revisao-1440-day.png",
+    "ux-pro-05-ponto-rh-revisao-390-night.png",
+    "ux-pro-05-ponto-rh-decidido-1440-day.png",
+    "ux-pro-05-titular-jornada-pedido-390-day.png",
+    "ux-pro-05-titular-jornada-retorno-320-day.png",
+    "ux-pro-05-titular-jornada-retorno-390-day.png",
+    "ux-pro-05-titular-jornada-retorno-768-day.png",
+    "ux-pro-05-titular-jornada-retorno-1440-day.png",
+    "ux-pro-05-titular-jornada-retorno-390-night.png"
+  ],
+  "humanAcceptanceExecuted": false
+}

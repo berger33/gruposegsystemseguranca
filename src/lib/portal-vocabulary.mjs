@@ -878,7 +878,11 @@ export function ticketStatusTone(value) {
 const EMPLOYEE_ITEM_STATUS_LABELS = Object.freeze({
   pending: 'Pendente',
   pendente: 'Pendente',
+  solicitado: 'Aguardando análise',
   em_analise: 'Em análise',
+  em_correcao: 'Em correção',
+  corrigido: 'Corrigido',
+  divergente: 'Divergente',
   aprovada: 'Aprovada',
   aprovado: 'Aprovado',
   rejeitada: 'Rejeitada',
@@ -907,9 +911,9 @@ export function employeeItemStatusLabel(value) {
 
 export function employeeItemStatusTone(value) {
   const key = String(value || '').trim().toLowerCase();
-  if (['aprovada', 'aprovado', 'approved', 'published', 'concluida', 'concluido'].includes(key)) return 'success';
-  if (['rejeitada', 'rejeitado', 'rejected', 'cancelada'].includes(key)) return 'danger';
-  if (['em_analise', 'under_review'].includes(key)) return 'warning';
+  if (['aprovada', 'aprovado', 'approved', 'published', 'concluida', 'concluido', 'corrigido'].includes(key)) return 'success';
+  if (['rejeitada', 'rejeitado', 'rejected', 'cancelada', 'divergente'].includes(key)) return 'danger';
+  if (['em_analise', 'em_correcao', 'solicitado', 'under_review'].includes(key)) return 'warning';
   if (['pendente', 'aberta', 'aberto', 'registrada', 'submitted'].includes(key)) return 'info';
   return 'neutral';
 }

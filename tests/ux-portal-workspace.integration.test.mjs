@@ -3181,3 +3181,310 @@ test('browser: RH devolve documento com motivo e o portal apresenta o retorno no
     await employeeBrowser.close();
   }
 });
+
+test('browser: ajuste de ponto percorre Jornada do titular e Ponto e ajustes do RH com aprovação, rejeição, marcações preservadas e isolamento', { skip: !RUN }, async () => {
+  const employeeBrowser = await launchBrowser();
+  let rhBrowser;
+  let employeeContext;
+  let rhContext;
+  try {
+    async function createPortalEmployee(tag) {
+      const suffix = `${tag}-${randomUUID().slice(0, 6)}`;
+      const created = await api('/api/hr/employees', {
+        method: 'POST', cookie: rhCookie,
+        body: {
+          matricula: `QA-${suffix}`,
+          display_name: `Titular ${suffix}`,
+          cargo: 'vigilante',
+          status: 'ativo',
+          employment_type: 'clt',
+        },
+      });
+      assert.equal(created.status, 201);
+      const email = `ux05-${suffix.toLowerCase()}@exemplo.invalid`;
+      const access = await api(`/api/admin/hr/employees/${created.body.employee.id}/access`, {
+        method: 'POST', cookie: rhCookie, body: { email },
+      });
+      assert.equal(access.status, 201);
+      const firstLogin = await api('/api/employee/session', {
+        method: 'POST', body: { email, password: access.body.temporaryPassword },
+      });
+      assert.equal(firstLogin.status, 200);
+      const tempCookie = firstLogin.setCookie.find(value => value.startsWith('seg_employee_session='))?.split(';')[0];
+      const password = `Titular-${randomUUID()}!`;
+      const changed = await api('/api/employee/session/password', {
+        method: 'PUT', cookie: tempCookie,
+        body: { currentPassword: access.body.temporaryPassword, newPassword: password },
+      });
+      assert.equal(changed.status, 200);
+      const login = await api('/api/employee/session', {
+        method: 'POST', body: { email, password },
+      });
+      assert.equal(login.status, 200);
+      const session = login.setCookie.find(value => value.startsWith('seg_employee_session='))?.split(';')[0];
+      assert.ok(session);
+      return { record: created.body.employee, session };
+    }
+
+    // Dois titulares isolados criados pelas APIs canônicas: titular A (jornada própria) e titular B (isolamento).
+    const titularA = await createPortalEmployee('UX05A');
+    const titularB = await createPortalEmployee('UX05B');
+    const sessionA = titularA.session;
+    const sessionB = titularB.session;
+
+    const positionNow = () => ({
+      latitude: -23.46284,
+      longitude: -46.53332,
+      accuracy: 11,
+      positionAt: new Date().toISOString(),
+    });
+    const punchIn1 = await api('/api/employee/time-clock', {
+      method: 'POST', cookie: sessionA,
+      body: { requestId: randomUUID(), kind: 'entrada', position: positionNow() },
+    });
+    assert.equal(punchIn1.status, 201);
+    const entryApproveId = punchIn1.body.timeEntryId;
+    const punchOut1 = await api('/api/employee/time-clock', {
+      method: 'POST', cookie: sessionA,
+      body: { requestId: randomUUID(), kind: 'saida', position: positionNow() },
+    });
+    assert.equal(punchOut1.status, 201);
+
+    const punchIn2 = await api('/api/employee/time-clock', {
+      method: 'POST', cookie: sessionA,
+      body: { requestId: randomUUID(), kind: 'entrada', position: positionNow() },
+    });
+    assert.equal(punchIn2.status, 201);
+    const entryRejectId = punchIn2.body.timeEntryId;
+    const punchOut2 = await api('/api/employee/time-clock', {
+      method: 'POST', cookie: sessionA,
+      body: { requestId: randomUUID(), kind: 'saida', position: positionNow() },
+    });
+    assert.equal(punchOut2.status, 201);
+
+    // Isolamento: funcionário B não enxerga nem consegue pedir ajuste para jornada de A.
+    const forbiddenCrossAttempt = await api('/api/employee/actions/time-correction', {
+      method: 'POST', cookie: sessionB,
+      body: {
+        timeEntryId: entryApproveId,
+        reason: 'Tentativa cruzada indevida de outro titular',
+        requestedChanges: { clock_in: '08:00', clock_out: '17:00' },
+      },
+    });
+    assert.equal(forbiddenCrossAttempt.status, 404);
+    assert.equal(forbiddenCrossAttempt.body.error, 'time_entry_not_found');
+
+    // Titular A abre /funcionario -> Jornada no celular e solicita o ajuste pela interface real.
+    const employeeOpened = await openPage(employeeBrowser, '/funcionario', sessionA, { width: 390, height: 844 });
+    employeeContext = employeeOpened.context;
+    const empPage = employeeOpened.page;
+    await empPage.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+    await empPage.getByRole('tab', { name: 'Jornada' }).click();
+
+    const approveReason = `Ajuste saída portaria ${randomUUID().slice(0, 8)}`;
+    const jornadaSectionInitial = empPage.locator('section').filter({ hasText: 'Jornada e correções' });
+    // Há duas jornadas: abrimos os formulários de correção até expor o da jornada entryApproveId.
+    const botoesSolicitar = jornadaSectionInitial.getByRole('button', { name: 'Solicitar correção' });
+    await botoesSolicitar.first().waitFor();
+    const totalBotoes = await botoesSolicitar.count();
+    for (let idx = 0; idx < totalBotoes; idx += 1) {
+      await jornadaSectionInitial.getByRole('button', { name: 'Solicitar correção' }).first().click();
+      if (await empPage.locator(`#correcao-motivo-${entryApproveId}`).count()) break;
+    }
+    await empPage.locator(`#correcao-entrada-${entryApproveId}`).fill('08:00');
+    await empPage.locator(`#correcao-saida-${entryApproveId}`).fill('17:00');
+    await empPage.locator(`#correcao-motivo-${entryApproveId}`).fill(approveReason);
+    await empPage.locator(`#correcao-motivo-${entryApproveId}`).locator('xpath=ancestor::form[1]').getByRole('button', { name: 'Enviar correção' }).click();
+
+    const empPendingCard = empPage.locator('article').filter({ hasText: approveReason });
+    await empPendingCard.waitFor();
+    assert.match(await empPendingCard.innerText(), /Aguardando análise do RH/i,
+      'o pedido recém-criado no portal deve exibir rótulo humano em vez do token cru solicitado');
+    assert.doesNotMatch(await empPendingCard.innerText(), /\bsolicitado\b/i);
+    await capture(empPage, 'ux-pro-05-titular-jornada-pedido-390-day');
+
+    // RH abre /admin/funcionarios -> Ponto e ajustes, consulta espelho + marcações e analisa o pedido.
+    rhBrowser = await launchBrowser();
+    const rhOpened = await openPage(rhBrowser, '/admin/funcionarios', rhCookie, { width: 1440, height: 900 });
+    rhContext = rhOpened.context;
+    const rhPage = rhOpened.page;
+    await rhPage.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+    await rhPage.getByRole('tab', { name: 'Ponto e ajustes' }).click();
+
+    await rhPage.getByLabel('Funcionário', { exact: true }).selectOption(titularA.record.id);
+    const verMarcacoesBtn = rhPage.getByRole('button', { name: /Ver marcações e localização/i }).first();
+    await verMarcacoesBtn.waitFor();
+    await verMarcacoesBtn.click();
+    await rhPage.getByRole('heading', { name: /Marcações originais da jornada selecionada/i }).waitFor();
+    const historicoPanelText = await rhPage.locator('section[aria-labelledby="rh-historico-ponto-titulo"]').innerText();
+    assert.match(historicoPanelText, /Entrada ·/);
+    assert.match(historicoPanelText, /Saída ·/);
+    assert.doesNotMatch(historicoPanelText, /\bsaida_intervalo\b|\bretorno_intervalo\b/);
+
+    const rhCard = rhPage.locator('article').filter({ hasText: approveReason });
+    await rhCard.waitFor();
+    assert.match(await rhCard.innerText(), /Aguardando análise/);
+    await rhCard.getByRole('button', { name: 'Consultar marcações e localização' }).click();
+    await rhCard.getByText(/Coordenadas -23\.46284, -46\.53332/).first().waitFor();
+
+    // Verifica responsividade 320/390/768/1440, foco por teclado e geometria do checkbox (sem esticar a 100%).
+    const rhReviewViewports = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await rhPage.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      const hoursInput = rhCard.getByLabel('Horas trabalhadas após ajuste');
+      await hoursInput.focus();
+      const metrics = await rhPage.evaluate(() => {
+        const checkbox = document.querySelector('input[type="checkbox"][id^="ajuste-revisado-"]');
+        const rect = checkbox ? checkbox.getBoundingClientRect() : { width: 0, height: 0 };
+        return {
+          width: document.documentElement.clientWidth,
+          overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          checkboxWidth: Math.round(rect.width),
+          checkboxHeight: Math.round(rect.height),
+        };
+      });
+      rhReviewViewports.push(metrics);
+      assert.ok(metrics.checkboxWidth >= 16 && metrics.checkboxWidth <= 28,
+        `checkbox não pode esticar a 100% da largura (${metrics.checkboxWidth}px)`);
+      await capture(rhPage, `ux-pro-05-ponto-rh-revisao-${width}-day`);
+    }
+    assert.deepEqual(rhReviewViewports.map(item => item.width), [320, 390, 768, 1440]);
+    assert.ok(rhReviewViewports.every(item => item.overflow <= 1), JSON.stringify(rhReviewViewports));
+
+    // Modo noite em 390px + verificação de contraste real do botão primário Aprovar ajuste.
+    await rhPage.setViewportSize({ width: 390, height: 844 });
+    await rhPage.getByRole('button', { name: 'Ativar modo noite' }).click();
+    await rhPage.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+    const nightPrimaryColors = await rhCard.getByRole('button', { name: 'Aprovar ajuste' }).evaluate(node => {
+      const computed = window.getComputedStyle(node);
+      return { color: computed.color, backgroundColor: computed.backgroundColor };
+    });
+    assert.notEqual(nightPrimaryColors.color, 'rgb(255, 255, 255)',
+      'no modo noite o botão primário sobre fundo azul claro deve usar texto escuro legível');
+    await capture(rhPage, 'ux-pro-05-ponto-rh-revisao-390-night');
+    await rhPage.getByRole('button', { name: 'Ativar modo dia' }).click();
+    await rhPage.waitForFunction(() => document.documentElement.dataset.adminTheme !== 'night');
+    await rhPage.setViewportSize({ width: 1440, height: 900 });
+
+    // Transição 1: Colocar em análise -> reflete no banco e no portal do titular.
+    await rhCard.getByRole('button', { name: 'Colocar em análise' }).click();
+    await rhPage.locator('[role="status"]', { hasText: /colocado em análise/i }).waitFor();
+    const cardEmAnalise = rhPage.locator('article').filter({ hasText: approveReason });
+    await cardEmAnalise.getByText('Em análise').waitFor();
+
+    await empPage.reload({ waitUntil: 'domcontentloaded' });
+    await empPage.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+    await empPage.getByRole('tab', { name: 'Jornada' }).click();
+    const empAnaliseCard = empPage.locator('article').filter({ hasText: approveReason });
+    await empAnaliseCard.getByText('Em análise pelo RH').waitFor();
+    const jornadaEmAnalise = empPage.locator('section').filter({ hasText: 'Jornada e correções' });
+    await jornadaEmAnalise.getByText(/Pendente/).first().waitFor();
+    assert.doesNotMatch(await jornadaEmAnalise.innerText(), /\bpendente\b|\bsolicitado\b|\bem_analise\b/);
+
+    // Transição 2: Aprovar ajuste -> atualiza resumo da jornada, preserva marcações imutáveis e traduz Corrigido no portal.
+    await cardEmAnalise.getByLabel('Entrada aprovada').fill('08:00');
+    await cardEmAnalise.getByLabel('Saída aprovada').fill('17:00');
+    await cardEmAnalise.getByLabel('Horas trabalhadas após ajuste').fill('8');
+    await cardEmAnalise.getByLabel('Revisei o original, a solicitação e as horas trabalhadas.').check();
+    await cardEmAnalise.getByRole('button', { name: 'Aprovar ajuste' }).click();
+    await rhPage.locator('[role="status"]', { hasText: /aprovado\. As marcações originais permanecem preservadas/i }).waitFor();
+
+    const approvedEntryRow = (await pool.query(
+      'SELECT status, hours_worked, original_snapshot FROM hr_time_entries WHERE id = $1',
+      [entryApproveId],
+    )).rows[0];
+    assert.equal(approvedEntryRow.status, 'corrigido');
+    assert.equal(Number(approvedEntryRow.hours_worked), 8);
+    assert.ok(approvedEntryRow.original_snapshot, 'o snapshot original da jornada deve permanecer preservado');
+
+    const preservedPunches = (await pool.query(
+      'SELECT count(*)::int AS total FROM emp_time_punches p JOIN emp_time_sessions s ON s.id = p.session_id WHERE s.time_entry_id = $1',
+      [entryApproveId],
+    )).rows[0];
+    assert.equal(preservedPunches.total, 2, 'aprovar ajuste jamais altera ou apaga as marcações originais');
+
+    // Transição 3: Segundo pedido é rejeitado com motivo obrigatório e o retorno aparece apenas ao titular A.
+    const rejectReasonRequest = `Ajuste intervalo ${randomUUID().slice(0, 8)}`;
+    const secondCorrection = await api('/api/employee/actions/time-correction', {
+      method: 'POST', cookie: sessionA,
+      body: {
+        timeEntryId: entryRejectId,
+        reason: rejectReasonRequest,
+        requestedChanges: { clock_out: '18:00' },
+      },
+    });
+    assert.equal(secondCorrection.status, 201);
+
+    await rhPage.getByRole('button', { name: 'Atualizar pedidos' }).click();
+    const rhRejectCard = rhPage.locator('article').filter({ hasText: rejectReasonRequest });
+    await rhRejectCard.waitFor();
+    const rhRejectionMotive = 'Horário divergente da escala confirmada na portaria.';
+    await rhRejectCard.getByLabel('Motivo da rejeição').fill(rhRejectionMotive);
+    await rhRejectCard.getByRole('button', { name: 'Rejeitar ajuste' }).click();
+    await rhPage.locator('[role="status"]', { hasText: /rejeitado com motivo registrado/i }).waitFor();
+    await capture(rhPage, 'ux-pro-05-ponto-rh-decidido-1440-day');
+
+    const auditRows = (await pool.query(
+      `SELECT action FROM audit_log
+        WHERE action IN (
+          'emp_journey_correction_request',
+          'emp_journey_correction_em_analise',
+          'emp_journey_correction_aprovado',
+          'emp_journey_correction_rejeitado'
+        )
+        ORDER BY action`,
+    )).rows.map(row => row.action);
+    assert.ok(auditRows.includes('emp_journey_correction_request'));
+    assert.ok(auditRows.includes('emp_journey_correction_em_analise'));
+    assert.ok(auditRows.includes('emp_journey_correction_aprovado'));
+    assert.ok(auditRows.includes('emp_journey_correction_rejeitado'));
+
+    // Recarrega o portal do titular A e valida Corrigido, Ajuste aprovado e Ajuste rejeitado + Motivo em 320/390/768/1440 + noite.
+    await empPage.reload({ waitUntil: 'domcontentloaded' });
+    await empPage.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
+    await empPage.getByRole('tab', { name: 'Jornada' }).click();
+
+    const empApprovedCard = empPage.locator('article').filter({ hasText: approveReason });
+    await empApprovedCard.getByText('Ajuste aprovado pelo RH').waitFor();
+    const empRejectedCard = empPage.locator('article').filter({ hasText: rejectReasonRequest });
+    await empRejectedCard.getByText(rhRejectionMotive, { exact: false }).waitFor();
+    assert.match(await empRejectedCard.innerText(), /Ajuste rejeitado pelo RH/i);
+    assert.match(await empRejectedCard.innerText(), /Motivo informado pelo RH/i);
+
+    const jornadaSection = empPage.locator('section').filter({ hasText: 'Jornada e correções' });
+    await jornadaSection.getByText(/Corrigido/).first().waitFor();
+    assert.doesNotMatch(await jornadaSection.innerText(), /\bcorrigido\b|\bsolicitado\b|\bem_correcao\b/);
+
+    const empViewports = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await empPage.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      await empRejectedCard.evaluate(element => element.scrollIntoView({ block: 'center', inline: 'nearest' }));
+      empViewports.push(await empPage.evaluate(() => ({
+        width: document.documentElement.clientWidth,
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      })));
+      await capture(empPage, `ux-pro-05-titular-jornada-retorno-${width}-day`);
+    }
+    assert.deepEqual(empViewports.map(item => item.width), [320, 390, 768, 1440]);
+    assert.ok(empViewports.every(item => item.overflow <= 1), JSON.stringify(empViewports));
+
+    await empPage.setViewportSize({ width: 390, height: 844 });
+    await empPage.getByRole('button', { name: 'Ativar modo noite' }).click();
+    await empPage.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+    await capture(empPage, 'ux-pro-05-titular-jornada-retorno-390-night');
+
+    // Funcionário B continua sem ver qualquer jornada, marcação ou motivo de rejeição do titular A.
+    const clockB = await api('/api/employee/time-clock', { cookie: sessionB });
+    assert.equal(clockB.status, 200);
+    assert.deepEqual(clockB.body.punches, []);
+    assert.deepEqual(clockB.body.corrections, []);
+    const homeB = await api('/api/employee/home', { cookie: sessionB });
+    assert.equal(homeB.status, 200);
+    assert.deepEqual(homeB.body.journey, []);
+  } finally {
+    await rhContext?.close();
+    await employeeContext?.close();
+    await rhBrowser?.close();
+    await employeeBrowser.close();
+  }
+});
