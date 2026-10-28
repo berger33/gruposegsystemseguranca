@@ -64,7 +64,7 @@ Nome do papel "supervisor" (T25); conteúdo técnico T24 aula 8 e procedimentos 
 | E10 `EPERM` de symlink no Windows | `tests/helpers/fs-link-fixtures.mjs`: junction em Windows para diretórios, entrada insegura equivalente para arquivos; nenhuma asserção removida ou pulada |
 | E11 índice `/qa/modulos` obsoleto | Blocos de TI, Marcelo, RH, CRM e assistentes reconciliados com o HEAD; data/SHA registrados |
 | E12 sem fonte única de estado | Este arquivo + banners nos documentos históricos |
-| E13 ZIPs obsoletos | Avisos versionados em `downloads/LEIA-ME.md` e `dist/LEIA-ME.md` |
+| E13 ZIPs obsoletos | Aviso canônico versionado em `downloads/LEIA-ME.md`; `dist/LEIA-ME.md` é **gerado** pela guarda (E21) |
 
 ## 6. Fatias de produto entregues nesta sessão
 
