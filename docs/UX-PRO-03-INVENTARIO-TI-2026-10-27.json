@@ -3,25 +3,25 @@
   "resumo": "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
   "data": "2026-10-27",
   "criterio": "promover por area somente com prova (decisao de 02/10); prova estatica nao substitui gate de navegador nem aceite humano",
-  "tiConsoleSha256": "593a0e122152fc6595c580bc6800dfa4ac5b3704d2d6ab52c390baa22766a921",
+  "tiConsoleSha256": "b4c53d0597723315041f7b0e5a7b498e4275394bae93488fb9de93db57f2780e",
   "pageSha256": "360bf2564469679a4cc7c0b6b9274f05557188f701a3f3b89649ce4d70d56313",
   "total": 83,
-  "abas": 18,
-  "importsDinamicos": 18,
+  "abas": 19,
+  "importsDinamicos": 19,
   "console": {
-    "total": 18,
-    "comProva": 18,
+    "total": 19,
+    "comProva": 19,
     "lacunas": []
   },
   "workspace": {
     "total": 25
   },
   "orfos": {
-    "total": 40,
+    "total": 39,
     "promovidosSemSairDaClassificacao": 0
   },
   "promocoesComProva": {
-    "total": 6,
+    "total": 7,
     "todasMontadas": true,
     "detalhes": [
       {
@@ -59,6 +59,12 @@
         "aba": "configuracoes",
         "familia": "PLT-13 configurações, flags, manutenção, rollout e reversão",
         "relatorio": "docs/UX-PRO-03-PROMOCAO-CONFIGURACOES-ROLLOUT-2026-10-27.md"
+      },
+      {
+        "componente": "LgpdRequestClient.tsx",
+        "aba": "lgpd",
+        "familia": "PLT-10 pedidos do titular com verificação de identidade, responsável, prazo de 15 dias e impedimentos documentados",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-PEDIDOS-LGPD-2026-10-28.md"
       }
     ]
   },

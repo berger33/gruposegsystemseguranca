@@ -35,12 +35,12 @@
       "entregue": 7
     },
     "porClasseEvidencia": {
-      "mencionado_em_gate": 113,
-      "somente_documento": 86,
+      "mencionado_em_gate": 114,
+      "somente_documento": 85,
       "gate_nomeado": 23
     },
     "aRevalidarDeclarado": 46,
-    "aRevalidarSemGate": 21,
+    "aRevalidarSemGate": 20,
     "idsARevalidarSemGate": [
       "PLT-01",
       "PLT-02",
@@ -48,7 +48,6 @@
       "PLT-06",
       "PLT-07",
       "PLT-09",
-      "PLT-10",
       "PLT-12",
       "PLT-15",
       "EXT-16",
@@ -66,7 +65,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1600,
+    "arquivosVarridos": 1603,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -5654,7 +5653,7 @@
         "src/server/integrations-api.mjs"
       ],
       "ocorrencias_gate": 0,
-      "ocorrencias_documento": 15,
+      "ocorrencias_documento": 16,
       "ocorrencias_codigo": 2,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -5832,24 +5831,32 @@
       "estado_declarado_0410": "a_revalidar",
       "estado_confirmado_0410": "a_revalidar",
       "pendencia_0410": "preencher",
-      "classe_evidencia_atual": "somente_documento",
+      "classe_evidencia_atual": "mencionado_em_gate",
       "arquivos_gate_nomeados": [],
-      "arquivos_gate": [],
+      "arquivos_gate": [
+        "tests/ux-portal-workspace.integration.test.mjs",
+        "tests/ux-pro-03-ti-lgpd-requests-ui.test.mjs",
+        "tests/ux-pro-03-ti-reaudit.test.mjs"
+      ],
       "arquivos_documento": [
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
+        "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
         "docs/UX-PRO-03-PROMOCAO-CONFIGURACOES-ROLLOUT-2026-10-27.md",
+        "docs/UX-PRO-03-PROMOCAO-PEDIDOS-LGPD-2026-10-28.md",
         "docs/auditoria-2026-10-04/AUDITORIA.md"
       ],
       "arquivos_codigo": [
+        "scripts/ux-pro-03-ti-inventory.mjs",
+        "src/app/admin/ti/LgpdRequestClient.module.css",
         "src/app/admin/ti/LgpdRequestClient.tsx",
         "src/server/lgpd-request-api.mjs"
       ],
-      "ocorrencias_gate": 0,
-      "ocorrencias_documento": 6,
-      "ocorrencias_codigo": 2,
+      "ocorrencias_gate": 9,
+      "ocorrencias_documento": 11,
+      "ocorrencias_codigo": 5,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -5875,7 +5882,7 @@
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
         "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
         "docs/UX-PRO-03-PROMOCAO-CONFIGURACOES-ROLLOUT-2026-10-27.md",
-        "docs/UX-PRO-03-PROMOCAO-RETENCAO-DESCARTE-2026-10-27.md"
+        "docs/UX-PRO-03-PROMOCAO-PEDIDOS-LGPD-2026-10-28.md"
       ],
       "arquivos_codigo": [
         "scripts/ux-pro-03-ti-inventory.mjs",
@@ -5883,7 +5890,7 @@
         "src/app/admin/ti/RetentionClient.tsx"
       ],
       "ocorrencias_gate": 9,
-      "ocorrencias_documento": 19,
+      "ocorrencias_documento": 20,
       "ocorrencias_codigo": 4,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"

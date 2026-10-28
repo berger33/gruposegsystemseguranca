@@ -6384,3 +6384,282 @@ test('browser UX-PRO-03: PLT-13 Configurações e rollout (papel, A/B, POST/PATC
     }
   }
 });
+
+// ---------------------------------------------------------------------------
+// UX-PRO-03 — 7ª promoção com prova: PLT-10 pedidos do titular (acesso,
+// correção, eliminação, portabilidade, oposição, revogação, informação). Papel
+// admin/ti/rh no servidor (console restrito a ti/admin), verificação de
+// identidade e impedimento documentado decididos no servidor, escrita real,
+// A/B, filtro, vazio honesto, 503 e 403 em Chromium real.
+// ---------------------------------------------------------------------------
+test('browser UX-PRO-03: PLT-10 Pedidos LGPD (papel, A/B, POST/PATCH, verificação de identidade, erro e retry)', { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: 'ti' });
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const comercial = await provisionStaff(pool, { role: 'comercial' });
+  const staffIds = [ti.id, rh.id, comercial.id];
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const comercialCookie = await loginStaffHttp(comercial.email);
+  const DOC_HASH = { ALFA: '0f'.repeat(32), BETA: '1e'.repeat(32) };
+  const emailOf = label => `qa-plt10-${label.toLowerCase()}@exemplo.invalid`;
+
+  const cleanup = async () => {
+    await pool.query("DELETE FROM lgpd_request_history WHERE request_id IN (SELECT id FROM lgpd_requests WHERE requester_email LIKE 'qa-plt10-%')").catch(() => {});
+    await pool.query("DELETE FROM auth_access_audit WHERE actor_id LIKE 'qa-plt10-%'").catch(() => {});
+    await pool.query("DELETE FROM lgpd_requests WHERE requester_email LIKE 'qa-plt10-%'").catch(() => {});
+  };
+  const seed = async label => {
+    await cleanup();
+    await pool.query(
+      `INSERT INTO lgpd_requests (request_type, status, requester_name, requester_email, requester_document_hash, description, due_date)
+       VALUES ('acesso','recebido',$1,$2,$3,$4,CURRENT_DATE + 15)`,
+      [`QA PLT10 ${label} Titular`, emailOf(label), DOC_HASH[label],
+        `QA-PLT10-${label} pedido sintético do titular para conferência em navegador.`],
+    );
+    await pool.query(
+      `INSERT INTO lgpd_requests (request_type, status, requester_name, requester_email, description, due_date, responsible_name)
+       VALUES ('eliminacao','em_analise',$1,$2,$3,CURRENT_DATE + 2,'QA PLT10 responsável')`,
+      [`QA PLT10 ${label} Segundo`, `qa-plt10-${label.toLowerCase()}-2@exemplo.invalid`,
+        `QA-PLT10-${label} segundo pedido sintético com prazo próximo.`],
+    );
+  };
+  const rowOf = async email => (await pool.query('SELECT * FROM lgpd_requests WHERE requester_email=$1', [email])).rows[0];
+
+  try {
+    // ---------- autorização no SERVIDOR ----------
+    await seed('ALFA');
+    const seeded = await rowOf(emailOf('ALFA'));
+    assert.ok(seeded?.id, 'o pedido semeado precisa existir para a prova de autorização');
+    const deniedRead = await api('/api/admin/lgpd/requests', { cookie: comercialCookie });
+    assert.equal(deniedRead.status, 403, `comercial não pode consultar pedidos LGPD: veio ${deniedRead.status}`);
+    assert.equal(deniedRead.body?.error, 'lgpd_restricted_admin_ti_rh');
+    const deniedWrite = await api(`/api/admin/lgpd/requests/${seeded.id}`, {
+      method: 'PATCH', cookie: comercialCookie,
+      body: { next_status: 'cancelado', reason: 'QA-PLT10 tentativa de escrita sem papel autorizado' },
+    });
+    assert.equal(deniedWrite.status, 403, `comercial não pode transicionar pedido: veio ${deniedWrite.status}`);
+    // A API autoriza rh; o CONSOLE é mais estreito (ti/admin) e a tela não amplia nada.
+    assert.equal((await api('/api/admin/lgpd/requests', { cookie: rhCookie })).status, 200);
+    assert.equal((await api('/api/admin/lgpd/requests', { cookie: tiCookie })).status, 200);
+    // O canal público do titular continua existindo sem sessão staff (mesma origem).
+    const publicCreate = await api('/api/lgpd/requests', {
+      method: 'POST',
+      body: {
+        request_type: 'portabilidade', requester_name: 'QA PLT10 Anônimo',
+        requester_email: 'qa-plt10-anon@exemplo.invalid', requester_document: '98765432100',
+        description: 'QA-PLT10 pedido criado pelo canal público, sem sessão de equipe.',
+      },
+    });
+    assert.equal(publicCreate.status, 201, `canal público precisa aceitar o pedido: veio ${publicCreate.status}`);
+    assert.ok(publicCreate.body?.request?.requester_document_hash, 'o documento precisa voltar apenas como hash');
+    assert.equal(publicCreate.body.request.requester_document, undefined, 'o documento não pode voltar em claro');
+
+    const gateBrowser = await launchBrowser();
+    try {
+      // rh tem autorização na API, mas o console de TI é restrito a ti/admin.
+      const { context, page } = await openPage(gateBrowser, '/admin/ti', rhCookie, { width: 1280, height: 900 });
+      await page.locator('[data-admin-gate="forbidden"]').waitFor();
+      assert.equal(await page.getByRole('button', { name: 'Pedidos LGPD', exact: true }).count(), 0,
+        'o console não pode oferecer a aba a um papel que a página não autoriza');
+      await context.close();
+    } finally {
+      await gateBrowser.close();
+    }
+
+    // ---------- estado A: quatro larguras, teclado, fonte e honestidade ----------
+    const readings = [];
+    for (const [width, height] of [[320, 844], [390, 844], [768, 900], [1440, 900]]) {
+      const browser = await launchBrowser();
+      try {
+        const { context, page } = await openPage(browser, '/admin/ti', tiCookie, { width, height });
+        const tab = page.getByRole('button', { name: 'Pedidos LGPD', exact: true });
+        await tab.waitFor();
+        await tab.focus();
+        const focused = await page.evaluate(() => document.activeElement?.textContent?.trim() || '');
+        assert.match(focused, /Pedidos LGPD/, `a aba precisa receber foco em ${width}`);
+        await page.keyboard.press('Enter');
+        await page.getByRole('heading', { name: 'Pedidos LGPD' }).waitFor();
+        await page.getByText(/Fonte: tabelas/).waitFor();
+        await page.getByText(/QA-PLT10-ALFA/).first().waitFor();
+        const text = await page.locator('body').innerText();
+        assert.match(text, /QA-PLT10-ALFA/);
+        assert.match(text, /Data-base:/);
+        assert.match(text, /prazo mais próximo/);
+        assert.match(text, /15 dias/i);
+        assert.match(text, /armazenado apenas como hash/i);
+        assert.match(text, /parecer jurídico/i);
+        assert.match(text, /NO-GO/);
+        assert.match(text, /faltam \d+ dia\(s\)|vence hoje|prazo vencido há \d+ dia\(s\)/, 'o prazo precisa ser dito em dias');
+        // O documento do titular existe só como hash: nunca o valor inteiro na tela.
+        assert.match(text, /0f0f0f0f0f0f/);
+        assert.doesNotMatch(text, new RegExp(DOC_HASH.ALFA), 'o hash completo do documento não pode ser exibido');
+        assert.doesNotMatch(text, /QA-PLT10-BETA/, `B não pode vazar em ${width}`);
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(overflow <= 1, `PLT-10 overflow ${overflow} em ${width}`);
+        readings.push({ width, overflow });
+        await context.close();
+      } finally {
+        await browser.close();
+      }
+    }
+    assert.deepEqual(readings.map(item => item.width), [320, 390, 768, 1440]);
+
+    // ---------- escrita real pela UI: POST público, filtro, PATCH e regra de identidade ----------
+    const journeyBrowser = await launchBrowser();
+    const uiEmail = 'qa-plt10-ui@exemplo.invalid';
+    try {
+      const { context, page } = await openPage(journeyBrowser, '/admin/ti', tiCookie, { width: 1440, height: 900 });
+      const detailPanel = page.locator('section[aria-labelledby="lgpd-detail-title"]');
+      const openDetails = async name => {
+        const summary = page.locator('summary').filter({ hasText: name }).first();
+        const isOpen = await summary.evaluate(element => element.parentElement?.open ?? false);
+        if (!isOpen) await summary.click();
+      };
+      await page.getByRole('button', { name: 'Pedidos LGPD', exact: true }).click();
+      await page.getByText(/QA-PLT10-ALFA/).first().waitFor();
+
+      // POST pelo canal público do titular, dentro da tela.
+      await openDetails('Registrar pedido pelo canal público do titular');
+      await page.getByLabel('Nome do titular').fill('QA PLT10 Titular da Interface');
+      await page.getByLabel('E-mail do titular').fill(uiEmail);
+      await page.getByLabel('Documento do titular').fill('12345678901');
+      await page.getByLabel('Descrição do pedido').fill('QA-PLT10 pedido criado pela interface para conferência.');
+      await page.getByRole('button', { name: 'Criar pedido público' }).click();
+      await page.getByText(/Pedido registrado pelo canal público/).waitFor();
+      await page.getByText(uiEmail).first().waitFor();
+
+      // Erro real do servidor traduzido: descrição curta demais. A releitura
+      // depois do 201 remonta o painel e limpa o formulário, então o <details>
+      // é reaberto e os campos obrigatórios anteriores são preenchidos de novo —
+      // sem eles o servidor responderia `invalid_requester_name` antes.
+      await openDetails('Registrar pedido pelo canal público do titular');
+      await page.getByLabel('Nome do titular').fill('QA PLT10 Titular Inválido');
+      await page.getByLabel('E-mail do titular').fill('qa-plt10-invalido@exemplo.invalid');
+      await page.getByLabel('Descrição do pedido').fill('curta');
+      await page.getByRole('button', { name: 'Criar pedido público' }).click();
+      await page.getByText(/descrição do pedido precisa ter pelo menos 10 caracteres/i).waitFor();
+      assert.equal(await rowOf('qa-plt10-invalido@exemplo.invalid'), undefined, 'o pedido recusado não pode ter sido gravado');
+
+      // Filtro que devolve vazio honesto — diferente de falha.
+      await page.getByLabel('Filtrar por e-mail').fill('qa-plt10-inexistente@exemplo.invalid');
+      await page.getByRole('button', { name: 'Aplicar filtros' }).click();
+      // O estado de leitura fica fora dos painéis: vazio/error/negado substituem
+      // a fila inteira, então só pode existir um UiState de leitura por vez.
+      const emptyState = page.locator('[data-ui-state="empty"]');
+      await emptyState.waitFor();
+      assert.match(await emptyState.innerText(), /Nenhum pedido para esta leitura/);
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0, 'vazio não pode ser apresentado como falha');
+      await page.getByRole('button', { name: 'Limpar filtros' }).click();
+      await page.getByText(uiEmail).first().waitFor();
+
+      // PATCH pela UI: primeira transição permitida pelo servidor.
+      await page.locator('li').filter({ hasText: uiEmail }).first().getByRole('button', { name: 'Abrir detalhe e histórico' }).click();
+      await detailPanel.getByText(/Histórico de transições/).waitFor();
+      await page.getByLabel('Próximo status').selectOption('em_verificacao');
+      await page.getByLabel('Motivo da transição').fill('QA-PLT10 início da verificação de identidade do titular.');
+      await page.getByRole('button', { name: 'Atualizar pedido' }).click();
+      await page.getByText(/Pedido atualizado\./).waitFor();
+      const created = await rowOf(uiEmail);
+      assert.ok(created?.id, 'o pedido criado pela interface precisa estar no banco');
+      assert.equal(created.status, 'em_verificacao');
+
+      // Transição intermediária pela API (mesmo papel) para colocar o pedido em
+      // análise; a prova da UI continua sendo o PATCH final abaixo.
+      const moved = await api(`/api/admin/lgpd/requests/${created.id}`, {
+        method: 'PATCH', cookie: tiCookie,
+        body: { next_status: 'em_analise', reason: 'QA-PLT10 transição intermediária para a prova de identidade.' },
+      });
+      assert.equal(moved.status, 200, `a transição intermediária deveria dar 200, veio ${moved.status}`);
+      await page.getByRole('button', { name: 'Carregar pedidos' }).click();
+      await page.locator('li').filter({ hasText: uiEmail }).first().getByRole('button', { name: 'Abrir detalhe e histórico' }).click();
+      await detailPanel.getByText(/Histórico de transições/).waitFor();
+      await page.getByLabel('Próximo status').selectOption('aprovado');
+      await page.getByLabel('Motivo da transição').fill('QA-PLT10 aprovação sem identidade verificada deve ser recusada.');
+
+      // Regra real do servidor: aprovar sem identidade verificada é recusado.
+      const identityBox = page.getByRole('checkbox', { name: 'identidade verificada' });
+      if (await identityBox.isChecked()) await identityBox.uncheck();
+      await page.getByRole('button', { name: 'Atualizar pedido' }).click();
+      await page.getByText(/identidade do titular precisa estar verificada/i).waitFor();
+      assert.equal((await rowOf(uiEmail)).status, 'em_analise', 'a recusa não pode ter mudado o status');
+
+      // Com a verificação declarada, a mesma transição passa e o histórico cresce.
+      await identityBox.check();
+      await page.getByRole('button', { name: 'Atualizar pedido' }).click();
+      await page.getByText(/Pedido atualizado\./).waitFor();
+      const approved = await rowOf(uiEmail);
+      assert.equal(approved.status, 'aprovado');
+      assert.equal(approved.is_identity_verified, true);
+      const history = await pool.query('SELECT COUNT(*)::int AS total FROM lgpd_request_history WHERE request_id=$1', [approved.id]);
+      assert.ok(history.rows[0].total >= 2, `o histórico precisa registrar as transições: ${history.rows[0].total}`);
+      await detailPanel.getByText(new RegExp(`Histórico de transições \\(${history.rows[0].total}\\)`)).waitFor();
+
+      // Troca para B no banco: A, o registro criado em A e as mensagens antigas
+      // não podem sobreviver à releitura.
+      await seed('BETA');
+      await page.getByRole('button', { name: 'Carregar pedidos' }).click();
+      await page.getByText(/QA-PLT10-BETA/).first().waitFor();
+      const text = await page.locator('body').innerText();
+      assert.doesNotMatch(text, /QA-PLT10-ALFA/, 'o estado A não pode sobrar na leitura de B');
+      assert.doesNotMatch(text, new RegExp(uiEmail, 'i'), 'registro criado em A não pode sobreviver a B');
+      assert.match(text, /QA-PLT10-BETA/);
+      assert.doesNotMatch(text, /Pedido registrado pelo canal público/, 'mensagem antiga não pode sobreviver à releitura');
+      assert.doesNotMatch(text, /Pedido atualizado\./);
+      assert.doesNotMatch(text, /descrição do pedido precisa ter pelo menos 10/);
+      await context.close();
+    } finally {
+      await journeyBrowser.close();
+    }
+
+    // ---------- 503: erro declarado e retry sem recarregar ----------
+    const failureBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(failureBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/admin/lgpd/requests'],
+        status: 503, code: 'lgpd_unavailable',
+        onPage: p => p.addInitScript(() => { window.__qaFetchOriginal = window.fetch.bind(window); }),
+      });
+      await page.getByRole('button', { name: 'Pedidos LGPD', exact: true }).click();
+      const errorState = page.locator('[data-ui-state="error"]');
+      await errorState.waitFor();
+      assert.match(await errorState.innerText(), /Falha na consulta/);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await page.evaluate(() => { window.fetch = window.__qaFetchOriginal; });
+      await errorState.getByRole('button', { name: 'Tentar novamente' }).click();
+      await page.getByText(/QA-PLT10-BETA/).first().waitFor();
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0, 'retry precisa sair do erro');
+      await context.close();
+    } finally {
+      await failureBrowser.close();
+    }
+
+    // ---------- 403: negado distinto de erro e de vazio ----------
+    const deniedBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(deniedBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/admin/lgpd/requests'],
+        status: 403, code: 'lgpd_restricted_admin_ti_rh',
+      });
+      await page.getByRole('button', { name: 'Pedidos LGPD', exact: true }).click();
+      const deniedState = page.locator('[data-ui-state="denied"]');
+      await deniedState.waitFor();
+      assert.match(await deniedState.innerText(), /Acesso não autorizado/);
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await context.close();
+    } finally {
+      await deniedBrowser.close();
+    }
+  } finally {
+    await cleanup();
+    for (const id of staffIds) {
+      await pool.query('DELETE FROM auth_access_audit WHERE actor_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_sessions WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_staff_profiles WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_credentials WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_identities WHERE id=$1', [id]).catch(() => {});
+    }
+  }
+});

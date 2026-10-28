@@ -58,7 +58,7 @@
 "IntegrationLogClient.tsx","196","console","TiConsole","integracoes","5","0","ux-pro-03-ti-integration-logs-ui.test.mjs","ti|admin","com_prova"
 "IntegrationsClient.tsx","76","orfao","","","2","0","","nao_montado","orfao_nao_promovido"
 "LaborBudgetClient.tsx","74","workspace","src/app/admin/comercial/ComercialWorkspace.tsx","","2","0","ux-pro-03-commercial-estimates-ui.test.mjs","herdado do workspace","montado_em_workspace"
-"LgpdRequestClient.tsx","132","orfao","","","3","0","","nao_montado","orfao_nao_promovido"
+"LgpdRequestClient.tsx","516","console","TiConsole","lgpd","3","0","ux-pro-03-ti-lgpd-requests-ui.test.mjs","ti|admin","com_prova"
 "MaintenanceDocClient.tsx","279","console","TiConsole","manutencao","2","0","ux-pro-03-ti-maintenance-docs-ui.test.mjs","ti|admin","com_prova"
 "NotificationPreferencesClient.tsx","125","orfao","","","3","0","","nao_montado","orfao_nao_promovido"
 "NotificationsClient.tsx","268","console","TiConsole","avisos","3","0","ux-pro-03-ti-notifications-ui.test.mjs","ti|admin","com_prova"
