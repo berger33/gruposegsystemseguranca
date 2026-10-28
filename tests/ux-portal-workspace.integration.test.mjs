@@ -6384,3 +6384,288 @@ test('browser UX-PRO-03: PLT-13 Configurações e rollout (papel, A/B, POST/PATC
     }
   }
 });
+
+// ---------------------------------------------------------------------------
+// UX-PRO-03 — 7ª promoção com prova: CLI-05/06/07/08, lado administrativo dos
+// recursos v2 do portal do cliente. Papel admin/ti no servidor (`ensureAuth`),
+// escrita real pela UI, erro traduzido, A/B e retry em Chromium real.
+// Limites provados aqui, não escondidos: RH é negado de propósito (não há
+// autorização por conta enquanto A3 não existir) e o registro de anexo NÃO
+// envia bytes — não há armazenamento de arquivos nesta instalação.
+// ---------------------------------------------------------------------------
+test('browser UX-PRO-03: CLI-05/06/07/08 console do cliente v2 (papel, A/B, POST/PATCH, erro e retry)', { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: 'ti' });
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const staffIds = [ti.id, rh.id];
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const accountA = randomUUID();
+  const accountB = randomUUID();
+
+  const cleanup = async () => {
+    for (const accountId of [accountA, accountB]) {
+      await pool.query(
+        `DELETE FROM cli_tickets_v2 WHERE client_account_id = $1::uuid AND title LIKE 'QA-CLI08%'`,
+        [accountId],
+      ).catch(() => {});
+      await pool.query(
+        `DELETE FROM cli_visits WHERE client_account_id = $1::uuid AND title LIKE 'QA-CLI07%'`,
+        [accountId],
+      ).catch(() => {});
+      await pool.query(
+        `DELETE FROM cli_client_reports_v2 WHERE client_account_id = $1::uuid AND title LIKE 'QA-CLI08%'`,
+        [accountId],
+      ).catch(() => {});
+    }
+    await pool.query('DELETE FROM client_accounts WHERE id = ANY($1::uuid[])', [[accountA, accountB]]).catch(() => {});
+  };
+
+  const seedTicket = async (accountId, label) => {
+    const protocol = `CLI-20261028-${label}`;
+    const inserted = await pool.query(
+      `INSERT INTO cli_tickets_v2 (protocol, client_account_id, category, priority, title, description, status)
+       VALUES ($1,$2::uuid,'atendimento_servico','media',$3,'Chamado sintético do gate CLI-05/06','aberto')
+       ON CONFLICT (protocol) DO UPDATE SET title = EXCLUDED.title
+       RETURNING id`,
+      [protocol, accountId, `QA-CLI08-${label}`],
+    );
+    return inserted.rows[0].id;
+  };
+
+  try {
+    await cleanup();
+    await pool.query(
+      "INSERT INTO client_accounts (id, display_name, created_by) VALUES ($1::uuid, 'QA CLI v2 Conta A', 'ti'), ($2::uuid, 'QA CLI v2 Conta B', 'ti')",
+      [accountA, accountB],
+    );
+    const ticketA = await seedTicket(accountA, 'ALFA');
+    await pool.query(
+      `INSERT INTO cli_visits (protocol, client_account_id, visit_type, title, scheduled_at, status)
+       VALUES ('VIS-CLI-20261028-ALFA',$1::uuid,'visita_tecnica','QA-CLI07 Visita sintetica A', NOW() + INTERVAL '2 days','agendada')`,
+      [accountA],
+    );
+    await pool.query(
+      `INSERT INTO cli_client_reports_v2 (protocol, client_account_id, report_type, title, content, period_start, period_end, status)
+       VALUES ('REP-CLI-20261028-ALFA',$1::uuid,'execucao','QA-CLI08 Relatorio sintetico A',
+               'Conteúdo sintético do gate CLI-08, sem dado real de cliente.', CURRENT_DATE - 7, CURRENT_DATE, 'rascunho')`,
+      [accountA],
+    );
+
+    // ---------- autorização decidida no SERVIDOR ----------
+    for (const pathname of [
+      '/api/cli/tickets-v2',
+      '/api/cli/visits',
+      '/api/cli/reports-v2',
+      `/api/cli/ticket-messages?ticket_id=${ticketA}`,
+      `/api/cli/ticket-history?ticket_id=${ticketA}`,
+    ]) {
+      const denied = await api(pathname, { cookie: rhCookie });
+      assert.equal(denied.status, 403, `rh não pode consultar ${pathname}: veio ${denied.status}`);
+      const allowed = await api(pathname, { cookie: tiCookie });
+      assert.equal(allowed.status, 200, `ti precisa consultar ${pathname}: veio ${allowed.status}`);
+    }
+    const anonymous = await api('/api/cli/tickets-v2');
+    assert.equal(anonymous.status, 401, 'sem sessão a rota v2 precisa responder 401');
+
+    // ---------- estado A: quatro larguras, teclado, aviso, sem transbordo ----------
+    const readings = [];
+    for (const [width, height] of [[320, 844], [390, 844], [768, 900], [1440, 900]]) {
+      const browser = await launchBrowser();
+      try {
+        const { context, page } = await openPage(browser, '/admin/ti', tiCookie, { width, height });
+        const tab = page.getByRole('button', { name: 'Portal do cliente v2', exact: true });
+        await tab.waitFor();
+        await tab.focus();
+        const focused = await page.evaluate(() => document.activeElement?.textContent?.trim() || '');
+        assert.match(focused, /Portal do cliente v2/, `a aba precisa receber foco em ${width}`);
+        await page.keyboard.press('Enter');
+        await page.getByRole('heading', { name: 'Chamados, visitas e relatórios do cliente' }).waitFor();
+        await page.getByText(/Fonte: tabelas/).waitFor();
+        await page.getByText(/QA-CLI08-ALFA/).first().waitFor();
+        const text = await page.locator('body').innerText();
+        assert.match(text, /QA-CLI07 Visita sintetica A/);
+        assert.match(text, /QA-CLI08 Relatorio sintetico A/);
+        assert.match(text, /nenhum byte é enviado/i, 'o limite de armazenamento precisa estar visível');
+        assert.match(text, /A3/);
+        assert.match(text, /NO-GO/);
+        assert.match(text, /Fonte: tabelas/);
+        // Isolamento por conta NÃO existe em v2: a leitura é global e isso é
+        // declarado na tela. O cenário B é criado depois desta leitura.
+        assert.doesNotMatch(text, /QA-CLI08-BETA/, 'B não pode existir na leitura de A');
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(overflow <= 1, `CLI v2 overflow ${overflow} em ${width}`);
+        readings.push({ width, overflow });
+        await context.close();
+      } finally {
+        await browser.close();
+      }
+    }
+    assert.deepEqual(readings.map(item => item.width), [320, 390, 768, 1440]);
+
+    // ---------- escrita real pela UI + erro traduzido + troca de estado ----------
+    const journeyBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(journeyBrowser, '/admin/ti', tiCookie, { width: 1440, height: 900 });
+      const openDetails = async name => {
+        const summary = page.locator('summary').filter({ hasText: name }).first();
+        const isOpen = await summary.evaluate(element => element.parentElement?.open ?? false);
+        if (!isOpen) await summary.click();
+      };
+      // Espera a releitura terminar: interagir antes de `aria-busy=false`
+      // reabria formulários com a lista antiga (defeito já visto no PLT-13).
+      const settle = () => page.waitForFunction(() =>
+        Array.from(document.querySelectorAll('section[aria-busy]'))
+          .every(element => element.getAttribute('aria-busy') === 'false'));
+      await page.getByRole('button', { name: 'Portal do cliente v2', exact: true }).click();
+      await page.getByText(/QA-CLI08-ALFA/).first().waitFor();
+
+      // CLI-05: POST de chamado.
+      await openDetails('Registrar chamado');
+      await page.getByLabel('Conta do cliente (UUID)', { exact: true }).nth(0).fill(accountA);
+      await page.getByLabel('Título', { exact: true }).nth(0).fill('QA-CLI08 Chamado criado pela interface');
+      await page.getByLabel('Descrição', { exact: true }).nth(0).fill('Descrição sintética criada no gate, sem dado real.');
+      await page.getByRole('button', { name: 'Registrar chamado' }).click();
+      await page.getByText(/Chamado registrado com protocolo/).waitFor();
+      await settle();
+      await page.getByText(/QA-CLI08 Chamado criado pela interface/).first().waitFor();
+
+      // CLI-06: PATCH de estado com motivo + histórico.
+      const ticketCard = page.locator('li').filter({ hasText: 'QA-CLI08 Chamado criado pela interface' }).first();
+      await ticketCard.getByRole('button', { name: 'Usar este chamado nos formulários' }).click();
+      await openDetails('Alterar estado, responsável e reabertura');
+      await page.getByLabel('Novo estado', { exact: true }).selectOption('em_atendimento');
+      await page.getByLabel('Motivo da transição', { exact: true }).fill('Triagem inicial do gate CLI-06');
+      await page.getByRole('button', { name: 'Atualizar estado do chamado' }).click();
+      await page.getByText(/Estado do chamado atualizado/).waitFor();
+      await settle();
+
+      // CLI-05: detalhe do chamado (mensagens/anexos/histórico/SLA) e mensagem.
+      const ticketCard2 = page.locator('li').filter({ hasText: 'QA-CLI08 Chamado criado pela interface' }).first();
+      await ticketCard2.getByRole('button', { name: 'Abrir mensagens, anexos, SLA e histórico' }).click();
+      await page.getByRole('heading', { name: /Detalhe do chamado/ }).waitFor();
+      await page.getByText(/Histórico de estados/).waitFor();
+      await openDetails('Mensagem no chamado');
+      await page.getByLabel('Mensagem', { exact: true }).fill('Mensagem sintética do gate CLI-05.');
+      await page.getByRole('button', { name: 'Registrar mensagem' }).click();
+      await page.getByText(/Mensagem registrada no chamado/).waitFor();
+      await settle();
+      await page.getByText(/Mensagem sintética do gate CLI-05/).first().waitFor();
+
+      // Anexo: registra METADADO e a tela precisa negar que houve upload.
+      await openDetails('Metadado de anexo');
+      await page.getByLabel('Nome do arquivo', { exact: true }).fill('qa-cli05-sintetico.pdf');
+      await page.getByLabel('Referência do arquivo', { exact: true }).fill('referencia-qa-cli05-sintetica');
+      await page.getByLabel('Chave de armazenamento', { exact: true }).fill(`qa-cli05-${randomUUID().slice(0, 8)}`);
+      await page.getByRole('button', { name: 'Registrar metadado de anexo' }).click();
+      await page.getByText(/Nenhum byte foi enviado/).waitFor();
+      await settle();
+
+      // CLI-07: agendar visita e reagendar com motivo.
+      await openDetails('Agendar visita');
+      await page.getByLabel('Conta do cliente (UUID)', { exact: true }).nth(1).fill(accountA);
+      await page.getByLabel('Título', { exact: true }).nth(1).fill('QA-CLI07 Visita criada pela interface');
+      await page.getByLabel('Data e hora', { exact: true }).fill('2026-11-05T09:30');
+      await page.getByRole('button', { name: 'Agendar visita' }).click();
+      await page.getByText(/Visita agendada com protocolo VIS-CLI/).waitFor();
+      await settle();
+      await page.getByText(/QA-CLI07 Visita criada pela interface/).first().waitFor();
+      const visitCard = page.locator('li').filter({ hasText: 'QA-CLI07 Visita criada pela interface' }).first();
+      await visitCard.getByRole('button', { name: 'Usar esta visita para confirmar/reagendar' }).click();
+      await openDetails('Confirmar, reagendar ou encerrar visita');
+      await page.getByLabel('Novo estado', { exact: true }).nth(1).selectOption('reagendada');
+      await page.getByLabel('Nova data e hora', { exact: true }).fill('2026-11-08T14:00');
+      await page.getByLabel('Motivo do reagendamento', { exact: true }).fill('Reagendamento sintético por indisponibilidade do cliente');
+      await page.getByRole('button', { name: 'Atualizar visita' }).click();
+      await page.getByText(/Visita atualizada para reagendada/).waitFor();
+      await settle();
+
+      // CLI-08: criar relatório, revisar e provar que aprovar sem revisão falha.
+      await openDetails('Criar relatório');
+      await page.getByLabel('Conta do cliente (UUID)', { exact: true }).nth(2).fill(accountA);
+      await page.getByLabel('Título', { exact: true }).nth(2).fill('QA-CLI08 Relatorio criado pela interface');
+      await page.getByLabel('Conteúdo', { exact: true }).fill('Conteúdo sintético do relatório criado no gate CLI-08, sem dado real.');
+      await page.getByRole('button', { name: 'Criar relatório' }).click();
+      await page.getByText(/Relatório criado como rascunho/).waitFor();
+      await settle();
+      const reportCard = page.locator('li').filter({ hasText: 'QA-CLI08 Relatorio criado pela interface' }).first();
+      await reportCard.getByRole('button', { name: 'Usar este relatório na revisão' }).click();
+      await openDetails('Revisar, aprovar, rejeitar ou marcar como enviado');
+      // Regra real do servidor: aprovar sem revisão é recusado e traduzido.
+      await page.getByLabel('Novo estado', { exact: true }).nth(2).selectOption('aprovado');
+      await page.getByRole('button', { name: 'Atualizar relatório' }).click();
+      await page.getByText(/precisa passar por revisão antes da aprovação/).waitFor();
+      assert.equal(await page.getByText(/Relatório atualizado para aprovado/).count(), 0,
+        'o relatório recusado pelo servidor não pode aparecer como aprovado');
+      // Caminho correto: revisão com notas, depois aprovação.
+      await page.getByLabel('Novo estado', { exact: true }).nth(2).selectOption('em_revisao');
+      await page.getByLabel('Notas de revisão', { exact: true }).fill('Revisão sintética do gate CLI-08 sem dado real');
+      await page.getByRole('button', { name: 'Atualizar relatório' }).click();
+      await page.getByText(/Relatório atualizado para em_revisao/).waitFor();
+      await settle();
+
+      // Troca para B no banco: A e mensagens antigas não podem sobrar.
+      await seedTicket(accountB, 'BETA');
+      await page.getByRole('button', { name: 'Atualizar leitura' }).click();
+      await page.getByText(/QA-CLI08-BETA/).first().waitFor();
+      await settle();
+      const afterSwitch = await page.locator('body').innerText();
+      assert.match(afterSwitch, /QA-CLI08-BETA/);
+      assert.doesNotMatch(afterSwitch, /Relatório atualizado para em_revisao/,
+        'mensagem antiga não pode sobreviver à releitura');
+      await context.close();
+    } finally {
+      await journeyBrowser.close();
+    }
+
+    // ---------- 503: erro declarado e retry sem recarregar ----------
+    const failureBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(failureBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/cli/visits'],
+        status: 503, code: 'qa_forced_failure',
+        onPage: p => p.addInitScript(() => { window.__qaFetchOriginal = window.fetch.bind(window); }),
+      });
+      await page.getByRole('button', { name: 'Portal do cliente v2', exact: true }).click();
+      const errorState = page.locator('[data-ui-state="error"]');
+      await errorState.waitFor();
+      assert.match(await errorState.innerText(), /Falha na consulta/);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await page.evaluate(() => { window.__qaFetchOriginal && (window.fetch = window.__qaFetchOriginal); });
+      await errorState.getByRole('button', { name: 'Tentar novamente' }).click();
+      await page.getByText(/QA-CLI08-BETA/).first().waitFor();
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0, 'retry precisa sair do erro');
+      await context.close();
+    } finally {
+      await failureBrowser.close();
+    }
+
+    // ---------- 403: negado distinto de erro e de vazio ----------
+    const deniedBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(deniedBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/cli/reports-v2'],
+        status: 403, code: 'forbidden',
+      });
+      await page.getByRole('button', { name: 'Portal do cliente v2', exact: true }).click();
+      const deniedState = page.locator('[data-ui-state="denied"]');
+      await deniedState.waitFor();
+      assert.match(await deniedState.innerText(), /Acesso não autorizado/);
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await context.close();
+    } finally {
+      await deniedBrowser.close();
+    }
+  } finally {
+    await cleanup();
+    for (const id of staffIds) {
+      await pool.query('DELETE FROM auth_access_audit WHERE actor_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_sessions WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_staff_profiles WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_credentials WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_identities WHERE id=$1', [id]).catch(() => {});
+    }
+  }
+});

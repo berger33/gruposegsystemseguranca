@@ -66,7 +66,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1600,
+    "arquivosVarridos": 1603,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -619,7 +619,7 @@
         "src/server/pub-faq-assisted-api.mjs"
       ],
       "ocorrencias_gate": 0,
-      "ocorrencias_documento": 306,
+      "ocorrencias_documento": 307,
       "ocorrencias_codigo": 11,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -813,7 +813,7 @@
         "src/server/seo-technical-api.mjs"
       ],
       "ocorrencias_gate": 12,
-      "ocorrencias_documento": 22,
+      "ocorrencias_documento": 24,
       "ocorrencias_codigo": 9,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -877,7 +877,7 @@
         "src/server/crm-api.mjs"
       ],
       "ocorrencias_gate": 3,
-      "ocorrencias_documento": 43,
+      "ocorrencias_documento": 45,
       "ocorrencias_codigo": 5,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -3787,7 +3787,7 @@
         "src/server/cli-api.mjs"
       ],
       "ocorrencias_gate": 7,
-      "ocorrencias_documento": 17,
+      "ocorrencias_documento": 19,
       "ocorrencias_codigo": 4,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -3824,7 +3824,7 @@
         "src/server/cli-api.mjs"
       ],
       "ocorrencias_gate": 10,
-      "ocorrencias_documento": 17,
+      "ocorrencias_documento": 18,
       "ocorrencias_codigo": 5,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -3874,7 +3874,10 @@
       "classe_evidencia_atual": "mencionado_em_gate",
       "arquivos_gate_nomeados": [],
       "arquivos_gate": [
-        "tests/client-space.integration.test.mjs"
+        "tests/client-space.integration.test.mjs",
+        "tests/ux-portal-workspace.integration.test.mjs",
+        "tests/ux-pro-03-ti-cli-v2-ui.test.mjs",
+        "tests/ux-pro-03-ti-reaudit.test.mjs"
       ],
       "arquivos_documento": [
         "docs/AUDITORIA-TERRENO-L08.md",
@@ -3887,11 +3890,12 @@
         "docs/ENTREGA-L08-RELATORIO-2026-10-03-RECONCILIACAO-PR83.md"
       ],
       "arquivos_codigo": [
+        "scripts/ux-pro-03-ti-inventory.mjs",
         "src/app/admin/ti/CliAdvancedClient.tsx",
         "src/server/cli-advanced-api.mjs"
       ],
-      "ocorrencias_gate": 1,
-      "ocorrencias_documento": 16,
+      "ocorrencias_gate": 15,
+      "ocorrencias_documento": 22,
       "ocorrencias_codigo": 4,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -3906,7 +3910,8 @@
       "classe_evidencia_atual": "mencionado_em_gate",
       "arquivos_gate_nomeados": [],
       "arquivos_gate": [
-        "tests/client-space.integration.test.mjs"
+        "tests/client-space.integration.test.mjs",
+        "tests/ux-portal-workspace.integration.test.mjs"
       ],
       "arquivos_documento": [
         "docs/AUDITORIA-TERRENO-L08.md",
@@ -3923,8 +3928,8 @@
         "src/app/admin/ti/CliAdvancedClient.tsx",
         "src/server/cli-advanced-api.mjs"
       ],
-      "ocorrencias_gate": 2,
-      "ocorrencias_documento": 50,
+      "ocorrencias_gate": 4,
+      "ocorrencias_documento": 51,
       "ocorrencias_codigo": 4,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -3939,7 +3944,8 @@
       "classe_evidencia_atual": "mencionado_em_gate",
       "arquivos_gate_nomeados": [],
       "arquivos_gate": [
-        "tests/client-space.integration.test.mjs"
+        "tests/client-space.integration.test.mjs",
+        "tests/ux-portal-workspace.integration.test.mjs"
       ],
       "arquivos_documento": [
         "docs/AUDITORIA-TERRENO-L08.md",
@@ -3956,9 +3962,9 @@
         "src/app/admin/ti/CliAdvancedClient.tsx",
         "src/server/cli-advanced-api.mjs"
       ],
-      "ocorrencias_gate": 2,
+      "ocorrencias_gate": 3,
       "ocorrencias_documento": 8,
-      "ocorrencias_codigo": 4,
+      "ocorrencias_codigo": 3,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -3972,7 +3978,8 @@
       "classe_evidencia_atual": "mencionado_em_gate",
       "arquivos_gate_nomeados": [],
       "arquivos_gate": [
-        "tests/client-space.integration.test.mjs"
+        "tests/client-space.integration.test.mjs",
+        "tests/ux-portal-workspace.integration.test.mjs"
       ],
       "arquivos_documento": [
         "docs/AUDITORIA-TERRENO-L08.md",
@@ -3989,9 +3996,9 @@
         "src/app/admin/ti/CliAdvancedClient.tsx",
         "src/server/cli-advanced-api.mjs"
       ],
-      "ocorrencias_gate": 2,
+      "ocorrencias_gate": 6,
       "ocorrencias_documento": 8,
-      "ocorrencias_codigo": 4,
+      "ocorrencias_codigo": 3,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -5646,15 +5653,15 @@
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
         "docs/UX-PRO-03-PROMOCAO-AMBIENTES-2026-10-27.md",
-        "docs/UX-PRO-03-PROMOCAO-CONFIGURACOES-ROLLOUT-2026-10-27.md",
-        "docs/UX-PRO-03-PROMOCAO-DEPENDENCIAS-2026-10-27.md"
+        "docs/UX-PRO-03-PROMOCAO-CLIENTE-V2-2026-10-28.md",
+        "docs/UX-PRO-03-PROMOCAO-CONFIGURACOES-ROLLOUT-2026-10-27.md"
       ],
       "arquivos_codigo": [
         "src/app/admin/ti/IntegrationsClient.tsx",
         "src/server/integrations-api.mjs"
       ],
       "ocorrencias_gate": 0,
-      "ocorrencias_documento": 15,
+      "ocorrencias_documento": 16,
       "ocorrencias_codigo": 2,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -5703,6 +5710,7 @@
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
+        "docs/UX-PRO-03-PROMOCAO-CLIENTE-V2-2026-10-28.md",
         "docs/auditoria-2026-10-04/AUDITORIA.md"
       ],
       "arquivos_codigo": [
@@ -5710,7 +5718,7 @@
         "src/server/notification-preferences-api.mjs"
       ],
       "ocorrencias_gate": 0,
-      "ocorrencias_documento": 6,
+      "ocorrencias_documento": 7,
       "ocorrencias_codigo": 5,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -5941,7 +5949,7 @@
         "src/app/admin/ti/ConfigClient.module.css",
         "src/app/admin/ti/ConfigClient.tsx"
       ],
-      "ocorrencias_gate": 9,
+      "ocorrencias_gate": 10,
       "ocorrencias_documento": 10,
       "ocorrencias_codigo": 4,
       "aceite_humano": "nao_registrado",
