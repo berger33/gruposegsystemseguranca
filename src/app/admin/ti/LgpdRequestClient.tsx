@@ -252,7 +252,8 @@ export default function LgpdRequestClient() {
       setDetail({ request, history: Array.isArray(data.history) ? data.history as HistoryEntry[] : [] });
       setUpdateForm(previous => ({
         ...previous,
-        next_status: (TRANSITIONS[request.status] ?? [])[0] ?? request.status,
+        // Padrão: manter o status atual. Transicionar é escolha consciente.
+        next_status: request.status,
         is_identity_verified: request.is_identity_verified,
         impediment_documented: request.impediment_documented,
         responsible_name: request.responsible_name ?? "",
@@ -467,9 +468,9 @@ export default function LgpdRequestClient() {
               </details>
               <details className={styles.subsection}><summary>Registro canônico do pedido (JSON)</summary><pre className={styles.pre}>{JSON.stringify(detail.request, null, 2)}</pre></details>
               <div className={styles.formGrid}>
-                <Field label="Próximo status" help={allowedNext.length ? `Permitido pelo servidor a partir de ${detail.request.status}. Deixe no status atual para atualizar sem transicionar.` : "Este status é final: o servidor não permite nova transição; atualize os demais campos sem mudar o status."}>
+                <Field label="Próximo status" help={allowedNext.length ? `Manter ${detail.request.status} atualiza sem transicionar; as demais opções são as transições que o servidor permite a partir daqui.` : "Este status é final: o servidor não permite nova transição; atualize os demais campos sem mudar o status."}>
                   <select value={updateForm.next_status} onChange={event => setUpdateForm({ ...updateForm, next_status: event.target.value })}>
-                    {(allowedNext.length ? allowedNext : [detail.request.status]).map(status => <option key={status} value={status}>{status}</option>)}
+                    {[detail.request.status, ...allowedNext].map(status => <option key={status} value={status}>{status === detail.request.status ? `${status} (manter)` : status}</option>)}
                   </select>
                 </Field>
                 <Field label="Método de verificação"><select value={updateForm.verification_method} onChange={event => setUpdateForm({ ...updateForm, verification_method: event.target.value })}>

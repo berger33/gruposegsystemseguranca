@@ -6594,6 +6594,18 @@ test('browser UX-PRO-03: PLT-10 Pedidos LGPD (papel, A/B, POST/PATCH, verificaç
       assert.ok(history.rows[0].total >= 2, `o histórico precisa registrar as transições: ${history.rows[0].total}`);
       await detailPanel.getByText(new RegExp(`Histórico de transições \\(${history.rows[0].total}\\)`)).waitFor();
 
+      // Atualizar sem transicionar: manter o status não pode esbarrar em
+      // `invalid_transition` nem impedir registrar responsável e resposta.
+      await page.getByLabel('Próximo status').selectOption('aprovado');
+      await page.getByLabel('Responsável pelo pedido').fill('QA PLT10 Responsável Final');
+      await page.getByLabel('Resposta ao titular').fill('QA-PLT10 resposta registrada sem transição de status.');
+      await page.getByRole('button', { name: 'Atualizar pedido' }).click();
+      await page.getByText(/Pedido atualizado\./).waitFor();
+      const responded = await rowOf(uiEmail);
+      assert.equal(responded.status, 'aprovado', 'manter o status não pode transicionar o pedido');
+      assert.equal(responded.responsible_name, 'QA PLT10 Responsável Final');
+      assert.match(responded.response || '', /QA-PLT10 resposta registrada sem transição/);
+
       // Troca para B no banco: A, o registro criado em A e as mensagens antigas
       // não podem sobreviver à releitura.
       await seed('BETA');

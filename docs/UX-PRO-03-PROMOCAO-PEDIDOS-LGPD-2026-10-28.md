@@ -60,10 +60,10 @@ usado em `/privacidade`" — **falso**: `/privacidade` não tem formulário nem
   pedido mais recente, prazo mais próximo, contagens de abertos/verificados/
   vencidos), drill-down ao **JSON canônico** e ao **histórico de transições**;
 - transições oferecidas só entre as permitidas pela máquina de estados (espelho
-  informativo — quem decide é o servidor); em status final o seletor mostra
-  apenas o status atual e o `next_status` **não é enviado** — assim é possível
-  registrar responsável, impedimento ou resposta sem forçar uma transição que o
-  servidor recusaria com `invalid_transition`;
+  informativo — quem decide é o servidor), com a opção **`<status> (manter)`**
+  como padrão: `next_status` só é enviado quando difere do status atual, então
+  registrar responsável, impedimento ou resposta nunca esbarra em
+  `invalid_transition`;
 - CSS module com tokens compartilhados, breakpoints 900/650 px e
   `:focus-visible`, sem hex inline nem diálogos nativos (`alert`/`prompt`/
   `confirm` retirados do fluxo);
@@ -105,6 +105,7 @@ cluster PostgreSQL 17 descartável + Chromium real, com contas `ti`, `rh` e
 | PATCH pela UI (E17) | **200** — `recebido → em_verificacao` com motivo gravado no histórico |
 | Regra real do servidor | aprovar sem identidade verificada → **400** `identity_verification_required` traduzido, status **inalterado** no banco |
 | Mesma transição com verificação | **200** → `aprovado`, `is_identity_verified=true`, histórico com ≥ 2 transições conferido na tela |
+| Atualizar **sem** transicionar | manter `aprovado` + responsável + resposta → **200**, status **inalterado** no banco (não há `invalid_transition`) |
 | Troca A → B no banco | `QA-PLT10-ALFA` → `QA-PLT10-BETA`: o estado A, o registro criado em A e as mensagens antigas **não sobrevivem** à releitura |
 | 503 injetado | `UiState` de erro + retry que sai do erro sem recarregar a página |
 | 403 injetado | `UiState` negado, distinto de erro e de vazio |
