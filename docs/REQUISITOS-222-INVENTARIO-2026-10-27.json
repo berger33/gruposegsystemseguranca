@@ -35,9 +35,9 @@
       "entregue": 7
     },
     "porClasseEvidencia": {
-      "mencionado_em_gate": 114,
+      "mencionado_em_gate": 113,
       "somente_documento": 86,
-      "gate_nomeado": 22
+      "gate_nomeado": 23
     },
     "aRevalidarDeclarado": 46,
     "aRevalidarSemGate": 21,
@@ -66,7 +66,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1598,
+    "arquivosVarridos": 1600,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -3799,29 +3799,33 @@
       "estado_declarado_0410": "a_revalidar",
       "estado_confirmado_0410": "a_revalidar",
       "pendencia_0410": "Falta gate cliente para itens/vigência e bloqueio de conteúdo interno.",
-      "classe_evidencia_atual": "mencionado_em_gate",
-      "arquivos_gate_nomeados": [],
+      "classe_evidencia_atual": "gate_nomeado",
+      "arquivos_gate_nomeados": [
+        "tests/cli03-contract-published-details-ui.test.mjs"
+      ],
       "arquivos_gate": [
+        "tests/cli03-contract-published-details-ui.test.mjs",
         "tests/client-space.integration.test.mjs"
       ],
       "arquivos_documento": [
         "docs/AUDITORIA-TERRENO-L08.md",
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CLI-03-ANALISE-LACUNAS-2026-10-28.md",
+        "docs/CLI-03-UI-DETALHE-PUBLICADO-2026-10-28.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/ENTREGA-L08-RELATORIO-2026-10-02.md",
         "docs/ENTREGA-L08-RELATORIO-2026-10-03-CLI12-RENOVACAO.md",
-        "docs/ENTREGA-L08.md",
-        "docs/PLANO-MESTRE-IMPLEMENTACAO.md"
+        "docs/ENTREGA-L08.md"
       ],
       "arquivos_codigo": [
         "scripts/qa-l08-delivery-postgres.mjs",
         "src/app/admin/ti/CliClient.tsx",
+        "src/app/cliente/app/contratos/page.tsx",
         "src/server/cli-api.mjs"
       ],
-      "ocorrencias_gate": 1,
-      "ocorrencias_documento": 13,
-      "ocorrencias_codigo": 4,
+      "ocorrencias_gate": 10,
+      "ocorrencias_documento": 17,
+      "ocorrencias_codigo": 5,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
