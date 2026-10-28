@@ -47,7 +47,7 @@
 ### SEC-01 — Inventariar rotas, APIs, tabelas, jobs, permissões e documentação
 - ✅ `scripts/ux-pro-00-inventory.mjs:515` — inventário de rotas com modo de verificação
   `if (process.argv.includes('--check')) {`
-- ✅ `scripts/requisitos-222-inventory.mjs:206` — inventário de 222 requisitos com classe de evidência
+- ✅ `scripts/requisitos-222-inventory.mjs:207` — inventário de 222 requisitos com classe de evidência
   `porClasseEvidencia: countBy('classe_evidencia_atual'),`
 
 ### SEC-02 — Corrigir verificações de escopo para negar por padrão em qualquer erro
