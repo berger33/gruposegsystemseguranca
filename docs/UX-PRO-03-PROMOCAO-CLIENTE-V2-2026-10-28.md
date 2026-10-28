@@ -181,6 +181,7 @@ despachado de forma diferente. Os 39 órfãos restantes continuam sem rota.
 | `ux-pro-00-inventory.mjs --check` | **101 rotas** |
 | `requisitos-222-inventory.mjs --check` | regenerado nesta fatia: **1603 arquivos varridos**, 222 IDs, **21 `a_revalidar` sem gate** (inalterado); CLI-05..08 ganharam `arquivos_codigo` com o componente e `arquivos_gate` com o teste focal |
 | `requisitos-sec-reaudit.mjs --check` | **35/35 âncoras** |
+| `npm run test:ux-portal:pg` com `UX_PORTAL_TEST_PATTERN='CLI-05/06/07/08 console'` | **executado 2×**: 001–181 aplicadas no cluster descartável; a metade HTTP passa (o teste chega ao 1º `launchBrowser` da linha 6473), o cenário **para em `launchChromiumOnce`** (linha 111) com `libnspr4.so: cannot open shared object file` — **0/1**, bloqueio de SO, não de asserção |
 | `git diff --check` | limpo |
 
 ## 6. Limitações honestas
