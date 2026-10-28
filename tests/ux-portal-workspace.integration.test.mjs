@@ -6531,7 +6531,15 @@ test('browser UX-PRO-03: CLI-05/06/07/08 console do cliente v2 (papel, A/B, POST
       await ticketsPanel().getByLabel('Conta do cliente (UUID)', { exact: true }).fill(accountA);
       await ticketsPanel().getByLabel('Título', { exact: true }).fill('QA-CLI08 Chamado criado pela interface');
       await ticketsPanel().getByLabel('Descrição', { exact: true }).fill('Descrição sintética criada no gate, sem dado real.');
-      await page.getByRole('button', { name: 'Registrar chamado' }).click();
+      // O id nasce no POST; capturá-lo evita adivinhar qual cartão da lista foi
+      // vinculado aos formulários depois da releitura.
+      const [createTicketResponse] = await Promise.all([
+        page.waitForResponse(response => response.request().method() === 'POST'
+          && new URL(response.url()).pathname === '/api/cli/tickets-v2'),
+        page.getByRole('button', { name: 'Registrar chamado' }).click(),
+      ]);
+      assert.equal(createTicketResponse.status(), 201, 'o POST do chamado precisa ser 201');
+      const createdTicketId = (await createTicketResponse.json()).ticket.id;
       await page.getByText(/Chamado registrado com protocolo/).waitFor();
       await settle();
       await page.getByText(/QA-CLI08 Chamado criado pela interface/).first().waitFor();
@@ -6539,11 +6547,30 @@ test('browser UX-PRO-03: CLI-05/06/07/08 console do cliente v2 (papel, A/B, POST
       // CLI-06: PATCH de estado com motivo + histórico.
       const ticketCard = page.locator('li').filter({ hasText: 'QA-CLI08 Chamado criado pela interface' }).first();
       await ticketCard.getByRole('button', { name: 'Usar este chamado nos formulários' }).click();
+      assert.equal(
+        await ticketsPanel().getByLabel('Chamado', { exact: true }).first().inputValue(),
+        createdTicketId,
+        'o botão do cartão precisa vincular o chamado criado aos formulários',
+      );
       await openDetails('Alterar estado, responsável e reabertura');
       await ticketsPanel().getByLabel('Novo estado', { exact: true }).selectOption('em_atendimento');
       await ticketsPanel().getByLabel('Motivo da transição', { exact: true }).fill('Triagem inicial do gate CLI-06');
-      await page.getByRole('button', { name: 'Atualizar estado do chamado' }).click();
-      await page.getByText(/Estado do chamado atualizado/).waitFor();
+      // A resposta HTTP é medida junto com o clique: sem isso, uma recusa do
+      // servidor aparece como "mensagem de sucesso não chegou" e esconde a causa.
+      const [statusPatch] = await Promise.all([
+        page.waitForResponse(response => response.request().method() === 'PATCH'
+          && new URL(response.url()).pathname === '/api/cli/tickets-v2'),
+        page.getByRole('button', { name: 'Atualizar estado do chamado' }).click(),
+      ]);
+      const statusPatchBody = await statusPatch.text().catch(() => '');
+      assert.equal(statusPatch.status(), 200, `PATCH do chamado precisa ser 200; corpo: ${statusPatchBody}`);
+      await page.getByText(/Estado do chamado atualizado/).waitFor({
+        timeout: 15_000,
+      }).catch(async error => {
+        const alert = await page.locator('[role="alert"]').first().innerText().catch(() => '(sem alerta)');
+        const failedRead = await page.locator('[data-ui-state="error"]').first().innerText().catch(() => '(sem erro de leitura)');
+        throw new Error(`${error.message}\nalerta: ${alert}\nleitura: ${failedRead}\nPATCH: ${statusPatchBody}`);
+      });
       await settle();
 
       // CLI-05: detalhe do chamado (mensagens/anexos/histórico/SLA) e mensagem.
