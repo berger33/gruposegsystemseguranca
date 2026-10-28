@@ -181,3 +181,18 @@ test('UX-PRO-03 CLI-05/06/07/08: o PATCH de status tipa os literais do enum', ()
   assert.doesNotMatch(api, /CASE WHEN \$2='(resolvido|encerrado)' THEN/,
     'comparar o parâmetro com literal sem tipo volta a derrubar o PATCH em 500');
 });
+
+// Achado do gate (28/10): registrar mensagem, anexo ou ação de SLA recarrega o
+// detalhe do chamado, e o reload chamava `openTicket` com a limpeza de avisos
+// ligada — o aviso de sucesso piscava e desaparecia (o operador ficava sem
+// confirmação). O reload do detalhe, quando vem de uma mutação, preserva o
+// aviso; o botão "Tentar novamente" continua limpando.
+test('UX-PRO-03 CLI-05/06/07/08: atualizar o detalhe não apaga o aviso de sucesso', () => {
+  assert.match(component, /const openTicket = useCallback\(async \(ticketId: string, clearFeedback = true\)/);
+  assert.match(component, /if \(clearFeedback\) \{ setMessage\(""\); setOperationError\(""\); \}/);
+  const silentReloads = component.match(/openTicket\(openTicketId, false\)/g) || [];
+  assert.equal(silentReloads.length, 3,
+    'mensagem, anexo e SLA precisam recarregar o detalhe sem limpar o aviso');
+  // O retry explícito do operador continua limpando o feedback.
+  assert.match(component, /onRetry=\{\(\) => openTicket\(openTicketId\)\}/);
+});

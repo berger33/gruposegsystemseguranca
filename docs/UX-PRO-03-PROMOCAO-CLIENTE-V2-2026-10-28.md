@@ -199,6 +199,20 @@ A sonda foi um script temporário, **não versionado**; o que ficou no repositó
 é o 9º bloco focal (guarda do tipo do enum) e o cenário de navegador, que agora
 também exerce a **pausa de SLA** — as **nove** escritas passam a ter cenário.
 
+### 2.7. Sexto achado: o aviso de sucesso era apagado pelo próprio reload
+
+Na sequência, o gate esperou 45 s por `Mensagem registrada no chamado.` e não
+achou. O servidor respondia **201** (medido na sonda do §2.6); o defeito era de
+ordem no cliente: `createMessage`, `createAttachment` e `slaAction` recarregam o
+detalhe do chamado depois de gravar, e esse reload chamava `openTicket`, que
+começa com `setMessage("")`. O aviso aparecia e era apagado no mesmo ciclo —
+o operador registrava a mensagem e **não recebia confirmação nenhuma**.
+
+Correção: `openTicket(ticketId, clearFeedback = true)`; o reload vindo de
+mutação passa `false` e preserva o aviso. O botão *Tentar novamente* do detalhe
+continua limpando o feedback. O 10º bloco focal exige os dois comportamentos
+(três reloads silenciosos e o retry que limpa).
+
 ## 3. O que mudou (aditivo)
 
 - **`src/app/admin/ti/CliAdvancedClient.tsx`** — reescrito. O protótipo tinha hex
@@ -252,6 +266,7 @@ despachado de forma diferente. Os 39 órfãos restantes continuam sem rota.
 | Drill-down ao registro canônico | `<details>` com JSON integral de chamado, anexo, visita e relatório + históricos |
 | Erro de leitura com retry + subteste no gate | `503` → `data-ui-state="error"`; retry → volta à leitura; `403` → `denied` distinto de `error` e de `empty` |
 | Alias que não mata o papel dono | 5º bloco focal: a tela só pode usar `/api/cli/*`; RED provado devolvendo dois endpoints para `/api/hr/` (0 esperado → 2 falhas), GREEN 5/5 depois |
+| Aviso sobrevive ao reload do detalhe | 10º bloco focal: `openTicket(id, false)` nas três mutações que recarregam o detalhe; o retry explícito segue limpando |
 | PATCH de status vivo | 9º bloco focal: os literais do `CASE` precisam do tipo `cli_ticket_status`; a prova comportamental é a sonda contra PostgreSQL descartável (tabela do §2.6) e o cenário de navegador |
 | Escopo por região, sem `nth` | 8º bloco focal: os três painéis precisam seguir como regiões nomeadas (`aria-labelledby` + `<h3 id>`); o cenário do gate usa essa estrutura em vez de índice de montagem |
 | Nome acessível limpo | 7º bloco focal: o texto de ajuda não pode morar dentro do `<label>`; RED provado restaurando o `<label>` que envolvia a ajuda (1 falha), GREEN 7/7 |
@@ -261,10 +276,10 @@ despachado de forma diferente. Os 39 órfãos restantes continuam sem rota.
 
 | Verificação | Resultado |
 |---|---|
-| Teste focal `tests/ux-pro-03-ti-cli-v2-ui.test.mjs` | **RED 0/4 → GREEN 4/4** (RED provado restaurando o protótipo do `HEAD`); com os blocos do alias, dos nomes, da ajuda, das regiões e do enum, **9/9** |
+| Teste focal `tests/ux-pro-03-ti-cli-v2-ui.test.mjs` | **RED 0/4 → GREEN 4/4** (RED provado restaurando o protótipo do `HEAD`); com os blocos do alias, dos nomes, da ajuda, das regiões, do enum e do aviso, **10/10** |
 | `npm run typecheck` | **0 erro** |
 | `npm run build` | **106/106** páginas |
-| `npm test` | **1187 asserções: 1185 passam, 2 falham** — exatamente o par do **E22** (`libnspr4.so` ausente: `ux-pro-09e-pu4`, navegador), não regressão desta fatia |
+| `npm test` | **1188 asserções: 1186 passam, 2 falham** — exatamente o par do **E22** (`libnspr4.so` ausente: `ux-pro-09e-pu4`, navegador), não regressão desta fatia |
 | `node scripts/qa-wave0-static.mjs` | **5/5** |
 | `ux-pro-03-ti-inventory.mjs --check` | **83 componentes, 7 promoções com relatório** |
 | `ux-pro-00-inventory.mjs --check` | **101 rotas** |

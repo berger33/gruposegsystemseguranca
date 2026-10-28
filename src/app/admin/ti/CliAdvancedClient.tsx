@@ -237,11 +237,14 @@ export default function CliAdvancedClient() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const openTicket = useCallback(async (ticketId: string) => {
+  // `clearFeedback=false` é usado pelas mutações que atualizam o detalhe:
+  // recarregar o detalhe não pode apagar o aviso de sucesso que o operador
+  // acabou de receber. O botão "Tentar novamente" continua limpando.
+  const openTicket = useCallback(async (ticketId: string, clearFeedback = true) => {
     const current = ++detailSequence.current;
     setOpenTicketId(ticketId);
     setDetailState({ kind: "loading" });
-    setMessage(""); setOperationError("");
+    if (clearFeedback) { setMessage(""); setOperationError(""); }
     try {
       const [m, a, h, p] = await Promise.all([
         requestJson(`${ENDPOINTS.ticketMessages}?ticket_id=${encodeURIComponent(ticketId)}`),
@@ -366,7 +369,7 @@ export default function CliAdvancedClient() {
       is_internal: messageForm.is_internal === "true",
     }, "Mensagem registrada no chamado.", () => {
       setMessageForm({ ticket_id: messageForm.ticket_id, content: "", is_internal: messageForm.is_internal });
-      if (openTicketId) void openTicket(openTicketId);
+      if (openTicketId) void openTicket(openTicketId, false);
     });
   }
 
@@ -382,7 +385,7 @@ export default function CliAdvancedClient() {
       storage_key: attachmentForm.storage_key.trim(),
     }, "Metadado de anexo registrado. Nenhum byte foi enviado: não há armazenamento de arquivos nesta instalação.", () => {
       setAttachmentForm({ ticket_id: attachmentForm.ticket_id, file_name: "", file_url: "", storage_key: "" });
-      if (openTicketId) void openTicket(openTicketId);
+      if (openTicketId) void openTicket(openTicketId, false);
     });
   }
 
@@ -395,7 +398,7 @@ export default function CliAdvancedClient() {
       notes: slaForm.notes.trim() || null,
       action: slaForm.action,
     }, slaForm.action === "pause" ? "Pausa de SLA registrada explicitamente." : "SLA retomado; o tempo pausado foi somado pelo servidor.",
-    () => { if (openTicketId) void openTicket(openTicketId); });
+    () => { if (openTicketId) void openTicket(openTicketId, false); });
   }
 
   function createVisit() {
