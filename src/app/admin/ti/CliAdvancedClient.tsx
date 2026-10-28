@@ -568,7 +568,7 @@ export default function CliAdvancedClient() {
           </section>}
 
           <details className={styles.subsection}>
-            <summary>Registrar chamado</summary>
+            <summary>Novo chamado</summary>
             <p className={styles.note}>O protocolo (CLI-AAAAMMDD-XXXX) é gerado pelo servidor. Informe o UUID da conta do cliente já existente; nenhuma conta é criada aqui.</p>
             <div className={styles.formGrid}>
               <Field label="Conta do cliente (UUID)" help="Obrigatório. Sem escopo por conta (A3) o servidor não valida vínculo."><input value={ticketForm.client_account_id} onChange={e => setTicketForm({ ...ticketForm, client_account_id: e.target.value })} /></Field>
@@ -659,7 +659,7 @@ export default function CliAdvancedClient() {
           </ul>
 
           <details className={styles.subsection}>
-            <summary>Agendar visita</summary>
+            <summary>Nova visita</summary>
             <div className={styles.formGrid}>
               <Field label="Conta do cliente (UUID)" help="Obrigatório."><input value={visitForm.client_account_id} onChange={e => setVisitForm({ ...visitForm, client_account_id: e.target.value })} /></Field>
               <Field label="Contrato (UUID)" help="Opcional."><input value={visitForm.contract_id} onChange={e => setVisitForm({ ...visitForm, contract_id: e.target.value })} /></Field>
@@ -717,7 +717,7 @@ export default function CliAdvancedClient() {
           </ul>
 
           <details className={styles.subsection}>
-            <summary>Criar relatório</summary>
+            <summary>Novo relatório</summary>
             <div className={styles.formGrid}>
               <Field label="Conta do cliente (UUID)" help="Obrigatório."><input value={reportForm.client_account_id} onChange={e => setReportForm({ ...reportForm, client_account_id: e.target.value })} /></Field>
               <Field label="Contrato (UUID)" help="Opcional."><input value={reportForm.contract_id} onChange={e => setReportForm({ ...reportForm, contract_id: e.target.value })} /></Field>

@@ -58,11 +58,19 @@ Três limites ficam **escritos na interface**, não escondidos:
 ### 2.1. Relação com `/admin/clientes` (para não alegar novidade indevida)
 
 `/admin/clientes` já tem `TicketsSection`, `VisitsSection` e `ReportsSection`, mas
-elas operam nas tabelas **`client_visits` / `client_reports`** pelos contratos
-`/api/admin/client-visits` e `/api/admin/client-reports`. Os recursos v2 desta
-fatia são **outro conjunto**: `cli_tickets_v2`, `cli_visits`,
-`cli_client_reports_v2` e seus históricos (migração 075), até hoje sem nenhuma
-tela. Nada foi duplicado e nada do que existe em `/admin/clientes` foi alterado.
+elas operam nas tabelas **`client_visits` / `client_reports`** (migração 140) pelos
+contratos `/api/admin/client-visits` e `/api/admin/client-reports`. Os recursos v2
+desta fatia são **outro conjunto**: `cli_tickets_v2`, `cli_ticket_messages`,
+`cli_ticket_attachments`, `cli_ticket_history`, `cli_ticket_sla_pauses`,
+`cli_visits`, `cli_visit_history`, `cli_client_reports_v2` e
+`cli_client_report_history_v2` (migração 075), sem nenhuma tela até agora.
+Nada foi duplicado e nada de `/admin/clientes` foi alterado.
+
+**O que isso expõe, e não é decisão desta fatia:** existem hoje **duas famílias
+de visita e de relatório** no produto — a legada (`client_*`, migração 140,
+usada por `/admin/clientes`) e a v2 (`cli_*`, migração 075). A tela nova mostra
+só a v2 e nomeia a tabela de origem no cabeçalho; **consolidar ou aposentar uma
+das famílias é decisão do proprietário** e não foi inferida aqui.
 
 ### 2.2. Achado do gate: os aliases `/api/hr/cli-*` estão mortos para `ti` (E26)
 
@@ -94,6 +102,16 @@ Correção desta fatia, mínima e aditiva: a tela passou a usar o **alias canôn
 não o prefixo `cli-` na borda de RH?" fica registrada como **E26 em aberto**
 (decisão de servidor, não desta fatia). Um quinto bloco de teste focal impede a
 regressão: nenhum endpoint da tela pode voltar para `/api/hr/`.
+
+### 2.3. Segundo achado do gate: resumo e botão com o mesmo nome
+
+`<summary>` expõe papel de **botão** na árvore de acessibilidade. Os três
+formulários de criação usavam o mesmo nome no resumo e no botão (`Registrar
+chamado`, `Agendar visita`, `Criar relatório`), o que (a) deixa
+`getByRole('button', {name})` ambíguo — foi assim que o gate reprovou — e (b)
+anuncia **dois controles idênticos** para quem usa leitor de tela. Os resumos
+passaram a `Novo chamado`, `Nova visita` e `Novo relatório`; os botões não
+mudaram de nome. O 6º bloco focal proíbe a colisão de nomes.
 
 ## 3. O que mudou (aditivo)
 
@@ -148,15 +166,16 @@ despachado de forma diferente. Os 39 órfãos restantes continuam sem rota.
 | Drill-down ao registro canônico | `<details>` com JSON integral de chamado, anexo, visita e relatório + históricos |
 | Erro de leitura com retry + subteste no gate | `503` → `data-ui-state="error"`; retry → volta à leitura; `403` → `denied` distinto de `error` e de `empty` |
 | Alias que não mata o papel dono | 5º bloco focal: a tela só pode usar `/api/cli/*`; RED provado devolvendo dois endpoints para `/api/hr/` (0 esperado → 2 falhas), GREEN 5/5 depois |
+| Nome acessível não ambíguo | 6º bloco focal: `<summary>` também é botão na árvore de acessibilidade, então resumo e botão do mesmo formulário não podem ter o **mesmo nome**. RED provado devolvendo `Novo chamado` → `Registrar chamado` (1 falha), GREEN 6/6 |
 
 ## 5. Evidências
 
 | Verificação | Resultado |
 |---|---|
-| Teste focal `tests/ux-pro-03-ti-cli-v2-ui.test.mjs` | **RED 0/4 → GREEN 4/4** (RED provado restaurando o protótipo do `HEAD`); com o bloco do alias, **5/5** |
+| Teste focal `tests/ux-pro-03-ti-cli-v2-ui.test.mjs` | **RED 0/4 → GREEN 4/4** (RED provado restaurando o protótipo do `HEAD`); com os blocos do alias e do nome acessível, **6/6** |
 | `npm run typecheck` | **0 erro** |
 | `npm run build` | **106/106** páginas |
-| `npm test` | **1183 asserções: 1181 passam, 2 falham** — exatamente o par do **E22** (`libnspr4.so` ausente: `ux-pro-09e-pu4`, navegador), não regressão desta fatia |
+| `npm test` | **1184 asserções: 1182 passam, 2 falham** — exatamente o par do **E22** (`libnspr4.so` ausente: `ux-pro-09e-pu4`, navegador), não regressão desta fatia |
 | `node scripts/qa-wave0-static.mjs` | **5/5** |
 | `ux-pro-03-ti-inventory.mjs --check` | **83 componentes, 7 promoções com relatório** |
 | `ux-pro-00-inventory.mjs --check` | **101 rotas** |

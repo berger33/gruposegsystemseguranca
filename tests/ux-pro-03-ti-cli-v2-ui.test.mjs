@@ -121,3 +121,18 @@ test('UX-PRO-03 CLI-05/06/07/08: a tela usa o alias canônico /api/cli/*, não a
   assert.match(server, /url\.pathname\.startsWith\("\/api\/hr\/"\)/);
   assert.match(server, /if \(!\(await authorizeLegacyHrRequest\(req, res, url\)\)\) return;/);
 });
+
+// `<summary>` também expõe papel de botão na árvore de acessibilidade. Se um
+// resumo tiver o MESMO nome do botão que ele revela, `getByRole('button',
+// {name})` fica ambíguo (strict mode) e o leitor de tela anuncia dois
+// controles idênticos. O gate de navegador reprovou exatamente nisso.
+test('UX-PRO-03 CLI-05/06/07/08: resumo e botão de cada formulário não compartilham nome', () => {
+  const summaries = [...component.matchAll(/<summary>([^<{]+)<\/summary>/g)]
+    .map(match => match[1].trim())
+    .filter(text => !/\(JSON\)/.test(text) && !/^Histórico/.test(text) && !/^Pausas de SLA/.test(text));
+  const buttons = [...component.matchAll(/>([^<>{}]+)<\/button>/g)].map(match => match[1].trim());
+  assert.ok(summaries.length >= 7, `esperava os resumos dos formulários, achei ${summaries.length}`);
+  for (const summary of summaries) {
+    assert.ok(!buttons.includes(summary), `"${summary}" não pode nomear resumo e botão ao mesmo tempo`);
+  }
+});

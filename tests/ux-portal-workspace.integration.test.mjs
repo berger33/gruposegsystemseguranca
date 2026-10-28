@@ -6520,7 +6520,7 @@ test('browser UX-PRO-03: CLI-05/06/07/08 console do cliente v2 (papel, A/B, POST
       await page.getByText(/QA-CLI08-ALFA/).first().waitFor();
 
       // CLI-05: POST de chamado.
-      await openDetails('Registrar chamado');
+      await openDetails('Novo chamado');
       await page.getByLabel('Conta do cliente (UUID)', { exact: true }).nth(0).fill(accountA);
       await page.getByLabel('Título', { exact: true }).nth(0).fill('QA-CLI08 Chamado criado pela interface');
       await page.getByLabel('Descrição', { exact: true }).nth(0).fill('Descrição sintética criada no gate, sem dado real.');
@@ -6561,7 +6561,7 @@ test('browser UX-PRO-03: CLI-05/06/07/08 console do cliente v2 (papel, A/B, POST
       await settle();
 
       // CLI-07: agendar visita e reagendar com motivo.
-      await openDetails('Agendar visita');
+      await openDetails('Nova visita');
       await page.getByLabel('Conta do cliente (UUID)', { exact: true }).nth(1).fill(accountA);
       await page.getByLabel('Título', { exact: true }).nth(1).fill('QA-CLI07 Visita criada pela interface');
       await page.getByLabel('Data e hora', { exact: true }).fill('2026-11-05T09:30');
@@ -6580,7 +6580,7 @@ test('browser UX-PRO-03: CLI-05/06/07/08 console do cliente v2 (papel, A/B, POST
       await settle();
 
       // CLI-08: criar relatório, revisar e provar que aprovar sem revisão falha.
-      await openDetails('Criar relatório');
+      await openDetails('Novo relatório');
       await page.getByLabel('Conta do cliente (UUID)', { exact: true }).nth(2).fill(accountA);
       await page.getByLabel('Título', { exact: true }).nth(2).fill('QA-CLI08 Relatorio criado pela interface');
       await page.getByLabel('Conteúdo', { exact: true }).fill('Conteúdo sintético do relatório criado no gate CLI-08, sem dado real.');
