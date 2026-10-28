@@ -113,6 +113,27 @@ anuncia **dois controles idênticos** para quem usa leitor de tela. Os resumos
 passaram a `Novo chamado`, `Nova visita` e `Novo relatório`; os botões não
 mudaram de nome. O 6º bloco focal proíbe a colisão de nomes.
 
+### 2.4. Terceiro achado do gate: ajuda dentro do `<label>` suja o nome acessível
+
+Com o gate executando no runner do GitHub (Chromium real), o cenário reprovou
+no **primeiro campo** do formulário de chamado, depois de 45 s:
+
+```
+locator.fill: Timeout 45000ms exceeded.
+waiting for getByLabel('Conta do cliente (UUID)', { exact: true }).first()
+```
+
+O helper `Field` renderizava `<label><span>rótulo</span>{controle}<small>ajuda</small></label>`.
+Tudo o que está dentro do `<label>` compõe o **nome acessível**: o campo se
+chamava, de fato, `"Conta do cliente (UUID) Obrigatório. Sem escopo por conta
+(A3) o servidor não valida vínculo."`. Duas consequências reais, e a segunda é
+de acessibilidade, não de teste: qualquer busca por nome exato falha, e o leitor
+de tela anuncia a frase inteira como se fosse o rótulo.
+
+Correção: `<label htmlFor={id}>{rótulo}</label>` + `id` no controle +
+`aria-describedby` para a ajuda, que passou a ficar **fora** do `<label>`. O 7º
+bloco focal proíbe `<small>` dentro de `<label>`.
+
 ## 3. O que mudou (aditivo)
 
 - **`src/app/admin/ti/CliAdvancedClient.tsx`** — reescrito. O protótipo tinha hex
@@ -166,35 +187,33 @@ despachado de forma diferente. Os 39 órfãos restantes continuam sem rota.
 | Drill-down ao registro canônico | `<details>` com JSON integral de chamado, anexo, visita e relatório + históricos |
 | Erro de leitura com retry + subteste no gate | `503` → `data-ui-state="error"`; retry → volta à leitura; `403` → `denied` distinto de `error` e de `empty` |
 | Alias que não mata o papel dono | 5º bloco focal: a tela só pode usar `/api/cli/*`; RED provado devolvendo dois endpoints para `/api/hr/` (0 esperado → 2 falhas), GREEN 5/5 depois |
+| Nome acessível limpo | 7º bloco focal: o texto de ajuda não pode morar dentro do `<label>`; RED provado restaurando o `<label>` que envolvia a ajuda (1 falha), GREEN 7/7 |
 | Nome acessível não ambíguo | 6º bloco focal: `<summary>` também é botão na árvore de acessibilidade, então resumo e botão do mesmo formulário não podem ter o **mesmo nome**. RED provado devolvendo `Novo chamado` → `Registrar chamado` (1 falha), GREEN 6/6 |
 
 ## 5. Evidências
 
 | Verificação | Resultado |
 |---|---|
-| Teste focal `tests/ux-pro-03-ti-cli-v2-ui.test.mjs` | **RED 0/4 → GREEN 4/4** (RED provado restaurando o protótipo do `HEAD`); com os blocos do alias e do nome acessível, **6/6** |
+| Teste focal `tests/ux-pro-03-ti-cli-v2-ui.test.mjs` | **RED 0/4 → GREEN 4/4** (RED provado restaurando o protótipo do `HEAD`); com os blocos do alias, dos nomes e da ajuda, **7/7** |
 | `npm run typecheck` | **0 erro** |
 | `npm run build` | **106/106** páginas |
-| `npm test` | **1184 asserções: 1182 passam, 2 falham** — exatamente o par do **E22** (`libnspr4.so` ausente: `ux-pro-09e-pu4`, navegador), não regressão desta fatia |
+| `npm test` | **1185 asserções: 1183 passam, 2 falham** — exatamente o par do **E22** (`libnspr4.so` ausente: `ux-pro-09e-pu4`, navegador), não regressão desta fatia |
 | `node scripts/qa-wave0-static.mjs` | **5/5** |
 | `ux-pro-03-ti-inventory.mjs --check` | **83 componentes, 7 promoções com relatório** |
 | `ux-pro-00-inventory.mjs --check` | **101 rotas** |
 | `requisitos-222-inventory.mjs --check` | regenerado nesta fatia: **1603 arquivos varridos**, 222 IDs, **21 `a_revalidar` sem gate** (inalterado); CLI-05..08 ganharam `arquivos_codigo` com o componente e `arquivos_gate` com o teste focal |
 | `requisitos-sec-reaudit.mjs --check` | **35/35 âncoras** |
-| `npm run test:ux-portal:pg` com `UX_PORTAL_TEST_PATTERN='CLI-05/06/07/08 console'` | **executado 2×**: 001–181 aplicadas no cluster descartável; a metade HTTP passa (o teste chega ao 1º `launchBrowser` da linha 6473), o cenário **para em `launchChromiumOnce`** (linha 111) com `libnspr4.so: cannot open shared object file` — **0/1**, bloqueio de SO, não de asserção |
+| `test:ux-portal:pg` (workflow *UX portais*, Chromium real) | **43 testes: 42 passam, 1 falha** — só o cenário desta fatia, por nome acessível do campo (ver §2.4). O log do runner foi lido de fato; a falha foi corrigida e a re-execução é o que fecha a prova |
 | `git diff --check` | limpo |
 
 ## 6. Limitações honestas
 
-- **O cenário de navegador roda até onde a sandbox permite.** O gate foi
-  executado de verdade (`scripts/qa-ux-portal-postgres.mjs`, cluster descartável
-  com as 181 migrações aplicadas): a **metade HTTP passou** — é ela que produziu
-  a prova de papel da tabela do §2.2 —, e a metade de navegador **para no
-  `launch`** com `libnspr4.so: cannot open shared object file`. Instalar a
-  biblioteca também não é possível daqui (`apt-get update` não alcança
-  `deb.debian.org`), o que fixa a mesma restrição do **E22** e do relatório da
-  CLI-03 UI. Prova pendente: quem rodar `npm run test:ux-portal:pg` numa máquina
-  com as libs do Chromium confirma o subteste de larguras/teclado/erro.
+- **A prova de navegador veio do CI, não da sandbox.** Localmente o Chromium não
+  abre (`libnspr4.so` ausente) e `apt-get` não alcança `deb.debian.org`; o painel
+  do GitHub também não mostra log sem login. O log do job foi obtido pelo
+  endpoint da API (`/actions/jobs/<id>/logs`, URL assinada) e é dele que saem os
+  três achados do §2.2–§2.4. A sandbox provou o HTTP (papel, 401/403/200) e o
+  navegador ficou com o CI — que é a limitação do E22, não desta fatia.
 - **Sem escopo por conta (A3)**: a leitura v2 é global. O cenário A/B prova que
   o registro de B não aparece antes de existir, mas **não** prova isolamento por
   conta — porque ele não existe neste desenho. Isso está escrito na tela e aqui.

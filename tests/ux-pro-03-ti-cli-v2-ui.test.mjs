@@ -136,3 +136,18 @@ test('UX-PRO-03 CLI-05/06/07/08: resumo e botão de cada formulário não compar
     assert.ok(!buttons.includes(summary), `"${summary}" não pode nomear resumo e botão ao mesmo tempo`);
   }
 });
+
+// O texto de ajuda dentro do <label> vira parte do NOME ACESSÍVEL do controle:
+// `getByLabel('Título', {exact:true})` deixa de casar e o leitor de tela anuncia
+// "Título 3 a 200 caracteres." como se fosse o rótulo. O gate de navegador
+// reprovou nisso (timeout de 45 s no primeiro campo do formulário de chamado).
+test('UX-PRO-03 CLI-05/06/07/08: o texto de ajuda fica fora do <label> (nome acessível limpo)', () => {
+  const field = component.match(/function Field\([\s\S]*?\n}/)?.[0] ?? '';
+  assert.ok(field, 'o componente precisa manter o helper Field');
+  assert.match(field, /<label htmlFor=\{id\}>/, 'o rótulo precisa ser <label htmlFor={id}>');
+  assert.match(field, /"aria-describedby": helpId/, 'a ajuda precisa ser anunciada por aria-describedby');
+  assert.doesNotMatch(field, /<small[^>]*>\{help\}<\/small>\}?<\/label>/, 'a ajuda não pode estar dentro do <label>');
+  for (const inner of [...component.matchAll(/<label\b[^>]*>([\s\S]*?)<\/label>/g)].map(match => match[1])) {
+    assert.ok(!inner.includes('<small'), 'nenhum <small> de ajuda pode viver dentro de um <label>');
+  }
+});

@@ -19,7 +19,7 @@
 //    cliente — RH/comercial são negados de propósito pelo servidor;
 //  - nada é enviado ao cliente por e-mail (sem SMTP real);
 //  - aceite humano 0/222 e produção NO-GO: esta tela não muda isso.
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { cloneElement, isValidElement, useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import UiState from "@/components/ui/UiState";
 import styles from "./CliAdvancedClient.module.css";
 
@@ -134,8 +134,24 @@ function toIso(value: string) {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// O texto de ajuda NÃO pode morar dentro do <label>: ele entra no nome
+// acessível do controle e o leitor de tela passa a anunciar a frase inteira
+// como se fosse o rótulo (e `getByLabel('Título', {exact:true})` deixa de
+// existir). O rótulo fica no <label htmlFor>, o controle recebe id e
+// `aria-describedby` apontando para a ajuda.
 function Field({ label, children, help }: { label: string; children: ReactNode; help?: string }) {
-  return <label className={styles.field}><span>{label}</span>{children}{help && <small>{help}</small>}</label>;
+  const id = useId();
+  const helpId = help ? `${id}-help` : undefined;
+  const control = isValidElement<Record<string, unknown>>(children)
+    ? cloneElement(children, { id, "aria-describedby": helpId })
+    : children;
+  return (
+    <div className={styles.field}>
+      <label htmlFor={id}>{label}</label>
+      {control}
+      {help && <small id={helpId}>{help}</small>}
+    </div>
+  );
 }
 
 async function requestJson(path: string, init?: RequestInit) {

@@ -3824,7 +3824,7 @@
         "src/server/cli-api.mjs"
       ],
       "ocorrencias_gate": 10,
-      "ocorrencias_documento": 18,
+      "ocorrencias_documento": 17,
       "ocorrencias_codigo": 5,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -3894,8 +3894,8 @@
         "src/app/admin/ti/CliAdvancedClient.tsx",
         "src/server/cli-advanced-api.mjs"
       ],
-      "ocorrencias_gate": 16,
-      "ocorrencias_documento": 23,
+      "ocorrencias_gate": 17,
+      "ocorrencias_documento": 22,
       "ocorrencias_codigo": 4,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"

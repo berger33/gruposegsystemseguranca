@@ -8,7 +8,7 @@
 "BackupClient.tsx","159","console","TiConsole","backup","3","0","ux-pro-03-backup-catalog-ui.test.mjs","ti|admin","com_prova"
 "BudgetClient.tsx","314","console","TiConsole","orcamentos","3","0","ux-pro-03-ti-budget-ui.test.mjs","ti|admin","com_prova"
 "CatalogClient.tsx","59","workspace","src/app/admin/comercial/ComercialWorkspace.tsx","","0","0","ux-pro-03-catalog-equipment-ui.test.mjs","herdado do workspace","montado_em_workspace"
-"CliAdvancedClient.tsx","749","console","TiConsole","cliente","9","0","ux-pro-03-ti-cli-v2-ui.test.mjs","ti|admin","com_prova"
+"CliAdvancedClient.tsx","765","console","TiConsole","cliente","9","0","ux-pro-03-ti-cli-v2-ui.test.mjs","ti|admin","com_prova"
 "CliClient.tsx","193","orfao","","","10","0","","nao_montado","orfao_nao_promovido"
 "CliFinanceClient.tsx","230","orfao","","","9","0","","nao_montado","orfao_nao_promovido"
 "CmsClient.tsx","56","orfao","","","3","0","","nao_montado","orfao_nao_promovido"
