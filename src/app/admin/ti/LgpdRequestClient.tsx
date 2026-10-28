@@ -467,9 +467,9 @@ export default function LgpdRequestClient() {
               </details>
               <details className={styles.subsection}><summary>Registro canônico do pedido (JSON)</summary><pre className={styles.pre}>{JSON.stringify(detail.request, null, 2)}</pre></details>
               <div className={styles.formGrid}>
-                <Field label="Próximo status" help={allowedNext.length ? `Permitido pelo servidor a partir de ${detail.request.status}.` : "Este status é final: o servidor não permite nova transição."}>
+                <Field label="Próximo status" help={allowedNext.length ? `Permitido pelo servidor a partir de ${detail.request.status}. Deixe no status atual para atualizar sem transicionar.` : "Este status é final: o servidor não permite nova transição; atualize os demais campos sem mudar o status."}>
                   <select value={updateForm.next_status} onChange={event => setUpdateForm({ ...updateForm, next_status: event.target.value })}>
-                    {(allowedNext.length ? allowedNext : STATUSES).map(status => <option key={status} value={status}>{status}</option>)}
+                    {(allowedNext.length ? allowedNext : [detail.request.status]).map(status => <option key={status} value={status}>{status}</option>)}
                   </select>
                 </Field>
                 <Field label="Método de verificação"><select value={updateForm.verification_method} onChange={event => setUpdateForm({ ...updateForm, verification_method: event.target.value })}>
@@ -488,7 +488,9 @@ export default function LgpdRequestClient() {
               <button type="button" className={styles.primary} disabled={busy} onClick={() => mutate(
                 detailEndpoint(detail.request.id), "PATCH",
                 {
-                  next_status: updateForm.next_status,
+                  // Sem transição não se manda next_status: o servidor recusaria
+                  // `invalid_transition` e impediria registrar responsável/resposta.
+                  ...(updateForm.next_status !== detail.request.status ? { next_status: updateForm.next_status } : {}),
                   reason: updateForm.reason.trim(),
                   responsible_name: updateForm.responsible_name.trim(),
                   verification_method: updateForm.verification_method,

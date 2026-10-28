@@ -60,7 +60,10 @@ usado em `/privacidade`" — **falso**: `/privacidade` não tem formulário nem
   pedido mais recente, prazo mais próximo, contagens de abertos/verificados/
   vencidos), drill-down ao **JSON canônico** e ao **histórico de transições**;
 - transições oferecidas só entre as permitidas pela máquina de estados (espelho
-  informativo — quem decide é o servidor);
+  informativo — quem decide é o servidor); em status final o seletor mostra
+  apenas o status atual e o `next_status` **não é enviado** — assim é possível
+  registrar responsável, impedimento ou resposta sem forçar uma transição que o
+  servidor recusaria com `invalid_transition`;
 - CSS module com tokens compartilhados, breakpoints 900/650 px e
   `:focus-visible`, sem hex inline nem diálogos nativos (`alert`/`prompt`/
   `confirm` retirados do fluxo);
