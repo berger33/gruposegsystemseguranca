@@ -1,3 +1,5 @@
+> **Estado vigente (26/10/2026, `main` 6b4212d):** este documento é **histórico** — registra o estado da sua própria data e pode conter filas/contagens já superadas. A fonte única de estado é [`STATUS-VIGENTE.md`](STATUS-VIGENTE.md); a auditoria completa está em [`AUDITORIA-FATIAS-PENDENTES-E-ERROS-2026-10-26.md`](AUDITORIA-FATIAS-PENDENTES-E-ERROS-2026-10-26.md). Produção segue **NO-GO**.
+
 # Relatório consolidado de pendências — 222 requisitos / QA até Onda 21
 
 Data: 2026-09-28. Fonte de verdade de estados: [controle de implementação](CONTROLE-IMPLEMENTACAO.md); este relatório **não altera automaticamente** os estados históricos nem considera um teste parcial homologação de módulo. [Relatório de testes](RELATORIO-CONSOLIDADO-TESTES.md) e [gate de produção](PRODUCAO-GATE.md). O sistema pode ser baixado para **prévia local sintética**, mas **NO-GO para produção, dados reais e backup operacional**. Não há quantidade fixa de ondas restantes: o trabalho depende de decisão humana, infraestrutura, provedores, UAT e riscos aceitos.

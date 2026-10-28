@@ -1,0 +1,1279 @@
+{
+  "stage": "ux-pro-10b-previas",
+  "data": "2026-10-27",
+  "metodo": "PostgreSQL 17 descartavel + Chromium real; measureTextContrast (PU4) reutilizado; page.evaluate sem IIFE externa",
+  "rotas": {
+    "/layout-01": {
+      "teclado": {
+        "passos": 20,
+        "primeiroFocoVisivel": {
+          "step": 1,
+          "tag": "A",
+          "label": "Abrir Aparência do site",
+          "outline": "solid",
+          "outlineWidth": "3px",
+          "focusVisible": true,
+          "visible": true
+        },
+        "amostras": [
+          {
+            "step": 1,
+            "tag": "A",
+            "label": "Abrir Aparência do site",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 2,
+            "tag": "A",
+            "label": "Ver site atual",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 3,
+            "tag": "IFRAME",
+            "label": "",
+            "outline": "none",
+            "outlineWidth": "3px",
+            "focusVisible": false,
+            "visible": false
+          },
+          {
+            "step": 4,
+            "tag": "IFRAME",
+            "label": "",
+            "outline": "none",
+            "outlineWidth": "3px",
+            "focusVisible": false,
+            "visible": false
+          },
+          {
+            "step": 5,
+            "tag": "IFRAME",
+            "label": "",
+            "outline": "none",
+            "outlineWidth": "3px",
+            "focusVisible": false,
+            "visible": false
+          },
+          {
+            "step": 6,
+            "tag": "IFRAME",
+            "label": "",
+            "outline": "none",
+            "outlineWidth": "3px",
+            "focusVisible": false,
+            "visible": false
+          }
+        ]
+      },
+      "zoom200": {
+        "overflow": 0,
+        "zoom": 2,
+        "viewport": "390x844"
+      },
+      "contraste": {
+        "light": {
+          "status": "measured",
+          "renderedTextNodeCount": 7,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 7,
+          "resolvedCount": 7,
+          "indeterminateCount": 0,
+          "under45Count": 0
+        },
+        "dark": {
+          "status": "measured",
+          "renderedTextNodeCount": 7,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 7,
+          "resolvedCount": 7,
+          "indeterminateCount": 0,
+          "under45Count": 0
+        }
+      },
+      "paleta": {
+        "light": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "dark": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "diferente": false
+      }
+    },
+    "/layout-02": {
+      "teclado": {
+        "passos": 20,
+        "primeiroFocoVisivel": {
+          "step": 1,
+          "tag": "A",
+          "label": "Abrir Aparência do site",
+          "outline": "solid",
+          "outlineWidth": "3px",
+          "focusVisible": true,
+          "visible": true
+        },
+        "amostras": [
+          {
+            "step": 1,
+            "tag": "A",
+            "label": "Abrir Aparência do site",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 2,
+            "tag": "A",
+            "label": "Ver site atual",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 3,
+            "tag": "A",
+            "label": "Grupo SEG System, início",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 4,
+            "tag": "BUTTON",
+            "label": "Abrir menu",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 5,
+            "tag": "A",
+            "label": "Falar com a equipe",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 6,
+            "tag": "A",
+            "label": "Desenhar uma solução",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          }
+        ]
+      },
+      "zoom200": {
+        "overflow": 0,
+        "zoom": 2,
+        "viewport": "390x844"
+      },
+      "contraste": {
+        "light": {
+          "status": "measured",
+          "renderedTextNodeCount": 131,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 131,
+          "resolvedCount": 112,
+          "indeterminateCount": 19,
+          "under45Count": 0
+        },
+        "dark": {
+          "status": "measured",
+          "renderedTextNodeCount": 131,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 131,
+          "resolvedCount": 112,
+          "indeterminateCount": 19,
+          "under45Count": 0
+        }
+      },
+      "paleta": {
+        "light": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "dark": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "diferente": false
+      }
+    },
+    "/layout-03": {
+      "teclado": {
+        "passos": 20,
+        "primeiroFocoVisivel": {
+          "step": 1,
+          "tag": "A",
+          "label": "Abrir Aparência do site",
+          "outline": "solid",
+          "outlineWidth": "3px",
+          "focusVisible": true,
+          "visible": true
+        },
+        "amostras": [
+          {
+            "step": 1,
+            "tag": "A",
+            "label": "Abrir Aparência do site",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 2,
+            "tag": "A",
+            "label": "Ver site atual",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 3,
+            "tag": "A",
+            "label": "Grupo SEG System — início",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 4,
+            "tag": "BUTTON",
+            "label": "Abrir navegação",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 5,
+            "tag": "A",
+            "label": "Vamos conversar",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 6,
+            "tag": "A",
+            "label": "Conte o que você precisa",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          }
+        ]
+      },
+      "zoom200": {
+        "overflow": 0,
+        "zoom": 2,
+        "viewport": "390x844"
+      },
+      "contraste": {
+        "light": {
+          "status": "measured",
+          "renderedTextNodeCount": 117,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 117,
+          "resolvedCount": 117,
+          "indeterminateCount": 0,
+          "under45Count": 0
+        },
+        "dark": {
+          "status": "measured",
+          "renderedTextNodeCount": 117,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 117,
+          "resolvedCount": 117,
+          "indeterminateCount": 0,
+          "under45Count": 0
+        }
+      },
+      "paleta": {
+        "light": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "dark": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "diferente": false
+      }
+    },
+    "/layout-04": {
+      "teclado": {
+        "passos": 20,
+        "primeiroFocoVisivel": {
+          "step": 1,
+          "tag": "A",
+          "label": "Abrir Aparência do site",
+          "outline": "solid",
+          "outlineWidth": "3px",
+          "focusVisible": true,
+          "visible": true
+        },
+        "amostras": [
+          {
+            "step": 1,
+            "tag": "A",
+            "label": "Abrir Aparência do site",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 2,
+            "tag": "A",
+            "label": "Ver site atual",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 3,
+            "tag": "A",
+            "label": "Grupo SEG System, início",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 4,
+            "tag": "BUTTON",
+            "label": "Abrir navegação",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 5,
+            "tag": "A",
+            "label": "Solicitar avaliação",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 6,
+            "tag": "A",
+            "label": "Mapear minha necessidade",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          }
+        ]
+      },
+      "zoom200": {
+        "overflow": 0,
+        "zoom": 2,
+        "viewport": "390x844"
+      },
+      "contraste": {
+        "light": {
+          "status": "measured",
+          "renderedTextNodeCount": 129,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 129,
+          "resolvedCount": 129,
+          "indeterminateCount": 0,
+          "under45Count": 0
+        },
+        "dark": {
+          "status": "measured",
+          "renderedTextNodeCount": 129,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 129,
+          "resolvedCount": 129,
+          "indeterminateCount": 0,
+          "under45Count": 0
+        }
+      },
+      "paleta": {
+        "light": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "dark": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "diferente": false
+      }
+    },
+    "/layout-05": {
+      "teclado": {
+        "passos": 20,
+        "primeiroFocoVisivel": {
+          "step": 1,
+          "tag": "A",
+          "label": "Abrir Aparência do site",
+          "outline": "solid",
+          "outlineWidth": "3px",
+          "focusVisible": true,
+          "visible": true
+        },
+        "amostras": [
+          {
+            "step": 1,
+            "tag": "A",
+            "label": "Abrir Aparência do site",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 2,
+            "tag": "A",
+            "label": "Ver site atual",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 3,
+            "tag": "A",
+            "label": "Grupo SEG System, início",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 4,
+            "tag": "BUTTON",
+            "label": "Abrir menu",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 5,
+            "tag": "A",
+            "label": "Solicitar conversa",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 6,
+            "tag": "A",
+            "label": "Apresentar minha necessidade",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          }
+        ]
+      },
+      "zoom200": {
+        "overflow": 0,
+        "zoom": 2,
+        "viewport": "390x844"
+      },
+      "contraste": {
+        "light": {
+          "status": "measured",
+          "renderedTextNodeCount": 124,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 124,
+          "resolvedCount": 124,
+          "indeterminateCount": 0,
+          "under45Count": 0
+        },
+        "dark": {
+          "status": "measured",
+          "renderedTextNodeCount": 124,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 124,
+          "resolvedCount": 124,
+          "indeterminateCount": 0,
+          "under45Count": 0
+        }
+      },
+      "paleta": {
+        "light": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "dark": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "diferente": false
+      }
+    },
+    "/layout-06": {
+      "teclado": {
+        "passos": 20,
+        "primeiroFocoVisivel": {
+          "step": 1,
+          "tag": "A",
+          "label": "Abrir Aparência do site",
+          "outline": "solid",
+          "outlineWidth": "3px",
+          "focusVisible": true,
+          "visible": true
+        },
+        "amostras": [
+          {
+            "step": 1,
+            "tag": "A",
+            "label": "Abrir Aparência do site",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 2,
+            "tag": "A",
+            "label": "Ver site atual",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 3,
+            "tag": "A",
+            "label": "Grupo SEG System — início",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 4,
+            "tag": "BUTTON",
+            "label": "Abrir menu",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 5,
+            "tag": "A",
+            "label": "Começar",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 6,
+            "tag": "A",
+            "label": "Conte o que você precisa",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          }
+        ]
+      },
+      "zoom200": {
+        "overflow": 0,
+        "zoom": 2,
+        "viewport": "390x844"
+      },
+      "contraste": {
+        "light": {
+          "status": "measured",
+          "renderedTextNodeCount": 115,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 115,
+          "resolvedCount": 115,
+          "indeterminateCount": 0,
+          "under45Count": 0
+        },
+        "dark": {
+          "status": "measured",
+          "renderedTextNodeCount": 115,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 115,
+          "resolvedCount": 115,
+          "indeterminateCount": 0,
+          "under45Count": 0
+        }
+      },
+      "paleta": {
+        "light": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "dark": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "diferente": false
+      }
+    },
+    "/layout-07": {
+      "teclado": {
+        "passos": 20,
+        "primeiroFocoVisivel": {
+          "step": 1,
+          "tag": "A",
+          "label": "Abrir Aparência do site",
+          "outline": "solid",
+          "outlineWidth": "3px",
+          "focusVisible": true,
+          "visible": true
+        },
+        "amostras": [
+          {
+            "step": 1,
+            "tag": "A",
+            "label": "Abrir Aparência do site",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 2,
+            "tag": "A",
+            "label": "Ver site atual",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 3,
+            "tag": "A",
+            "label": "Grupo SEG System — início",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 4,
+            "tag": "A",
+            "label": "01 Visão geral",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 5,
+            "tag": "A",
+            "label": "02 Pontos de cuidado",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 6,
+            "tag": "A",
+            "label": "03 Como começar",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          }
+        ]
+      },
+      "zoom200": {
+        "overflow": 0,
+        "zoom": 2,
+        "viewport": "390x844"
+      },
+      "contraste": {
+        "light": {
+          "status": "measured",
+          "renderedTextNodeCount": 132,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 132,
+          "resolvedCount": 113,
+          "indeterminateCount": 19,
+          "under45Count": 0
+        },
+        "dark": {
+          "status": "measured",
+          "renderedTextNodeCount": 132,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 132,
+          "resolvedCount": 113,
+          "indeterminateCount": 19,
+          "under45Count": 0
+        }
+      },
+      "paleta": {
+        "light": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "dark": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "diferente": false
+      }
+    },
+    "/layout-08": {
+      "teclado": {
+        "passos": 20,
+        "primeiroFocoVisivel": {
+          "step": 1,
+          "tag": "A",
+          "label": "Abrir Aparência do site",
+          "outline": "solid",
+          "outlineWidth": "3px",
+          "focusVisible": true,
+          "visible": true
+        },
+        "amostras": [
+          {
+            "step": 1,
+            "tag": "A",
+            "label": "Abrir Aparência do site",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 2,
+            "tag": "A",
+            "label": "Ver site atual",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 3,
+            "tag": "A",
+            "label": "Grupo SEG System — início",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 4,
+            "tag": "A",
+            "label": "Fale com a equipe",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 5,
+            "tag": "A",
+            "label": "Explore as frentes",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 6,
+            "tag": "BUTTON",
+            "label": "01 / SERVIÇOSegurança desarmada",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          }
+        ]
+      },
+      "zoom200": {
+        "overflow": 0,
+        "zoom": 2,
+        "viewport": "390x844"
+      },
+      "contraste": {
+        "light": {
+          "status": "measured",
+          "renderedTextNodeCount": 126,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 126,
+          "resolvedCount": 123,
+          "indeterminateCount": 3,
+          "under45Count": 0
+        },
+        "dark": {
+          "status": "measured",
+          "renderedTextNodeCount": 126,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 126,
+          "resolvedCount": 123,
+          "indeterminateCount": 3,
+          "under45Count": 0
+        }
+      },
+      "paleta": {
+        "light": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "dark": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "diferente": false
+      }
+    },
+    "/layout-09": {
+      "teclado": {
+        "passos": 19,
+        "primeiroFocoVisivel": {
+          "step": 1,
+          "tag": "A",
+          "label": "Abrir Aparência do site",
+          "outline": "solid",
+          "outlineWidth": "3px",
+          "focusVisible": true,
+          "visible": true
+        },
+        "amostras": [
+          {
+            "step": 1,
+            "tag": "A",
+            "label": "Abrir Aparência do site",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 2,
+            "tag": "A",
+            "label": "Ver site atual",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 3,
+            "tag": "A",
+            "label": "Grupo SEG System — início",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 4,
+            "tag": "BUTTON",
+            "label": "Abrir menu",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 5,
+            "tag": "A",
+            "label": "Falar com a equipe",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 6,
+            "tag": "A",
+            "label": "Começar o briefing",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          }
+        ]
+      },
+      "zoom200": {
+        "overflow": 0,
+        "zoom": 2,
+        "viewport": "390x844"
+      },
+      "contraste": {
+        "light": {
+          "status": "measured",
+          "renderedTextNodeCount": 99,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 99,
+          "resolvedCount": 79,
+          "indeterminateCount": 20,
+          "under45Count": 0
+        },
+        "dark": {
+          "status": "measured",
+          "renderedTextNodeCount": 99,
+          "unmeasuredVisibleTextCount": 0,
+          "sampleCount": 99,
+          "resolvedCount": 79,
+          "indeterminateCount": 20,
+          "under45Count": 0
+        }
+      },
+      "paleta": {
+        "light": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "dark": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "diferente": false
+      }
+    },
+    "/layout-10": {
+      "teclado": {
+        "passos": 20,
+        "primeiroFocoVisivel": {
+          "step": 1,
+          "tag": "A",
+          "label": "Abrir Aparência do site",
+          "outline": "solid",
+          "outlineWidth": "3px",
+          "focusVisible": true,
+          "visible": true
+        },
+        "amostras": [
+          {
+            "step": 1,
+            "tag": "A",
+            "label": "Abrir Aparência do site",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 2,
+            "tag": "A",
+            "label": "Ver site atual",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 3,
+            "tag": "A",
+            "label": "Grupo SEG System — início",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 4,
+            "tag": "BUTTON",
+            "label": "Abrir navegação",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 5,
+            "tag": "A",
+            "label": "Iniciar conversa",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          },
+          {
+            "step": 6,
+            "tag": "A",
+            "label": "Percorrer as frentes",
+            "outline": "solid",
+            "outlineWidth": "3px",
+            "focusVisible": true,
+            "visible": true
+          }
+        ]
+      },
+      "zoom200": {
+        "overflow": 0,
+        "zoom": 2,
+        "viewport": "390x844"
+      },
+      "contraste": {
+        "light": {
+          "status": "measured",
+          "renderedTextNodeCount": 95,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 95,
+          "resolvedCount": 95,
+          "indeterminateCount": 0,
+          "under45Count": 0
+        },
+        "dark": {
+          "status": "measured",
+          "renderedTextNodeCount": 95,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 95,
+          "resolvedCount": 95,
+          "indeterminateCount": 0,
+          "under45Count": 0
+        }
+      },
+      "paleta": {
+        "light": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "dark": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "diferente": false
+      }
+    },
+    "/layout-preview": {
+      "teclado": null,
+      "zoom200": {
+        "overflow": 0,
+        "zoom": 2,
+        "viewport": "390x844"
+      },
+      "contraste": {
+        "light": {
+          "status": "measured",
+          "renderedTextNodeCount": 205,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 205,
+          "resolvedCount": 168,
+          "indeterminateCount": 37,
+          "under45Count": 0
+        },
+        "dark": {
+          "status": "measured",
+          "renderedTextNodeCount": 205,
+          "unmeasuredVisibleTextCount": 6,
+          "sampleCount": 205,
+          "resolvedCount": 168,
+          "indeterminateCount": 37,
+          "under45Count": 0
+        }
+      },
+      "paleta": {
+        "light": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "dark": {
+          "html": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          },
+          "body": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)"
+          }
+        },
+        "diferente": false
+      },
+      "layout09": {
+        "light": {
+          "focoVisivel": true,
+          "overflow": 0,
+          "contraste": {
+            "status": "measured",
+            "renderedTextNodeCount": 95,
+            "unmeasuredVisibleTextCount": 0,
+            "sampleCount": 95,
+            "resolvedCount": 75,
+            "indeterminateCount": 20,
+            "under45Count": 0
+          }
+        },
+        "dark": {
+          "focoVisivel": true,
+          "overflow": 0,
+          "contraste": {
+            "status": "measured",
+            "renderedTextNodeCount": 95,
+            "unmeasuredVisibleTextCount": 0,
+            "sampleCount": 95,
+            "resolvedCount": 75,
+            "indeterminateCount": 20,
+            "under45Count": 0
+          }
+        }
+      }
+    }
+  },
+  "iframe": {
+    "title": "Layout 01 — Institucional clássica",
+    "passosAteFoco": 3,
+    "shiftTabSaiu": true,
+    "corpoAcessivel": true
+  },
+  "limites": [
+    "leitor de tela nao executado",
+    "revisao manual de tema/contraste nao executada",
+    "WCAG integral nao verificado",
+    "aceite humano/UAT/Windows nao executado",
+    "producao segue NO-GO"
+  ]
+}

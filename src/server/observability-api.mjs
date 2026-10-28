@@ -98,7 +98,7 @@ export function createObservabilityApi({ json, sameOrigin, getPool, readAdminSes
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (!['admin','ti'].includes(session.role)) return json(res, 403, { error: 'observability_restricted' });
 
-    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!UUID_RE.test(alertId)) return json(res, 400, { error: 'invalid_alert_id' });
 
     if (req.method !== 'POST' && req.method !== 'PATCH') return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'POST, PATCH' });

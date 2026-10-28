@@ -58,4 +58,4 @@ jobs:
       # Baseline autenticado em 1440×900 e 390×844. A preparação registra
       # vínculo/grant fictício e cria, aprova, exercita e publica via APIs reais.
       - run: npm run ux:evidence -- --stage=ux-11-continuidade-cliente
-      - run: npm audit --audit-level=high
+      - run: npm audit --audit-level=moderate

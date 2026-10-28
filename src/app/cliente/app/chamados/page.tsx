@@ -1,5 +1,5 @@
 "use client";
-import {workspaceResponse,workspaceFetch} from "@/lib/workspace-response";
+import {workspaceFetch} from "@/lib/workspace-response";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Headphones, RotateCw, Send } from "lucide-react";
@@ -36,6 +36,12 @@ type Ticket = {
   messages: TicketMessage[] | null;
 };
 
+// UX-PRO-ID3: a leitura de chamados pertence a uma conta. Sem isso, os
+// chamados de A apareciam sob B durante a consulta e uma resposta antiga de A
+// podia substituir o resultado já concluído de B.
+type TicketsRead = { accountId: string; tickets: Ticket[]; readAt: string };
+type TicketsReadError = { accountId: string; message: string };
+
 const ticketStatus: Record<Ticket["status"], { text: string; chip: string }> = {
   open: { text: "Aberto", chip: appStyles.chipOpen },
   in_progress: { text: "Em atendimento", chip: appStyles.chipProgress },
@@ -65,10 +71,28 @@ const openErrors: Record<string, string> = {
   ticket_message_invalid: "O comentário do aceite deve ter entre 5 e 1000 caracteres (ou ficar em branco).",
 };
 
+function readFailureMessage(error: unknown) {
+  const raw = error instanceof Error ? error.message : "";
+  // workspaceFetch já traduz HTTP em português; removemos apenas o sufixo
+  // técnico (código interno) para não vazar identificadores ao cliente.
+  if (/^Sua sessão|^Seu acesso|^O registro|^O serviço|^Confira/.test(raw)) {
+    return raw.replace(/\s*\(HTTP \d+, [^)]*\)$/, "");
+  }
+  if (raw.startsWith("A resposta")) return raw;
+  return "Não foi possível carregar seus chamados agora. Tente novamente.";
+}
+
+function formatReadTime(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "horário não informado" : date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
 export default function ClientTicketsPage() {
   const { activeAccount, loading, notice, reload } = useClientSpace();
-  const [tickets, setTickets] = useState<Ticket[] | null>(null);
-  const [loadError, setLoadError] = useState("");
+  const [read, setRead] = useState<TicketsRead | null>(null);
+  const [readError, setReadError] = useState<TicketsReadError | null>(null);
+  const [readLoading, setReadLoading] = useState(false);
+  const latestRequest = useRef(0);
   const [category, setCategory] = useState<string>(TICKET_CATEGORIES[0] as string);
   const [title, setTitle] = useState("");
   const [details, setDetails] = useState("");
@@ -80,37 +104,62 @@ export default function ClientTicketsPage() {
   const [acceptBusy, setAcceptBusy] = useState<string | null>(null);
   const retryRequest = useRef<{ fingerprint: string; key: string } | null>(null);
 
-  const loadTickets = useCallback((accountId: string) => {
-    setLoadError("");
-    workspaceFetch(`/api/client/tickets?account=${encodeURIComponent(accountId)}`, { cache: "no-store" })
-      .then(async response => {
-        if (!response.ok) await workspaceResponse(response);
-        const data = (await workspaceResponse(response)) as { tickets: Ticket[] };
-        setTickets(data.tickets);
-      })
-      .catch((error) => setLoadError(error instanceof Error ? error.message : "Não foi possível carregar seus chamados agora."));
+  const loadTickets = useCallback(async (accountId: string) => {
+    const requestId = ++latestRequest.current;
+    setReadLoading(true);
+    setReadError(null);
+    try {
+      const response = await workspaceFetch(`/api/client/tickets?account=${encodeURIComponent(accountId)}`, { cache: "no-store" });
+      const data = (await response.json()) as { tickets: Ticket[] };
+      // Um 200 com corpo inesperado não é "nenhum chamado": é falha de leitura.
+      if (!Array.isArray(data.tickets)) throw new Error("A resposta não trouxe a lista de chamados. Tente novamente.");
+      if (requestId !== latestRequest.current) return;
+      setRead({ accountId, tickets: data.tickets, readAt: new Date().toISOString() });
+    } catch (error) {
+      if (requestId !== latestRequest.current) return;
+      setReadError({ accountId, message: readFailureMessage(error) });
+    } finally {
+      if (requestId !== latestRequest.current) return;
+      setReadLoading(false);
+    }
   }, []);
 
   useEffect(() => {
+    // Rascunhos e mensagens pertencem ao recorte anterior; não devem reaparecer
+    // em outra conta (nem sugerir que uma ação de A foi concluída em B).
+    setMessage("");
+    setState("idle");
+    setReopenReason({});
+    setAcceptNote({});
+    retryRequest.current = null;
     if (!activeAccount || activeAccount.status !== "active") {
-      setTickets(null);
+      latestRequest.current += 1;
+      setRead(null);
+      setReadError(null);
+      setReadLoading(false);
       return;
     }
-    loadTickets(activeAccount.id);
+    void loadTickets(activeAccount.id);
   }, [activeAccount, loadTickets]);
+
+  const currentRead = activeAccount?.id === read?.accountId ? read : null;
+  const currentError = activeAccount?.id === readError?.accountId ? readError : null;
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!activeAccount) return;
+    const accountId = activeAccount.id;
     setState("submitting");
     setMessage("");
-    const requestBody = { accountId: activeAccount.id, category, title, details };
+    const requestBody = { accountId, category, title, details };
     const requestFingerprint = JSON.stringify(requestBody);
     if (!retryRequest.current || retryRequest.current.fingerprint !== requestFingerprint) {
       retryRequest.current = { fingerprint: requestFingerprint, key: crypto.randomUUID() };
     }
     try {
-      const response = await workspaceFetch("/api/client/tickets", {
+      // fetch direto: workspaceFetch consumiria o corpo do erro e o mapa
+      // openErrors nunca seria alcançado em 400/409.
+      const response = await fetch("/api/client/tickets", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -132,7 +181,7 @@ export default function ClientTicketsPage() {
       setMessage("Chamado registrado. A equipe acompanha pelo portal e responde por aqui mesmo.");
       setTitle("");
       setDetails("");
-      loadTickets(activeAccount.id);
+      await loadTickets(accountId);
     } catch {
       setState("error");
       setMessage("Não foi possível conectar agora. Tente novamente em instantes.");
@@ -140,12 +189,14 @@ export default function ClientTicketsPage() {
   };
 
   const acceptTicket = async (ticket: Ticket) => {
+    const accountId = activeAccount?.id;
+    if (!accountId) return;
     const note = (acceptNote[ticket.id] ?? "").trim();
     setAcceptBusy(ticket.id);
     setState("idle");
     setMessage("");
     try {
-      const response = await workspaceFetch(`/api/client/tickets/${ticket.id}/accept`, {
+      const response = await fetch(`/api/client/tickets/${ticket.id}/accept`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -164,7 +215,7 @@ export default function ClientTicketsPage() {
       setAcceptNote(current => ({ ...current, [ticket.id]: "" }));
       setState("success");
       setMessage("Aceite registrado. O chamado foi encerrado e o histórico completo fica auditado.");
-      if (activeAccount) loadTickets(activeAccount.id);
+      await loadTickets(accountId);
     } catch {
       setState("error");
       setMessage("Não foi possível conectar agora. Tente novamente em instantes.");
@@ -174,12 +225,14 @@ export default function ClientTicketsPage() {
   };
 
   const reopenTicket = async (ticket: Ticket) => {
+    const accountId = activeAccount?.id;
+    if (!accountId) return;
     const reason = (reopenReason[ticket.id] ?? "").trim();
     setReopenBusy(ticket.id);
     setState("idle");
     setMessage("");
     try {
-      const response = await workspaceFetch(`/api/client/tickets/${ticket.id}/reopen`, {
+      const response = await fetch(`/api/client/tickets/${ticket.id}/reopen`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),
@@ -193,7 +246,7 @@ export default function ClientTicketsPage() {
       setReopenReason(current => ({ ...current, [ticket.id]: "" }));
       setState("success");
       setMessage("Chamado reaberto. A equipe receberá a justificativa pelo histórico auditado.");
-      if (activeAccount) loadTickets(activeAccount.id);
+      await loadTickets(accountId);
     } catch {
       setState("error");
       setMessage("Não foi possível conectar agora. Tente novamente em instantes.");
@@ -238,7 +291,7 @@ export default function ClientTicketsPage() {
 
   return (
     <>
-      <section className={appStyles.sectionCard} aria-labelledby="tickets-title">
+      <section className={appStyles.sectionCard} aria-labelledby="tickets-title" aria-busy={readLoading}>
         <span className={styles.badge}>
           <Headphones size={12} aria-hidden="true" />
           {activeAccount.display_name}
@@ -312,121 +365,136 @@ export default function ClientTicketsPage() {
         )}
       </section>
 
-      <section className={appStyles.sectionCard} aria-labelledby="tickets-list-title">
+      <section className={appStyles.sectionCard} aria-labelledby="tickets-list-title" aria-busy={readLoading}>
         <h2 id="tickets-list-title" className={appStyles.sectionTitle}>
           Seus chamados
         </h2>
         <p className={appStyles.sectionHint}>
           Histórico de solicitações deste cadastro, na ordem da mais recente para a mais antiga.
         </p>
-        {!activeAccount || activeAccount.status !== "active" ? null : loadError ? (
-          <p className={`${styles.message} ${styles.messageError}`} role="alert">
-            <span>{loadError}</span>
-            <button
-              className={appStyles.retryButton}
-              type="button"
-              onClick={() => activeAccount && loadTickets(activeAccount.id)}
-            >
-              <RotateCw size={13} aria-hidden="true" />
-              Tentar novamente
-            </button>
-          </p>
-        ) : !tickets ? (
-          <div className={appStyles.loadingWrapWide}>
-            <span className={styles.spinner} aria-hidden="true" />
-            Carregando chamados…
-          </div>
-        ) : tickets.length === 0 ? (
-          <div className={appStyles.emptyState}>
-            Você ainda não abriu chamados para este cadastro. Use o formulário acima quando precisar.
+        {activeAccount.status !== "active" ? (
+          <div className={appStyles.suspendedNote}>
+            Cadastro {activeAccount.status === "suspended" ? "suspenso" : "encerrado"}. Os chamados não são exibidos
+            enquanto a situação não é regularizada.
           </div>
         ) : (
-          <ul className={appStyles.list}>
-            {tickets.map(ticket => {
-              const status = ticketStatus[ticket.status];
-              return (
-                <li key={ticket.id} className={appStyles.listItem}>
-                  <div className={appStyles.listItemMain}>
-                    <p className={appStyles.listItemTitle}>{ticket.title}</p>
-                    <p className={appStyles.listItemMeta}>
-                      {ticket.category} · Aberto em {new Date(ticket.created_at).toLocaleString("pt-BR")}
-                    </p>
-                  </div>
-                  <span className={`${appStyles.chip} ${status.chip}`}>{status.text}</span>
-                  <p className={appStyles.listItemDetail}>{ticket.details}</p>
-                  {(ticket.messages ?? []).length > 0 ? (
-                    <div className={appStyles.responseBox}>
-                      <strong>Trilha do atendimento</strong>
-                      <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none" }}>
-                        {(ticket.messages ?? []).map((entry, index) => (
-                          <li key={`${ticket.id}-msg-${index}`} style={{ marginTop: index === 0 ? 0 : 8 }}>
-                            <strong>{messageKindLabel[entry.kind]}</strong>
-                            {entry.author_name ? ` · ${entry.author_name}` : ""} ·{" "}
-                            {new Date(entry.created_at).toLocaleString("pt-BR")}
-                            <br />
-                            {entry.message}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : ticket.admin_response ? (
-                    <div className={appStyles.responseBox}>
-                      <strong>Resposta da equipe</strong>
-                      {ticket.admin_response}
-                    </div>
-                  ) : null}
-                  {ticket.sla_paused_at ? (
-                    <div className={appStyles.responseBox}>
-                      <strong>SLA pausado</strong>
-                      A equipe marcou este chamado como aguardando cliente em {new Date(ticket.sla_paused_at).toLocaleString("pt-BR")}.
-                    </div>
-                  ) : null}
-                  {ticket.status === "resolved" ? (
-                    <div className={appStyles.inlineAction}>
-                      <textarea
-                        className={appStyles.textarea}
-                        value={acceptNote[ticket.id] ?? ""}
-                        maxLength={1000}
-                        onChange={event => setAcceptNote(current => ({ ...current, [ticket.id]: event.target.value }))}
-                        placeholder="Comentário do aceite (opcional, 5 a 1000 caracteres)"
-                        aria-label={`Comentário do aceite do chamado ${ticket.title}`}
-                      />
-                      <button
-                        type="button"
-                        className={styles.submit}
-                        disabled={acceptBusy === ticket.id}
-                        onClick={() => void acceptTicket(ticket)}
-                      >
-                        <Send size={13} aria-hidden="true" />
-                        {acceptBusy === ticket.id ? "Registrando…" : "Aceitar atendimento e encerrar"}
-                      </button>
-                    </div>
-                  ) : null}
-                  {ticket.status === "resolved" || ticket.status === "closed" ? (
-                    <div className={appStyles.inlineAction}>
-                      <textarea
-                        className={appStyles.textarea}
-                        value={reopenReason[ticket.id] ?? ""}
-                        maxLength={500}
-                        onChange={event => setReopenReason(current => ({ ...current, [ticket.id]: event.target.value }))}
-                        placeholder="Motivo da reabertura (mín. 10 caracteres)"
-                        aria-label={`Motivo para reabrir chamado ${ticket.title}`}
-                      />
-                      <button
-                        type="button"
-                        className={appStyles.retryButton}
-                        disabled={reopenBusy === ticket.id}
-                        onClick={() => void reopenTicket(ticket)}
-                      >
-                        <RotateCw size={13} aria-hidden="true" />
-                        {reopenBusy === ticket.id ? "Reabrindo…" : "Reabrir chamado"}
-                      </button>
-                    </div>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
+          <>
+            {currentError ? (
+              <p className={`${styles.message} ${styles.messageError}`} role="alert">
+                <span>{currentError.message}</span>
+                <button
+                  className={appStyles.retryButton}
+                  type="button"
+                  onClick={() => void loadTickets(activeAccount.id)}
+                >
+                  <RotateCw size={13} aria-hidden="true" />
+                  Tentar novamente
+                </button>
+              </p>
+            ) : null}
+            {currentError && currentRead ? (
+              <p className={appStyles.sectionHint} role="status">
+                Os dados abaixo são da Última leitura concluída às {formatReadTime(currentRead.readAt)}. A nova consulta falhou e nada foi apagado.
+              </p>
+            ) : null}
+            {readLoading || !currentRead ? (
+              <div className={appStyles.loadingWrapWide} role={currentError ? undefined : "status"}>
+                <span className={styles.spinner} aria-hidden="true" />
+                {currentError ? "Aguardando uma leitura concluída…" : "Carregando chamados…"}
+              </div>
+            ) : currentRead.tickets.length === 0 ? (
+              <div className={appStyles.emptyState}>
+                Você ainda não abriu chamados para este cadastro. Use o formulário acima quando precisar.
+              </div>
+            ) : (
+              <ul className={appStyles.list}>
+                {currentRead.tickets.map(ticket => {
+                  const status = ticketStatus[ticket.status];
+                  return (
+                    <li key={ticket.id} className={appStyles.listItem}>
+                      <div className={appStyles.listItemMain}>
+                        <p className={appStyles.listItemTitle}>{ticket.title}</p>
+                        <p className={appStyles.listItemMeta}>
+                          {ticket.category} · Aberto em {new Date(ticket.created_at).toLocaleString("pt-BR")}
+                        </p>
+                      </div>
+                      <span className={`${appStyles.chip} ${status.chip}`}>{status.text}</span>
+                      <p className={appStyles.listItemDetail}>{ticket.details}</p>
+                      {(ticket.messages ?? []).length > 0 ? (
+                        <div className={appStyles.responseBox}>
+                          <strong>Trilha do atendimento</strong>
+                          <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none" }}>
+                            {(ticket.messages ?? []).map((entry, index) => (
+                              <li key={`${ticket.id}-msg-${index}`} style={{ marginTop: index === 0 ? 0 : 8 }}>
+                                <strong>{messageKindLabel[entry.kind]}</strong>
+                                {entry.author_name ? ` · ${entry.author_name}` : ""} ·{" "}
+                                {new Date(entry.created_at).toLocaleString("pt-BR")}
+                                <br />
+                                {entry.message}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : ticket.admin_response ? (
+                        <div className={appStyles.responseBox}>
+                          <strong>Resposta da equipe</strong>
+                          {ticket.admin_response}
+                        </div>
+                      ) : null}
+                      {ticket.sla_paused_at ? (
+                        <div className={appStyles.responseBox}>
+                          <strong>SLA pausado</strong>
+                          A equipe marcou este chamado como aguardando cliente em {new Date(ticket.sla_paused_at).toLocaleString("pt-BR")}.
+                        </div>
+                      ) : null}
+                      {ticket.status === "resolved" ? (
+                        <div className={appStyles.inlineAction}>
+                          <textarea
+                            className={appStyles.textarea}
+                            value={acceptNote[ticket.id] ?? ""}
+                            maxLength={1000}
+                            onChange={event => setAcceptNote(current => ({ ...current, [ticket.id]: event.target.value }))}
+                            placeholder="Comentário do aceite (opcional, 5 a 1000 caracteres)"
+                            aria-label={`Comentário do aceite do chamado ${ticket.title}`}
+                          />
+                          <button
+                            type="button"
+                            className={styles.submit}
+                            disabled={acceptBusy === ticket.id}
+                            onClick={() => void acceptTicket(ticket)}
+                          >
+                            <Send size={13} aria-hidden="true" />
+                            {acceptBusy === ticket.id ? "Registrando…" : "Aceitar atendimento e encerrar"}
+                          </button>
+                        </div>
+                      ) : null}
+                      {ticket.status === "resolved" || ticket.status === "closed" ? (
+                        <div className={appStyles.inlineAction}>
+                          <textarea
+                            className={appStyles.textarea}
+                            value={reopenReason[ticket.id] ?? ""}
+                            maxLength={500}
+                            onChange={event => setReopenReason(current => ({ ...current, [ticket.id]: event.target.value }))}
+                            placeholder="Motivo da reabertura (mín. 10 caracteres)"
+                            aria-label={`Motivo para reabrir chamado ${ticket.title}`}
+                          />
+                          <button
+                            type="button"
+                            className={appStyles.retryButton}
+                            disabled={reopenBusy === ticket.id}
+                            onClick={() => void reopenTicket(ticket)}
+                          >
+                            <RotateCw size={13} aria-hidden="true" />
+                            {reopenBusy === ticket.id ? "Reabrindo…" : "Reabrir chamado"}
+                          </button>
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </>
         )}
       </section>
     </>

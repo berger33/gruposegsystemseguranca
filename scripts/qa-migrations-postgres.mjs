@@ -10,6 +10,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import pg from 'pg';
 import { readdirSync } from 'node:fs';
+import './qa-generated-files-guard.mjs';
 // Derivado do disco: nunca mais fica defasado quando uma migração é adicionada.
 const EXPECTED_MIGRATIONS = readdirSync(new URL('../db/migrations/', import.meta.url))
   .filter(f => /^\d{3}-.*\.sql$/.test(f)).length;

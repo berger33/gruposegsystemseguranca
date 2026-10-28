@@ -1,3 +1,5 @@
+> **Estado vigente (26/10/2026, `main` 6b4212d):** este documento é **histórico** — registra o estado da sua própria data e pode conter filas/contagens já superadas. A fonte única de estado é [`STATUS-VIGENTE.md`](STATUS-VIGENTE.md); a auditoria completa está em [`AUDITORIA-FATIAS-PENDENTES-E-ERROS-2026-10-26.md`](AUDITORIA-FATIAS-PENDENTES-E-ERROS-2026-10-26.md). Produção segue **NO-GO**.
+
 ## Atualização corrente — F15 / EXT-07 Planos de Ação de Compliance (Opção 1)
 
 - **Base:** `b26f93cb1262777827a46edc823e8fccd1c1e70e`, branch `arena/01a109c0-gruposegsystemseguranca`.

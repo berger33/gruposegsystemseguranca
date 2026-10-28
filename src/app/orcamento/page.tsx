@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { PUBLIC_SERVICES, PROPERTY_TYPES, findPropertyType } from "@/lib/service-catalog.mjs";
 
@@ -12,6 +12,13 @@ export default function OrcamentoPage() {
   const [services, setServices] = useState<string[]>([]);
   const [form, setForm] = useState({ name: "", phone: "", city: "", details: "", consent: false });
   const [status, setStatus] = useState<{ type: "idle" | "loading" | "success" | "error"; message?: string }>({ type: "idle" });
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  // G5: falha pós-submissão precisa ser anunciada e receber foco, senão o
+  // visitante (especialmente por teclado/leitor de tela) não sabe que o envio
+  // falhou e não consegue repetir sem procurar a mensagem.
+  useEffect(() => {
+    if (status.type === "error") errorRef.current?.focus();
+  }, [status.type]);
 
   const toggle = (name: string) =>
     setServices((prev) => (prev.includes(name) ? prev.filter((s) => s !== name) : [...prev, name]));
@@ -95,7 +102,7 @@ export default function OrcamentoPage() {
           : `${propertyType} · ${services.join(", ")}. Nenhum valor é exibido aqui — o preço depende de vistoria e parâmetros de custo/tributo/margem versionados.`}
       </section>
 
-      <form onSubmit={submit} style={{ marginTop: 16, display: "grid", gap: 10 }}>
+      <form onSubmit={submit} aria-busy={status.type === "loading"} style={{ marginTop: 16, display: "grid", gap: 10 }}>
         <label>Nome<br /><input required maxLength={100} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={{ width: "100%", padding: 8 }} /></label>
         <label>Telefone<br /><input required maxLength={30} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} style={{ width: "100%", padding: 8 }} /></label>
         <label>Cidade/bairro<br /><input required maxLength={100} value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} style={{ width: "100%", padding: 8 }} /></label>
@@ -107,8 +114,9 @@ export default function OrcamentoPage() {
         <button type="submit" disabled={status.type === "loading" || services.length === 0} style={{ padding: "10px 16px", background: "#0b5fff", color: "#fff", border: "none", borderRadius: 6 }}>
           {status.type === "loading" ? "Enviando…" : "Solicitar orçamento (protocolo persistido)"}
         </button>
-        {status.type === "success" && <p style={{ color: "#166534", background: "#ecfdf5", padding: 10, borderRadius: 6 }}>{status.message}</p>}
-        {status.type === "error" && <p style={{ color: "#991b1b", background: "#fef2f2", padding: 10, borderRadius: 6 }}>Erro: {status.message}</p>}
+        {status.type === "loading" && <p role="status" style={{ fontSize: 13 }}>Enviando sua solicitação…</p>}
+        {status.type === "success" && <p role="status" style={{ color: "#166534", background: "#ecfdf5", padding: 10, borderRadius: 6 }}>{status.message}</p>}
+        {status.type === "error" && <p ref={errorRef} tabIndex={-1} role="alert" style={{ color: "#991b1b", background: "#fef2f2", padding: 10, borderRadius: 6 }}>Erro: {status.message}</p>}
       </form>
 
       <p style={{ marginTop: 20, fontSize: 12, opacity: 0.65 }}>

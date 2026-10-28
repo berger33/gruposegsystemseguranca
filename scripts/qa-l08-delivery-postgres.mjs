@@ -10,6 +10,7 @@ import { symlinkSync, existsSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import './qa-generated-files-guard.mjs';
 
 const root = path.resolve(import.meta.dirname, "..");
 // embedded-postgres ships libpq/ICU beside the native binaries; expose that
@@ -43,7 +44,7 @@ try {
   await postgres.initialise(); await postgres.start(); await postgres.createDatabase(database);
   const databaseUrl = `postgresql://seg_qa:${password}@127.0.0.1:${port}/${database}`;
   console.log(`QA_L08_PG_READY: 127.0.0.1:${port}/${database}; temporary isolated cluster; secret omitted.`);
-  console.log("QA_L08_SCOPE: CLI-01..05 canonical legacy portal; full access journey, fail-closed atomic audit, A/B isolation, pre-header private-download audit, ticket/document idempotency and real Chromium entry; CLI-06..15, EXT-01..17 and v2 APIs not promoted.");
+  console.log("QA_L08_SCOPE: CLI-01..05 canonical legacy portal; CLI-02 client contact list + delegated-contact API slice (grant-bound, self/direct-delegate-only, scope-preserving, pending/no access); CLI-03 published contract details; CLI-06..08 client API slices (account-scoped visits, reschedule audit, reviewed report visibility and idempotent acknowledgement); full access journey, fail-closed atomic audit, A/B isolation, pre-header private-download audit, ticket/document idempotency and real Chromium entry. CLI-06..08 staff lifecycle/UI and CLI-09..15, EXT-01..17 and v2 APIs remain outside this evidence.");
   result = await run(process.execPath, ["--test", "--test-concurrency=1", "tests/l08-delivery.integration.test.mjs"], {
     RUN_DATABASE_INTEGRATION: "1", DATABASE_URL: databaseUrl, DATABASE_MIGRATION_URL: "", RUN_DATABASE_INTEGRATION_REMOTE: "", QA_PGLITE_ONLY: "", ALLOW_REMOTE_MIGRATIONS: "", OLLAMA_ENABLED: "false", MAIL_HOST: "", NEXT_TELEMETRY_DISABLED: "1", CLIENT_DOCS_DIR: path.join(directory, "private-documents"), AWS_EXECUTION_ENV: "AWS_Lambda_nodejs22.x",
   });

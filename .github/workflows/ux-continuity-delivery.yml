@@ -52,4 +52,4 @@ jobs:
       - run: UX_CONTINUITY_EVIDENCE_DIR=docs/ux-11-continuidade-evidencias npm run test:ux-continuity:pg
       # Baseline visual autenticado da rota de equipe em 1440×900 e 390×844.
       - run: npm run ux:evidence -- --stage=ux-11-continuidade
-      - run: npm audit --audit-level=high
+      - run: npm audit --audit-level=moderate

@@ -53,5 +53,5 @@ jobs:
       # Gate focal: PostgreSQL 17 descartável, HTTP real, Chromium real e stub
       # determinístico. O auditor TAP exige >=20 casos, zero fail/skip/todo.
       - run: npm run test:ai-rag-widget:pg
-      - run: npm audit --audit-level=high
+      - run: npm audit --audit-level=moderate
 

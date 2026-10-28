@@ -10,6 +10,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { snapshotGeneratedFiles, restoreGeneratedFiles } from "./qa-generated-files.mjs";
 
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === "1") {
   console.error("QA_PG_REFUSED: DATABASE_URL, DATABASE_MIGRATION_URL e banco remoto são proibidos neste gate local.");
@@ -67,8 +68,12 @@ const postgres = new EmbeddedPostgres({
   onError: (error) => console.error("QA_PG_ENGINE_ERROR", String(error).replaceAll(password, "[redacted]").slice(0, 500)),
 });
 
-let exitCode = 1;
+let exitCode = 1, generatedSnapshot;
 try {
+  // E9: o servidor --dev com NEXT_DIST_DIR reescreve next-env.d.ts e
+  // tsconfig.json. Sem restore, este gate deixava a árvore suja e a guarda E2
+  // falhava na execução seguinte (falso vermelho de CI).
+  generatedSnapshot = await snapshotGeneratedFiles();
   await postgres.initialise();
   await postgres.start();
   const database = "seg_qa_ext14";
@@ -111,8 +116,13 @@ try {
   console.error("QA_PG_FAILED", String(error?.message || error).replaceAll(password, "[redacted]").slice(0, 700));
   exitCode = 1;
 } finally {
-  await postgres.stop().catch(() => {});
-  await rm(directory, { recursive: true, force: true }).catch(() => {});
-  console.log("QA_EXT14_PG_TEMP_CLEANED: true");
+  try {
+    await postgres.stop().catch(() => {});
+    await rm(directory, { recursive: true, force: true }).catch(() => {});
+    console.log("QA_EXT14_PG_TEMP_CLEANED: true");
+  } finally {
+    await restoreGeneratedFiles(generatedSnapshot);
+    console.log("QA_EXT14_GENERATED_FILES_RESTORED: true");
+  }
 }
 process.exit(exitCode);

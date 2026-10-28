@@ -536,6 +536,50 @@ test('o gate focal exige PostgreSQL real quando é cobrado', () => {
   if (REQUIRE) assert.ok(RUN, 'QA_AI_RAG_WIDGET_REQUIRE_DB=1 exige DATABASE_URL e RUN_DATABASE_INTEGRATION=1');
 });
 
+// ---------------------------------------------------------------------------
+// E3/E4 — aliases legados de escrita retirados do dispatch (410) e curadoria
+// administrativa preservada. Antes, /api/ai/rag/feedback, /api/ai/bot-sessions
+// e /api/ai-rag-queries alcançavam os handlers antigos e respondiam 403
+// `tenant_scope_not_implemented` para rag_key='cliente' — contradizendo a
+// canônica, que isola por client_account_id/grants. Nenhum modelo é chamado.
+// ---------------------------------------------------------------------------
+test('HTTP E4: todos os aliases legados de escrita respondem 410 e nunca tenant_scope_not_implemented', opt, async () => {
+  const aliases = [
+    '/api/ai/rag', '/api/public/ai/rag', '/api/ai/rag/queries',
+    '/api/admin/ai-rag-queries', '/api/ai-rag-queries',
+    '/api/ai/rag/feedback', '/api/public/ai/rag/feedback', '/api/admin/ai-rag-feedback',
+    '/api/ai/bot', '/api/public/ai/bot', '/api/bot',
+    '/api/admin/ai-bot-sessions', '/api/ai/bot-sessions',
+  ];
+  for (const alias of aliases) {
+    for (const ragKey of ['publico', 'cliente']) {
+      const response = await api(alias, {
+        method: 'POST', cookie: adminCookie,
+        body: { rag_key: ragKey, query: 'consulta sintetica de escopo', protocol: 'E4-PROBE-0001', rating: 3 },
+      });
+      assert.equal(response.status, 410, `${alias} (${ragKey}) precisa ser 410: veio ${response.status}`);
+      assert.equal(response.body?.error, 'legacy_ai_retired');
+      assert.equal(response.body?.canonical, '/api/ai/answer');
+      assert.notEqual(response.body?.error, 'tenant_scope_not_implemented',
+        `${alias} não pode responder o 403 legado contraditório`);
+    }
+  }
+  // A canônica continua viva: o bloqueio não pode engoli-la.
+  const canonical = await api('/api/ai/answer', {
+    method: 'POST', cookie: adminCookie,
+    body: { rag_key: 'publico', query: 'consulta sintetica de escopo' },
+  });
+  assert.notEqual(canonical.status, 410, '/api/ai/answer não pode ser retirado');
+  assert.ok([200, 400, 401, 403, 503].includes(canonical.status), `canônica respondeu ${canonical.status}`);
+});
+
+test('HTTP E4: a curadoria administrativa GET continua disponível após a retirada dos POSTs', opt, async () => {
+  for (const pathname of ['/api/admin/ai-rag-indexes', '/api/admin/ai-rag-documents', '/api/admin/ai-rag-cost']) {
+    const response = await api(pathname, { method: 'GET', cookie: adminCookie, headers: { origin: baseUrl } });
+    assert.equal(response.status, 200, `curadoria ${pathname} precisa continuar disponível: veio ${response.status}`);
+  }
+});
+
 test('HTTP: visita anônima não entra em base privada e a pública não vê conteúdo privado', opt, async () => {
   for (const ragKey of ['rh', 'marcelo', 'cliente']) {
     const anonymous = await ask(ragKey, MARK.rh, null);

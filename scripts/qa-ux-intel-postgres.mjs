@@ -8,6 +8,7 @@ import { mkdtemp, rm, symlink } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import './qa-generated-files-guard.mjs';
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') { console.error('QA_PG_REFUSED: banco do operador ou remoto definido.'); process.exit(2); }
 const root = path.resolve(import.meta.dirname, '..');
 const embeddedLib = path.join(root, 'node_modules/@embedded-postgres/linux-x64/native/lib');

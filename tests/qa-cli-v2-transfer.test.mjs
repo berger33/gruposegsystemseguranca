@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash, generateKeyPairSync, randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { createUnsafeObjectEntry } from './helpers/fs-link-fixtures.mjs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { signQaManifest, publicKeyFingerprint } from '../scripts/qa-detached-manifest-signature.mjs';
@@ -99,8 +100,7 @@ test('PLT-BAK-001: falha após 1/3 importa, remove só arquivo criado; desconhec
   assert.equal(done.count, 3);
   assert.deepEqual(await inventoryQaCliV2Objects({ pool, root: destinationRoot }),
     { referenced: 3, unreferenced: 1, missing: 0, dbKeys: 3, diskKeys: 4 });
-  const unsafe = path.join(destinationRoot, 'objects', 'a'.repeat(48));
-  await symlink(path.join(destinationRoot, 'objects', canary), unsafe);
+  await createUnsafeObjectEntry({ objectsDir: path.join(destinationRoot, 'objects'), canaryPath: path.join(destinationRoot, 'objects', canary), key: 'a'.repeat(48) });
   await assert.rejects(inventoryQaCliV2Objects({ pool, root: destinationRoot }), /qa_cli_inventory_file_unsafe/);
   assert.deepEqual(await readFile(path.join(destinationRoot, 'objects', canary)), canaryBytes);
 });

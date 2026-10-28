@@ -2667,7 +2667,11 @@ async function routeApi(req, res) {
   const inviteMatch = url.pathname.match(/^\/api\/admin\/invites\/([0-9a-f-]{36})$/i);
   if (inviteMatch) return clientAccessApi.handleInviteRevoke(req, res, inviteMatch[1]);
   if (url.pathname === "/api/client/accounts") return clientSpaceApi.handleClientAccounts(req, res);
+  if (url.pathname === "/api/client/contacts") return clientSpaceApi.handleClientContacts(req, res, url);
+  if (url.pathname === "/api/client/contacts/delegate") return clientSpaceApi.handleClientContactDelegate(req, res);
   if (url.pathname === "/api/client/contracts") return clientSpaceApi.handleClientContracts(req, res, url);
+  const clientContractPublishedMatch = url.pathname.match(/^\/api\/client\/contracts\/([0-9a-f-]{36})\/published-details$/i);
+  if (clientContractPublishedMatch) return clientSpaceApi.handleClientContractPublishedDetails(req, res, url, clientContractPublishedMatch[1]);
   if (url.pathname === "/api/client/documents") return clientSpaceApi.handleClientDocuments(req, res, url);
   const clientDocMatch = url.pathname.match(/^\/api\/client\/documents\/([0-9a-f-]{36})\/download$/i);
   if (clientDocMatch) return clientSpaceApi.handleClientDocumentDownload(req, res, clientDocMatch[1]);
@@ -4538,7 +4542,15 @@ async function routeApi(req, res) {
   }
   if (url.pathname === "/api/ai/answer") return aiRagRealApi.ask(req, res);
   // Os endpoints beta públicos antigos não podem mais apresentar fallback como IA.
-  if (req.method === "POST" && ["/api/ai/rag", "/api/public/ai/rag", "/api/ai/rag/queries", "/api/admin/ai-rag-queries", "/api/ai/bot", "/api/public/ai/bot", "/api/bot", "/api/admin/ai-bot-sessions"].includes(url.pathname)) {
+  // E4: TODOS os aliases de escrita dos handlers legados precisam ser
+  // retirados, não apenas os mais conhecidos. Os aliases de feedback, de
+  // sessões e `/api/ai-rag-queries` ainda alcançavam handleQueries /
+  // handleFeedback / handleBotSessions e respondiam 403
+  // `tenant_scope_not_implemented` para rag_key='cliente' — comportamento
+  // contraditório com a canônica, que isola por client_account_id/grants.
+  // A curadoria administrativa (GET de índices, documentos, chunks e custo)
+  // continua despachada logo abaixo; só os POSTs legados são retirados.
+  if (req.method === "POST" && ["/api/ai/rag", "/api/public/ai/rag", "/api/ai/rag/queries", "/api/admin/ai-rag-queries", "/api/ai-rag-queries", "/api/ai/rag/feedback", "/api/public/ai/rag/feedback", "/api/admin/ai-rag-feedback", "/api/ai/bot", "/api/public/ai/bot", "/api/bot", "/api/admin/ai-bot-sessions", "/api/ai/bot-sessions"].includes(url.pathname)) {
     return json(res, 410, { error: "legacy_ai_retired", canonical: "/api/ai/answer" });
   }
   // APIs administrativas legadas de curadoria permanecem acessíveis ao staff autorizado.

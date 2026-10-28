@@ -1,0 +1,288 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<title>E18 — Opções de paleta para decisão</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#e9edf2;color:#111827;font-family:Inter,Arial,Helvetica,sans-serif}
+.page-head{max-width:1680px;margin:0 auto;padding:28px 24px 10px}
+.page-head h1{font-size:26px;margin:0 0 6px;letter-spacing:-.02em}
+.page-head p{margin:0;color:#4b5563;font-size:13px;line-height:1.6}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:1680px;margin:0 auto;padding:14px 24px 40px}
+.panel{background:#fff;border:1px solid #d8dee7;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(15,23,42,.06)}
+.panel-head{padding:16px 16px 14px;border-bottom:1px solid #e5e9f0;background:linear-gradient(180deg,#fff,#f8fafc)}
+.eyebrow{font-size:9px;letter-spacing:.18em;font-weight:800;color:#6b7280}
+.panel-head h2{font-size:16px;margin:6px 0 3px;letter-spacing:-.01em}
+.panel-head .sub{font-size:11px;color:#4b5563;margin:0 0 10px;line-height:1.45;min-height:32px}
+.meta{display:flex;gap:6px;flex-wrap:wrap;font-size:9px;color:#6b7280}
+.meta span{background:#eef2f7;border-radius:4px;padding:4px 6px}
+.meta b{color:#111827}
+.nota{margin-top:9px;font-size:10px;font-weight:700;color:#0f5132;background:#e7f5ec;border-left:3px solid #198754;padding:6px 8px;border-radius:0 4px 4px 0}
+#painel-ANTES .nota{color:#842029;background:#fdecee;border-left-color:#dc3545}
+.site{font-size:10px}
+.topbar{display:flex;justify-content:space-between;padding:5px 12px;background:#eef1f5;color:#5a6673;font-size:7px;letter-spacing:.1em;font-weight:700}
+.nav{display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid #eceff4;font-size:8px}
+.nav strong{font-size:12px;letter-spacing:-.03em;margin-right:auto;color:#142f4c}
+.nav span{color:#52616b}
+.nav a{text-decoration:none;font-weight:700}
+.hero{padding:18px 12px 16px;background:#fff}
+.kicker{font-size:7px;letter-spacing:.18em;font-weight:800;margin-bottom:9px}
+.hero h1{font-family:Georgia,'Times New Roman',serif;font-size:25px;line-height:1.02;letter-spacing:-.045em;margin:0 0 9px;color:#142f4c;font-weight:400}
+.hero h1 em{font-style:italic}
+.hero p{font-size:9px;line-height:1.7;margin:0 0 12px;max-width:250px}
+.cta{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.cta button{color:#fff;border:0;border-radius:3px;padding:8px 11px;font-size:8px;font-weight:700;cursor:default}
+.cta a{font-size:8px;font-weight:700;text-decoration:none}
+.assina{font-size:7px;letter-spacing:.08em;line-height:1.6}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 12px 14px;background:#fff}
+.card{border:1px solid #e6eaf0;border-radius:5px;padding:9px 8px;background:#fcfdfe}
+.card .num{font-size:8px;font-weight:800;letter-spacing:.1em}
+.card h3{font-family:Georgia,serif;font-size:10px;margin:5px 0 6px;font-weight:600;line-height:1.2}
+.card p{font-size:7.5px;line-height:1.6;margin:0 0 8px;color:inherit}
+.card a{font-size:7.5px;font-weight:700;text-decoration:none}
+.faixa{display:flex;justify-content:space-between;gap:8px;padding:10px 12px;font-size:7.5px;letter-spacing:.03em}
+.faixa a{text-decoration:none;font-weight:700}
+.swatches{padding:12px;border-top:1px solid #e5e9f0;background:#fbfcfe}
+.sw-title{font-size:8px;font-weight:800;letter-spacing:.1em;color:#6b7280;margin:4px 0 6px;text-transform:uppercase}
+.sw{display:inline-flex;align-items:center;gap:5px;font-size:8px;padding:4px 6px;margin:0 3px 4px 0;border:1px solid #e5e9f0;border-radius:4px}
+.sw b{font-size:7.5px;padding:1px 3px;border-radius:3px}
+.sw b.ok{background:#dcf5e6;color:#0f5132}
+.sw b.bad{background:#fde2e4;color:#842029}
+@media(max-width:1200px){.grid{grid-template-columns:repeat(2,1fr)}}
+</style></head><body>
+<div class="page-head">
+  <h1>E18 — Opções de paleta para as prévias de layout</h1>
+  <p>Simulação sobre as <b>2.560 amostras reais</b> do gate 10B (11 rotas × light/dark). As quatro colunas usam exatamente a mesma estrutura de componentes; só mudam as cores de texto. Os badges mostram o contraste medido. <b>Nenhum CSS de produção foi alterado</b> — as cores abaixo são as que seriam aplicadas após a sua decisão.</p>
+</div>
+<div class="grid">
+<section class="panel" id="painel-ANTES">
+  <header class="panel-head">
+    <div class="eyebrow">ESTADO ATUAL</div>
+    <h2>Hoje (sem correção)</h2>
+    <p class="sub">144 cores com contraste insuficiente</p>
+    <div class="meta"><span>Alvo <b>—</b></span><span>Ratio médio <b>3.34:1</b></span><span>Cores <b>144</b></span></div>
+    <div class="nota">708 sinais abaixo de 4.5:1</div>
+  </header>
+
+  <div class="site">
+    <div class="topbar"><span>GRUPO SEG · SEGURANÇA ELETRÔNICA</span><span>Atendimento 24h</span></div>
+    <nav class="nav"><strong>SegSystem</strong><span>Serviços</span><span>Segmentos</span><span>Sobre</span><a style="color:#75a7d1">Contato</a></nav>
+
+    <div class="hero">
+      <div class="kicker" style="color:#7091b2">MONITORAMENTO INTELIGENTE</div>
+      <h1>Proteção que <em style="color:#75a7d1">nunca dorme</em>.</h1>
+      <p style="color:#7091b2">Câmeras, alarmes e controle de acesso integrados em uma única plataforma, com resposta humana em minutos.</p>
+      <div class="cta"><button style="background:#75a7d1">Solicitar proposta</button><a style="color:#6da9dc">Conhecer serviços →</a></div>
+      <div class="assina" style="color:#6e9bc1"><b>4.200+</b> unidades monitoradas · <b>18</b> anos de operação</div>
+    </div>
+
+    <div class="cards">
+      
+      <article class="card">
+        <span class="num" style="color:#879ba4">01</span>
+        <h3 style="color:#75a7d1">CFTV e câmeras</h3>
+        <p style="color:#78acd5">Gravação em nuvem, analytics embarcado e imagens nítidas mesmo à noite.</p>
+        <a style="color:#75a7d1">Saiba mais →</a>
+      </article>
+      <article class="card">
+        <span class="num" style="color:#76a0c5">02</span>
+        <h3 style="color:#7091b2">Alarme e sensores</h3>
+        <p style="color:#6da9dc">Gravação em nuvem, analytics embarcado e imagens nítidas mesmo à noite.</p>
+        <a style="color:#75a7d1">Saiba mais →</a>
+      </article>
+      <article class="card">
+        <span class="num" style="color:#6c9bc6">03</span>
+        <h3 style="color:#78acd5">Controle de acesso</h3>
+        <p style="color:#6e9bc1">Gravação em nuvem, analytics embarcado e imagens nítidas mesmo à noite.</p>
+        <a style="color:#75a7d1">Saiba mais →</a>
+      </article>
+    </div>
+
+    <div class="faixa" style="background:rgb(17,24,39)">
+      <span style="color:#78acd5">© 2026 Grupo SEG System. Prévia de layout — dados fictícios.</span>
+      <a style="color:#75a7d1">Política de privacidade</a>
+    </div>
+  </div>
+
+  <div class="swatches">
+    <div class="sw-title">Sobre branco — variantes escuras</div>
+    <span class="sw" style="color:#75a7d1;background:rgb(255,255,255)">Link <b class="bad">2.56:1</b></span><span class="sw" style="color:#7091b2;background:rgb(255,255,255)">Corpo <b class="bad">3.29:1</b></span><span class="sw" style="color:#78acd5;background:rgb(255,255,255)">Secundário <b class="bad">2.42:1</b></span><span class="sw" style="color:#6da9dc;background:rgb(255,255,255)">Rótulo <b class="bad">2.51:1</b></span><span class="sw" style="color:#6e9bc1;background:rgb(255,255,255)">Destaque <b class="bad">2.95:1</b></span><span class="sw" style="color:#879ba4;background:rgb(255,255,255)">Legenda <b class="bad">2.89:1</b></span>
+    <div class="sw-title">Sobre papel claro</div>
+    <span class="sw" style="color:#75a7d1;background:rgb(246,248,250)">Link <b class="bad">2.4:1</b></span><span class="sw" style="color:#7091b2;background:rgb(246,248,250)">Corpo <b class="bad">3.09:1</b></span><span class="sw" style="color:#78acd5;background:rgb(246,248,250)">Secundário <b class="bad">2.28:1</b></span><span class="sw" style="color:#6da9dc;background:rgb(246,248,250)">Rótulo <b class="bad">2.36:1</b></span>
+    <div class="sw-title">Sobre fundo escuro — variantes claras</div>
+    <span class="sw" style="color:#75a7d1;background:rgb(17,24,39)">Link <b class="ok">6.93:1</b></span><span class="sw" style="color:#7091b2;background:rgb(17,24,39)">Corpo <b class="ok">5.39:1</b></span><span class="sw" style="color:#78acd5;background:rgb(17,24,39)">Secundário <b class="ok">7.32:1</b></span><span class="sw" style="color:#6da9dc;background:rgb(17,24,39)">Rótulo <b class="ok">7.06:1</b></span>
+  </div>
+</section>
+<section class="panel" id="painel-A">
+  <header class="panel-head">
+    <div class="eyebrow">PROPOSTA A</div>
+    <h2>Opção A — Ajuste mínimo</h2>
+    <p class="sub">Mesma identidade, só o ajuste necessário</p>
+    <div class="meta"><span>Alvo <b>≥ 4.5:1 (AA)</b></span><span>Ratio médio <b>4.52:1</b></span><span>Cores <b>158</b></span></div>
+    <div class="nota">708/708 corrigidos · 158 variantes</div>
+  </header>
+
+  <div class="site">
+    <div class="topbar"><span>GRUPO SEG · SEGURANÇA ELETRÔNICA</span><span>Atendimento 24h</span></div>
+    <nav class="nav"><strong>SegSystem</strong><span>Serviços</span><span>Segmentos</span><span>Sobre</span><a style="color:#5e7995">Contato</a></nav>
+
+    <div class="hero">
+      <div class="kicker" style="color:#9e664c">MONITORAMENTO INTELIGENTE</div>
+      <h1>Proteção que <em style="color:#5e7995">nunca dorme</em>.</h1>
+      <p style="color:#567a99">Câmeras, alarmes e controle de acesso integrados em uma única plataforma, com resposta humana em minutos.</p>
+      <div class="cta"><button style="background:#5e7995">Solicitar proposta</button><a style="color:#617993">Conhecer serviços →</a></div>
+      <div class="assina" style="color:#64798e"><b>4.200+</b> unidades monitoradas · <b>18</b> anos de operação</div>
+    </div>
+
+    <div class="cards">
+      
+      <article class="card">
+        <span class="num" style="color:#65747b">01</span>
+        <h3 style="color:#5e7995">CFTV e câmeras</h3>
+        <p style="color:#497aab">Gravação em nuvem, analytics embarcado e imagens nítidas mesmo à noite.</p>
+        <a style="color:#5e7995">Saiba mais →</a>
+      </article>
+      <article class="card">
+        <span class="num" style="color:#337589">02</span>
+        <h3 style="color:#567a99">Alarme e sensores</h3>
+        <p style="color:#617993">Gravação em nuvem, analytics embarcado e imagens nítidas mesmo à noite.</p>
+        <a style="color:#5e7995">Saiba mais →</a>
+      </article>
+      <article class="card">
+        <span class="num" style="color:#9e664c">03</span>
+        <h3 style="color:#497aab">Controle de acesso</h3>
+        <p style="color:#64798e">Gravação em nuvem, analytics embarcado e imagens nítidas mesmo à noite.</p>
+        <a style="color:#5e7995">Saiba mais →</a>
+      </article>
+    </div>
+
+    <div class="faixa" style="background:rgb(17,24,39)">
+      <span style="color:#f1f5f9">© 2026 Grupo SEG System. Prévia de layout — dados fictícios.</span>
+      <a style="color:#dbeafe">Política de privacidade</a>
+    </div>
+  </div>
+
+  <div class="swatches">
+    <div class="sw-title">Sobre branco — variantes escuras</div>
+    <span class="sw" style="color:#65747b;background:rgb(255,255,255)">Link <b class="ok">4.84:1</b></span><span class="sw" style="color:#337589;background:rgb(255,255,255)">Corpo <b class="ok">5.19:1</b></span><span class="sw" style="color:#9a6628;background:rgb(255,255,255)">Secundário <b class="ok">4.88:1</b></span><span class="sw" style="color:#44709e;background:rgb(255,255,255)">Rótulo <b class="ok">5.18:1</b></span><span class="sw" style="color:#586f8b;background:rgb(255,255,255)">Destaque <b class="ok">5.17:1</b></span><span class="sw" style="color:#3b70a6;background:rgb(255,255,255)">Legenda <b class="ok">5.18:1</b></span>
+    <div class="sw-title">Sobre papel claro</div>
+    <span class="sw" style="color:#65747b;background:rgb(246,248,250)">Link <b class="ok">4.55:1</b></span><span class="sw" style="color:#337589;background:rgb(246,248,250)">Corpo <b class="ok">4.87:1</b></span><span class="sw" style="color:#9a6628;background:rgb(246,248,250)">Secundário <b class="ok">4.58:1</b></span><span class="sw" style="color:#44709e;background:rgb(246,248,250)">Rótulo <b class="ok">4.86:1</b></span>
+    <div class="sw-title">Sobre fundo escuro — variantes claras</div>
+    <span class="sw" style="color:#3f8fa6;background:rgb(17,24,39)">Link <b class="ok">4.81:1</b></span><span class="sw" style="color:#f0d1bc;background:rgb(17,24,39)">Corpo <b class="ok">12.29:1</b></span><span class="sw" style="color:#b18852;background:rgb(17,24,39)">Secundário <b class="ok">5.5:1</b></span><span class="sw" style="color:#b6e3ff;background:rgb(17,24,39)">Rótulo <b class="ok">13.03:1</b></span>
+  </div>
+</section>
+<section class="panel" id="painel-B">
+  <header class="panel-head">
+    <div class="eyebrow">PROPOSTA B</div>
+    <h2>Opção B — Contraste alto (AAA)</h2>
+    <p class="sub">Cores profundas, matizes preservados</p>
+    <div class="meta"><span>Alvo <b>≥ 7:1 (AAA)</b></span><span>Ratio médio <b>7.4:1</b></span><span>Cores <b>28</b></span></div>
+    <div class="nota">704/708 a 7:1 · 4 exigem clarear o fundo</div>
+  </header>
+
+  <div class="site">
+    <div class="topbar"><span>GRUPO SEG · SEGURANÇA ELETRÔNICA</span><span>Atendimento 24h</span></div>
+    <nav class="nav"><strong>SegSystem</strong><span>Serviços</span><span>Segmentos</span><span>Sobre</span><a style="color:#1f5680">Contato</a></nav>
+
+    <div class="hero">
+      <div class="kicker" style="color:#86442a">MONITORAMENTO INTELIGENTE</div>
+      <h1>Proteção que <em style="color:#1f5680">nunca dorme</em>.</h1>
+      <p style="color:#1e537c">Câmeras, alarmes e controle de acesso integrados em uma única plataforma, com resposta humana em minutos.</p>
+      <div class="cta"><button style="background:#1f5680">Solicitar proposta</button><a style="color:#1f557f">Conhecer serviços →</a></div>
+      <div class="assina" style="color:#1c4d73"><b>4.200+</b> unidades monitoradas · <b>18</b> anos de operação</div>
+    </div>
+
+    <div class="cards">
+      
+      <article class="card">
+        <span class="num" style="color:#834229">01</span>
+        <h3 style="color:#1f5680">CFTV e câmeras</h3>
+        <p style="color:#86442a">Gravação em nuvem, analytics embarcado e imagens nítidas mesmo à noite.</p>
+        <a style="color:#1f5680">Saiba mais →</a>
+      </article>
+      <article class="card">
+        <span class="num" style="color:#834329">02</span>
+        <h3 style="color:#1e537c">Alarme e sensores</h3>
+        <p style="color:#1f557f">Gravação em nuvem, analytics embarcado e imagens nítidas mesmo à noite.</p>
+        <a style="color:#1f5680">Saiba mais →</a>
+      </article>
+      <article class="card">
+        <span class="num" style="color:#44515c">03</span>
+        <h3 style="color:#86442a">Controle de acesso</h3>
+        <p style="color:#1c4d73">Gravação em nuvem, analytics embarcado e imagens nítidas mesmo à noite.</p>
+        <a style="color:#1f5680">Saiba mais →</a>
+      </article>
+    </div>
+
+    <div class="faixa" style="background:rgb(17,24,39)">
+      <span style="color:#f1f5f9">© 2026 Grupo SEG System. Prévia de layout — dados fictícios.</span>
+      <a style="color:#dbeafe">Política de privacidade</a>
+    </div>
+  </div>
+
+  <div class="swatches">
+    <div class="sw-title">Sobre branco — variantes escuras</div>
+    <span class="sw" style="color:#1f5680;background:rgb(255,255,255)">Link <b class="ok">7.77:1</b></span><span class="sw" style="color:#1e537c;background:rgb(255,255,255)">Corpo <b class="ok">8.13:1</b></span><span class="sw" style="color:#86442a;background:rgb(255,255,255)">Secundário <b class="ok">7.31:1</b></span><span class="sw" style="color:#1f557f;background:rgb(255,255,255)">Rótulo <b class="ok">7.88:1</b></span><span class="sw" style="color:#1c4d73;background:rgb(255,255,255)">Destaque <b class="ok">8.9:1</b></span><span class="sw" style="color:#834229;background:rgb(255,255,255)">Legenda <b class="ok">7.56:1</b></span>
+    <div class="sw-title">Sobre papel claro</div>
+    <span class="sw" style="color:#1f5680;background:rgb(246,248,250)">Link <b class="ok">7.3:1</b></span><span class="sw" style="color:#1e537c;background:rgb(246,248,250)">Corpo <b class="ok">7.64:1</b></span><span class="sw" style="color:#86442a;background:rgb(246,248,250)">Secundário <b class="ok">6.86:1</b></span><span class="sw" style="color:#1f557f;background:rgb(246,248,250)">Rótulo <b class="ok">7.4:1</b></span>
+    <div class="sw-title">Sobre fundo escuro — variantes claras</div>
+    <span class="sw" style="color:#ffffff;background:rgb(17,24,39)">Link <b class="ok">17.74:1</b></span><span class="sw" style="color:#7e9eb6;background:rgb(17,24,39)">Corpo <b class="ok">6.3:1</b></span><span class="sw" style="color:#91acc0;background:rgb(17,24,39)">Secundário <b class="ok">7.49:1</b></span><span class="sw" style="color:#87a5bb;background:rgb(17,24,39)">Rótulo <b class="ok">6.87:1</b></span>
+  </div>
+</section>
+<section class="panel" id="painel-C">
+  <header class="panel-head">
+    <div class="eyebrow">PROPOSTA C</div>
+    <h2>Opção C — Marca unificada</h2>
+    <p class="sub">Navy + aço + terracota em todos os layouts</p>
+    <div class="meta"><span>Alvo <b>≥ 4.5:1 (AA)</b></span><span>Ratio médio <b>6.75:1</b></span><span>Cores <b>10</b></span></div>
+    <div class="nota">708/708 corrigidos · 10 variantes de 4 tokens</div>
+  </header>
+
+  <div class="site">
+    <div class="topbar"><span>GRUPO SEG · SEGURANÇA ELETRÔNICA</span><span>Atendimento 24h</span></div>
+    <nav class="nav"><strong>SegSystem</strong><span>Serviços</span><span>Segmentos</span><span>Sobre</span><a style="color:#1e5a8a">Contato</a></nav>
+
+    <div class="hero">
+      <div class="kicker" style="color:#9c4a2f">MONITORAMENTO INTELIGENTE</div>
+      <h1>Proteção que <em style="color:#1e5a8a">nunca dorme</em>.</h1>
+      <p style="color:#9c4a2f">Câmeras, alarmes e controle de acesso integrados em uma única plataforma, com resposta humana em minutos.</p>
+      <div class="cta"><button style="background:#1e5a8a">Solicitar proposta</button><a style="color:#142f4c">Conhecer serviços →</a></div>
+      <div class="assina" style="color:#697a8d"><b>4.200+</b> unidades monitoradas · <b>18</b> anos de operação</div>
+    </div>
+
+    <div class="cards">
+      
+      <article class="card">
+        <span class="num" style="color:#5f8aac">01</span>
+        <h3 style="color:#1e5a8a">CFTV e câmeras</h3>
+        <p style="color:#33414d">Gravação em nuvem, analytics embarcado e imagens nítidas mesmo à noite.</p>
+        <a style="color:#1e5a8a">Saiba mais →</a>
+      </article>
+      <article class="card">
+        <span class="num" style="color:#5784a7">02</span>
+        <h3 style="color:#9c4a2f">Alarme e sensores</h3>
+        <p style="color:#142f4c">Gravação em nuvem, analytics embarcado e imagens nítidas mesmo à noite.</p>
+        <a style="color:#1e5a8a">Saiba mais →</a>
+      </article>
+      <article class="card">
+        <span class="num" style="color:#e7d3cc">03</span>
+        <h3 style="color:#33414d">Controle de acesso</h3>
+        <p style="color:#697a8d">Gravação em nuvem, analytics embarcado e imagens nítidas mesmo à noite.</p>
+        <a style="color:#1e5a8a">Saiba mais →</a>
+      </article>
+    </div>
+
+    <div class="faixa" style="background:rgb(17,24,39)">
+      <span style="color:#f1f5f9">© 2026 Grupo SEG System. Prévia de layout — dados fictícios.</span>
+      <a style="color:#dbeafe">Política de privacidade</a>
+    </div>
+  </div>
+
+  <div class="swatches">
+    <div class="sw-title">Sobre branco — variantes escuras</div>
+    <span class="sw" style="color:#1e5a8a;background:rgb(255,255,255)">Link <b class="ok">7.28:1</b></span><span class="sw" style="color:#9c4a2f;background:rgb(255,255,255)">Corpo <b class="ok">6.12:1</b></span><span class="sw" style="color:#33414d;background:rgb(255,255,255)">Secundário <b class="ok">10.48:1</b></span><span class="sw" style="color:#142f4c;background:rgb(255,255,255)">Rótulo <b class="ok">13.63:1</b></span>
+    <div class="sw-title">Sobre papel claro</div>
+    <span class="sw" style="color:#1e5a8a;background:rgb(246,248,250)">Link <b class="ok">6.84:1</b></span><span class="sw" style="color:#9c4a2f;background:rgb(246,248,250)">Corpo <b class="ok">5.74:1</b></span><span class="sw" style="color:#33414d;background:rgb(246,248,250)">Secundário <b class="ok">9.84:1</b></span><span class="sw" style="color:#142f4c;background:rgb(246,248,250)">Rótulo <b class="ok">12.8:1</b></span>
+    <div class="sw-title">Sobre fundo escuro — variantes claras</div>
+    <span class="sw" style="color:#5f8aac;background:rgb(17,24,39)">Link <b class="ok">4.83:1</b></span><span class="sw" style="color:#e7d3cc;background:rgb(17,24,39)">Corpo <b class="ok">12.32:1</b></span><span class="sw" style="color:#ba826f;background:rgb(17,24,39)">Secundário <b class="ok">5.5:1</b></span><span class="sw" style="color:#c7d6e2;background:rgb(17,24,39)">Rótulo <b class="ok">11.95:1</b></span>
+  </div>
+</section></div>
+</body></html>

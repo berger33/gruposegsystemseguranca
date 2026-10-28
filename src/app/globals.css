@@ -179,7 +179,7 @@ h1 em, h2 em { color: var(--blue); font-style: normal; }
 .choice__check { display: grid; place-items: center; flex: none; width: 15px; height: 15px; border: 1px solid var(--line); border-radius: 2px; }
 .choice--selected .choice__check { border-color: var(--blue); color: white; background: var(--blue); }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
-.quote-form-wrap label span:not(.optional) { color: #c76748; }
+.quote-form-wrap label span:not(.optional) { color: #af5a3f; }
 .quote-form-wrap input:not([type=checkbox]), .quote-form-wrap select, .quote-form-wrap textarea { display: block; width: 100%; min-height: 43px; border: 1px solid var(--line); border-radius: 2px; background: var(--surface); color: var(--text); padding: 11px 12px; outline: none; margin-top: 7px; font-size: 11px; font-weight: 500; }
 .quote-form-wrap textarea { resize: vertical; min-height: 80px; }
 .quote-form-wrap input::placeholder, .quote-form-wrap textarea::placeholder { color: var(--muted); opacity: .72; }

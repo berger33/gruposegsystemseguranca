@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import path from 'node:path';
+import './qa-generated-files-guard.mjs';
 
 const projectRoot = path.resolve(import.meta.dirname, '..');
 async function freePort() {

@@ -1,0 +1,69 @@
+{
+  "inventario": "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.csv",
+  "resumo": "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
+  "data": "2026-10-27",
+  "criterio": "promover por area somente com prova (decisao de 02/10); prova estatica nao substitui gate de navegador nem aceite humano",
+  "tiConsoleSha256": "593a0e122152fc6595c580bc6800dfa4ac5b3704d2d6ab52c390baa22766a921",
+  "pageSha256": "360bf2564469679a4cc7c0b6b9274f05557188f701a3f3b89649ce4d70d56313",
+  "total": 83,
+  "abas": 18,
+  "importsDinamicos": 18,
+  "console": {
+    "total": 18,
+    "comProva": 18,
+    "lacunas": []
+  },
+  "workspace": {
+    "total": 25
+  },
+  "orfos": {
+    "total": 40,
+    "promovidosSemSairDaClassificacao": 0
+  },
+  "promocoesComProva": {
+    "total": 6,
+    "todasMontadas": true,
+    "detalhes": [
+      {
+        "componente": "DependencyClient.tsx",
+        "aba": "dependencias",
+        "familia": "PLT-14 dependências / lockfile / vulnerabilidades",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-DEPENDENCIAS-2026-10-27.md"
+      },
+      {
+        "componente": "MaintenanceDocClient.tsx",
+        "aba": "manutencao",
+        "familia": "PLT-18 documentação de manutenção versionada",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-DOCUMENTACAO-MANUTENCAO-2026-10-27.md"
+      },
+      {
+        "componente": "BudgetClient.tsx",
+        "aba": "orcamentos",
+        "familia": "PLT-16 orçamento operacional, métricas de uso e alertas",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-ORCAMENTO-USO-2026-10-27.md"
+      },
+      {
+        "componente": "EnvClient.tsx",
+        "aba": "ambientes",
+        "familia": "PLT-17 inventário declarativo de ambientes e verificações de isolamento",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-AMBIENTES-2026-10-27.md"
+      },
+      {
+        "componente": "RetentionClient.tsx",
+        "aba": "retencao",
+        "familia": "PLT-11 retenção por categoria, exceções formais e descarte verificável",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-RETENCAO-DESCARTE-2026-10-27.md"
+      },
+      {
+        "componente": "ConfigClient.tsx",
+        "aba": "configuracoes",
+        "familia": "PLT-13 configurações, flags, manutenção, rollout e reversão",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-CONFIGURACOES-ROLLOUT-2026-10-27.md"
+      }
+    ]
+  },
+  "apis": {
+    "literais": 398,
+    "semDispatch": 0
+  }
+}

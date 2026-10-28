@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { linkDirectoryOutside } from './helpers/fs-link-fixtures.mjs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createQaCliV2LocalProvider } from '../scripts/qa-cli-v2-local-provider.mjs';
@@ -64,6 +65,6 @@ test('PLT-BAK-001 / CLI-04: diretório operador e symlink fora do QA são recusa
   await assert.rejects(createQaCliV2LocalProvider('/operator/private-docs'), /qa_object_external_dir_refused/);
   const root = await mkdtemp(path.join(tmpdir(), 'seg-qa-cli-contract-'));
   t.after(() => rm(root, { recursive: true, force: true }));
-  await symlink(tmpdir(), path.join(root, 'objects'));
+  await linkDirectoryOutside(tmpdir(), path.join(root, 'objects'));
   await assert.rejects(createQaCliV2LocalProvider(root), /qa_object_external_dir_refused/);
 });

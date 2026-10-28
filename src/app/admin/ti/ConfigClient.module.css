@@ -1,0 +1,43 @@
+/* UX-PRO-03 — PLT-13: tokens compartilhados, sem hex inline. Mesmo contrato
+   visual das outras promoções com prova. */
+.workspace{display:grid;gap:1rem;min-width:0;margin-top:1.25rem;padding:clamp(.85rem,2vw,1.5rem);border:1px solid var(--ux-color-border);border-radius:16px;background:var(--ux-color-surface);color:var(--ux-color-text);box-shadow:var(--ux-shadow-card)}
+.header,.sectionHeading{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;min-width:0}
+.header h2{margin:.2rem 0 .45rem;font-size:clamp(1.4rem,2.2vw,1.85rem)}
+.header p,.sectionHeading p{max-width:80ch;margin:.25rem 0 0;color:var(--ux-color-muted);line-height:1.5}
+.eyebrow{margin:0;color:var(--ux-color-brand);font-size:.74rem;font-weight:750;letter-spacing:.07em;text-transform:uppercase}
+.source,.note{font-size:.82rem;line-height:1.55;overflow-wrap:anywhere}
+.source code,.note code{padding:.1rem .3rem;border-radius:4px;background:var(--ux-color-brand-soft)}
+.sectionHeading h3{margin:0;font-size:1.08rem}
+.panel{display:grid;gap:.9rem;min-width:0;padding:clamp(.85rem,1.7vw,1.2rem);border:1px solid var(--ux-color-border);border-radius:14px;background:var(--ux-color-canvas)}
+.count{flex:none;padding:.35rem .65rem;border:1px solid var(--ux-color-border);border-radius:999px;background:var(--ux-color-surface);font-size:.8rem;font-weight:700}
+.note{margin:0;color:var(--ux-color-muted)}
+.field{display:grid;gap:.38rem;min-width:0;color:var(--ux-color-text);font-size:.82rem;font-weight:650}
+.field>span{display:block}
+.field small{color:var(--ux-color-muted);font-size:.76rem;font-weight:400;line-height:1.45}
+.field input,.field select,.field textarea{width:100%;min-height:44px;box-sizing:border-box;padding:.62rem .72rem;border:1px solid var(--ux-color-border);border-radius:8px;background:var(--ux-color-surface);color:var(--ux-color-text);font:inherit;font-weight:400}
+.field textarea{min-height:5rem;resize:vertical}
+.formGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem;min-width:0}
+.full{grid-column:1/-1;min-width:0}
+.inlineForm{display:flex;flex-wrap:wrap;align-items:end;gap:.6rem;min-width:0}
+.inlineForm .field{flex:1 1 14rem;max-width:22rem}
+.workspace button{width:fit-content;min-height:44px;padding:.62rem .85rem;border:1px solid var(--ux-color-border);border-radius:9px;background:var(--ux-color-surface);color:var(--ux-color-text);font:inherit;font-weight:650;cursor:pointer}
+.workspace button:hover:not(:disabled){border-color:var(--ux-color-brand)}
+.workspace button:disabled{cursor:wait;opacity:.65}
+.workspace .primary{border-color:var(--ux-color-brand);background:var(--ux-color-brand);color:var(--ux-color-surface)}
+.actions{display:flex;flex-wrap:wrap;gap:.5rem}
+.recordList{display:grid;gap:.6rem;margin:0;padding:0;list-style:none}
+.recordList li{display:grid;gap:.28rem;min-width:0;padding:.75rem;border:1px solid var(--ux-color-border);border-radius:9px;background:var(--ux-color-surface)}
+.recordList strong{overflow-wrap:anywhere}
+.recordList span{color:var(--ux-color-muted);font-size:.78rem;overflow-wrap:anywhere}
+.subsection{min-width:0;padding:.65rem .8rem;border:1px solid var(--ux-color-border);border-radius:10px;background:var(--ux-color-surface)}
+.subsection summary{min-height:38px;display:flex;align-items:center;color:var(--ux-color-brand);font-size:.84rem;font-weight:700;cursor:pointer}
+.pre{margin:.5rem 0 0;max-height:20rem;overflow:auto;font-size:.76rem;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ux-color-text)}
+.ok{color:var(--ux-color-success)}
+.warning{color:var(--ux-color-warning);font-weight:700}
+.critical{color:var(--ux-color-error);font-weight:750}
+.success,.error{margin:0;padding:.65rem .8rem;border-radius:9px;font-size:.84rem;line-height:1.5}
+.success{border:1px solid var(--ux-color-success);color:var(--ux-color-success)}
+.error{border:1px solid var(--ux-color-error);color:var(--ux-color-error)}
+.workspace :focus-visible,.workspace button:focus-visible,.workspace summary:focus-visible{outline:3px solid var(--ux-color-focus);outline-offset:3px}
+@media(max-width:900px){.formGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.header,.sectionHeading{flex-direction:column}.header>button{align-self:flex-start}.formGrid{grid-template-columns:1fr}.full{grid-column:auto}.workspace{padding:.75rem}.panel{padding:.75rem}.actions,.inlineForm{flex-direction:column;align-items:stretch}.actions button,.inlineForm button{width:100%}.inlineForm .field{max-width:none}}

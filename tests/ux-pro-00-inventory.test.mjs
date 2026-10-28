@@ -8,6 +8,9 @@ const root = path.resolve(import.meta.dirname, '..');
 const GENERATOR = 'scripts/ux-pro-00-inventory.mjs';
 const INVENTORY = 'docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-10.csv';
 const MATRIX = 'docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-10.csv';
+// Inventário vigente (13/10): os CSVs de 10/10 são históricos de reconciliação
+// e deliberadamente não carregam os gates descobertos depois.
+const CURRENT_INVENTORY = 'docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-13.csv';
 
 async function pageEntries() {
   const appRoot = path.join(root, 'src', 'app');
@@ -52,7 +55,7 @@ test('o inventário vigente conta exatamente as entradas de rota que existem em 
   assert.equal(summary.entradasDeRota, entries.length, 'cada arquivo page.* conta como uma entrada');
   assert.equal(summary.rotasDistintas, summary.entradasDeRota, 'nenhuma rota pode ser contada duas vezes');
 
-  const inventory = parseCsv(await readFile(path.join(root, INVENTORY), 'utf8'));
+  const inventory = parseCsv(await readFile(path.join(root, CURRENT_INVENTORY), 'utf8'));
   assert.equal(inventory.length, entries.length);
   assert.equal(new Set(inventory.map((row) => row.rota)).size, entries.length, 'rotas duplicadas no inventário');
   for (const row of inventory) {
@@ -63,19 +66,19 @@ test('o inventário vigente conta exatamente as entradas de rota que existem em 
   }
 });
 
-test('a diferença 98 → 100 fica explicada por rotas nomeadas, sem reescrever os históricos', async () => {
+test('a diferença entre inventários históricos e a rota CLI-02 nova fica reconciliada', async () => {
   const summary = summaryFrom(runGenerator(['--check']));
   const byId = Object.fromEntries(summary.reconciliacao.map((entry) => [entry.inventario, entry]));
 
   for (const id of ['UX-00 05/10/2026', 'FECH-12 07/10/2026']) {
     assert.equal(byId[id].rotasDistintasRegistradas, 98, `${id} registra 98 rotas`);
-    assert.deepEqual(byId[id].adicionadasDesde, ['/admin/aparencia', '/layout-preview']);
+    assert.deepEqual(byId[id].adicionadasDesde, ['/admin/aparencia', '/cliente/app/contatos', '/layout-preview']);
     assert.deepEqual(byId[id].removidasDesde, []);
   }
 
   const auditoria = byId['Auditoria 08/10/2026'];
   assert.equal(auditoria.rotasDistintasRegistradas, 100);
-  assert.deepEqual(auditoria.adicionadasDesde, []);
+  assert.deepEqual(auditoria.adicionadasDesde, ['/cliente/app/contatos']);
   assert.deepEqual(auditoria.removidasDesde, []);
   assert.equal(auditoria.linhasSemBarraInicial, 100, 'o CSV de 08/10 grava a rota sem barra inicial');
   assert.equal(auditoria.raizGravadaComoArquivo, 1, 'o CSV de 08/10 grava a raiz como page.tsx');
@@ -84,6 +87,18 @@ test('a diferença 98 → 100 fica explicada por rotas nomeadas, sem reescrever 
     const file = await readFile(path.join(root, historical.arquivo), 'utf8');
     assert.ok(file.length > 0, `histórico preservado: ${historical.arquivo}`);
   }
+});
+
+test('E6 grupo 3: o filtro preciso em src/app/page.tsx vira gate de jornada da raiz', async () => {
+  const inventory = parseCsv(await readFile(path.join(root, CURRENT_INVENTORY), 'utf8'));
+  const home = inventory.find((row) => row.rota === '/');
+  assert.ok(home, 'a raiz precisa estar no inventário');
+  assert.match(home.gates_automatizados, /ux-public-routes-group3-delivery\.yml/,
+    'o workflow do grupo 3 precisa ser reconhecido como gate de jornada da raiz');
+  assert.doesNotMatch(home.gates_automatizados, /\|\|/, 'sem gate duplicado');
+  const generator = await readFile(path.join(root, GENERATOR), 'utf8');
+  assert.match(generator, /prefixes\.add\('\/'\)/,
+    'o reconhecimento do arquivo da raiz precisa continuar no gerador');
 });
 
 test('a matriz cobre todas as rotas e nunca inventa validação manual nem aceite humano', async () => {

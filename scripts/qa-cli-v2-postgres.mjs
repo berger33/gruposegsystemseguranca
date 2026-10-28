@@ -7,6 +7,7 @@ import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import './qa-generated-files-guard.mjs';
 
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.ALLOW_REMOTE_MIGRATIONS === 'true' || process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') {
   console.error('QA_CLI_V2_REFUSED: unset database URLs and remote migrations before local-only QA.');

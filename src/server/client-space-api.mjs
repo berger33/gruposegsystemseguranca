@@ -409,6 +409,230 @@ export function createClientSpaceApi(ctx) {
     }
   }
 
+  async function handleClientContractPublishedDetails(req, res, url, contractId) {
+    if (!requireMethod(req, res, ["GET"])) return;
+    const session = await requireClientSession(req, res);
+    if (!session) return;
+    const accountId = String(url.searchParams.get("account") || "");
+    if (!UUID_PATTERN.test(accountId)) return ctx.json(res, 400, { error: "invalid_account_id" });
+    if (!UUID_PATTERN.test(contractId)) return ctx.json(res, 400, { error: "invalid_contract_id" });
+
+    const db = ctx.getPool();
+    if (!(await requireAccountScope(db, { req, res, session, accountId, action: "contract_list" }))) return;
+    try {
+      const grantResult = await db.query(
+        `SELECT contract_scope_mode, allowed_contract_ids
+           FROM client_access_grants
+          WHERE identity_id = $1 AND client_account_id = $2 AND revoked_at IS NULL`,
+        [session.identityId, accountId],
+      );
+      const grant = grantResult.rows[0];
+      if (!grant || !["all", "selected"].includes(grant.contract_scope_mode)) {
+        if (!await auditOr503(db, res, { actorKind: "client", actorId: session.identityId, action: "contract_list", target: contractId, result: "denied", category: "authorization_denied" })) return;
+        return ctx.json(res, 403, { error: "forbidden" });
+      }
+      if (grant.contract_scope_mode === "selected" && !(Array.isArray(grant.allowed_contract_ids) && grant.allowed_contract_ids.includes(contractId))) {
+        if (!await auditOr503(db, res, { actorKind: "client", actorId: session.identityId, action: "contract_list", target: contractId, result: "denied", category: "authorization_denied" })) return;
+        return ctx.json(res, 403, { error: "forbidden" });
+      }
+
+      const contractResult = await db.query(
+        `SELECT id, title, service, status, starts_on, ends_on, summary
+           FROM client_contracts
+          WHERE id = $1 AND client_account_id = $2`,
+        [contractId, accountId],
+      );
+      const contract = contractResult.rows[0];
+      if (!contract) {
+        if (!await auditOr503(db, res, { actorKind: "client", actorId: session.identityId, action: "contract_list", target: contractId, result: "denied", category: "not_found" })) return;
+        return ctx.json(res, 404, { error: "contract_not_found" });
+      }
+
+      const [itemsResult, vigenciasResult, documentsResult] = await Promise.all([
+        db.query(
+          `SELECT id, item_type, title, description, quantity, unit
+             FROM cli_contract_items
+            WHERE contract_id = $1 AND is_internal = false
+            ORDER BY title ASC LIMIT 100`,
+          [contractId],
+        ),
+        db.query(
+          `SELECT id, starts_on, ends_on, status
+             FROM cli_contract_vigencia
+            WHERE contract_id = $1 AND status = 'vigente'
+              AND starts_on <= CURRENT_DATE
+              AND (ends_on IS NULL OR ends_on >= CURRENT_DATE)
+            ORDER BY starts_on DESC LIMIT 20`,
+          [contractId],
+        ),
+        db.query(
+          `SELECT id, category, title, description, file_name, version, valid_from, valid_to
+             FROM cli_client_documents_v2
+            WHERE client_account_id = $1 AND contract_id = $2
+              AND status = 'publicado' AND is_internal = false AND is_private = false
+              AND (valid_from IS NULL OR valid_from <= CURRENT_DATE)
+              AND (valid_to IS NULL OR valid_to >= CURRENT_DATE)
+            ORDER BY title ASC LIMIT 100`,
+          [accountId, contractId],
+        ),
+      ]);
+      if (!await auditOr503(db, res, { actorKind: "client", actorId: session.identityId, action: "contract_list", target: contractId, result: "allowed" })) return;
+      return ctx.json(res, 200, {
+        contract,
+        items: itemsResult.rows,
+        vigencias: vigenciasResult.rows,
+        documents: documentsResult.rows,
+      });
+    } catch (error) {
+      return databaseFailure(res, error, "Could not load published client contract details.");
+    }
+  }
+
+  async function handleClientContacts(req, res, url) {
+    if (!requireMethod(req, res, ["GET"])) return;
+    const session = await requireClientSession(req, res);
+    if (!session) return;
+    const accountId = String(url.searchParams.get("account") || "").trim();
+    if (!UUID_PATTERN.test(accountId)) return ctx.json(res, 400, { error: "invalid_account_id" });
+    const db = ctx.getPool();
+    if (!(await requireAccountScope(db, { req, res, session, accountId, action: "contact_list" }))) return;
+    try {
+      const sources = await db.query(
+        `SELECT id FROM cli_client_contacts
+          WHERE identity_id = $1 AND client_account_id = $2 AND status = 'ativo'
+          ORDER BY created_at ASC`,
+        [session.identityId, accountId],
+      );
+      const sourceIds = sources.rows.map(row => row.id);
+      if (!sourceIds.length) {
+        if (!await auditOr503(db, res, { actorKind: "client", actorId: session.identityId, action: "contact_list", target: accountId, result: "allowed" })) return;
+        return ctx.json(res, 200, { contacts: [] });
+      }
+      const contactsResult = await db.query(
+        `SELECT id, client_account_id, display_name, email, role, status, can_delegate,
+                delegated_by_contact_id, COALESCE(identity_id = $1, false) AS is_self
+           FROM cli_client_contacts
+          WHERE client_account_id = $2
+            AND (id = ANY($3::uuid[]) OR delegated_by_contact_id = ANY($3::uuid[]))
+          ORDER BY is_self DESC, display_name ASC LIMIT 100`,
+        [session.identityId, accountId, sourceIds],
+      );
+      // Expose only the authenticated contact(s) and their direct delegations.
+      const visibleContactIds = contactsResult.rows.map(row => row.id);
+      const visibleScopes = visibleContactIds.length
+        ? await db.query(
+          `SELECT contact_id, unit_id, contract_id, role, can_delegate
+             FROM cli_contact_scopes
+            WHERE client_account_id = $1 AND contact_id = ANY($2::uuid[])
+            ORDER BY unit_id NULLS FIRST, contract_id NULLS FIRST, role`,
+          [accountId, visibleContactIds],
+        )
+        : { rows: [] };
+      const allScopesByContact = new Map();
+      for (const scope of visibleScopes.rows) {
+        const list = allScopesByContact.get(scope.contact_id) || [];
+        list.push({ unit_id: scope.unit_id, contract_id: scope.contract_id, role: scope.role, can_delegate: scope.can_delegate });
+        allScopesByContact.set(scope.contact_id, list);
+      }
+      const contacts = contactsResult.rows.map(({ id, ...contact }) => ({
+        id,
+        ...contact,
+        scopes: allScopesByContact.get(id) || [],
+      }));
+      if (!await auditOr503(db, res, { actorKind: "client", actorId: session.identityId, action: "contact_list", target: accountId, result: "allowed" })) return;
+      return ctx.json(res, 200, { contacts });
+    } catch (error) {
+      return databaseFailure(res, error, "Could not load the authorized client contacts.");
+    }
+  }
+
+  async function handleClientContactDelegate(req, res) {
+    if (!requireMethod(req, res, ["POST"])) return;
+    if (!requireSameOrigin(req, res)) return;
+    const session = await requireClientSession(req, res);
+    if (!session) return;
+    const body = await readJsonOr400(req, res);
+    if (body === undefined) return;
+    const accountId = String(body.accountId || body.client_account_id || "").trim();
+    if (!UUID_PATTERN.test(accountId)) return ctx.json(res, 400, { error: "invalid_account_id" });
+    const displayName = String(body.displayName || body.display_name || "").trim();
+    if (displayName.length < 2 || displayName.length > 200) return ctx.json(res, 400, { error: "invalid_display_name" });
+    const email = String(body.email || "").trim().toLowerCase();
+    if (email.length < 5 || email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return ctx.json(res, 400, { error: "invalid_email" });
+    }
+
+    const db = ctx.getPool();
+    if (!(await requireAccountScope(db, { req, res, session, accountId, action: "contact_delegate" }))) return;
+    let client;
+    try {
+      client = await db.connect();
+      await client.query("BEGIN");
+      const sourceResult = await client.query(
+        `SELECT id, role, can_delegate
+           FROM cli_client_contacts
+          WHERE identity_id = $1 AND client_account_id = $2 AND status = 'ativo'
+            AND delegated_by_contact_id IS NULL
+          FOR UPDATE`,
+        [session.identityId, accountId],
+      );
+      const source = sourceResult.rows[0];
+      if (!source || !source.can_delegate) {
+        await client.query("ROLLBACK");
+        if (!await auditOr503(db, res, { actorKind: "client", actorId: session.identityId, action: "contact_delegate", target: accountId, result: "denied", category: "authorization_denied" })) return;
+        return ctx.json(res, 403, { error: "delegation_not_authorized" });
+      }
+      const scopesResult = await client.query(
+        `SELECT unit_id, contract_id, role
+           FROM cli_contact_scopes
+          WHERE contact_id = $1 AND client_account_id = $2 AND can_delegate = true
+          ORDER BY unit_id NULLS FIRST, contract_id NULLS FIRST, role
+          FOR UPDATE`,
+        [source.id, accountId],
+      );
+      if (!scopesResult.rows.length) {
+        await client.query("ROLLBACK");
+        if (!await auditOr503(db, res, { actorKind: "client", actorId: session.identityId, action: "contact_delegate", target: accountId, result: "denied", category: "authorization_denied" })) return;
+        return ctx.json(res, 403, { error: "delegation_not_authorized" });
+      }
+
+      const contactResult = await client.query(
+        `INSERT INTO cli_client_contacts
+           (client_account_id, display_name, email, role, status, can_delegate, delegated_by_contact_id, created_by)
+         VALUES ($1,$2,$3,$4,'pendente_convite',false,$5,'client')
+         RETURNING id, client_account_id, display_name, email, role, status, can_delegate, delegated_by_contact_id`,
+        [accountId, displayName, email, source.role, source.id],
+      );
+      const delegatedContact = contactResult.rows[0];
+      const delegatedScopes = [];
+      for (const scope of scopesResult.rows) {
+        const scopeResult = await client.query(
+          `INSERT INTO cli_contact_scopes
+             (contact_id, client_account_id, unit_id, contract_id, role, can_delegate, delegated_by_contact_id)
+           VALUES ($1,$2,$3,$4,$5,false,$6)
+           RETURNING id, client_account_id, unit_id, contract_id, role, can_delegate, delegated_by_contact_id`,
+          [delegatedContact.id, accountId, scope.unit_id, scope.contract_id, scope.role, source.id],
+        );
+        delegatedScopes.push(scopeResult.rows[0]);
+      }
+      await audit(client, {
+        actorKind: "client",
+        actorId: session.identityId,
+        action: "contact_delegate",
+        target: delegatedContact.id,
+        result: "allowed",
+      });
+      await client.query("COMMIT");
+      return ctx.json(res, 201, { contact: delegatedContact, scopes: delegatedScopes, access_granted: false });
+    } catch (error) {
+      await rollback(client);
+      if (error && typeof error === "object" && error.code === "23505") return ctx.json(res, 409, { error: "duplicate_contact_email" });
+      return databaseFailure(res, error, "Could not delegate the client contact.");
+    } finally {
+      client?.release();
+    }
+  }
+
   async function handleClientDocuments(req, res, url) {
     if (!requireMethod(req, res, ["GET"])) return;
     const session = await requireClientSession(req, res);
@@ -2017,6 +2241,9 @@ export function createClientSpaceApi(ctx) {
   return {
     handleClientAccounts,
     handleClientContracts,
+    handleClientContractPublishedDetails,
+    handleClientContacts,
+    handleClientContactDelegate,
     handleClientDocuments,
     handleClientDocumentDownload,
     handleClientTickets,

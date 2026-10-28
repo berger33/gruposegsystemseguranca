@@ -145,17 +145,27 @@ try {
     }catch(err:any){ setMsg(`erro rag test: ${err.message}`); }
   }
 
+  // E3: o teste de bot chamava /api/ai/bot (público) ou
+  // /api/admin/ai-bot-sessions (privado). Ambos foram retirados (410) na
+  // canonicalização para /api/ai/answer, então o botão sempre falhava e ainda
+  // tentava exibir protocolo/fila/modo, campos que a canônica não devolve.
+  // Agora a consulta usa o contrato vivo e descreve fontes, motivo e se o
+  // modelo foi realmente consultado — sem inventar protocolo ou resposta.
   async function testBot(e: React.FormEvent){
     e.preventDefault();
-    setMsg(`testando bot modo ${botConfig?.active_mode||"com_ia"}...`);
+    setMsg(`consultando base ${testQuery.rag_key} na API canônica...`);
     try{
-      const endpoint = testQuery.rag_key === "publico" ? "/api/ai/bot" : "/api/admin/ai-bot-sessions";
-      const res = await fetch(endpoint, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ rag_key: testQuery.rag_key, query: testQuery.query, origin:"admin_ti" }) });
+      const res = await fetch("/api/ai/answer", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ rag_key: testQuery.rag_key, query: testQuery.query, origin:"admin_ti" }) });
       const data = await res.json();
-      if(!res.ok) throw new Error(data.error||"falha");
-      setMsg(`Bot ${data.mode} protocolo ${data.protocol} fila ${data.queue_position} whatsapp_redirect ${data.is_whatsapp_redirect}: ${data.response.slice(0,200)}...`);
+      if(!res.ok){
+        const reason = data.reason ? ` (motivo: ${data.reason})` : "";
+        throw new Error(`${data.error||"falha"}${reason}`);
+      }
+      const fontes = Array.isArray(data.sources) ? data.sources.length : 0;
+      const motivo = data.reason ? `, motivo ${data.reason}` : "";
+      setMsg(`Base ${data.rag_key||testQuery.rag_key}: ${String(data.response||"").slice(0,200)} — fontes ${fontes}, modelo ${data.ollama_used?"consultado":"não consultado"}${motivo}.`);
       load();
-    }catch(err:any){ setMsg(`erro bot test: ${err.message}`); }
+    }catch(err:any){ setMsg(`erro consulta canônica: ${err.message}`); }
   }
 
   return (

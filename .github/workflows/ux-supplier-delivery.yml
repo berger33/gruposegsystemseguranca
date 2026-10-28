@@ -16,4 +16,4 @@ jobs:
       - run: node --test tests/ux-supplier-vocabulary.test.mjs tests/ext04-suppliers.test.mjs
       - run: npm run test:ext04-suppliers:pg
       - run: npm run test:ux-supplier:pg
-      - run: npm audit --audit-level=high
+      - run: npm audit --audit-level=moderate

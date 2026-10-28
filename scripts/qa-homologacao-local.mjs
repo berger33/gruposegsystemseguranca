@@ -10,6 +10,12 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hashPassword, hashToken } from '../src/lib/client-auth-core.mjs';
+import { releaseSignalHandlers } from './qa-generated-files-guard.mjs';
+// Este runner faz graceful shutdown próprio (para servidor + Postgres) nos
+// handlers de SIGINT/SIGTERM abaixo. Liberar os handlers do guard evita que
+// ele chame process.exit() antes do cleanup; o evento `exit` ainda restaura
+// next-env.d.ts/tsconfig.json.
+releaseSignalHandlers();
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const simulateWin1252 = process.argv.includes('--verify-win1252');

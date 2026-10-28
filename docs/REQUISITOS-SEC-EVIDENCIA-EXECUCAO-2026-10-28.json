@@ -1,0 +1,64 @@
+{
+  "stage": "requisitos-sec-evidencia-execucao",
+  "data": "2026-10-28",
+  "metodo": "execução real de 5 padrões de gate (4 comandos): wave0 estático, staff-auth/CLI-v2 em PostgreSQL 17, E6 grupo 2 e 10B em PostgreSQL 17 + Chromium; exit code, duração e resumo TAP capturados",
+  "ambiente": {
+    "node": "v22.22.3",
+    "execEnv": "AWS_Lambda_nodejs22.x"
+  },
+  "gates": [
+    {
+      "gate": "scripts/qa-wave0-static.mjs",
+      "descricao": "bateria estática: imports + migrações",
+      "database": "não aplicável (gate estático)",
+      "comando": "scripts/qa-wave0-static.mjs",
+      "filtro": null,
+      "exit": 0,
+      "duracaoMs": 34,
+      "resumo": "RESUMO: 5/5 verificações estáticas OK; 0 imports ausentes; 0 migrações ausentes."
+    },
+    {
+      "gate": "scripts/qa-staff-auth-postgres.mjs",
+      "descricao": "sessão, CSRF, MFA, rate limit (SEC-02/04/05/06/07/13/15)",
+      "database": "PostgreSQL 17 descartável",
+      "comando": "scripts/qa-staff-auth-postgres.mjs",
+      "filtro": null,
+      "exit": 0,
+      "duracaoMs": 10913,
+      "resumo": "# tests 21 | # pass 21 | # fail 0 | STAFF_AUTH_L01_TEST_EXIT: 0"
+    },
+    {
+      "gate": "scripts/qa-cli-v2-postgres.mjs",
+      "descricao": "escopo de documento e auditoria transacional (SEC-03/12/14)",
+      "database": "PostgreSQL 17 descartável",
+      "comando": "scripts/qa-cli-v2-postgres.mjs",
+      "filtro": null,
+      "exit": 0,
+      "duracaoMs": 6749,
+      "resumo": "# tests 11 | # pass 11 | # fail 0 | QA_CLI_V2_TEST_EXIT: 0"
+    },
+    {
+      "gate": "scripts/qa-ux-public-routes-postgres.mjs",
+      "descricao": "jornadas de orçamento/simulador/pacotes/privacidade (SEC-10)",
+      "database": "PostgreSQL 17 descartável + Chromium",
+      "comando": "scripts/qa-ux-public-routes-postgres.mjs",
+      "filtro": "E6 grupo 2",
+      "exit": 0,
+      "duracaoMs": 37594,
+      "resumo": "# tests 7 | # pass 7 | # fail 0 | UX_PUBLIC_TEST_EXIT: 0"
+    },
+    {
+      "gate": "scripts/qa-ux-public-routes-postgres.mjs",
+      "descricao": "prévias x recursos reais (SEC-11)",
+      "database": "PostgreSQL 17 descartável + Chromium",
+      "comando": "scripts/qa-ux-public-routes-postgres.mjs",
+      "filtro": "UX-PRO-10B previas",
+      "exit": 0,
+      "duracaoMs": 104449,
+      "resumo": "# tests 5 | # pass 5 | # fail 0 | UX_PUBLIC_TEST_EXIT: 0"
+    }
+  ],
+  "aprovados": 5,
+  "total": 5,
+  "limite": "evidência técnica de execução automatizada; NENHUM aceite humano, UAT, Windows real, leitor de tela ou reauditoria integral por jornada foi executado; produção segue NO-GO"
+}
