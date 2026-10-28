@@ -1,3 +1,7 @@
+> **Estado vigente (26/10/2026, `main` 6b4212d):** este documento é **histórico** — registra o estado da sua própria data e pode conter filas/contagens já superadas. A fonte única de estado é [`STATUS-VIGENTE.md`](STATUS-VIGENTE.md); a auditoria completa está em [`AUDITORIA-FATIAS-PENDENTES-E-ERROS-2026-10-26.md`](AUDITORIA-FATIAS-PENDENTES-E-ERROS-2026-10-26.md). Produção segue **NO-GO**.
+>
+> **Atualização 27/10/2026:** A verificação em navegador real (10 percursos de teclado, `:focus-visible`, iframe do Layout 01 com `Shift+Tab`, zoom 200%) foi entregue em **27/10/2026**: `docs/UX-PRO-10B-PREVIAS-RESULTADO-2026-10-27.md`. Leitor de tela e WCAG integral seguem pendentes.
+
 # Gap Resolution: UX-Pro-10B P0 - Keyboard Accessibility
 
 > **Retificação (18/10/2026, PR corretiva da #263):** documento movido da raiz para `docs/`. Premissa corrigida: **apenas o Layout 01 contém iframe** (`/visuals/layout-01/index.html`); os layouts 02–10 são componentes React. O gap abaixo — navegação de teclado **em navegador real** — **continua pendente**: não foi executado pela PR #263 nem por esta correção, e nenhum teste unitário o substitui. Ver [`UX-PRO-10B-CORRECAO-263-ESCOPO-ANTES-2026-10-18.md`](UX-PRO-10B-CORRECAO-263-ESCOPO-ANTES-2026-10-18.md).

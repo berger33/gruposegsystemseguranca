@@ -1,0 +1,52 @@
+{
+  "stage": "e18-opcao-a-aplicada",
+  "data": "2026-10-27",
+  "alvo": 4.5,
+  "decisao": "Opção A — Ajuste mínimo AA ≥4.5:1 (escolha do proprietário)",
+  "escopo": "apenas declarações color: nos 10 Layout*.module.css + src/app/globals.css",
+  "arquivos": [
+    {
+      "arquivo": "src/app/globals.css",
+      "substituicoes": 1
+    },
+    {
+      "arquivo": "src/components/Layout02.module.css",
+      "substituicoes": 12
+    },
+    {
+      "arquivo": "src/components/Layout03.module.css",
+      "substituicoes": 28
+    },
+    {
+      "arquivo": "src/components/Layout04.module.css",
+      "substituicoes": 12
+    },
+    {
+      "arquivo": "src/components/Layout05.module.css",
+      "substituicoes": 22
+    },
+    {
+      "arquivo": "src/components/Layout06.module.css",
+      "substituicoes": 16
+    },
+    {
+      "arquivo": "src/components/Layout07.module.css",
+      "substituicoes": 19
+    },
+    {
+      "arquivo": "src/components/Layout08.module.css",
+      "substituicoes": 19
+    },
+    {
+      "arquivo": "src/components/Layout09.module.css",
+      "substituicoes": 12
+    },
+    {
+      "arquivo": "src/components/Layout10.module.css",
+      "substituicoes": 18
+    }
+  ],
+  "cores": 144,
+  "sinaisCorrigiveis": 708,
+  "coresSemDestino": []
+}

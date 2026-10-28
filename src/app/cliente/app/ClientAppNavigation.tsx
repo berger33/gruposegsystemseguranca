@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, BriefcaseBusiness, CalendarClock, CirclePlus, ClipboardCheck, FileText, Headphones, LayoutDashboard, LifeBuoy, LogOut, RefreshCw, ShieldAlert, ShieldCheck, Receipt, Star } from "lucide-react";
+import { BookOpen, BriefcaseBusiness, CalendarClock, CirclePlus, ClipboardCheck, FileText, Headphones, LayoutDashboard, LifeBuoy, LogOut, RefreshCw, ShieldAlert, ShieldCheck, Receipt, Star, UsersRound } from "lucide-react";
 import { useClientSpace } from "./ClientSpaceProvider";
 import styles from "./ClientApp.module.css";
 
 const destinations = [
   { href: "/cliente/app", label: "Visão geral", icon: LayoutDashboard },
   { href: "/cliente/app/contratos", label: "Contratos", icon: BriefcaseBusiness },
+  { href: "/cliente/app/contatos", label: "Contatos e acessos", icon: UsersRound },
   { href: "/cliente/app/documentos", label: "Documentos", icon: FileText },
   { href: "/cliente/app/chamados", label: "Chamados", icon: Headphones },
   { href: "/cliente/app/agenda", label: "Agenda", icon: CalendarClock },

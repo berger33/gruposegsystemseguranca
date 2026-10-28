@@ -16,6 +16,7 @@ import { inventoryQaFileCoverage } from './qa-backup-coverage-inventory.mjs';
 import { prepareQaCliV2Transfer, createQaCliV2UnreferencedFixture, inventoryQaCliV2Objects,
   injectQaCliV2CoTamper, restoreQaCliV2Transfer } from './qa-cli-v2-transfer.mjs';
 import { verifyRestoredDocumentHttp } from './qa-restored-document-http.mjs';
+import './qa-generated-files-guard.mjs';
 
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.ALLOW_REMOTE_MIGRATIONS === 'true' ||
     process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') {

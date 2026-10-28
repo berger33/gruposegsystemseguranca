@@ -1,3 +1,5 @@
+> **Estado vigente (26/10/2026, `main` 6b4212d):** este documento é **histórico** — registra o estado da sua própria data e pode conter filas/contagens já superadas. A fonte única de estado é [`STATUS-VIGENTE.md`](STATUS-VIGENTE.md); a auditoria completa está em [`AUDITORIA-FATIAS-PENDENTES-E-ERROS-2026-10-26.md`](AUDITORIA-FATIAS-PENDENTES-E-ERROS-2026-10-26.md). Produção segue **NO-GO**.
+
 # Cronograma completo — o que falta (UX-PRO-07 a 10, sistema além de UX e homologação)
 
 > **Reconciliação em 21/10/2026:** o snapshot e as filas abaixo são históricos. Na `main` `fb174f93996944c0b11e64553b4dc81c64a90856`, UX-PRO-07F–07M estão reconciliadas como integradas (#235–#243; atualização #280); #281 fechou os alvos de toque 07E-2; #267 C11 fornecedores, #268 E8, #269 E5, #270 E6-C1, #271–#273 E2/E2-C1, #275–#279 E3/E3-R1/E3-CRM, #283 PU5 e #265–#266 UX-PRO-10B/10C estão integradas. A reconciliação item a item dos resíduos e decisões restantes está em [UX-PRO-RESIDUOS-DECISOES-ESCOPO-ANTES-2026-10-21.md](UX-PRO-RESIDUOS-DECISOES-ESCOPO-ANTES-2026-10-21.md). Não usar as estimativas de sessões/tabelas históricas abaixo como fila atual sem reavaliar a `main`.

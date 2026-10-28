@@ -9,11 +9,17 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import pg from 'pg';
 import { seedFreshDemo } from './local-demo-seed.mjs';
+import { snapshotGeneratedFiles, restoreGeneratedFiles } from './qa-generated-files.mjs';
 
 if (process.argv.length !== 2 || ['DATABASE_URL','DATABASE_MIGRATION_URL','CLIENT_DOCS_DIR','MAIL_HOST','SEG_DEMO_TEST_DIR'].some(k => process.env[k])) {
   console.error('QA-HOM-008_REFUSED: no operator database, documents, SMTP or alternate data dir allowed'); process.exit(2);
 }
 const root = path.resolve(import.meta.dirname, '..');
+// E9: `local-demo.mjs` sobe `server.mjs --dev` com um allowlist de env que NÃO
+// repassa NEXT_DIST_DIR. O Next então reescreve `next-env.d.ts` apontando para
+// `.next/dev/types/...` e suja a árvore versionada (o SHA canônico 1862ac4b…
+// virava 0f706298… a cada execução deste gate). O snapshot/restore compartilhado
+// roda no finally, inclusive quando o gate falha. Nenhuma asserção é afrouxada.
 const dir = await mkdtemp(path.join(tmpdir(), 'seg-demo-qa-'));
 const snapshotDir = await mkdtemp(path.join(tmpdir(), 'seg-demo-qa-backup-'));
 const restoredDir = await mkdtemp(path.join(tmpdir(), 'seg-demo-qa-restored-'));
@@ -27,7 +33,7 @@ const env = { PATH: process.env.PATH || process.env.Path || '', SystemRoot: proc
   HOME: process.env.HOME || '', USERPROFILE: process.env.USERPROFILE || '',
   TEMP: process.env.TEMP || '', TMP: process.env.TMP || '', TMPDIR: process.env.TMPDIR || '',
   SEG_DEMO_TEST_MODE: '1', SEG_DEMO_TEST_DIR: dir, SEG_DEMO_WEB_PORT: String(port) };
-let child, pool, result = 1;
+let child, pool, result = 1, generatedSnapshot;
 const logs = [];
 function spawnDemo(action, overrides = {}) {
   const proc = spawn(process.execPath, ['scripts/local-demo.mjs',action], { cwd: root, env: { ...env, ...overrides }, stdio: ['pipe','pipe','pipe'] });
@@ -107,6 +113,7 @@ async function stop() {
   }
 }
 try {
+  generatedSnapshot = await snapshotGeneratedFiles();
   child = spawnDemo('--init'); await ready(child, { credentials:true });
   const firstLog = logs.join('');
   const ti = firstLog.match(/TI: (\S+) \/ (\S+)/);
@@ -309,13 +316,21 @@ try {
 } catch (error) {
   console.error('QA-HOM-008_FAILED:', String(error?.message || error).slice(0,250));
 } finally {
-  await pool?.end().catch(() => {});
-  try { await stop(); } catch { result = 1; }
-  // The runner created exactly this mkdtemp path and no other; it never
-  // touches the operator's default profile directory or any configured DB.
-  if (child?.exitCode !== null) {
-    for (const owned of [dir,snapshotDir,restoredDir]) await rm(owned, { recursive:true, force:true });
-    console.log('QA-HOM-008/009_TEMP_CLEANED: true');
-  } else { console.error('QA-HOM-008_TEMP_LEFT_FOR_INSPECTION: child still running'); result = 1; }
+  try {
+    await pool?.end().catch(() => {});
+    try { await stop(); } catch { result = 1; }
+    // The runner created exactly this mkdtemp path and no other; it never
+    // touches the operator's default profile directory or any configured DB.
+    if (child?.exitCode !== null) {
+      for (const owned of [dir,snapshotDir,restoredDir]) await rm(owned, { recursive:true, force:true });
+      console.log('QA-HOM-008/009_TEMP_CLEANED: true');
+    } else { console.error('QA-HOM-008_TEMP_LEFT_FOR_INSPECTION: child still running'); result = 1; }
+  } finally {
+    // E9: devolver next-env.d.ts/tsconfig.json ao estado de entrada MESMO se
+    // o cleanup acima lançar. Sem isto, `npm run test:demo-local:pg` deixa o
+    // repositório sujo e a guarda E2 falha na próxima execução.
+    await restoreGeneratedFiles(generatedSnapshot);
+    console.log('QA-HOM-008_GENERATED_FILES_RESTORED: true');
+  }
 }
 process.exit(result);

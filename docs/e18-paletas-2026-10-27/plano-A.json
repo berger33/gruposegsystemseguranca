@@ -1,0 +1,2276 @@
+{
+  "stage": "e18-opcao-a-plano",
+  "data": "2026-10-27",
+  "decisao": "Opção A — Ajuste mínimo AA ≥4.5:1 (escolha do proprietário)",
+  "alvo": 4.5,
+  "sinais": 708,
+  "sinaisCorrigiveis": 708,
+  "aindaAbaixo": [],
+  "cores": 144,
+  "porTipo": {
+    "claro": 139,
+    "escuro": 3,
+    "misto": 2
+  },
+  "ocorrencias": {
+    "#ffffff": [
+      {
+        "arquivo": "src/app/cliente/app/ClientApp.module.css",
+        "n": 1
+      },
+      {
+        "arquivo": "src/app/funcionario/EmployeePortal.module.css",
+        "n": 2
+      },
+      {
+        "arquivo": "src/app/globals.css",
+        "n": 6
+      },
+      {
+        "arquivo": "src/components/Layout02.module.css",
+        "n": 1
+      },
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      },
+      {
+        "arquivo": "src/components/Layout04.module.css",
+        "n": 6
+      },
+      {
+        "arquivo": "src/components/Layout06.module.css",
+        "n": 9
+      },
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 5
+      },
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      },
+      {
+        "arquivo": "src/components/Layout09.module.css",
+        "n": 2
+      },
+      {
+        "arquivo": "src/components/VisualAdmin.module.css",
+        "n": 5
+      },
+      {
+        "arquivo": "src/styles/themes.css",
+        "n": 1
+      },
+      {
+        "arquivo": "src/styles/ux-tokens.css",
+        "n": 1
+      }
+    ],
+    "#c76748": [
+      {
+        "arquivo": "src/app/globals.css",
+        "n": 1
+      }
+    ],
+    "#425466": [
+      {
+        "arquivo": "src/components/Layout02.module.css",
+        "n": 1
+      }
+    ],
+    "#577184": [
+      {
+        "arquivo": "src/components/Layout02.module.css",
+        "n": 1
+      }
+    ],
+    "#78909c": [
+      {
+        "arquivo": "src/components/Layout02.module.css",
+        "n": 1
+      }
+    ],
+    "#207d98": [
+      {
+        "arquivo": "src/components/Layout02.module.css",
+        "n": 1
+      }
+    ],
+    "#277f9a": [
+      {
+        "arquivo": "src/components/Layout02.module.css",
+        "n": 1
+      }
+    ],
+    "#617683": [
+      {
+        "arquivo": "src/components/Layout02.module.css",
+        "n": 1
+      }
+    ],
+    "#879ba4": [
+      {
+        "arquivo": "src/components/Layout02.module.css",
+        "n": 1
+      }
+    ],
+    "#6a808d": [
+      {
+        "arquivo": "src/components/Layout02.module.css",
+        "n": 1
+      }
+    ],
+    "#647983": [
+      {
+        "arquivo": "src/components/Layout02.module.css",
+        "n": 1
+      }
+    ],
+    "#6c7f89": [
+      {
+        "arquivo": "src/components/Layout02.module.css",
+        "n": 1
+      }
+    ],
+    "#39849a": [
+      {
+        "arquivo": "src/components/Layout02.module.css",
+        "n": 1
+      }
+    ],
+    "#75818a": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#718494": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#8f684f": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#a66349": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 4
+      }
+    ],
+    "#66727b": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#727f84": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#e6b493": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#a2664c": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#7b8385": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#748086": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#bc795c": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#65747a": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#61737a": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#5c6d72": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#b97a5d": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#6a777d": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 2
+      }
+    ],
+    "#9d755d": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#788286": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#6b777b": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#92745f": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#78817f": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#a66b50": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 2
+      }
+    ],
+    "#708087": [
+      {
+        "arquivo": "src/components/Layout03.module.css",
+        "n": 1
+      }
+    ],
+    "#9a641f": [
+      {
+        "arquivo": "src/components/Layout04.module.css",
+        "n": 2
+      }
+    ],
+    "#9c6729": [
+      {
+        "arquivo": "src/components/Layout04.module.css",
+        "n": 1
+      }
+    ],
+    "#637078": [
+      {
+        "arquivo": "src/components/Layout04.module.css",
+        "n": 1
+      }
+    ],
+    "#738087": [
+      {
+        "arquivo": "src/components/Layout04.module.css",
+        "n": 1
+      }
+    ],
+    "#59676e": [
+      {
+        "arquivo": "src/components/Layout04.module.css",
+        "n": 1
+      }
+    ],
+    "#7e6a50": [
+      {
+        "arquivo": "src/components/Layout04.module.css",
+        "n": 1
+      }
+    ],
+    "#69777c": [
+      {
+        "arquivo": "src/components/Layout04.module.css",
+        "n": 1
+      }
+    ],
+    "#69767a": [
+      {
+        "arquivo": "src/components/Layout04.module.css",
+        "n": 1
+      }
+    ],
+    "#a46d2b": [
+      {
+        "arquivo": "src/components/Layout04.module.css",
+        "n": 1
+      }
+    ],
+    "#68767b": [
+      {
+        "arquivo": "src/components/Layout04.module.css",
+        "n": 1
+      }
+    ],
+    "#6d8290": [
+      {
+        "arquivo": "src/components/Layout05.module.css",
+        "n": 1
+      }
+    ],
+    "#3976a5": [
+      {
+        "arquivo": "src/components/Layout05.module.css",
+        "n": 8
+      }
+    ],
+    "#758894": [
+      {
+        "arquivo": "src/components/Layout05.module.css",
+        "n": 1
+      }
+    ],
+    "#d2e3ee": [
+      {
+        "arquivo": "src/components/Layout05.module.css",
+        "n": 1
+      }
+    ],
+    "#657985": [
+      {
+        "arquivo": "src/components/Layout05.module.css",
+        "n": 1
+      }
+    ],
+    "#6b8290": [
+      {
+        "arquivo": "src/components/Layout05.module.css",
+        "n": 1
+      }
+    ],
+    "#5e7381": [
+      {
+        "arquivo": "src/components/Layout05.module.css",
+        "n": 1
+      }
+    ],
+    "#477ca3": [
+      {
+        "arquivo": "src/components/Layout05.module.css",
+        "n": 1
+      }
+    ],
+    "#6a7c87": [
+      {
+        "arquivo": "src/components/Layout05.module.css",
+        "n": 1
+      }
+    ],
+    "#70848f": [
+      {
+        "arquivo": "src/components/Layout05.module.css",
+        "n": 1
+      }
+    ],
+    "#718694": [
+      {
+        "arquivo": "src/components/Layout05.module.css",
+        "n": 1
+      }
+    ],
+    "#7b8c94": [
+      {
+        "arquivo": "src/components/Layout05.module.css",
+        "n": 1
+      }
+    ],
+    "#677c88": [
+      {
+        "arquivo": "src/components/Layout05.module.css",
+        "n": 1
+      }
+    ],
+    "#6f818b": [
+      {
+        "arquivo": "src/components/Layout05.module.css",
+        "n": 1
+      }
+    ],
+    "#6f99b6": [
+      {
+        "arquivo": "src/components/Layout05.module.css",
+        "n": 1
+      }
+    ],
+    "#687c88": [
+      {
+        "arquivo": "src/components/Layout05.module.css",
+        "n": 1
+      }
+    ],
+    "#7791b2": [
+      {
+        "arquivo": "src/components/Layout06.module.css",
+        "n": 1
+      }
+    ],
+    "#7188a7": [
+      {
+        "arquivo": "src/components/Layout06.module.css",
+        "n": 1
+      }
+    ],
+    "#b6e3ff": [
+      {
+        "arquivo": "src/components/Layout06.module.css",
+        "n": 4
+      }
+    ],
+    "#758ba9": [
+      {
+        "arquivo": "src/components/Layout06.module.css",
+        "n": 1
+      }
+    ],
+    "#647a96": [
+      {
+        "arquivo": "src/components/Layout06.module.css",
+        "n": 1
+      }
+    ],
+    "#3976ca": [
+      {
+        "arquivo": "src/components/Layout06.module.css",
+        "n": 1
+      }
+    ],
+    "#5d7899": [
+      {
+        "arquivo": "src/components/Layout06.module.css",
+        "n": 1
+      }
+    ],
+    "#8295aa": [
+      {
+        "arquivo": "src/components/Layout06.module.css",
+        "n": 1
+      }
+    ],
+    "#5b7290": [
+      {
+        "arquivo": "src/components/Layout06.module.css",
+        "n": 1
+      }
+    ],
+    "#7190ad": [
+      {
+        "arquivo": "src/components/Layout06.module.css",
+        "n": 1
+      }
+    ],
+    "#748ca4": [
+      {
+        "arquivo": "src/components/Layout06.module.css",
+        "n": 1
+      }
+    ],
+    "#657d98": [
+      {
+        "arquivo": "src/components/Layout06.module.css",
+        "n": 1
+      }
+    ],
+    "#6f86a0": [
+      {
+        "arquivo": "src/components/Layout06.module.css",
+        "n": 1
+      }
+    ],
+    "#6da9dc": [
+      {
+        "arquivo": "src/components/Layout06.module.css",
+        "n": 1
+      }
+    ],
+    "#657d96": [
+      {
+        "arquivo": "src/components/Layout06.module.css",
+        "n": 1
+      }
+    ],
+    "#7fa9d2": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#7187a3": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#164274": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#4384c7": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#8095af": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#7f96b1": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#4a7dae": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#607b9d": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#7890aa": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#5186bd": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#5f7896": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#427eba": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#8799ad": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#577394": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#7890a6": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#5b87b3": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#6c8298": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#78acd5": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#68819d": [
+      {
+        "arquivo": "src/components/Layout07.module.css",
+        "n": 1
+      }
+    ],
+    "#7490ad": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#4581c4": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#5d7795": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#477eb8": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#7990aa": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#5a7da2": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#7091b2": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#708aa6": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#4d82b6": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#627c98": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#76a0c5": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#7188a0": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#8095a9": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#617a99": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#7189a2": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#5784ac": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#70869b": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#6c9bc6": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#677e97": [
+      {
+        "arquivo": "src/components/Layout08.module.css",
+        "n": 1
+      }
+    ],
+    "#718ba2": [
+      {
+        "arquivo": "src/components/Layout09.module.css",
+        "n": 1
+      }
+    ],
+    "#4b7fad": [
+      {
+        "arquivo": "src/components/Layout09.module.css",
+        "n": 1
+      }
+    ],
+    "#8399ad": [
+      {
+        "arquivo": "src/components/Layout09.module.css",
+        "n": 1
+      }
+    ],
+    "#5c8bb4": [
+      {
+        "arquivo": "src/components/Layout09.module.css",
+        "n": 1
+      }
+    ],
+    "#6b7f91": [
+      {
+        "arquivo": "src/components/Layout09.module.css",
+        "n": 1
+      }
+    ],
+    "#7b8e9f": [
+      {
+        "arquivo": "src/components/Layout09.module.css",
+        "n": 1
+      }
+    ],
+    "#8194a4": [
+      {
+        "arquivo": "src/components/Layout09.module.css",
+        "n": 1
+      }
+    ],
+    "#7b91a5": [
+      {
+        "arquivo": "src/components/Layout09.module.css",
+        "n": 1
+      }
+    ],
+    "#6b8195": [
+      {
+        "arquivo": "src/components/Layout09.module.css",
+        "n": 1
+      }
+    ],
+    "#75a7d1": [
+      {
+        "arquivo": "src/components/Layout09.module.css",
+        "n": 1
+      }
+    ],
+    "#6e9bc1": [
+      {
+        "arquivo": "src/components/Layout09.module.css",
+        "n": 1
+      }
+    ],
+    "#688097": [
+      {
+        "arquivo": "src/components/Layout09.module.css",
+        "n": 1
+      },
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ],
+    "#7590a7": [
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ],
+    "#617a90": [
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ],
+    "#7aa1bf": [
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ],
+    "#91acc1": [
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ],
+    "#4f82aa": [
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ],
+    "#607991": [
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ],
+    "#7d93a5": [
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ],
+    "#5486ad": [
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ],
+    "#627b91": [
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ],
+    "#78a4c5": [
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ],
+    "#6c8193": [
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ],
+    "#5f788e": [
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ],
+    "#6e8aa1": [
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ],
+    "#7b90a1": [
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ],
+    "#5a85a9": [
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ],
+    "#718596": [
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ],
+    "#6c9bc1": [
+      {
+        "arquivo": "src/components/Layout10.module.css",
+        "n": 1
+      }
+    ]
+  },
+  "naoEncontradas": [],
+  "plano": [
+    {
+      "cor": "#425466",
+      "tipo": "escuro",
+      "nova": "#6c7a88",
+      "fundos": [
+        "#030b12"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#577184",
+      "tipo": "claro",
+      "nova": "#577083",
+      "fundos": [
+        "#eaf0f2"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#78909c",
+      "tipo": "claro",
+      "nova": "#5d6f79",
+      "fundos": [
+        "#eaf0f2"
+      ],
+      "amostras": 6
+    },
+    {
+      "cor": "#207d98",
+      "tipo": "misto",
+      "base": "#1e7690",
+      "varianteEscura": "#3f8fa6",
+      "fundosClaros": [
+        "#f6f8f8",
+        "#eaf0f2"
+      ],
+      "fundosEscuros": [
+        "#0c2030",
+        "#0a1723"
+      ],
+      "seletoresClaros": [
+        "span.Layout02_sectionLabel__vpBRH",
+        "div.Layout02_faqHeading__iLHdJ > span.Layout02_sectionLabel__vpBRH"
+      ],
+      "seletoresEscuros": [
+        "div.Layout02_methodAside__vxrLq > span.Layout02_sectionLabel__vpBRH",
+        "div.Layout02_contactCopy__BunHa > span.Layout02_sectionLabel__vpBRH"
+      ],
+      "amostras": 8
+    },
+    {
+      "cor": "#277f9a",
+      "tipo": "claro",
+      "nova": "#267b96",
+      "fundos": [
+        "#f6f8f8"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#617683",
+      "tipo": "claro",
+      "nova": "#617582",
+      "fundos": [
+        "#f6f8f8"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#879ba4",
+      "tipo": "claro",
+      "nova": "#65747b",
+      "fundos": [
+        "#f6f8f8"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#6a808d",
+      "tipo": "claro",
+      "nova": "#617581",
+      "fundos": [
+        "#f6f8f8"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#647983",
+      "tipo": "claro",
+      "nova": "#60747e",
+      "fundos": [
+        "#f3f7f8"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#6c7f89",
+      "tipo": "claro",
+      "nova": "#63747e",
+      "fundos": [
+        "#f3f7f8"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#39849a",
+      "tipo": "claro",
+      "nova": "#337589",
+      "fundos": [
+        "#eaf0f2"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#75818a",
+      "tipo": "claro",
+      "nova": "#616a72",
+      "fundos": [
+        "#ece9e1"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#718494",
+      "tipo": "claro",
+      "nova": "#627280",
+      "fundos": [
+        "#f6f4ee"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#8f684f",
+      "tipo": "claro",
+      "nova": "#89644c",
+      "fundos": [
+        "#f6f4ee",
+        "#f0ede5"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#a66349",
+      "tipo": "claro",
+      "nova": "#935741",
+      "fundos": [
+        "#f6f4ee",
+        "#e9e4d9",
+        "#fbfaf6",
+        "#f0ede5"
+      ],
+      "amostras": 8
+    },
+    {
+      "cor": "#66727b",
+      "tipo": "claro",
+      "nova": "#66717a",
+      "fundos": [
+        "#f6f4ee"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#727f84",
+      "tipo": "claro",
+      "nova": "#667277",
+      "fundos": [
+        "#f6f4ee"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#e6b493",
+      "tipo": "escuro",
+      "nova": "#f0d1bc",
+      "fundos": [
+        "#496172"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#a2664c",
+      "tipo": "claro",
+      "nova": "#9c6249",
+      "fundos": [
+        "#f8f5ed"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7b8385",
+      "tipo": "claro",
+      "nova": "#6b7173",
+      "fundos": [
+        "#f6f4ee"
+      ],
+      "amostras": 6
+    },
+    {
+      "cor": "#748086",
+      "tipo": "claro",
+      "nova": "#5e686d",
+      "fundos": [
+        "#e9e4d9"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#bc795c",
+      "tipo": "claro",
+      "nova": "#8d5a45",
+      "fundos": [
+        "#e9e4d9"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#65747a",
+      "tipo": "claro",
+      "nova": "#5b686e",
+      "fundos": [
+        "#e9e4d9"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#61737a",
+      "tipo": "claro",
+      "nova": "#596970",
+      "fundos": [
+        "#e9e4d9"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#5c6d72",
+      "tipo": "claro",
+      "nova": "#59696e",
+      "fundos": [
+        "#e9e4d9"
+      ],
+      "amostras": 6
+    },
+    {
+      "cor": "#b97a5d",
+      "tipo": "claro",
+      "nova": "#8b5b46",
+      "fundos": [
+        "#e9e4d9"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#6a777d",
+      "tipo": "claro",
+      "nova": "#69757b",
+      "fundos": [
+        "#fbfaf6"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#9d755d",
+      "tipo": "claro",
+      "nova": "#906c56",
+      "fundos": [
+        "#fbfaf6"
+      ],
+      "amostras": 10
+    },
+    {
+      "cor": "#788286",
+      "tipo": "claro",
+      "nova": "#6c7579",
+      "fundos": [
+        "#fbfaf6"
+      ],
+      "amostras": 10
+    },
+    {
+      "cor": "#6b777b",
+      "tipo": "claro",
+      "nova": "#626e71",
+      "fundos": [
+        "#f0ede5"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#92745f",
+      "tipo": "claro",
+      "nova": "#8e705c",
+      "fundos": [
+        "#fffefa"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#78817f",
+      "tipo": "claro",
+      "nova": "#6f7876",
+      "fundos": [
+        "#fffefa"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#a66b50",
+      "tipo": "claro",
+      "nova": "#9e664c",
+      "fundos": [
+        "#fbfaf6"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#708087",
+      "tipo": "claro",
+      "nova": "#67767d",
+      "fundos": [
+        "#fbfaf6"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#9a641f",
+      "tipo": "misto",
+      "base": "#8a5a1c",
+      "varianteEscura": "#b18852",
+      "fundosClaros": [
+        "#edf0ef",
+        "#dce2e1"
+      ],
+      "fundosEscuros": [
+        "#202a32"
+      ],
+      "seletoresClaros": [
+        "span.Layout04_sectionKicker__DmmpJ",
+        "div.Layout04_contactLead__uBdbG > span.Layout04_sectionKicker__DmmpJ"
+      ],
+      "seletoresEscuros": [
+        "div.Layout04_methodHead__Fjfpq > span.Layout04_sectionKicker__DmmpJ"
+      ],
+      "amostras": 6
+    },
+    {
+      "cor": "#9c6729",
+      "tipo": "claro",
+      "nova": "#895a24",
+      "fundos": [
+        "#edf0ef",
+        "#dce2e1"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#637078",
+      "tipo": "claro",
+      "nova": "#636f77",
+      "fundos": [
+        "#edf0ef"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#738087",
+      "tipo": "claro",
+      "nova": "#646f75",
+      "fundos": [
+        "#edf0ef"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#59676e",
+      "tipo": "claro",
+      "nova": "#59666d",
+      "fundos": [
+        "#dce2e1"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7e6a50",
+      "tipo": "claro",
+      "nova": "#74614a",
+      "fundos": [
+        "#dce2e1"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#69777c",
+      "tipo": "claro",
+      "nova": "#5a666b",
+      "fundos": [
+        "#dce2e1"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#69767a",
+      "tipo": "claro",
+      "nova": "#697579",
+      "fundos": [
+        "#f9faf8"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#a46d2b",
+      "tipo": "claro",
+      "nova": "#9a6628",
+      "fundos": [
+        "#f5f7f5"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#68767b",
+      "tipo": "claro",
+      "nova": "#667479",
+      "fundos": [
+        "#f5f7f5"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#6d8290",
+      "tipo": "claro",
+      "nova": "#667987",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#3976a5",
+      "tipo": "claro",
+      "nova": "#37719f",
+      "fundos": [
+        "#f3f6f7",
+        "#eaf0f4"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#758894",
+      "tipo": "claro",
+      "nova": "#63737e",
+      "fundos": [
+        "#f3f6f7"
+      ],
+      "amostras": 6
+    },
+    {
+      "cor": "#ffffff",
+      "tipo": "claro",
+      "nova": "#626262",
+      "fundos": [
+        "#d6e0e6"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#d2e3ee",
+      "tipo": "claro",
+      "nova": "#5c6469",
+      "fundos": [
+        "#d6e0e6"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#657985",
+      "tipo": "claro",
+      "nova": "#60737f",
+      "fundos": [
+        "#f3f6f7"
+      ],
+      "amostras": 6
+    },
+    {
+      "cor": "#6b8290",
+      "tipo": "claro",
+      "nova": "#647987",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#5e7381",
+      "tipo": "claro",
+      "nova": "#5b707e",
+      "fundos": [
+        "#eaf0f4"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#477ca3",
+      "tipo": "claro",
+      "nova": "#477ba2",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#6a7c87",
+      "tipo": "claro",
+      "nova": "#687984",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#70848f",
+      "tipo": "claro",
+      "nova": "#5f6f79",
+      "fundos": [
+        "#eaf0f4"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#718694",
+      "tipo": "claro",
+      "nova": "#637582",
+      "fundos": [
+        "#f7f9fa"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7b8c94",
+      "tipo": "claro",
+      "nova": "#67757c",
+      "fundos": [
+        "#f7f9fa"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#677c88",
+      "tipo": "claro",
+      "nova": "#657985",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#6f818b",
+      "tipo": "claro",
+      "nova": "#697983",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#6f99b6",
+      "tipo": "claro",
+      "nova": "#597a92",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#687c88",
+      "tipo": "claro",
+      "nova": "#667985",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7791b2",
+      "tipo": "claro",
+      "nova": "#637894",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7188a7",
+      "tipo": "claro",
+      "nova": "#60738e",
+      "fundos": [
+        "#f2f8ff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#b6e3ff",
+      "tipo": "escuro",
+      "nova": "#b6e3ff",
+      "fundos": [
+        "#164fd8"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#758ba9",
+      "tipo": "claro",
+      "nova": "#61738c",
+      "fundos": [
+        "#f2f8ff"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#647a96",
+      "tipo": "claro",
+      "nova": "#637894",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#3976ca",
+      "tipo": "claro",
+      "nova": "#3670bf",
+      "fundos": [
+        "#f4f9ff",
+        "#eaf5ff"
+      ],
+      "amostras": 8
+    },
+    {
+      "cor": "#5d7899",
+      "tipo": "claro",
+      "nova": "#587191",
+      "fundos": [
+        "#f4f9ff",
+        "#eaf5ff"
+      ],
+      "amostras": 8
+    },
+    {
+      "cor": "#8295aa",
+      "tipo": "claro",
+      "nova": "#697889",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#5b7290",
+      "tipo": "claro",
+      "nova": "#586e8c",
+      "fundos": [
+        "#dff1ff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7190ad",
+      "tipo": "claro",
+      "nova": "#576f86",
+      "fundos": [
+        "#dff1ff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#748ca4",
+      "tipo": "claro",
+      "nova": "#5c6e81",
+      "fundos": [
+        "#dff1ff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#657d98",
+      "tipo": "claro",
+      "nova": "#617993",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#6f86a0",
+      "tipo": "claro",
+      "nova": "#647890",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#6da9dc",
+      "tipo": "claro",
+      "nova": "#4f7b9f",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#657d96",
+      "tipo": "claro",
+      "nova": "#627992",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7fa9d2",
+      "tipo": "claro",
+      "nova": "#5b7997",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7187a3",
+      "tipo": "claro",
+      "nova": "#657891",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#164274",
+      "tipo": "claro",
+      "nova": "#102f53",
+      "fundos": [
+        "#5797ec"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#4384c7",
+      "tipo": "claro",
+      "nova": "#3c75b1",
+      "fundos": [
+        "#f4f9ff"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#8095af",
+      "tipo": "claro",
+      "nova": "#647489",
+      "fundos": [
+        "#f4f9ff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7f96b1",
+      "tipo": "claro",
+      "nova": "#637489",
+      "fundos": [
+        "#f4f9ff"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#4a7dae",
+      "tipo": "claro",
+      "nova": "#43729f",
+      "fundos": [
+        "#ffffff",
+        "#e7f3ff"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#607b9d",
+      "tipo": "claro",
+      "nova": "#5e789a",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7890aa",
+      "tipo": "claro",
+      "nova": "#64798e",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#5186bd",
+      "tipo": "claro",
+      "nova": "#44709e",
+      "fundos": [
+        "#efefef"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#5f7896",
+      "tipo": "claro",
+      "nova": "#586f8b",
+      "fundos": [
+        "#efefef"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#427eba",
+      "tipo": "claro",
+      "nova": "#3b70a6",
+      "fundos": [
+        "#efefef"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#8799ad",
+      "tipo": "claro",
+      "nova": "#6a7888",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#577394",
+      "tipo": "claro",
+      "nova": "#557091",
+      "fundos": [
+        "#e7f3ff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7890a6",
+      "tipo": "claro",
+      "nova": "#5e7082",
+      "fundos": [
+        "#e7f3ff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#5b87b3",
+      "tipo": "claro",
+      "nova": "#527aa2",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#6c8298",
+      "tipo": "claro",
+      "nova": "#64798d",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#78acd5",
+      "tipo": "claro",
+      "nova": "#557a98",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#68819d",
+      "tipo": "claro",
+      "nova": "#617993",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7490ad",
+      "tipo": "claro",
+      "nova": "#627992",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#4581c4",
+      "tipo": "claro",
+      "nova": "#3f75b3",
+      "fundos": [
+        "#f5faff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#5d7795",
+      "tipo": "claro",
+      "nova": "#5c7593",
+      "fundos": [
+        "#f5faff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#477eb8",
+      "tipo": "claro",
+      "nova": "#4376ad",
+      "fundos": [
+        "#f5faff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7990aa",
+      "tipo": "claro",
+      "nova": "#63758b",
+      "fundos": [
+        "#f5faff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#5a7da2",
+      "tipo": "claro",
+      "nova": "#527293",
+      "fundos": [
+        "#e9f4fd"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7091b2",
+      "tipo": "claro",
+      "nova": "#5e7995",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 24
+    },
+    {
+      "cor": "#708aa6",
+      "tipo": "claro",
+      "nova": "#5c7189",
+      "fundos": [
+        "#e9f4fd"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#4d82b6",
+      "tipo": "claro",
+      "nova": "#4473a2",
+      "fundos": [
+        "#ffffff",
+        "#eaf5ff"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#627c98",
+      "tipo": "claro",
+      "nova": "#607995",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#76a0c5",
+      "tipo": "claro",
+      "nova": "#5a7a97",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#7188a0",
+      "tipo": "claro",
+      "nova": "#64798e",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#8095a9",
+      "tipo": "claro",
+      "nova": "#687889",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#617a99",
+      "tipo": "claro",
+      "nova": "#5a718e",
+      "fundos": [
+        "#eaf5ff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7189a2",
+      "tipo": "claro",
+      "nova": "#5e7286",
+      "fundos": [
+        "#eaf5ff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#5784ac",
+      "tipo": "claro",
+      "nova": "#517aa0",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#70869b",
+      "tipo": "claro",
+      "nova": "#65798c",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#6c9bc6",
+      "tipo": "claro",
+      "nova": "#557a9c",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#677e97",
+      "tipo": "claro",
+      "nova": "#637990",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#718ba2",
+      "tipo": "claro",
+      "nova": "#63798e",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#4b7fad",
+      "tipo": "claro",
+      "nova": "#44749e",
+      "fundos": [
+        "#f3f8fc",
+        "#ffffff",
+        "#edf5fb"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#8399ad",
+      "tipo": "claro",
+      "nova": "#647483",
+      "fundos": [
+        "#f3f8fc"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#5c8bb4",
+      "tipo": "claro",
+      "nova": "#517a9f",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#6b7f91",
+      "tipo": "claro",
+      "nova": "#66798a",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7b8e9f",
+      "tipo": "claro",
+      "nova": "#687786",
+      "fundos": [
+        "#fbfdff"
+      ],
+      "amostras": 8
+    },
+    {
+      "cor": "#8194a4",
+      "tipo": "claro",
+      "nova": "#697886",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7b91a5",
+      "tipo": "claro",
+      "nova": "#5d6d7c",
+      "fundos": [
+        "#e5edf3"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#6b8195",
+      "tipo": "claro",
+      "nova": "#65798c",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#75a7d1",
+      "tipo": "claro",
+      "nova": "#567a99",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 24
+    },
+    {
+      "cor": "#6e9bc1",
+      "tipo": "claro",
+      "nova": "#527390",
+      "fundos": [
+        "#edf5fb"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#688097",
+      "tipo": "claro",
+      "nova": "#5d7287",
+      "fundos": [
+        "#edf5fb",
+        "#ffffff"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#7590a7",
+      "tipo": "claro",
+      "nova": "#63798d",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#617a90",
+      "tipo": "claro",
+      "nova": "#61798f",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 6
+    },
+    {
+      "cor": "#7aa1bf",
+      "tipo": "claro",
+      "nova": "#59758b",
+      "fundos": [
+        "#f2f8fc"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#91acc1",
+      "tipo": "claro",
+      "nova": "#627483",
+      "fundos": [
+        "#f2f8fc"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#4f82aa",
+      "tipo": "claro",
+      "nova": "#48769b",
+      "fundos": [
+        "#f2f8fc"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#607991",
+      "tipo": "claro",
+      "nova": "#5c748c",
+      "fundos": [
+        "#f2f8fc"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7d93a5",
+      "tipo": "claro",
+      "nova": "#637483",
+      "fundos": [
+        "#f2f8fc"
+      ],
+      "amostras": 6
+    },
+    {
+      "cor": "#5486ad",
+      "tipo": "claro",
+      "nova": "#487394",
+      "fundos": [
+        "#ffffff",
+        "#eaf3f9"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#627b91",
+      "tipo": "claro",
+      "nova": "#61798f",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#78a4c5",
+      "tipo": "claro",
+      "nova": "#55748c",
+      "fundos": [
+        "#eef6fb",
+        "#f8fbfd"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#6c8193",
+      "tipo": "claro",
+      "nova": "#607382",
+      "fundos": [
+        "#eef6fb",
+        "#f8fbfd"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#5f788e",
+      "tipo": "claro",
+      "nova": "#5a7186",
+      "fundos": [
+        "#eaf3f9"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#6e8aa1",
+      "tipo": "claro",
+      "nova": "#5a7184",
+      "fundos": [
+        "#eaf3f9"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#7b90a1",
+      "tipo": "claro",
+      "nova": "#60707e",
+      "fundos": [
+        "#eaf3f9"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#5a85a9",
+      "tipo": "claro",
+      "nova": "#537a9c",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 4
+    },
+    {
+      "cor": "#718596",
+      "tipo": "claro",
+      "nova": "#677988",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 2
+    },
+    {
+      "cor": "#6c9bc1",
+      "tipo": "claro",
+      "nova": "#557a99",
+      "fundos": [
+        "#ffffff"
+      ],
+      "amostras": 12
+    },
+    {
+      "cor": "#c76748",
+      "tipo": "claro",
+      "nova": "#af5a3f",
+      "fundos": [
+        "#f2f8fd"
+      ],
+      "amostras": 10
+    }
+  ],
+  "aplicado": true,
+  "limite": "simulação até --apply; indeterminadas (196) e <option> (108) fora do escopo"
+}

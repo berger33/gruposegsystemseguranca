@@ -1,0 +1,75 @@
+name: UX-PRO-10B previas - teclado zoom e cor
+on:
+  pull_request:
+    branches: [main]
+    # Filtros precisos nas rotas DIRETAS das prévias. Este é o SEGUNDO gate de
+    # jornada destas rotas (o primeiro é o E6 grupo 3): aqui se medem teclado,
+    # foco visível, zoom 200%, prefers-color-scheme e contraste de texto.
+    paths:
+      - 'src/app/page.tsx'
+      - 'src/app/layout-01/**'
+      - 'src/app/layout-02/**'
+      - 'src/app/layout-03/**'
+      - 'src/app/layout-04/**'
+      - 'src/app/layout-05/**'
+      - 'src/app/layout-06/**'
+      - 'src/app/layout-07/**'
+      - 'src/app/layout-08/**'
+      - 'src/app/layout-09/**'
+      - 'src/app/layout-10/**'
+      - 'src/app/layout-preview/**'
+      - 'src/components/SiteVisualRenderer.tsx'
+      - 'src/components/SitePreviewNotice.tsx'
+      - 'src/components/Layout*.tsx'
+      - 'src/components/PublicSite.tsx'
+      - 'src/components/Layout*.module.css'
+      - 'src/styles/themes.css'
+      - 'public/visuals/layout-01/**'
+      - 'src/lib/site-visuals.*'
+      - 'scripts/ux-evidence-text-contrast.mjs'
+      - 'scripts/ux-pro-10b-contrast-inventory.mjs'
+      - 'scripts/qa-ux-public-routes-postgres.mjs'
+      - 'tests/ux-public-routes.integration.test.mjs'
+      - 'tests/ux-pro-10b-previas-medicoes.test.mjs'
+      - 'tests/ux-pro-10b-contrast-inventory.test.mjs'
+      - 'docs/UX-PRO-10B-PREVIAS-MEDICOES-2026-10-27.json'
+      - 'docs/UX-PRO-10B-CONTRASTE-AMOSTRAS-2026-10-27.json'
+      - 'docs/UX-PRO-10B-CONTRASTE-INVENTARIO-2026-10-27.json'
+      - 'docs/UX-PRO-10B-CONTRASTE-INVENTARIO-2026-10-27.csv'
+      - 'docs/E18-CONTRASTE-INVENTARIO-2026-10-27.md'
+      - 'docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-13.csv'
+      - 'docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv'
+      - 'package.json'
+      - '.github/workflows/ux-layout-previews-a11y-delivery.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm audit --audit-level=moderate
+      - run: npm run typecheck
+      - name: Guarda estrutural da fatia
+        run: node --test tests/ux-pro-10b-previas-medicoes.test.mjs
+      - name: Guarda do inventario de contraste (E18)
+        run: node --test tests/ux-pro-10b-contrast-inventory.test.mjs
+      - name: Inventario de rotas em dia
+        run: node scripts/ux-pro-00-inventory.mjs --check
+      - name: PostgreSQL 17 descartavel + Chromium (5 cenarios de previa)
+        run: node scripts/qa-ux-public-routes-postgres.mjs
+        env:
+          UX_PUBLIC_TEST_PATTERN: 'UX-PRO-10B previas'
+      - name: Baseline de contraste nao pode regredir
+        # Roda DEPOIS do gate: le o JSON recem-escrito pelo runner, nao o
+        # arquivo versionado. Assim uma piora de contraste bloqueia a PR.
+        run: node --test tests/ux-pro-10b-previas-medicoes.test.mjs
+      - name: Inventario de contraste E18 regenerado sobre as amostras novas
+        # O gate reescreve as amostras brutas; o inventario versionado precisa
+        # continuar batendo com elas. Se o contraste mudou, a PR cai aqui.
+        run: node scripts/ux-pro-10b-contrast-inventory.mjs --check

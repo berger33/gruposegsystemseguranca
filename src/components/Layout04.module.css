@@ -69,19 +69,19 @@
 .sectorItems svg { color: var(--orange); }
 .solutions { padding: 84px 8vw 84px; background: var(--paper); color: var(--black); }
 .sectionHeader { display: flex; justify-content: space-between; align-items: end; gap: 36px; margin-bottom: 38px; }
-.sectionKicker { color: #9a641f; }
+.sectionKicker { color: #8a5a1c; }
 .sectionHeader h2, .methodHead h2, .contactLead h2 { margin: 17px 0 0; font-size: clamp(34px, 3.9vw, 55px); line-height: 1.01; font-weight: 800; letter-spacing: -.06em; text-transform: uppercase; }
-.sectionHeader h2 em, .methodHead h2 em, .contactLead h2 em { color: #9c6729; font-style: normal; }
-.sectionHeader > p { max-width: 345px; margin: 0 0 2px; color: #637078; font-size: 12px; line-height: 1.75; }
+.sectionHeader h2 em, .methodHead h2 em, .contactLead h2 em { color: #895a24; font-style: normal; }
+.sectionHeader > p { max-width: 345px; margin: 0 0 2px; color: #636f77; font-size: 12px; line-height: 1.75; }
 .serviceGrid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
 .serviceCard { min-height: 197px; position: relative; padding: 19px 20px; background: #f7f8f6; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transition: background .2s; }
 .serviceCard:hover { background: #e3e8e8; }
-.cardHead { display: flex; align-items: center; justify-content: space-between; color: #9a641f; }
+.cardHead { display: flex; align-items: center; justify-content: space-between; color: #8a5a1c; }
 .cardHead > span { font-size: 8px; letter-spacing: .14em; }
 .serviceCard h3 { max-width: 240px; margin: 30px 0 8px; color: #1d2930; font-size: 14px; font-weight: 800; text-transform: uppercase; line-height: 1.3; }
 .serviceCard p { max-width: 255px; margin: 0; color: #66737a; font-size: 10px; line-height: 1.6; }
 .serviceCard > a { position: absolute; right: 17px; bottom: 15px; color: #a36e2f; }
-.solutionsFoot { display: flex; justify-content: space-between; align-items: center; gap: 15px; padding-top: 18px; color: #738087; font-size: 7px; font-weight: 800; letter-spacing: .13em; }
+.solutionsFoot { display: flex; justify-content: space-between; align-items: center; gap: 15px; padding-top: 18px; color: #646f75; font-size: 7px; font-weight: 800; letter-spacing: .13em; }
 .solutionsFoot a { display: flex; align-items: center; gap: 8px; color: #374d5a; font-size: 9px; letter-spacing: 0; }
 .method { padding: 79px 8vw 86px; display: grid; grid-template-columns: .78fr 1.22fr; gap: 7vw; color: var(--white); background: #202a32; border-top: 5px solid var(--orange); }
 .methodHead h2 { color: white; }
@@ -95,12 +95,12 @@
 .methodSteps p { margin: 0; color: #b5bfc1; font-size: 9px; line-height: 1.7; }
 .contact { padding: 87px 8vw 94px; display: grid; grid-template-columns: .82fr 1.18fr; gap: 7vw; background: #dce2e1; }
 .contactLead h2 { margin-top: 20px; }
-.contactLead > p { max-width: 340px; margin: 20px 0 30px; color: #59676e; font-size: 12px; line-height: 1.8; }
+.contactLead > p { max-width: 340px; margin: 20px 0 30px; color: #59666d; font-size: 12px; line-height: 1.8; }
 .contactDirect { max-width: 315px; display: flex; flex-direction: column; gap: 10px; padding: 16px 0; border-top: 1px solid #bfc9c8; border-bottom: 1px solid #bfc9c8; }
-.contactDirect > span { color: #7e6a50; font-size: 7px; font-weight: 800; letter-spacing: .16em; }
+.contactDirect > span { color: #74614a; font-size: 7px; font-weight: 800; letter-spacing: .16em; }
 .contactDirect a { display: flex; align-items: center; gap: 9px; color: #1e3948; font-size: 12px; font-weight: 800; }
 .contactDirect a svg:first-child { color: #5e8668; }
-.contactNote { display: flex; align-items: center; gap: 8px; margin-top: 19px; color: #69777c; font-size: 8px; letter-spacing: .07em; }
+.contactNote { display: flex; align-items: center; gap: 8px; margin-top: 19px; color: #5a666b; font-size: 8px; letter-spacing: .07em; }
 .form { padding: 25px 27px; background: #f9faf8; border: 1px solid #c7d0d0; box-shadow: 7px 7px 0 #b7c1c2; }
 .formTop { display: flex; justify-content: space-between; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 2px solid #2b3942; color: #455c68; font-size: 8px; font-weight: 800; letter-spacing: .13em; }
 .form label { display: flex; flex-direction: column; gap: 6px; margin-bottom: 13px; color: #43545d; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
@@ -116,7 +116,7 @@
 .checkGrid label > span { width: 15px; height: 15px; flex: 0 0 15px; display: grid; place-items: center; border: 1px solid #adb9ba; color: transparent; }
 .checkGrid input:checked + span { color: #171e22; border-color: var(--orange); background: var(--orange); }
 .checkGrid input:focus-visible + span { outline: 2px solid #a76c27; outline-offset: 2px; }
-.consent { display: grid !important; grid-template-columns: 13px 1fr; align-items: start; gap: 8px !important; color: #69767a !important; font-size: 7px !important; line-height: 1.5; font-weight: 400 !important; text-transform: none !important; letter-spacing: 0 !important; }
+.consent { display: grid !important; grid-template-columns: 13px 1fr; align-items: start; gap: 8px !important; color: #697579 !important; font-size: 7px !important; line-height: 1.5; font-weight: 400 !important; text-transform: none !important; letter-spacing: 0 !important; }
 .consent input { accent-color: #b6772c; }
 .submit { width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; color: #111820; background: var(--orange); border: 0; font-size: 9px; font-weight: 800; text-transform: uppercase; cursor: pointer; transition: background .2s, transform .2s; }
 .faq { padding: 72px 8vw 84px; display: grid; grid-template-columns: .8fr 1.2fr; gap: 7vw; background: #f5f7f5; }
@@ -125,10 +125,10 @@
 .faqList { border-top: 1px solid #c8d0d1; }
 .faqList article { border-bottom: 1px solid #c8d0d1; }
 .faqList button { width: 100%; min-height: 61px; display: grid; grid-template-columns: 42px 1fr 18px; align-items: center; gap: 11px; padding: 0; border: 0; color: #27363e; background: transparent; text-align: left; font-size: 10px; font-weight: 800; cursor: pointer; }
-.faqList button > span { color: #a46d2b; font-size: 7px; letter-spacing: .09em; }
+.faqList button > span { color: #9a6628; font-size: 7px; letter-spacing: .09em; }
 .faqList button svg { color: #667780; transition: transform .2s; }
 .faqList button[aria-expanded="true"] svg { transform: rotate(180deg); }
-.faqList article > p { margin: -2px 27px 18px 53px; color: #68767b; font-size: 9px; line-height: 1.7; }
+.faqList article > p { margin: -2px 27px 18px 53px; color: #667479; font-size: 9px; line-height: 1.7; }
 .footer { min-height: 92px; padding: 20px 5vw; display: flex; align-items: center; justify-content: space-between; gap: 18px; color: #aeb9bd; background: #0c1218; font-size: 7px; letter-spacing: .12em; font-weight: 700; }
 .footerBrand .brandIcon { width: 34px; height: 34px; }
 .footerBrand strong { font-size: 10px; }
@@ -203,3 +203,6 @@
 @media (prefers-reduced-motion: reduce) {
   .site *, .site *::before, .site *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* E18 opção A: #9a641f também aparece em superfície escura. */
+.methodHead .sectionKicker { color: #b18852; }

@@ -172,7 +172,7 @@ export function createPrivacyApi({ json, readJson, sameOrigin, getPool, readAdmi
   }
 
   async function handlePolicyById(req, res, policyId) {
-    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!UUID_RE.test(policyId)) return json(res, 400, { error: 'invalid_policy_id' });
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);

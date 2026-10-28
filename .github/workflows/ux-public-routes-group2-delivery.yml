@@ -1,0 +1,43 @@
+name: E6 rotas publicas - grupo 2 (conversao)
+on:
+  pull_request:
+    branches: [main]
+    # Filtros precisos: e isso que faz o inventario UX-PRO-00 reconhecer este
+    # workflow como gate de jornada das cinco rotas de conversao. Nao usar src/**.
+    paths:
+      - 'src/app/orcamento/**'
+      - 'src/app/simulador/**'
+      - 'src/app/pacotes/**'
+      - 'src/app/privacidade/**'
+      - 'src/app/proposta/aceite/**'
+      - 'src/lib/service-catalog.mjs'
+      - 'src/components/PublishedContent.tsx'
+      - 'tests/ux-public-routes.integration.test.mjs'
+      - 'tests/ux-public-routes-group2-gate.test.mjs'
+      - 'scripts/qa-ux-public-routes-postgres.mjs'
+      - 'docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-13.csv'
+      - 'docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv'
+      - 'package.json'
+      - '.github/workflows/ux-public-routes-group2-delivery.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm audit --audit-level=moderate
+      - run: npm run typecheck
+      - name: Guarda estatica do grupo 2
+        run: node --test tests/ux-public-routes-group2-gate.test.mjs
+      - name: Inventario de rotas em dia
+        run: node scripts/ux-pro-00-inventory.mjs --check
+      - name: PostgreSQL 17 descartavel + Chromium (5 rotas de conversao)
+        run: node scripts/qa-ux-public-routes-postgres.mjs
+        env:
+          UX_PUBLIC_TEST_PATTERN: 'E6 grupo 2'

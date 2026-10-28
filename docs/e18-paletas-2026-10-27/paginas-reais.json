@@ -1,0 +1,145 @@
+{
+  "stage": "e18-paletas-paginas-reais",
+  "data": "2026-10-27",
+  "metodo": "PostgreSQL 17 descartavel + server.mjs --dev + Chromium real; recolorizacao apenas no DOM",
+  "rotas": [
+    "/layout-03",
+    "/layout-05",
+    "/layout-08",
+    "/layout-09"
+  ],
+  "opcoes": [
+    {
+      "id": "ANTES",
+      "alvo": 0
+    },
+    {
+      "id": "A",
+      "alvo": 4.5
+    },
+    {
+      "id": "B",
+      "alvo": 7
+    },
+    {
+      "id": "C",
+      "alvo": 4.5
+    }
+  ],
+  "coresProblematicas": 144,
+  "resultados": [
+    {
+      "rota": "/layout-03",
+      "opcao": "ANTES",
+      "file": "real-layout-03-ANTES.png",
+      "changed": 0,
+      "skippedComplex": 0
+    },
+    {
+      "rota": "/layout-03",
+      "opcao": "A",
+      "file": "real-layout-03-A.png",
+      "changed": 51,
+      "skippedComplex": 0
+    },
+    {
+      "rota": "/layout-03",
+      "opcao": "B",
+      "file": "real-layout-03-B.png",
+      "changed": 51,
+      "skippedComplex": 0
+    },
+    {
+      "rota": "/layout-03",
+      "opcao": "C",
+      "file": "real-layout-03-C.png",
+      "changed": 51,
+      "skippedComplex": 0
+    },
+    {
+      "rota": "/layout-05",
+      "opcao": "ANTES",
+      "file": "real-layout-05-ANTES.png",
+      "changed": 0,
+      "skippedComplex": 0
+    },
+    {
+      "rota": "/layout-05",
+      "opcao": "A",
+      "file": "real-layout-05-A.png",
+      "changed": 53,
+      "skippedComplex": 0
+    },
+    {
+      "rota": "/layout-05",
+      "opcao": "B",
+      "file": "real-layout-05-B.png",
+      "changed": 53,
+      "skippedComplex": 0
+    },
+    {
+      "rota": "/layout-05",
+      "opcao": "C",
+      "file": "real-layout-05-C.png",
+      "changed": 53,
+      "skippedComplex": 0
+    },
+    {
+      "rota": "/layout-08",
+      "opcao": "ANTES",
+      "file": "real-layout-08-ANTES.png",
+      "changed": 0,
+      "skippedComplex": 0
+    },
+    {
+      "rota": "/layout-08",
+      "opcao": "A",
+      "file": "real-layout-08-A.png",
+      "changed": 48,
+      "skippedComplex": 1
+    },
+    {
+      "rota": "/layout-08",
+      "opcao": "B",
+      "file": "real-layout-08-B.png",
+      "changed": 48,
+      "skippedComplex": 1
+    },
+    {
+      "rota": "/layout-08",
+      "opcao": "C",
+      "file": "real-layout-08-C.png",
+      "changed": 48,
+      "skippedComplex": 1
+    },
+    {
+      "rota": "/layout-09",
+      "opcao": "ANTES",
+      "file": "real-layout-09-ANTES.png",
+      "changed": 0,
+      "skippedComplex": 0
+    },
+    {
+      "rota": "/layout-09",
+      "opcao": "A",
+      "file": "real-layout-09-A.png",
+      "changed": 27,
+      "skippedComplex": 3
+    },
+    {
+      "rota": "/layout-09",
+      "opcao": "B",
+      "file": "real-layout-09-B.png",
+      "changed": 27,
+      "skippedComplex": 3
+    },
+    {
+      "rota": "/layout-09",
+      "opcao": "C",
+      "file": "real-layout-09-C.png",
+      "changed": 27,
+      "skippedComplex": 3
+    }
+  ],
+  "limite": "nenhum CSS de producao alterado; aguardando decisao do proprietario; producao NO-GO"
+}

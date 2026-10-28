@@ -1,7 +1,9 @@
 node_modules/
 .next*/
 out/
-dist/
+dist/*
+# Aviso de pacote obsoleto precisa acompanhar o código (E13).
+!dist/LEIA-ME.md
 .env
 .env.*
 !.env.example

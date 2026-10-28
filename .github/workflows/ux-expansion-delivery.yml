@@ -16,4 +16,4 @@ jobs:
       - run: node --test tests/ux-expansion-vocabulary.test.mjs tests/ext09-expansion.test.mjs
       - run: npm run test:ext09-expansion:pg
       - run: npm run test:ux-expansion:pg
-      - run: npm audit --audit-level=high
+      - run: npm audit --audit-level=moderate

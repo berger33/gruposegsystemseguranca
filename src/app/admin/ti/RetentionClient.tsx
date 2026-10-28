@@ -1,122 +1,375 @@
 "use client";
-import { useEffect, useState } from "react";
+// UX-PRO-03 — 5ª promoção "com prova": PLT-11, retenção por categoria e
+// descarte verificável (políticas, exceções formais, jobs e logs minimizados).
+// Antes: protótipo órfão, hex inline, `any`, fetch sem verificação de status e
+// um único <p> para qualquer falha. Agora: 17ª aba real do TiConsole, quatro
+// contratos preservados, papel admin/ti decidido no servidor, fonte/data-base
+// declaradas, drill-down ao registro canônico, quatro estados de leitura com
+// retry e aviso de que o job é SIMULAÇÃO SINTÉTICA — não apaga dado pessoal
+// real e não substitui parecer jurídico. Nenhuma permissão, rota ou migração
+// mudou.
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import UiState from "@/components/ui/UiState";
+import styles from "./RetentionClient.module.css";
 
-type Policy = { id:string; category:string; field_pattern:string; retention_days:number; description:string; legal_basis:string; disposal_method:string; exceptional_retention_allowed:boolean; max_exception_days:number|null; is_active:boolean; created_at:string; };
-type Exception = { id:string; category:string; field_reference:string; reason:string; justification:string; status:string; requested_retention_days:number; approved_retention_days:number|null; expires_at:string; requested_by:string; approved_by:string|null; created_at:string; };
-type Job = { id:string; status:string; total_scanned:number; total_expired:number; total_disposed:number; initiated_by:string; created_at:string; finished_at:string|null; notes:string|null; };
-type Log = { id:string; category:string; field_reference:string; record_reference_hash:string; disposal_method:string; disposed_at:string; retention_days_applied:number|null; details:string|null; };
+type Policy = {
+  id: string; category: string; field_pattern: string; retention_days: number;
+  description: string; legal_basis: string; legal_basis_detail: string | null;
+  disposal_method: string; exceptional_retention_allowed: boolean;
+  max_exception_days: number | null; is_active: boolean;
+  created_by: string | null; created_at?: string; updated_at?: string;
+};
+type RetentionException = {
+  id: string; category: string; field_reference: string; reason: string;
+  justification: string; status: string; requested_retention_days: number;
+  approved_retention_days: number | null; expires_at: string;
+  requested_by: string; approved_by: string | null; rejection_reason?: string | null;
+  policy_id?: string | null; created_at: string;
+};
+type DisposalJob = {
+  id: string; status: string; total_scanned: number; total_expired: number;
+  total_disposed: number; initiated_by: string; notes: string | null;
+  created_at: string; finished_at: string | null;
+};
+type DisposalLog = {
+  id: string; category: string; field_reference: string;
+  record_reference_hash: string; disposal_method: string;
+  retention_days_applied: number | null; details: string | null; disposed_at: string;
+};
+type ReadState = { kind: "loading" } | { kind: "ready" } | { kind: "denied" } | { kind: "error"; detail: string };
 
-const CATS=['identificacao','contato','localizacao','profissional','financeiro','tecnico','comportamental','sensivel','outro'];
-const BASIS=['consentimento','execucao_contrato','cumprimento_legal','legitimo_interesse','protecao_vida','tutela_saude','exercicio_direitos','protecao_credito','outro'];
-const METHODS=['exclusao_logica','exclusao_fisica','anonimizacao','arquivamento'];
-const EX_STATUS=['solicitado','em_analise','aprovado','rejeitado','expirado','revogado'];
+const ENDPOINTS = {
+  policies: "/api/admin/retention/policies",
+  exceptions: "/api/admin/retention/exceptions",
+  jobs: "/api/admin/retention/disposal/jobs",
+  logs: "/api/admin/retention/disposal/logs",
+} as const;
 
-export default function RetentionClient(){
-  const [policies,setPolicies]=useState<Policy[]>([]);
-  const [exceptions,setExceptions]=useState<Exception[]>([]);
-  const [jobs,setJobs]=useState<Job[]>([]);
-  const [logs,setLogs]=useState<Log[]>([]);
-  const [msg,setMsg]=useState<string>('');
-  const [policyForm,setPolicyForm]=useState({category:'contato', field_pattern:'*', retention_days:365, description:'', legal_basis:'cumprimento_legal', disposal_method:'exclusao_logica', exceptional_retention_allowed:false, max_exception_days:730});
-  const [excForm,setExcForm]=useState({category:'contato', field_reference:'email', reason:'', justification:'', requested_retention_days:180, expires_at:''});
-  const [excUpdate,setExcUpdate]=useState({id:'', next_status:'em_analise', approved_retention_days:'', rejection_reason:''});
+const CATS = ["identificacao", "contato", "localizacao", "profissional", "financeiro", "tecnico", "comportamental", "sensivel", "outro"] as const;
+const BASIS = ["consentimento", "execucao_contrato", "cumprimento_legal", "legitimo_interesse", "protecao_vida", "tutela_saude", "exercicio_direitos", "protecao_credito", "outro"] as const;
+const METHODS = ["exclusao_logica", "exclusao_fisica", "anonimizacao", "arquivamento"] as const;
+const EX_STATUS = ["solicitado", "em_analise", "aprovado", "rejeitado", "expirado", "revogado"] as const;
 
-  async function load(){
-    try{
-      const [p,e,j,l]=await Promise.all([
-        fetch('/api/admin/retention/policies',{credentials:'include'}).then(r=>r.json()),
-        fetch('/api/admin/retention/exceptions',{credentials:'include'}).then(r=>r.json()),
-        fetch('/api/admin/retention/disposal/jobs',{credentials:'include'}).then(r=>r.json()),
-        fetch('/api/admin/retention/disposal/logs',{credentials:'include'}).then(r=>r.json()),
+const ERROR_LABELS: Record<string, string> = {
+  forbidden: "Sua sessão não tem autorização para consultar retenção de dados. Entre com uma conta individual de TI ou administração.",
+  unauthorized: "Sua sessão expirou. Entre novamente para consultar a retenção.",
+  invalid_category: "Selecione uma categoria de dado válida.",
+  invalid_retention_days: "Informe um prazo de retenção entre 1 e 36.500 dias.",
+  description_min_10: "A descrição da finalidade precisa ter pelo menos 10 caracteres.",
+  invalid_legal_basis: "Selecione uma base legal válida.",
+  invalid_disposal_method: "Selecione um método de descarte válido.",
+  invalid_max_exception: "O máximo de dias para exceção precisa estar entre 1 e 36.500.",
+  field_required: "Informe a referência do campo que terá retenção excepcional.",
+  reason_min_10: "O motivo da exceção precisa ter pelo menos 10 caracteres.",
+  justification_min_10: "A justificativa da exceção precisa ter pelo menos 10 caracteres.",
+  invalid_requested_days: "Informe um prazo solicitado entre 1 e 36.500 dias.",
+  invalid_policy_id: "A política vinculada não é um identificador válido.",
+  exceptional_not_allowed: "A política selecionada não permite retenção excepcional.",
+  exception_exceeds_policy: "O prazo solicitado ultrapassa o máximo permitido pela política.",
+  invalid_expires_at: "A data de expiração informada não é válida.",
+  invalid_status: "Selecione um status de exceção válido.",
+  invalid_transition: "Esta transição de status não é permitida pelo servidor.",
+  invalid_approved_days: "Os dias aprovados precisam estar entre 1 e 36.500.",
+  rejection_reason_min_10: "O motivo da rejeição precisa ter pelo menos 10 caracteres.",
+  invalid_id: "O registro selecionado não é válido. Recarregue a leitura.",
+  not_found: "O registro não foi localizado. Recarregue a leitura.",
+  job_failed: "O job de descarte falhou no servidor. Nenhum resultado foi presumido.",
+  method_not_allowed: "Esta operação não é permitida pelo servidor.",
+};
+function translate(code: unknown, status?: number) {
+  const key = typeof code === "string" ? code : "";
+  if (ERROR_LABELS[key]) return ERROR_LABELS[key];
+  if (status === 401 || status === 403) return ERROR_LABELS.forbidden;
+  return "Não foi possível concluir a operação. Confira os dados e tente novamente.";
+}
+function date(value?: string | null) {
+  if (!value) return "Não informada";
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.valueOf()) ? "Data indisponível" : parsed.toLocaleDateString("pt-BR");
+}
+function dateTime(value?: string | null) {
+  if (!value) return "Não informada";
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.valueOf()) ? "Data indisponível" : parsed.toLocaleString("pt-BR");
+}
+function Field({ label, children, help }: { label: string; children: ReactNode; help?: string }) {
+  return <label className={styles.field}><span>{label}</span>{children}{help && <small>{help}</small>}</label>;
+}
+
+async function requestJson(path: string, init?: RequestInit) {
+  const response = await fetch(path, { credentials: "include", cache: "no-store", ...init });
+  const data = await response.json().catch(() => ({})) as Record<string, unknown>;
+  return { response, data };
+}
+
+export default function RetentionClient() {
+  const [readState, setReadState] = useState<ReadState>({ kind: "loading" });
+  const [policies, setPolicies] = useState<Policy[]>([]);
+  const [exceptions, setExceptions] = useState<RetentionException[]>([]);
+  const [jobs, setJobs] = useState<DisposalJob[]>([]);
+  const [logs, setLogs] = useState<DisposalLog[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [operationError, setOperationError] = useState("");
+  const [policyForm, setPolicyForm] = useState({
+    category: "contato", field_pattern: "email", retention_days: "365",
+    description: "", legal_basis: "cumprimento_legal", disposal_method: "exclusao_logica",
+    exceptional_retention_allowed: false, max_exception_days: "730",
+  });
+  const [exceptionForm, setExceptionForm] = useState({
+    category: "contato", field_reference: "", reason: "", justification: "",
+    requested_retention_days: "180", expires_at: "", policy_id: "",
+  });
+  const [exceptionUpdate, setExceptionUpdate] = useState({
+    id: "", next_status: "em_analise", approved_retention_days: "", rejection_reason: "",
+  });
+  const [jobNotes, setJobNotes] = useState("");
+  const sequence = useRef(0);
+  const operation = useRef(false);
+
+  const clear = useCallback(() => {
+    setPolicies([]); setExceptions([]); setJobs([]); setLogs([]);
+    setExceptionUpdate({ id: "", next_status: "em_analise", approved_retention_days: "", rejection_reason: "" });
+  }, []);
+
+  // `clearFeedback=false` é usado por mutate: a mensagem de sucesso precisa
+  // sobreviver ao reload interno. Botão/retry/montagem limpam mensagens velhas.
+  const load = useCallback(async (clearFeedback = true) => {
+    const current = ++sequence.current;
+    if (clearFeedback) { setMessage(""); setOperationError(""); }
+    setReadState({ kind: "loading" });
+    try {
+      const [p, e, j, l] = await Promise.all([
+        requestJson(ENDPOINTS.policies),
+        requestJson(ENDPOINTS.exceptions),
+        requestJson(ENDPOINTS.jobs),
+        requestJson(ENDPOINTS.logs),
       ]);
-      if(p.policies) setPolicies(p.policies);
-      if(e.exceptions) setExceptions(e.exceptions);
-      if(j.jobs) setJobs(j.jobs);
-      if(l.logs) setLogs(l.logs);
-    }catch(err:any){ setMsg(String(err)); }
-  }
-  useEffect(()=>{ load(); },[]);
+      // Resposta fora de ordem: descarta e mantém a leitura mais recente.
+      if (current !== sequence.current) return;
+      const all = [p, e, j, l];
+      if (all.some(item => item.response.status === 401 || item.response.status === 403)) {
+        clear(); setReadState({ kind: "denied" }); return;
+      }
+      const failed = all.find(item => !item.response.ok);
+      if (failed) {
+        clear();
+        setReadState({ kind: "error", detail: translate(failed.data.error, failed.response.status) });
+        return;
+      }
+      // Payload validado: lista ausente ou inesperada vira vazio honesto.
+      setPolicies(Array.isArray(p.data.policies) ? p.data.policies as Policy[] : []);
+      setExceptions(Array.isArray(e.data.exceptions) ? e.data.exceptions as RetentionException[] : []);
+      setJobs(Array.isArray(j.data.jobs) ? j.data.jobs as DisposalJob[] : []);
+      setLogs(Array.isArray(l.data.logs) ? l.data.logs as DisposalLog[] : []);
+      setReadState({ kind: "ready" });
+    } catch {
+      if (current !== sequence.current) return;
+      clear();
+      setReadState({ kind: "error", detail: "Falha de rede ao consultar a retenção. Verifique a conexão e tente novamente." });
+    }
+  }, [clear]);
 
-  async function createPolicy(){
-    setMsg('salvando política...');
-    const r=await fetch('/api/admin/retention/policies',{method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(policyForm)});
-    const j=await r.json(); if(!r.ok){ setMsg('erro: '+(j.error||r.status)); return; } setMsg('política salva '+j.policy.id); load();
+  useEffect(() => { void load(); }, [load]);
+
+  async function mutate(path: string, method: "POST" | "PATCH", body: unknown, success: string, reset?: () => void) {
+    if (operation.current) return;
+    operation.current = true;
+    setBusy(true); setOperationError(""); setMessage("");
+    try {
+      const { response, data } = await requestJson(path, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) { setOperationError(translate(data.error, response.status)); return; }
+      setMessage(success);
+      reset?.();
+      await load(false);
+    } catch {
+      setOperationError("Não foi possível concluir a operação. Confira a conexão e tente novamente.");
+    } finally {
+      operation.current = false;
+      setBusy(false);
+    }
   }
-  async function createException(){
-    setMsg('salvando exceção...');
-    const r=await fetch('/api/admin/retention/exceptions',{method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(excForm)});
-    const j=await r.json(); if(!r.ok){ setMsg('erro: '+(j.error||r.status)); return; } setMsg('exceção criada '+j.exception.id); load();
-  }
-  async function updateException(){
-    if(!excUpdate.id){ setMsg('id exceção obrigatório'); return; }
-    setMsg('atualizando exceção...');
-    const payload:any={ next_status:excUpdate.next_status };
-    if(excUpdate.approved_retention_days) payload.approved_retention_days=parseInt(excUpdate.approved_retention_days,10);
-    if(excUpdate.rejection_reason) payload.rejection_reason=excUpdate.rejection_reason;
-    const r=await fetch(`/api/admin/retention/exceptions/${excUpdate.id}`,{method:'PATCH', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
-    const j=await r.json(); if(!r.ok){ setMsg('erro: '+(j.error||JSON.stringify(j))); return; } setMsg('exceção atualizada '+j.exception.status); load();
-  }
-  async function runJob(){
-    setMsg('executando job descarte...');
-    const r=await fetch('/api/admin/retention/disposal/jobs',{method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({notes:'Job manual via TI'})});
-    const j=await r.json(); if(!r.ok){ setMsg('erro job: '+(j.error||r.status)); return; } setMsg(`job ${j.job.id} scanned=${j.job.total_scanned} expired=${j.job.total_expired} disposed=${j.job.total_disposed}`); load();
-  }
+
+  const latestJob = jobs[0] ? dateTime(jobs[0].created_at) : "nenhum job registrado";
+  const latestLog = logs[0] ? dateTime(logs[0].disposed_at) : "nenhum descarte registrado";
+  const activePolicies = policies.filter(policy => policy.is_active).length;
+  const empty = policies.length === 0 && exceptions.length === 0 && jobs.length === 0 && logs.length === 0;
+  const feedback = readState.kind === "loading"
+    ? <UiState variant="loading" title="Carregando retenção" detail="Consultando políticas, exceções formais, jobs e histórico minimizado de descarte." />
+    : readState.kind === "denied"
+      ? <UiState variant="denied" title="Acesso não autorizado" detail="Esta superfície é restrita a contas individuais de TI ou administração. Nenhum dado foi exposto." onRetry={() => load()} retryLabel="Tentar novamente" />
+      : readState.kind === "error"
+        ? <UiState variant="error" title="Falha na consulta" detail={readState.detail} onRetry={() => load()} retryLabel="Tentar novamente" />
+        : empty
+          ? <UiState variant="empty" title="Nenhuma política de retenção" detail="As tabelas estão vazias. Os formulários abaixo registram as primeiras políticas e exceções formais informadas pelo operador." onRetry={() => load()} retryLabel="Atualizar" />
+          : null;
 
   return (
-    <section style={{margin:'24px 0', padding:16, border:'1px solid #333', borderRadius:8}}>
-      <h2>PLT-11 Retenção por categoria & descarte verificável</h2>
-      {msg && <p style={{color:'#0af'}}>{msg}</p>}
-      <button onClick={load}>Recarregar</button> <button onClick={runJob}>Executar job descarte</button>
+    <section className={styles.workspace} aria-busy={busy || readState.kind === "loading"}>
+      <header className={styles.header}>
+        <div>
+          <p className={styles.eyebrow}>PLT-11 · LGPD e retenção</p>
+          <h2>Retenção e descarte</h2>
+          <p>Políticas por categoria, exceções formais com aprovação documentada, jobs de descarte e histórico minimizado por hash de referência.</p>
+          <p className={styles.source}>
+            Fonte: tabelas <code>data_retention_policies</code>, <code>retention_exceptions</code>, <code>disposal_jobs</code> e <code>disposal_logs</code>.
+            {" "}Data-base: job mais recente em <strong>{latestJob}</strong>; descarte mais recente em <strong>{latestLog}</strong>.
+            {" "}Políticas ativas: <strong>{activePolicies}</strong>.
+          </p>
+        </div>
+        <button type="button" onClick={() => load()} disabled={busy || readState.kind === "loading"}>Atualizar leitura</button>
+      </header>
 
-      <h3>Políticas ({policies.length})</h3>
-      <ul style={{maxHeight:160, overflow:'auto'}}>
-        {policies.map(p=><li key={p.id}>{p.category}/{p.field_pattern} {p.retention_days}d {p.legal_basis} {p.disposal_method} {p.exceptional_retention_allowed?'exc-OK':''} {p.is_active?'ativa':'inativa'}</li>)}
-      </ul>
-      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:8}}>
-        <select value={policyForm.category} onChange={e=>setPolicyForm({...policyForm, category:e.target.value})}>{CATS.map(c=><option key={c} value={c}>{c}</option>)}</select>
-        <input placeholder="field_pattern ex: email ou *" value={policyForm.field_pattern} onChange={e=>setPolicyForm({...policyForm, field_pattern:e.target.value})} />
-        <input type="number" placeholder="retention_days" value={policyForm.retention_days} onChange={e=>setPolicyForm({...policyForm, retention_days:parseInt(e.target.value,10)||0})} />
-        <select value={policyForm.legal_basis} onChange={e=>setPolicyForm({...policyForm, legal_basis:e.target.value})}>{BASIS.map(b=><option key={b} value={b}>{b}</option>)}</select>
-        <select value={policyForm.disposal_method} onChange={e=>setPolicyForm({...policyForm, disposal_method:e.target.value})}>{METHODS.map(m=><option key={m} value={m}>{m}</option>)}</select>
-        <label><input type="checkbox" checked={policyForm.exceptional_retention_allowed} onChange={e=>setPolicyForm({...policyForm, exceptional_retention_allowed:e.target.checked})} /> excepcional permitido</label>
-        <input type="number" placeholder="max_exception_days" value={policyForm.max_exception_days||''} onChange={e=>setPolicyForm({...policyForm, max_exception_days:parseInt(e.target.value,10)||0})} />
-        <textarea placeholder="descrição finalidade" value={policyForm.description} onChange={e=>setPolicyForm({...policyForm, description:e.target.value})} style={{gridColumn:'1 / span 2'}} />
-      </div>
-      <button onClick={createPolicy}>Salvar política (upsert)</button>
+      {feedback}
+      {message && <p role="status" className={styles.success}>{message}</p>}
+      {operationError && <p role="alert" className={styles.error}>{operationError}</p>}
 
-      <h3>Exceções retenção ({exceptions.length})</h3>
-      <ul style={{maxHeight:160, overflow:'auto'}}>
-        {exceptions.map(ex=><li key={ex.id}>{ex.status} {ex.category}/{ex.field_reference} req={ex.requested_retention_days}d apr={ex.approved_retention_days||'-'} exp={ex.expires_at?.slice(0,10)} por={ex.requested_by} motivo={ex.reason.slice(0,60)}</li>)}
-      </ul>
-      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>
-        <select value={excForm.category} onChange={e=>setExcForm({...excForm, category:e.target.value})}>{CATS.map(c=><option key={c} value={c}>{c}</option>)}</select>
-        <input placeholder="field_reference ex: contrato_123" value={excForm.field_reference} onChange={e=>setExcForm({...excForm, field_reference:e.target.value})} />
-        <input type="number" placeholder="requested_retention_days" value={excForm.requested_retention_days} onChange={e=>setExcForm({...excForm, requested_retention_days:parseInt(e.target.value,10)||0})} />
-        <input type="date" value={excForm.expires_at} onChange={e=>setExcForm({...excForm, expires_at:e.target.value})} />
-        <textarea placeholder="reason min 10" value={excForm.reason} onChange={e=>setExcForm({...excForm, reason:e.target.value})} />
-        <textarea placeholder="justification min 10" value={excForm.justification} onChange={e=>setExcForm({...excForm, justification:e.target.value})} />
-      </div>
-      <button onClick={createException}>Solicitar exceção formal</button>
+      {readState.kind === "ready" && <>
+        <section className={styles.panel} aria-labelledby="retention-policies-title">
+          <div className={styles.sectionHeading}>
+            <div><h3 id="retention-policies-title">Políticas ({policies.length})</h3><p>Prazo, base legal e método de descarte por categoria e padrão de campo.</p></div>
+            <span className={styles.count}>{activePolicies} ativa(s)</span>
+          </div>
+          <ul className={styles.recordList}>
+            {policies.map(policy => <li key={policy.id}>
+              <strong>{policy.category} / {policy.field_pattern} · {policy.retention_days} dias</strong>
+              <span>base {policy.legal_basis} · descarte {policy.disposal_method} · {policy.is_active ? "ativa" : "inativa"}</span>
+              <span>{policy.description}</span>
+              <span>exceção {policy.exceptional_retention_allowed ? `permitida (máx. ${policy.max_exception_days ?? "—"} dias)` : "não permitida"} · registrada por {policy.created_by || "não informado"} em {date(policy.created_at)}</span>
+              <details className={styles.subsection}><summary>Registro canônico da política (JSON)</summary><pre className={styles.pre}>{JSON.stringify(policy, null, 2)}</pre></details>
+            </li>)}
+          </ul>
+          <details className={styles.subsection}>
+            <summary>Registrar política de retenção</summary>
+            <div className={styles.formGrid}>
+              <Field label="Categoria"><select value={policyForm.category} onChange={e => setPolicyForm({ ...policyForm, category: e.target.value })}>{CATS.map(category => <option key={category} value={category}>{category}</option>)}</select></Field>
+              <Field label="Padrão de campo"><input value={policyForm.field_pattern} onChange={e => setPolicyForm({ ...policyForm, field_pattern: e.target.value })} /></Field>
+              <Field label="Dias de retenção"><input type="number" min={1} value={policyForm.retention_days} onChange={e => setPolicyForm({ ...policyForm, retention_days: e.target.value })} /></Field>
+              <Field label="Base legal"><select value={policyForm.legal_basis} onChange={e => setPolicyForm({ ...policyForm, legal_basis: e.target.value })}>{BASIS.map(basis => <option key={basis} value={basis}>{basis}</option>)}</select></Field>
+              <Field label="Método de descarte"><select value={policyForm.disposal_method} onChange={e => setPolicyForm({ ...policyForm, disposal_method: e.target.value })}>{METHODS.map(method => <option key={method} value={method}>{method}</option>)}</select></Field>
+              <Field label="Máximo de dias excepcional"><input type="number" min={1} value={policyForm.max_exception_days} onChange={e => setPolicyForm({ ...policyForm, max_exception_days: e.target.value })} /></Field>
+              <div className={styles.full}><Field label="Descrição da finalidade" help="Mínimo de 10 caracteres; descreve a finalidade declarada da retenção."><textarea rows={3} value={policyForm.description} onChange={e => setPolicyForm({ ...policyForm, description: e.target.value })} /></Field></div>
+              <div className={styles.full}><label className={styles.field}><span>Permitir retenção excepcional</span><input type="checkbox" checked={policyForm.exceptional_retention_allowed} onChange={e => setPolicyForm({ ...policyForm, exceptional_retention_allowed: e.target.checked })} /></label></div>
+            </div>
+            <button type="button" className={styles.primary} disabled={busy} onClick={() => mutate(
+              ENDPOINTS.policies, "POST",
+              {
+                ...policyForm,
+                retention_days: Number(policyForm.retention_days),
+                max_exception_days: policyForm.exceptional_retention_allowed ? Number(policyForm.max_exception_days) : null,
+              },
+              "Política de retenção registrada.",
+              () => setPolicyForm({ category: "contato", field_pattern: "email", retention_days: "365", description: "", legal_basis: "cumprimento_legal", disposal_method: "exclusao_logica", exceptional_retention_allowed: false, max_exception_days: "730" }),
+            )}>Salvar política</button>
+          </details>
+        </section>
 
-      <h4>Atualizar exceção (aprovar/rejeitar/revogar)</h4>
-      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8}}>
-        <input placeholder="id exceção" value={excUpdate.id} onChange={e=>setExcUpdate({...excUpdate, id:e.target.value})} />
-        <select value={excUpdate.next_status} onChange={e=>setExcUpdate({...excUpdate, next_status:e.target.value})}>{EX_STATUS.map(s=><option key={s} value={s}>{s}</option>)}</select>
-        <input placeholder="approved_retention_days opcional" value={excUpdate.approved_retention_days} onChange={e=>setExcUpdate({...excUpdate, approved_retention_days:e.target.value})} />
-        <textarea placeholder="rejection_reason se rejeitado min10" value={excUpdate.rejection_reason} onChange={e=>setExcUpdate({...excUpdate, rejection_reason:e.target.value})} style={{gridColumn:'1 / span 3'}} />
-      </div>
-      <button onClick={updateException}>Atualizar status exceção</button>
+        <section className={styles.panel} aria-labelledby="retention-exceptions-title">
+          <div className={styles.sectionHeading}>
+            <div><h3 id="retention-exceptions-title">Exceções formais ({exceptions.length})</h3><p>Solicitação, análise, aprovação ou rejeição documentadas; transições decididas no servidor.</p></div>
+          </div>
+          <ul className={styles.recordList}>
+            {exceptions.map(exception => <li key={exception.id}>
+              <strong>{exception.status} · {exception.category} / {exception.field_reference}</strong>
+              <span>solicitado {exception.requested_retention_days}d · aprovado {exception.approved_retention_days ?? "—"}d · expira em {date(exception.expires_at)}</span>
+              <span>por {exception.requested_by} · revisado por {exception.approved_by || "não informado"} · criado em {date(exception.created_at)}</span>
+              <span>motivo: {exception.reason}</span>
+              <span>justificativa: {exception.justification}</span>
+              <details className={styles.subsection}><summary>Registro canônico da exceção (JSON)</summary><pre className={styles.pre}>{JSON.stringify(exception, null, 2)}</pre></details>
+              <div className={styles.actions}>
+                <button type="button" disabled={busy} onClick={() => setExceptionUpdate({
+                  id: exception.id, next_status: exception.status === "solicitado" ? "em_analise" : "aprovado",
+                  approved_retention_days: "", rejection_reason: "",
+                })}>Usar para revisão</button>
+              </div>
+            </li>)}
+          </ul>
+          <details className={styles.subsection}>
+            <summary>Solicitar exceção formal</summary>
+            <div className={styles.formGrid}>
+              <Field label="Categoria da exceção"><select value={exceptionForm.category} onChange={e => setExceptionForm({ ...exceptionForm, category: e.target.value })}>{CATS.map(category => <option key={category} value={category}>{category}</option>)}</select></Field>
+              <Field label="Referência do campo"><input value={exceptionForm.field_reference} onChange={e => setExceptionForm({ ...exceptionForm, field_reference: e.target.value })} /></Field>
+              <Field label="Dias solicitados"><input type="number" min={1} value={exceptionForm.requested_retention_days} onChange={e => setExceptionForm({ ...exceptionForm, requested_retention_days: e.target.value })} /></Field>
+              <Field label="Expira em" help="Se vazio, o servidor calcula a partir dos dias solicitados."><input type="date" value={exceptionForm.expires_at} onChange={e => setExceptionForm({ ...exceptionForm, expires_at: e.target.value })} /></Field>
+              <Field label="Política vinculada" help="Opcional: ID UUID de uma política que permita exceção."><input value={exceptionForm.policy_id} onChange={e => setExceptionForm({ ...exceptionForm, policy_id: e.target.value })} /></Field>
+              <div className={styles.full}><Field label="Motivo da exceção" help="Mínimo de 10 caracteres."><textarea rows={2} value={exceptionForm.reason} onChange={e => setExceptionForm({ ...exceptionForm, reason: e.target.value })} /></Field></div>
+              <div className={styles.full}><Field label="Justificativa da exceção" help="Mínimo de 10 caracteres; registra a base da decisão."><textarea rows={2} value={exceptionForm.justification} onChange={e => setExceptionForm({ ...exceptionForm, justification: e.target.value })} /></Field></div>
+            </div>
+            <button type="button" className={styles.primary} disabled={busy} onClick={() => mutate(
+              ENDPOINTS.exceptions, "POST",
+              { ...exceptionForm, requested_retention_days: Number(exceptionForm.requested_retention_days) },
+              "Exceção formal registrada.",
+              () => setExceptionForm({ category: "contato", field_reference: "", reason: "", justification: "", requested_retention_days: "180", expires_at: "", policy_id: "" }),
+            )}>Solicitar exceção formal</button>
+          </details>
+          <details className={styles.subsection}>
+            <summary>Atualizar status da exceção</summary>
+            <div className={styles.formGrid}>
+              <Field label="ID da exceção"><input value={exceptionUpdate.id} onChange={e => setExceptionUpdate({ ...exceptionUpdate, id: e.target.value })} /></Field>
+              <Field label="Próximo status"><select value={exceptionUpdate.next_status} onChange={e => setExceptionUpdate({ ...exceptionUpdate, next_status: e.target.value })}>{EX_STATUS.map(status => <option key={status} value={status}>{status}</option>)}</select></Field>
+              <Field label="Dias aprovados"><input type="number" min={1} value={exceptionUpdate.approved_retention_days} onChange={e => setExceptionUpdate({ ...exceptionUpdate, approved_retention_days: e.target.value })} /></Field>
+              <Field label="Motivo da rejeição" help="Obrigatório (mínimo 10 caracteres) quando o status for rejeitado."><input value={exceptionUpdate.rejection_reason} onChange={e => setExceptionUpdate({ ...exceptionUpdate, rejection_reason: e.target.value })} /></Field>
+            </div>
+            <button type="button" className={styles.primary} disabled={busy} onClick={() => mutate(
+              `${ENDPOINTS.exceptions}/${exceptionUpdate.id}`, "PATCH",
+              {
+                next_status: exceptionUpdate.next_status,
+                ...(exceptionUpdate.approved_retention_days ? { approved_retention_days: Number(exceptionUpdate.approved_retention_days) } : {}),
+                ...(exceptionUpdate.rejection_reason ? { rejection_reason: exceptionUpdate.rejection_reason } : {}),
+              },
+              "Status da exceção atualizado.",
+            )}>Atualizar status da exceção</button>
+          </details>
+        </section>
 
-      <h3>Jobs descarte ({jobs.length})</h3>
-      <ul style={{maxHeight:120, overflow:'auto'}}>
-        {jobs.map(j=><li key={j.id}>{j.status} scanned={j.total_scanned} expired={j.total_expired} disposed={j.total_disposed} por={j.initiated_by} {j.created_at?.slice(0,19)} {j.finished_at?.slice(0,19)||''} {j.notes||''}</li>)}
-      </ul>
+        <section className={styles.panel} aria-labelledby="retention-jobs-title">
+          <div className={styles.sectionHeading}>
+            <div><h3 id="retention-jobs-title">Jobs de descarte ({jobs.length})</h3><p>Execução registrada com contagens de varredura, expirados e descartes simulados.</p></div>
+          </div>
+          <ul className={styles.recordList}>
+            {jobs.map(job => <li key={job.id}>
+              <strong>{job.status} · job {job.id.slice(0, 8)}</strong>
+              <span>total_scanned {job.total_scanned} · total_expired {job.total_expired} · total_disposed {job.total_disposed}</span>
+              <span>iniciado por {job.initiated_by} em {dateTime(job.created_at)} · finalizado em {dateTime(job.finished_at)}</span>
+              <span>notas: {job.notes || "nenhuma"}</span>
+              <details className={styles.subsection}><summary>Registro canônico do job (JSON)</summary><pre className={styles.pre}>{JSON.stringify(job, null, 2)}</pre></details>
+            </li>)}
+          </ul>
+          <div className={styles.formGrid}>
+            <div className={styles.full}><Field label="Notas do job"><textarea rows={2} value={jobNotes} onChange={e => setJobNotes(e.target.value)} /></Field></div>
+          </div>
+          <button type="button" className={styles.primary} disabled={busy} onClick={() => mutate(
+            ENDPOINTS.jobs, "POST", { notes: jobNotes || "Job manual via console de TI" },
+            "Job de descarte executado (simulação sintética).",
+            () => setJobNotes(""),
+          )}>Executar job de descarte</button>
+        </section>
 
-      <h3>Logs descarte minimizado ({logs.length}) — histórico com hash referência, sem dado pessoal</h3>
-      <ul style={{maxHeight:160, overflow:'auto'}}>
-        {logs.map(l=><li key={l.id}>{l.category}/{l.field_reference} hash={l.record_reference_hash.slice(0,12)} {l.disposal_method} {l.retention_days_applied||''}d {l.disposed_at?.slice(0,19)} {l.details?.slice(0,60)||''}</li>)}
-      </ul>
-      <p style={{fontSize:12, color:'#888'}}>PLT-11: retenção por categoria, descarte em jobs verificáveis, retenção excepcional formal com aprovação/rejeição documentada, histórico minimizado (hash, sem conteúdo pessoal). Seed automático a partir de privacy_data_inventory.</p>
+        <section className={styles.panel} aria-labelledby="retention-logs-title">
+          <div className={styles.sectionHeading}>
+            <div><h3 id="retention-logs-title">Histórico minimizado ({logs.length})</h3><p>Somente hash de referência, categoria, método e data — sem conteúdo pessoal.</p></div>
+          </div>
+          <ul className={styles.recordList}>
+            {logs.map(log => <li key={log.id}>
+              <strong>{log.category} / {log.field_reference}</strong>
+              <span>hash {String(log.record_reference_hash).slice(0, 16)} · método {log.disposal_method} · {log.retention_days_applied ?? "—"} dias</span>
+              <span>descartado em {dateTime(log.disposed_at)} · {log.details || "sem detalhe"}</span>
+              <details className={styles.subsection}><summary>Registro canônico do log (JSON)</summary><pre className={styles.pre}>{JSON.stringify(log, null, 2)}</pre></details>
+            </li>)}
+          </ul>
+        </section>
+
+        <section className={styles.panel}>
+          <h3>Limites e decisões pendentes</h3>
+          <p className={styles.note}>
+            O job de descarte é uma <strong>simulação sintética</strong>: conta políticas e exceções expiradas e grava logs minimizados, mas <strong>não apaga dados pessoais reais</strong> em produção. As políticas e prazos semeados são exemplos; a retenção efetiva, as bases legais, o descarte real e a retenção excepcional exigem <strong>parecer jurídico</strong> e decisão do proprietário (LGPD, CLT e obrigações fiscais). Esta tela não envia dados a provedores, não configura produção e não substitui validação legal. <strong>Produção: NO-GO.</strong>
+          </p>
+        </section>
+      </>}
     </section>
   );
 }

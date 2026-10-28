@@ -1,0 +1,16 @@
+id,estado_0410,classe_evidencia_atual,classe_reauditoria,ancoras,encontradas,gate,gate_existe,aceite_humano
+SEC-01,em_execucao,mencionado_em_gate,evidencia_tecnica_mapeada,2,2,scripts/qa-wave0-static.mjs,true,nao_registrado
+SEC-02,pronto_local,mencionado_em_gate,evidencia_tecnica_mapeada,2,2,scripts/qa-staff-auth-postgres.mjs,true,nao_registrado
+SEC-03,a_revalidar,mencionado_em_gate,evidencia_tecnica_mapeada,2,2,scripts/qa-cli-v2-postgres.mjs,true,nao_registrado
+SEC-04,em_execucao,mencionado_em_gate,evidencia_tecnica_mapeada,3,3,scripts/qa-staff-auth-postgres.mjs,true,nao_registrado
+SEC-05,pronto_local,mencionado_em_gate,evidencia_tecnica_mapeada,2,2,scripts/qa-staff-auth-postgres.mjs,true,nao_registrado
+SEC-06,pronto_local,mencionado_em_gate,evidencia_tecnica_mapeada,3,3,scripts/qa-staff-auth-postgres.mjs,true,nao_registrado
+SEC-07,a_revalidar,mencionado_em_gate,evidencia_tecnica_mapeada,2,2,scripts/qa-staff-auth-postgres.mjs,true,nao_registrado
+SEC-08,pronto_local,mencionado_em_gate,evidencia_tecnica_mapeada,2,2,scripts/qa-wave0-static.mjs,true,nao_registrado
+SEC-09,em_execucao,mencionado_em_gate,evidencia_tecnica_mapeada,2,2,scripts/qa-wave0-static.mjs,true,nao_registrado
+SEC-10,a_revalidar,mencionado_em_gate,evidencia_tecnica_mapeada,2,2,scripts/qa-ux-public-routes-postgres.mjs,true,nao_registrado
+SEC-11,a_revalidar,mencionado_em_gate,evidencia_tecnica_mapeada,2,2,scripts/qa-ux-public-routes-postgres.mjs,true,nao_registrado
+SEC-12,a_revalidar,mencionado_em_gate,evidencia_tecnica_mapeada,2,2,scripts/qa-cli-v2-postgres.mjs,true,nao_registrado
+SEC-13,a_revalidar,mencionado_em_gate,evidencia_tecnica_mapeada,3,3,scripts/qa-staff-auth-postgres.mjs,true,nao_registrado
+SEC-14,a_revalidar,mencionado_em_gate,evidencia_tecnica_mapeada,3,3,scripts/qa-cli-v2-postgres.mjs,true,nao_registrado
+SEC-15,a_revalidar,mencionado_em_gate,evidencia_tecnica_mapeada,3,3,scripts/qa-staff-auth-postgres.mjs,true,nao_registrado

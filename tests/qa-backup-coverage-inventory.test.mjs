@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { mkdtemp, mkdir, rm, symlink, unlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, unlink, writeFile } from 'node:fs/promises';
+import { linkDirectoryOutside } from './helpers/fs-link-fixtures.mjs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { inventoryQaFileCoverage } from '../scripts/qa-backup-coverage-inventory.mjs';
@@ -67,7 +68,7 @@ test('PLT-BAK-001: não aceitar diretório fora da raiz QA antes de ler banco ou
   await assert.rejects(inventoryQaFileCoverage({ ...f, docsDir: path.join(tmpdir(), 'operator-private') }),
     /qa_inventory_external_dir_refused/);
   const link = path.join(f.qaRoot, 'outside-link');
-  await symlink(tmpdir(), link);
+  await linkDirectoryOutside(tmpdir(), link);
   await assert.rejects(inventoryQaFileCoverage({ ...f, docsDir: link }),
     /qa_inventory_external_dir_refused/);
 });

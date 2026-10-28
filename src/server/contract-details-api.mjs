@@ -1,5 +1,5 @@
 export function createContractDetailsApi({ json, readJson, sameOrigin, getPool, readAdminSession }) {
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const isUuid = v => typeof v === 'string' && UUID_RE.test(v);
   const bad = (res, msg) => json(res, 400, { error: msg });
   const sanitizeText = (s, max) => {

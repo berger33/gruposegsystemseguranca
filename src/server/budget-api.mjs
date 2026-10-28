@@ -3,7 +3,7 @@ const METRICS=['storage_gb','messages_count','ia_tokens','db_gb','bandwidth_gb',
 const SEVERITIES=['info','warning','critical'];
 
 function sanitize(v,max=2000){ if(typeof v!=='string') return ''; return v.trim().slice(0,max); }
-function uuidRe(){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i; }
+function uuidRe(){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i; }
 
 export function createBudgetApi({ pool, auditLog, sameOrigin, requireSession, requireRole }){
   async function handleBudgets(req,res){

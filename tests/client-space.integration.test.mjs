@@ -441,6 +441,104 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     assert.equal(listB.body.accounts[0].display_name, "Empresa Integração A2");
   });
 
+  await t.test("CLI-02: client delegation requires authorized source scope and does not grant access", async () => {
+    const source = await pool.query(
+      `INSERT INTO cli_client_contacts (client_account_id, identity_id, display_name, email, role, status, can_delegate)
+       VALUES ($1,$2,'Titular delegante',$3,'titular','ativo',true) RETURNING id`,
+      [accountA1, identityA, `cli02.origem.${runId}@exemplo.invalid`],
+    );
+    const sourceId = source.rows[0].id;
+    await pool.query(
+      `INSERT INTO cli_contact_scopes (contact_id, client_account_id, role, can_delegate)
+       VALUES ($1,$2,'operacional',true), ($1,$2,'financeiro',false)`,
+      [sourceId, accountA1],
+    );
+    const delegatedEmail = `cli02.destino.${runId}@exemplo.invalid`;
+    // Confirma que o ledger de migrações habilitou a nova ação auditável.
+    const auditProbe = await pool.query(
+      `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result)
+       VALUES ('client',$1,'contact_delegate','cli02-migration-probe','allowed') RETURNING id`,
+      [identityA],
+    );
+    await pool.query("DELETE FROM auth_access_audit WHERE id=$1", [auditProbe.rows[0].id]);
+    const response = await api("/api/client/contacts/delegate", {
+      method: "POST", cookie: cookieA,
+      body: { accountId: accountA1, displayName: "Contato delegado", email: delegatedEmail },
+    });
+    assert.equal(response.status, 201, JSON.stringify(response.body));
+    assert.equal(response.body.contact.status, "pendente_convite");
+    assert.equal(response.body.contact.role, "titular");
+    assert.equal(response.body.contact.can_delegate, false);
+    assert.equal(response.body.contact.delegated_by_contact_id, sourceId);
+    assert.equal(response.body.access_granted, false);
+    assert.deepEqual(response.body.scopes.map(scope => [scope.role, scope.can_delegate]), [["operacional", false]]);
+
+    const persisted = await pool.query(
+      `SELECT c.identity_id, c.status, c.can_delegate, s.role, s.can_delegate AS scope_can_delegate
+         FROM cli_client_contacts c JOIN cli_contact_scopes s ON s.contact_id=c.id
+        WHERE c.email=$1`,
+      [delegatedEmail],
+    );
+    assert.deepEqual(persisted.rows.map(row => [row.identity_id, row.status, row.can_delegate, row.role, row.scope_can_delegate]),
+      [[null, "pendente_convite", false, "operacional", false]]);
+    const audit = await pool.query(
+      "SELECT actor_kind, actor_id, action, target, result FROM auth_access_audit WHERE action='contact_delegate' AND target=$1",
+      [response.body.contact.id],
+    );
+    assert.deepEqual(audit.rows, [{ actor_kind: "client", actor_id: identityA, action: "contact_delegate", target: response.body.contact.id, result: "allowed" }]);
+
+    await pool.query(
+      `INSERT INTO cli_client_contacts (client_account_id, display_name, email, role, status)
+       VALUES ($1,'Unrelated contact','cli02.unrelated.' || $2 || '@exemplo.invalid','financeiro','ativo')`,
+      [accountA1, runId],
+    );
+    const contacts = await api(`/api/client/contacts?account=${accountA1}`, { cookie: cookieA });
+    assert.equal(contacts.status, 200, JSON.stringify(contacts.body));
+    assert.deepEqual(contacts.body.contacts.map(contact => [contact.email, contact.is_self]), [
+      [`cli02.origem.${runId}@exemplo.invalid`, true],
+      [delegatedEmail, false],
+    ]);
+    assert.deepEqual(contacts.body.contacts[1].scopes.map(scope => [scope.role, scope.can_delegate]), [["operacional", false]]);
+    const contactsOutsideGrant = await api(`/api/client/contacts?account=${accountA2}`, { cookie: cookieA });
+    assert.equal(contactsOutsideGrant.status, 403);
+
+    const duplicate = await api("/api/client/contacts/delegate", {
+      method: "POST", cookie: cookieA,
+      body: { accountId: accountA1, displayName: "Duplicado", email: delegatedEmail },
+    });
+    assert.equal(duplicate.status, 409);
+
+    const unauthorized = await api("/api/client/contacts/delegate", {
+      method: "POST", cookie: cookieA,
+      body: { accountId: accountA2, displayName: "Fora do escopo", email: `cli02.fora.${runId}@exemplo.invalid` },
+    });
+    assert.equal(unauthorized.status, 403);
+
+    const noDelegationSource = await pool.query(
+      `INSERT INTO cli_client_contacts (client_account_id, identity_id, display_name, email, role, status, can_delegate)
+       VALUES ($1,$2,'Contato sem delegação',$3,'operacional','ativo',false) RETURNING id`,
+      [accountA2, identityB, `cli02.sem-perm.${runId}@exemplo.invalid`],
+    );
+    await pool.query(
+      `INSERT INTO cli_contact_scopes (contact_id, client_account_id, role, can_delegate)
+       VALUES ($1,$2,'operacional',true)`,
+      [noDelegationSource.rows[0].id, accountA2],
+    );
+    const denied = await api("/api/client/contacts/delegate", {
+      method: "POST", cookie: cookieB,
+      body: { accountId: accountA2, displayName: "Tentativa negada", email: `cli02.negado.${runId}@exemplo.invalid` },
+    });
+    assert.equal(denied.status, 403);
+
+    const auditFailure = await withForcedAuditFailure("contact_delegate", () => api("/api/client/contacts/delegate", {
+      method: "POST", cookie: cookieA,
+      body: { accountId: accountA1, displayName: "Rollback audit", email: `cli02.rollback.${runId}@exemplo.invalid` },
+    }));
+    assert.equal(auditFailure.status, 503);
+    const rolledBack = await pool.query("SELECT count(*)::int AS count FROM cli_client_contacts WHERE email=$1", [`cli02.rollback.${runId}@exemplo.invalid`]);
+    assert.equal(rolledBack.rows[0].count, 0);
+  });
+
   let contractId = null;
   await t.test("contracts follow the verified scope on the server, not browser-supplied ids", async () => {
     const adminCreate = await api("/api/admin/contracts", {
@@ -536,6 +634,50 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     assert.equal(ended.status, 200);
     const relisted = await api(`/api/client/contracts?account=${accountA1}`, { cookie: cookieA });
     assert.equal(relisted.body.contracts.find(item => item.id === contractId)?.status, "ended");
+  });
+
+  await t.test("CLI-03: portal returns only in-scope published contract items, validity and documents", async () => {
+    await pool.query(
+      `INSERT INTO cli_contract_items (contract_id, item_type, title, description, is_internal)
+       VALUES ($1, 'vigilancia', 'Ronda publicada', 'Escopo operacional visível ao cliente.', false),
+              ($1, 'outro', 'Nota interna', 'Conteúdo interno que não deve ser exposto.', true)`,
+      [contractId],
+    );
+    await pool.query(
+      `INSERT INTO cli_contract_vigencia (contract_id, starts_on, ends_on, status)
+       VALUES ($1, CURRENT_DATE - 1, CURRENT_DATE + 30, 'vigente'),
+              ($1, CURRENT_DATE - 30, CURRENT_DATE - 1, 'encerrado')`,
+      [contractId],
+    );
+    const docs = await pool.query(
+      `INSERT INTO cli_client_documents_v2
+         (client_account_id, contract_id, category, title, description, file_name, file_url, storage_key, status, valid_from, valid_to, is_internal, is_private, uploaded_by)
+       VALUES
+         ($1, $2, 'relatorio', 'Publicado', 'Documento disponibilizado ao cliente.', 'publico.pdf', 'https://files.invalid/publico.pdf', 'qa-published-cli03-public', 'publicado', CURRENT_DATE - 1, CURRENT_DATE + 30, false, false, 'ti'),
+         ($1, $2, 'relatorio', 'Interno', 'Documento interno.', 'interno.pdf', 'https://files.invalid/interno.pdf', 'qa-published-cli03-internal', 'publicado', CURRENT_DATE - 1, CURRENT_DATE + 30, true, false, 'ti'),
+         ($1, $2, 'relatorio', 'Privado', 'Documento privado.', 'privado.pdf', 'https://files.invalid/privado.pdf', 'qa-published-cli03-private', 'publicado', CURRENT_DATE - 1, CURRENT_DATE + 30, false, true, 'ti'),
+         ($1, $2, 'relatorio', 'Rascunho', 'Documento ainda não publicado.', 'rascunho.pdf', 'https://files.invalid/rascunho.pdf', 'qa-published-cli03-draft', 'rascunho', CURRENT_DATE - 1, CURRENT_DATE + 30, false, false, 'ti')
+       RETURNING id`,
+      [accountA1, contractId],
+    );
+    const detailPath = `/api/client/contracts/${contractId}/published-details?account=${accountA1}`;
+    const response = await api(detailPath, { cookie: cookieA });
+    assert.equal(response.status, 200, JSON.stringify(response.body));
+    assert.equal(response.body.contract.id, contractId);
+    assert.deepEqual(response.body.items.map(item => item.title), ['Ronda publicada']);
+    assert.equal(response.body.vigencias.length, 1);
+    assert.equal(response.body.vigencias[0].status, 'vigente');
+    assert.deepEqual(response.body.documents.map(item => item.title), ['Publicado']);
+    assert.equal('file_url' in response.body.documents[0], false);
+    assert.equal('storage_key' in response.body.documents[0], false);
+    for (const id of docs.rows.map(row => row.id)) cleanupIds.push(id);
+
+    const wrongAccount = await api(`/api/client/contracts/${contractId}/published-details?account=${accountA2}`, { cookie: cookieA });
+    assert.equal(wrongAccount.status, 403);
+    await pool.query(`UPDATE client_access_grants SET contract_scope_mode='selected', allowed_contract_ids='{}' WHERE id=$1`, [grantA1]);
+    const outsideAllowlist = await api(detailPath, { cookie: cookieA });
+    assert.equal(outsideAllowlist.status, 403);
+    await pool.query(`UPDATE client_access_grants SET contract_scope_mode='all' WHERE id=$1`, [grantA1]);
   });
 
   let documentId = null;
@@ -646,7 +788,7 @@ test("client space enforces verified scoping end to end", testOptions, async t =
   });
 
   let ticketId = null;
-  await t.test("tickets open only inside the verified scope and carry a status audit trail", async () => {
+  await t.test("CLI-05: tickets open only inside verified account scope and carry a status audit trail", async () => {
     const invalidCategory = await api("/api/client/tickets", {
       method: "POST",
       body: { accountId: accountA1, category: "Categoria inventada", title: "a", details: "b" },
@@ -816,6 +958,61 @@ test("client space enforces verified scoping end to end", testOptions, async t =
     });
     assert.equal(divergent.status, 409);
     assert.deepEqual(divergent.body, { error: "idempotency_conflict" });
+  });
+
+  // CLI-06: visita tem ciclo e reagendamento auditável. CLI-07: visita aparece na
+  // agenda do cliente com isolamento por conta. CLI-08: relatório só é visível
+  // após aprovação e o aceite do cliente é registrado com replay idempotente.
+  await t.test("CLI-06 CLI-07 CLI-08: client visits are scoped, reschedulable and reports publish only after review", async () => {
+    const visit = await pool.query(
+      `INSERT INTO client_visits (client_account_id, title, scheduled_at, created_by)
+       VALUES ($1, $2, NOW() + INTERVAL '2 days', 'ti') RETURNING id`,
+      [accountA1, `Visita CLI ${runId}`],
+    );
+    const visitId = visit.rows[0].id;
+    const draft = await pool.query(
+      `INSERT INTO client_reports (client_account_id, visit_id, title, summary, status, created_by)
+       VALUES ($1, $2, $3, $4, 'draft', 'ti') RETURNING id`,
+      [accountA1, visitId, `Rascunho ${runId}`, "Relatório em revisão não deve aparecer ao cliente."],
+    );
+    const report = await pool.query(
+      `INSERT INTO client_reports (client_account_id, visit_id, title, summary, status, created_by)
+       VALUES ($1, $2, $3, $4, 'approved', 'ti') RETURNING id`,
+      [accountA1, visitId, `Aprovado ${runId}`, "Relatório aprovado para ciência do cliente."],
+    );
+
+    const visits = await api(`/api/client/visits?account=${accountA1}`, { cookie: cookieA });
+    assert.equal(visits.status, 200);
+    assert.deepEqual(visits.body.visits.map(item => item.id), [visitId]);
+    const crossAccountVisits = await api(`/api/client/visits?account=${accountA2}`, { cookie: cookieA });
+    assert.equal(crossAccountVisits.status, 403);
+
+    const moveTo = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const rescheduled = await api(`/api/client/visits/${visitId}`, {
+      method: "PATCH", cookie: cookieA,
+      body: { status: "rescheduled", rescheduledTo: moveTo, reason: "Conflito de agenda confirmado" },
+    });
+    assert.equal(rescheduled.status, 200, JSON.stringify(rescheduled.body));
+    assert.equal(rescheduled.body.visit.status, "rescheduled");
+    const visitAudit = await pool.query("SELECT next_status, changed_by FROM client_visit_status_audit WHERE visit_id = $1", [visitId]);
+    assert.deepEqual(visitAudit.rows.map(row => [row.next_status, row.changed_by]), [["rescheduled", "client"]]);
+
+    const reports = await api(`/api/client/reports?account=${accountA1}`, { cookie: cookieA });
+    assert.equal(reports.status, 200);
+    assert.deepEqual(reports.body.reports.map(item => item.id), [report.rows[0].id]);
+    assert.equal(reports.body.reports.some(item => item.id === draft.rows[0].id), false);
+    const acknowledged = await api(`/api/client/reports/${report.rows[0].id}/acknowledge`, {
+      method: "PATCH", cookie: cookieA, body: { note: "Medição conferida" },
+    });
+    assert.equal(acknowledged.status, 200, JSON.stringify(acknowledged.body));
+    assert.equal(acknowledged.body.status, "acknowledged");
+    const replay = await api(`/api/client/reports/${report.rows[0].id}/acknowledge`, {
+      method: "PATCH", cookie: cookieA, body: { note: "Medição conferida" },
+    });
+    assert.equal(replay.status, 200);
+    assert.equal(replay.body.replayed, true);
+    const reportAudit = await pool.query("SELECT next_status, changed_by FROM client_report_status_audit WHERE report_id = $1", [report.rows[0].id]);
+    assert.deepEqual(reportAudit.rows.map(row => [row.next_status, row.changed_by]), [["acknowledged", "client"]]);
   });
 
   await t.test("account creation rolls back when its mandatory audit fails", async () => {

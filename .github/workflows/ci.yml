@@ -28,8 +28,10 @@ jobs:
         run: npm ci
       - name: Check tree, migrations and CI gates
         run: node scripts/qa-wave0-static.mjs
-      - name: Audit dependencies (high and critical block)
-        run: npm audit --audit-level=high
+      - name: SEC technical re-audit map (anchors + recorded evidence, no human acceptance)
+        run: npm run reaudit:sec
+      - name: Audit dependencies (moderate and above block)
+        run: npm audit --audit-level=moderate
       - name: Typecheck
         run: npm run typecheck
       - name: Unit tests (no silent integration skip)
@@ -48,3 +50,7 @@ jobs:
         run: npm run test:demo-local:pg
       - name: CLI-09 portal charges and v2 document aliases (isolated localhost PostgreSQL)
         run: npm run test:cli-v2:pg
+      # E5: gate que estava órfão (sem npm test, sem workflow). Usa PostgreSQL
+      # embutido descartável e dados sintéticos; nenhum skip é aceito aqui.
+      - name: Client security regras 005/006 (embedded PostgreSQL, synthetic)
+        run: RUN_DATABASE_INTEGRATION=1 node --test --test-concurrency=1 tests/client-security.integration.test.mjs

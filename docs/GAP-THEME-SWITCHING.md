@@ -1,3 +1,7 @@
+> **Estado vigente (26/10/2026, `main` 6b4212d):** este documento é **histórico** — registra o estado da sua própria data e pode conter filas/contagens já superadas. A fonte única de estado é [`STATUS-VIGENTE.md`](STATUS-VIGENTE.md); a auditoria completa está em [`AUDITORIA-FATIAS-PENDENTES-E-ERROS-2026-10-26.md`](AUDITORIA-FATIAS-PENDENTES-E-ERROS-2026-10-26.md). Produção segue **NO-GO**.
+>
+> **Atualização 27/10/2026:** A medição de `prefers-color-scheme` em 11 rotas × light/dark foi entregue em **27/10/2026**: **0 rotas mudam de paleta**, 2.560 amostras de contraste, 708 abaixo de 4.5:1 (E18). `data-color-mode`/persistência do controle de tema segue sem prova em navegador. Ver `docs/UX-PRO-10B-PREVIAS-RESULTADO-2026-10-27.md`.
+
 # Gap Resolution: UX-Pro-10B P1 - Theme Switching
 
 > **Retificação (18/10/2026, PR corretiva da #263):** documento movido da raiz para `docs/`. A análise estática abaixo (temas em `src/styles/themes.css`, modos de cor) permanece, mas a **verificação em navegador continua pendente**: troca de tema, persistência e atualização dinâmica do `data-color-mode` não foram testadas pela PR #263 nem por esta correção. Os arquivos `public/visuals/layout-02..10/index.html` criados pela #263 foram removidos como órfãos — somente o visual do Layout 01 existe nesta família. Ver [`UX-PRO-10B-CORRECAO-263-ESCOPO-ANTES-2026-10-18.md`](UX-PRO-10B-CORRECAO-263-ESCOPO-ANTES-2026-10-18.md).

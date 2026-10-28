@@ -1,0 +1,58 @@
+name: E6 rotas publicas - grupo 3 (raiz e previas)
+on:
+  pull_request:
+    branches: [main]
+    # Filtros precisos: e isso que faz o inventario UX-PRO-00 reconhecer este
+    # workflow como gate de jornada da raiz, das dez previas de layout, da
+    # comparacao e do indice QA. Nao usar src/** (viraria baseline).
+    paths:
+      - 'src/app/page.tsx'
+      - 'src/app/layout-01/**'
+      - 'src/app/layout-02/**'
+      - 'src/app/layout-03/**'
+      - 'src/app/layout-04/**'
+      - 'src/app/layout-05/**'
+      - 'src/app/layout-06/**'
+      - 'src/app/layout-07/**'
+      - 'src/app/layout-08/**'
+      - 'src/app/layout-09/**'
+      - 'src/app/layout-10/**'
+      - 'src/app/layout-preview/**'
+      - 'src/app/qa/modulos/**'
+      - 'src/components/SiteVisualRenderer.tsx'
+      - 'src/components/SitePreviewNotice.tsx'
+      - 'src/components/DevelopmentPreviewNav.tsx'
+      - 'src/components/PublicSite.tsx'
+      - 'src/components/Layout*.tsx'
+      - 'src/lib/site-visuals.*'
+      - 'scripts/ux-pro-00-inventory.mjs'
+      - 'scripts/qa-ux-public-routes-postgres.mjs'
+      - 'tests/ux-pro-00-inventory.test.mjs'
+      - 'tests/ux-public-routes.integration.test.mjs'
+      - 'tests/ux-public-routes-group3-gate.test.mjs'
+      - 'docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-13.csv'
+      - 'docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv'
+      - 'package.json'
+      - '.github/workflows/ux-public-routes-group3-delivery.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm audit --audit-level=moderate
+      - run: npm run typecheck
+      - name: Guarda estatica do grupo 3 e do inventario da raiz
+        run: node --test tests/ux-public-routes-group3-gate.test.mjs tests/ux-pro-00-inventory.test.mjs
+      - name: Inventario de rotas em dia
+        run: node scripts/ux-pro-00-inventory.mjs --check
+      - name: PostgreSQL 17 descartavel + Chromium (13 rotas restantes)
+        run: node scripts/qa-ux-public-routes-postgres.mjs
+        env:
+          UX_PUBLIC_TEST_PATTERN: 'E6 grupo 3'

@@ -1,0 +1,120 @@
+{
+  "stage": "e18-inventario-contraste",
+  "data": "2026-10-27",
+  "metodo": "amostras brutas de measureTextContrast (PU4) em Chromium real; agrupadas por par de cor, seletor normalizado e motivo",
+  "origem": {
+    "arquivo": "docs/UX-PRO-10B-CONTRASTE-AMOSTRAS-2026-10-27.json",
+    "sha256": "9faea36df5f7e1be5a4dc9cc2378fb163ae7047a74edac8e9b1a3b5f26965a42"
+  },
+  "baseline": {
+    "arquivo": "docs/UX-PRO-10B-PREVIAS-MEDICOES-2026-10-27.json",
+    "totais": {
+      "samples": 2560,
+      "under45": 0,
+      "indeterminate": 196,
+      "unmeasured": 108
+    },
+    "validacaoCruzada": "identica"
+  },
+  "escopo": {
+    "cenarios": 24,
+    "cenariosBaseline": 22,
+    "cenariosComplementares": 2
+  },
+  "totais": {
+    "baseline": {
+      "samples": 2560,
+      "under45": 0,
+      "indeterminate": 196,
+      "unmeasured": 108
+    },
+    "complementar": {
+      "samples": 190,
+      "under45": 0,
+      "indeterminate": 40,
+      "unmeasured": 0
+    }
+  },
+  "causas": {
+    "abaixo45": {
+      "paresDeCorDistintos": 0,
+      "pares": []
+    },
+    "indeterminadas": {
+      "complex_background": 196
+    },
+    "naoMedidos": {
+      "option": 108
+    }
+  },
+  "rotas": {
+    "/layout-01": {
+      "under45": 0,
+      "paresDistintos": 0,
+      "indeterminadas": 0,
+      "naoMedidos": 0
+    },
+    "/layout-02": {
+      "under45": 0,
+      "paresDistintos": 0,
+      "indeterminadas": 38,
+      "naoMedidos": 12
+    },
+    "/layout-03": {
+      "under45": 0,
+      "paresDistintos": 0,
+      "indeterminadas": 0,
+      "naoMedidos": 12
+    },
+    "/layout-04": {
+      "under45": 0,
+      "paresDistintos": 0,
+      "indeterminadas": 0,
+      "naoMedidos": 12
+    },
+    "/layout-05": {
+      "under45": 0,
+      "paresDistintos": 0,
+      "indeterminadas": 0,
+      "naoMedidos": 12
+    },
+    "/layout-06": {
+      "under45": 0,
+      "paresDistintos": 0,
+      "indeterminadas": 0,
+      "naoMedidos": 12
+    },
+    "/layout-07": {
+      "under45": 0,
+      "paresDistintos": 0,
+      "indeterminadas": 38,
+      "naoMedidos": 12
+    },
+    "/layout-08": {
+      "under45": 0,
+      "paresDistintos": 0,
+      "indeterminadas": 6,
+      "naoMedidos": 12
+    },
+    "/layout-09": {
+      "under45": 0,
+      "paresDistintos": 0,
+      "indeterminadas": 40,
+      "naoMedidos": 0
+    },
+    "/layout-10": {
+      "under45": 0,
+      "paresDistintos": 0,
+      "indeterminadas": 0,
+      "naoMedidos": 12
+    },
+    "/layout-preview": {
+      "under45": 0,
+      "paresDistintos": 0,
+      "indeterminadas": 74,
+      "naoMedidos": 12
+    }
+  },
+  "grupos": 122,
+  "limite": "diagnostico; nenhuma paleta ou CSS alterado; decisao de design pendente do proprietario; producao NO-GO"
+}

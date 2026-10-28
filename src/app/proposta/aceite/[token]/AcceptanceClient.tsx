@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type SnapshotItem = {
   type: string;
@@ -35,6 +35,13 @@ export default function AcceptanceClient({ token }: { token: string }) {
   const [confirmChecked, setConfirmChecked] = useState(false);
   const [signerName, setSignerName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const errorRef = useRef<HTMLDivElement>(null);
+  // G5: um link inválido/expirado precisa ser anunciado e receber foco. Sem
+  // isso o visitante fica preso em "Carregando proposta…" para leitores de
+  // tela e não entende por que não há formulário de aceite.
+  useEffect(() => {
+    if (state.kind === "error") errorRef.current?.focus();
+  }, [state.kind]);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,10 +90,10 @@ export default function AcceptanceClient({ token }: { token: string }) {
         <strong>clique simples</strong>, não uma assinatura eletrônica qualificada.
       </p>
 
-      {state.kind === "loading" && <p>Carregando proposta…</p>}
+      {state.kind === "loading" && <p role="status">Carregando proposta…</p>}
 
       {state.kind === "error" && (
-        <div style={{ padding: 16, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#991b1b" }}>
+        <div ref={errorRef} tabIndex={-1} role="alert" style={{ padding: 16, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#991b1b" }}>
           {explainError(state.status, state.error)}
         </div>
       )}
@@ -139,7 +146,7 @@ export default function AcceptanceClient({ token }: { token: string }) {
       )}
 
       {state.kind === "accepted" && (
-        <div style={{ padding: 16, background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: 8, color: "#065f46" }}>
+        <div role="status" style={{ padding: 16, background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: 8, color: "#065f46" }}>
           <strong>Aceite registrado.</strong> Obrigado — nossa equipe comercial dará sequência ao contrato.
           {state.contract?.id && <p style={{ fontSize: 12, marginTop: 8 }}>Referência de implantação: {state.contract.id.slice(0, 8)} ({state.contract.isNew ? "criada agora" : "já existente, sem duplicar"}).</p>}
         </div>

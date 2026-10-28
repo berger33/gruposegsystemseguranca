@@ -110,7 +110,7 @@ export function createLgpdRequestApi({ json, readJson, sameOrigin, getPool, read
   }
 
   async function handleRequestById(req, res, requestId) {
-    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!UUID_RE.test(requestId)) return json(res, 400, { error: 'invalid_request_id' });
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
@@ -171,7 +171,7 @@ export function createLgpdRequestApi({ json, readJson, sameOrigin, getPool, read
         if (responsible_name !== null || responsible_id !== null) {
           if (responsible_name) { fields.push(`responsible_name = $${idx++}`); vals.push(responsible_name); }
           if (responsible_id) {
-            const UUID_RE2 = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            const UUID_RE2 = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
             if (!UUID_RE2.test(responsible_id)) return json(res, 400, { error: 'invalid_responsible_id' });
             fields.push(`responsible_id = $${idx++}`); vals.push(responsible_id);
           }

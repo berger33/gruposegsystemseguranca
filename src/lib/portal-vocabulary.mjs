@@ -729,6 +729,16 @@ const ERROR_MESSAGES = Object.freeze({
     title: 'E-mail inválido',
     detail: 'Escreva um endereço de e-mail válido.',
   },
+  duplicate_contact_email: {
+    kind: 'invalid',
+    title: 'Este e-mail já é um contato da conta',
+    detail: 'Use outro endereço. A tentativa não criou um segundo contato.',
+  },
+  delegation_not_authorized: {
+    kind: 'denied',
+    title: 'Delegação não autorizada',
+    detail: 'Somente o contato e os escopos explicitamente autorizados podem delegar. Nenhum acesso foi concedido.',
+  },
 
   // ----- Identificadores -----------------------------------------------------
   invalid_uuid: { kind: 'invalid', title: 'Identificador inválido', detail: 'O identificador enviado não tem o formato aceito.' },

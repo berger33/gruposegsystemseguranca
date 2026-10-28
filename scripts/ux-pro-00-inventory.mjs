@@ -196,6 +196,14 @@ async function workflowGates() {
       }
       if (!value.startsWith('src/app/')) continue;
       const withoutApp = value.slice('src/app'.length).replace(/\/\*.*$/, '').replace(/\/$/, '');
+      // E6 grupo 3: um filtro no ARQUIVO da raiz (src/app/page.tsx) é um gate
+      // preciso da rota "/". Sem isto o prefixo virava "/page.tsx" e a raiz
+      // ficava para sempre sem gate de jornada, mesmo com workflow dedicado.
+      // Não confundir com o filtro amplo src/app/** (tratado como baseline).
+      if (/^\/page\.(?:tsx|jsx|ts|js)$/.test(withoutApp)) {
+        prefixes.add('/');
+        continue;
+      }
       const prefix = `/${withoutApp.split('/').filter((segment) => segment && !segment.includes('*')).join('/')}`;
       if (prefix !== '/') prefixes.add(prefix);
     }

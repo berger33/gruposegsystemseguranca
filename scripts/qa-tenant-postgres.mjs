@@ -8,6 +8,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import './qa-generated-files-guard.mjs';
 
 const clientAccess = process.argv.length === 3 && process.argv[2] === '--client-access';
 if ((process.argv.length > 2 && !clientAccess) || process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') {

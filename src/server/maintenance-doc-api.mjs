@@ -2,7 +2,7 @@ const CATEGORIES=['configuracao','migracao','diagnostico','recuperacao','arquite
 const STATUSES=['rascunho','em_revisao','aprovado','publicado','arquivado'];
 
 function sanitize(v,max=20000){ if(typeof v!=='string') return ''; return v.trim().slice(0,max); }
-function uuidRe(){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i; }
+function uuidRe(){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i; }
 function slugify(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,200); }
 
 export function createMaintenanceDocApi({ pool, auditLog, sameOrigin, requireSession, requireRole }){
@@ -82,7 +82,10 @@ export function createMaintenanceDocApi({ pool, auditLog, sameOrigin, requireSes
         if(title!=null){ fields.push(`title=$${idx++}`); vals.push(title); }
         if(next_status){ fields.push(`status=$${idx++}`); vals.push(next_status); if(next_status==='publicado'){ fields.push(`is_published=true`); fields.push(`published_at=now()`); fields.push(`approved_by=$${idx++}`); vals.push(by); fields.push(`approved_by_id=$${idx++}`); vals.push(byId); fields.push(`approved_at=now()`); } }
         if(tags){ fields.push(`tags=$${idx++}`); vals.push(tags); }
-        if(publish){ fields.push(`is_published=true`); fields.push(`published_at=now()`); }
+        // status='publicado' já marca is_published/published_at. Repetir as
+        // colunas no SET faz o PostgreSQL recusar o UPDATE com
+        // "multiple assignments to same column"; por isso o dedupe.
+        if(publish && next_status!=='publicado'){ fields.push(`is_published=true`); fields.push(`published_at=now()`); }
         fields.push(`updated_by=$${idx++}`); vals.push(by);
         fields.push(`updated_by_id=$${idx++}`); vals.push(byId);
         fields.push(`updated_at=now()`); vals.push(id);

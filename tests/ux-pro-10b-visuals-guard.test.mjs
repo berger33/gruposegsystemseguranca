@@ -13,11 +13,14 @@
 //  4. que `@playwright/test` não volta a ser declarado sem uso (os testes
 //     usam `playwright`, que permanece declarado).
 //
-// O que NÃO prova: acessibilidade em navegador. A UX-PRO-10B (teclado
-// dentro do iframe do Layout 01, troca de tema, zoom 320/390/768/1440 e
-// `/layout-preview` em navegador real) continua PENDENTE — nenhum teste
-// unitário a substitui, e este arquivo não declara gap resolvido, aceite
-// humano, UAT ou conformidade WCAG.
+// O que NÃO prova: acessibilidade em navegador. Este arquivo é só a guarda
+// estática dos arquivos `visuals`. A verificação em navegador real foi
+// entregue em 27/10/2026 por `tests/ux-public-routes.integration.test.mjs`
+// (cinco cenários `UX-PRO-10B previas`: teclado/foco, zoom 200%,
+// prefers-color-scheme, iframe do Layout 01) com evidência em
+// `docs/UX-PRO-10B-PREVIAS-MEDICOES-2026-10-27.json`. Ainda NÃO há revisão
+// manual de tema/contraste, leitor de tela, WCAG integral, UAT ou aceite
+// humano; 708 amostras seguem abaixo de 4.5:1 (pendência aberta).
 
 import test from 'node:test';
 import assert from 'node:assert/strict';

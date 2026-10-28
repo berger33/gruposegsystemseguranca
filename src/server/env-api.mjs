@@ -4,7 +4,7 @@ const CHECK_TYPES=['real_data_scan','preview_data_check','isolation_verify','acc
 const CHECK_STATUS=['pendente','passou','falhou','aviso'];
 
 function sanitize(v,max=2000){ if(typeof v!=='string') return ''; return v.trim().slice(0,max); }
-function uuidRe(){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i; }
+function uuidRe(){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i; }
 
 export function createEnvApi({ pool, auditLog, sameOrigin, requireSession, requireRole }){
   async function handleEnvs(req,res){

@@ -25,9 +25,10 @@ import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import pg from 'pg';
+import { waitForStableBodyText } from './helpers/portal-stable-read.mjs';
 import { chromium as playwrightChromium } from 'playwright';
 import packagedChromium from '@sparticuz/chromium';
 import { provisionStaff, STAFF_TEST_PASSWORD } from './helpers/staff-login.mjs';
@@ -42,6 +43,27 @@ let rhCookie;
 let employee, employeeEmail, employeePassword;
 let employeeCookie;
 let clientEmail, clientPassword, clientCookie;
+
+// E2: o Next --dev com NEXT_DIST_DIR isolado reescreve next-env.d.ts e
+// tsconfig.json no checkout. Sem restauração, qualquer gate executado antes de
+// `npm test` suja a árvore e faz a guarda PLT-SMK-001 falhar por contaminação
+// (não por regressão de código).
+const GENERATED_FILES = ['next-env.d.ts', 'tsconfig.json'];
+let generatedSnapshot = new Map();
+
+async function snapshotGeneratedFiles() {
+  const snapshot = new Map();
+  for (const name of GENERATED_FILES) {
+    snapshot.set(name, await readFile(path.join(root, name), 'utf8').catch(() => null));
+  }
+  return snapshot;
+}
+
+async function restoreGeneratedFiles(snapshot) {
+  for (const [name, content] of snapshot) {
+    if (content !== null) await writeFile(path.join(root, name), content);
+  }
+}
 
 async function waitForServer(url, timeoutMs = 120_000) {
   const deadline = Date.now() + timeoutMs;
@@ -162,6 +184,7 @@ async function signInEmployee(page) {
 
 before(async () => {
   if (!RUN) return;
+  generatedSnapshot = await snapshotGeneratedFiles();
   const port = 3000 + Math.floor(Math.random() * 2000);
   baseUrl = `http://127.0.0.1:${port}`;
   server = spawn(process.execPath, ['server.mjs', '--dev'], {
@@ -266,6 +289,7 @@ before(async () => {
 after(async () => {
   await pool?.end().catch(() => {});
   if (server && !server.killed) { server.kill('SIGTERM'); await new Promise(r => setTimeout(r, 300)); server.kill('SIGKILL'); }
+  await restoreGeneratedFiles(generatedSnapshot);
 });
 
 test('o contrato de acesso dos portais não mudou: 401 sem sessão, dado próprio com sessão', { skip: !RUN }, async () => {
@@ -858,6 +882,1528 @@ test('browser ID3: contratos mantém a leitura na conta ativa e descarta respost
   } finally {
     await browser?.close();
     await pool.query('DELETE FROM client_contracts WHERE id = $1', [contractA]);
+    await pool.query('DELETE FROM client_access_grants WHERE id = ANY($1::uuid[])', [[grantA, grantB]]);
+    await pool.query('DELETE FROM client_accounts WHERE id = ANY($1::uuid[])', [[accountA, accountB]]);
+  }
+});
+
+test('browser ID3: agenda mantém a leitura na conta ativa e descarta resposta fora de ordem', { skip: !RUN }, async () => {
+  const accountA = randomUUID();
+  const accountB = randomUUID();
+  const grantA = randomUUID();
+  const grantB = randomUUID();
+  const visitA = randomUUID();
+  const titleA = `Visita sintetica ID3 A ${randomUUID().slice(0, 8)}`;
+  const evidencePrefix = process.env.UX_PORTAL_EVIDENCE_PREFIX || 'ux-pro-id3-agenda-leitura';
+  await pool.query(
+    "INSERT INTO client_accounts (id, display_name, created_by) VALUES ($1::uuid, 'ID3 Agenda Conta A Sintetica', 'ti'), ($2::uuid, 'ID3 Agenda Conta B Sintetica', 'ti')",
+    [accountA, accountB],
+  );
+  await pool.query(
+    `INSERT INTO client_access_grants (id, identity_id, client_account_id, reason, granted_by)
+     SELECT $1::uuid, id, $2::uuid, 'fixture sintetica ID3 agenda', 'ti' FROM auth_identities WHERE email = $3
+     UNION ALL
+     SELECT $4::uuid, id, $5::uuid, 'fixture sintetica ID3 agenda', 'ti' FROM auth_identities WHERE email = $3`,
+    [grantA, accountA, clientEmail, grantB, accountB],
+  );
+  await pool.query(
+    `INSERT INTO client_visits (id, client_account_id, visit_type, title, details, scheduled_at, status, created_by)
+     VALUES ($1::uuid, $2::uuid, 'technical', $3, 'Registro ficticio exclusivo do teste de leitura por conta.', NOW() + INTERVAL '2 days', 'scheduled', 'ti')`,
+    [visitA, accountA, titleA],
+  );
+
+  // O servidor continua sendo a autoridade: A devolve somente a visita de A e
+  // B devolve ausência confirmada. O defeito procurado está na reconciliação
+  // dessas respostas pelo componente, não no escopo SQL.
+  const responseA = await api(`/api/client/visits?account=${accountA}`, { cookie: clientCookie });
+  const responseB = await api(`/api/client/visits?account=${accountB}`, { cookie: clientCookie });
+  assert.equal(responseA.status, 200);
+  assert.deepEqual(responseA.body.visits.map(visit => visit.title), [titleA]);
+  assert.equal(responseB.status, 200);
+  assert.deepEqual(responseB.body.visits, []);
+
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'pt-BR' });
+    await context.addCookies(clientCookie.split('; ').filter(Boolean).map(item => {
+      const separator = item.indexOf('=');
+      return { name: item.slice(0, separator), value: item.slice(separator + 1), url: baseUrl };
+    }));
+    const page = await context.newPage();
+    page.setDefaultTimeout(20_000);
+    await page.addInitScript(() => {
+      window.__id3VisitCalls = {};
+      window.__id3VisitPending = {};
+      window.__id3VisitCompleted = {};
+      window.__id3VisitReleases = {};
+      window.__id3HoldVisits = false;
+      const original = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : (input?.url || '');
+        if (!url.includes('/api/client/visits?')) return original(input, init);
+        const account = new URL(url, window.location.origin).searchParams.get('account') || 'unknown';
+        const call = (window.__id3VisitCalls[account] || 0) + 1;
+        window.__id3VisitCalls[account] = call;
+        const key = `${account}:${call}`;
+        if (window.__id3HoldVisits) {
+          window.__id3VisitPending[key] = true;
+          await new Promise(resolve => {
+            window.__id3VisitReleases[key] = () => {
+              delete window.__id3VisitPending[key];
+              resolve();
+            };
+          });
+        }
+        const response = await original(input, init);
+        window.__id3VisitCompleted[key] = true;
+        return response;
+      };
+    });
+    await page.goto(`${baseUrl}/cliente/app/agenda`, { waitUntil: 'domcontentloaded' });
+    await page.getByText(titleA, { exact: true }).waitFor();
+    await capture(page, `${evidencePrefix}-a-carregado-390`);
+
+    // B:1 fica pendente: no código anterior, a visita de A continuava visível
+    // sob o cabeçalho de B e o vazio podia aparecer antes da resposta.
+    await page.evaluate(() => { window.__id3HoldVisits = true; });
+    const picker = page.getByLabel('Conta de cliente selecionada');
+    await picker.selectOption(accountB);
+    const pendingB1 = `${accountB}:1`;
+    await page.waitForFunction(key => window.__id3VisitPending[key] === true, pendingB1);
+    await capture(page, `${evidencePrefix}-b-pendente-390`);
+    assert.equal(await page.getByText(titleA, { exact: true }).count(), 0,
+      'a visita de A não pode continuar visível quando B está selecionada e sua leitura está pendente');
+    assert.equal(await page.getByText('Carregando agenda…', { exact: true }).count(), 1);
+    assert.equal(await page.getByText(/Nenhuma visita ou manutenção agendada para este cadastro/).count(), 0,
+      'B pendente não pode ser anunciada como B vazia');
+
+    const viewportEvidence = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      await page.waitForTimeout(80);
+      viewportEvidence.push(await page.evaluate(() => {
+        const width = document.documentElement.clientWidth;
+        return { width, horizontalOverflow: document.documentElement.scrollWidth - width };
+      }));
+      if (width !== 390) await capture(page, `${evidencePrefix}-b-pendente-${width}`);
+    }
+    assert.ok(viewportEvidence.every(item => item.horizontalOverflow <= 1),
+      `Agenda não deve transbordar horizontalmente: ${JSON.stringify(viewportEvidence)}`);
+
+    await page.evaluate(key => window.__id3VisitReleases[key](), pendingB1);
+    const emptyB = page.getByText(/Nenhuma visita ou manutenção agendada para este cadastro/);
+    await emptyB.waitFor();
+    assert.equal(await page.getByText(titleA, { exact: true }).count(), 0);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await capture(page, `${evidencePrefix}-b-vazio-390`);
+
+    // Resposta fora de ordem: A é iniciada, B é iniciada e concluída primeiro.
+    const nextACall = await page.evaluate(account => (window.__id3VisitCalls[account] || 0) + 1, accountA);
+    const pendingA2 = `${accountA}:${nextACall}`;
+    await picker.focus();
+    await page.keyboard.press('ArrowUp');
+    await page.waitForFunction(key => window.__id3VisitPending[key] === true, pendingA2);
+    assert.equal(await picker.inputValue(), accountA);
+    assert.equal(await picker.evaluate(element => element === document.activeElement), true,
+      'a troca por teclado preserva o foco no seletor de conta');
+    const nextBCall = await page.evaluate(account => (window.__id3VisitCalls[account] || 0) + 1, accountB);
+    const pendingB2 = `${accountB}:${nextBCall}`;
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(key => window.__id3VisitPending[key] === true, pendingB2);
+    assert.equal(await picker.inputValue(), accountB);
+    await page.evaluate(key => window.__id3VisitReleases[key](), pendingB2);
+    await emptyB.waitFor();
+    await page.evaluate(key => window.__id3VisitReleases[key](), pendingA2);
+    await page.waitForFunction(key => window.__id3VisitCompleted[key] === true, pendingA2);
+    await page.waitForTimeout(200);
+    assert.equal(await picker.inputValue(), accountB);
+    assert.equal(await page.getByText(titleA, { exact: true }).count(), 0,
+      'a resposta antiga de A não pode substituir o resultado mais recente de B');
+    assert.equal(await emptyB.count(), 1,
+      'o vazio confirmado da resposta mais recente de B deve permanecer visível');
+    await capture(page, `${evidencePrefix}-b-resposta-fora-de-ordem-390`);
+
+    if (process.env.UX_PORTAL_EVIDENCE_DIR) {
+      await writeFile(path.join(process.env.UX_PORTAL_EVIDENCE_DIR, `${evidencePrefix}-medidas.json`), JSON.stringify({
+        route: '/cliente/app/agenda',
+        serverReadA: { status: responseA.status, visits: responseA.body.visits.length },
+        serverReadB: { status: responseB.status, visits: responseB.body.visits.length },
+        viewportEvidence,
+        keyboard: 'ArrowUp/ArrowDown no seletor nativo; foco preservado',
+        outOfOrder: `B:${nextBCall} concluída antes de A:${nextACall}; resultado final permaneceu em B`,
+        humanAcceptanceExecuted: false,
+      }, null, 2) + '\n');
+    }
+    await context.close();
+  } finally {
+    await browser?.close();
+    await pool.query('DELETE FROM client_visits WHERE id = $1', [visitA]);
+    await pool.query('DELETE FROM client_access_grants WHERE id = ANY($1::uuid[])', [[grantA, grantB]]);
+    await pool.query('DELETE FROM client_accounts WHERE id = ANY($1::uuid[])', [[accountA, accountB]]);
+  }
+});
+
+test('browser ID3: solicitações mantém as duas leituras na conta ativa (inclusive contratos do formulário)', { skip: !RUN }, async () => {
+  const accountA = randomUUID();
+  const accountB = randomUUID();
+  const grantA = randomUUID();
+  const grantB = randomUUID();
+  const contractA = randomUUID();
+  const requestA = randomUUID();
+  const titleA = `Solicitacao sintetica ID3 A ${randomUUID().slice(0, 8)}`;
+  const contractTitleA = `Contrato sintetico ID3 solicitacoes A ${randomUUID().slice(0, 8)}`;
+  const protocolA = `SRV-CLI-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${randomUUID().slice(0, 4).toUpperCase()}`;
+  const evidencePrefix = process.env.UX_PORTAL_EVIDENCE_PREFIX || 'ux-pro-id3-solicitacoes-leitura';
+  await pool.query(
+    "INSERT INTO client_accounts (id, display_name, created_by) VALUES ($1::uuid, 'ID3 Solicitacoes Conta A Sintetica', 'ti'), ($2::uuid, 'ID3 Solicitacoes Conta B Sintetica', 'ti')",
+    [accountA, accountB],
+  );
+  await pool.query(
+    `INSERT INTO client_access_grants (id, identity_id, client_account_id, reason, granted_by)
+     SELECT $1::uuid, id, $2::uuid, 'fixture sintetica ID3 solicitacoes', 'ti' FROM auth_identities WHERE email = $3
+     UNION ALL
+     SELECT $4::uuid, id, $5::uuid, 'fixture sintetica ID3 solicitacoes', 'ti' FROM auth_identities WHERE email = $3`,
+    [grantA, accountA, clientEmail, grantB, accountB],
+  );
+  await pool.query(
+    `INSERT INTO client_contracts (id, client_account_id, title, service, status, summary, created_by)
+     VALUES ($1::uuid, $2::uuid, $3, 'Vigilancia sintetica', 'active', 'Registro ficticio exclusivo do teste de leitura por conta.', 'ti')`,
+    [contractA, accountA, contractTitleA],
+  );
+  await pool.query(
+    `INSERT INTO cli_service_requests (id, protocol, client_account_id, title, description, status, origin, created_by_identity)
+     VALUES ($1::uuid, $2, $3::uuid, $4, 'Descricao sintetica exclusiva do teste de leitura por conta.', 'solicitada', 'portal_cliente',
+             (SELECT id FROM auth_identities WHERE email = $5))`,
+    [requestA, protocolA, accountA, titleA, clientEmail],
+  );
+
+  // O servidor é a autoridade: A devolve 1 solicitação + 1 contrato; B devolve
+  // duas listas vazias. O defeito procurado está na reconciliação das DUAS
+  // respostas pelo componente — especialmente o <select> do formulário.
+  const requestResponseA = await api(`/api/client/service-requests?account=${accountA}`, { cookie: clientCookie });
+  const contractsResponseA = await api(`/api/client/contracts?account=${accountA}`, { cookie: clientCookie });
+  const requestResponseB = await api(`/api/client/service-requests?account=${accountB}`, { cookie: clientCookie });
+  const contractsResponseB = await api(`/api/client/contracts?account=${accountB}`, { cookie: clientCookie });
+  assert.equal(requestResponseA.status, 200);
+  assert.deepEqual(requestResponseA.body.serviceRequests.map(item => item.title), [titleA]);
+  assert.deepEqual(contractsResponseA.body.contracts.map(item => item.title), [contractTitleA]);
+  assert.equal(requestResponseB.status, 200);
+  assert.deepEqual(requestResponseB.body.serviceRequests, []);
+  assert.deepEqual(contractsResponseB.body.contracts, []);
+
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'pt-BR' });
+    await context.addCookies(clientCookie.split('; ').filter(Boolean).map(item => {
+      const separator = item.indexOf('=');
+      return { name: item.slice(0, separator), value: item.slice(separator + 1), url: baseUrl };
+    }));
+    const page = await context.newPage();
+    page.setDefaultTimeout(20_000);
+    await page.addInitScript(() => {
+      window.__id3SolCalls = {};
+      window.__id3SolPending = {};
+      window.__id3SolCompleted = {};
+      window.__id3SolReleases = {};
+      window.__id3SolHold = false;
+      const original = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : (input?.url || '');
+        const isRead = url.includes('/api/client/service-requests?') || url.includes('/api/client/contracts?');
+        if (!isRead) return original(input, init);
+        const account = new URL(url, window.location.origin).searchParams.get('account') || 'unknown';
+        const call = (window.__id3SolCalls[account] || 0) + 1;
+        window.__id3SolCalls[account] = call;
+        const key = `${account}:${call}`;
+        if (window.__id3SolHold) {
+          window.__id3SolPending[key] = true;
+          await new Promise(resolve => {
+            window.__id3SolReleases[key] = () => {
+              delete window.__id3SolPending[key];
+              resolve();
+            };
+          });
+        }
+        const response = await original(input, init);
+        window.__id3SolCompleted[key] = true;
+        return response;
+      };
+    });
+    await page.goto(`${baseUrl}/cliente/app/solicitacoes`, { waitUntil: 'domcontentloaded' });
+    const titleALocator = page.getByText(titleA, { exact: true });
+    const contractOptionA = page.locator('select option').filter({ hasText: contractTitleA });
+    await titleALocator.waitFor();
+    assert.equal(await contractOptionA.count(), 1, 'o contrato de A precisa estar disponível no formulário de A');
+    await capture(page, `${evidencePrefix}-a-carregado-390`);
+
+    // B dispara DUAS leituras. Ambas ficam pendentes: no código anterior, a
+    // solicitação e o contrato de A continuavam visíveis sob o cabeçalho de B.
+    await page.evaluate(() => { window.__id3SolHold = true; });
+    const picker = page.getByLabel('Conta de cliente selecionada');
+    const nextBCall = await page.evaluate(account => (window.__id3SolCalls[account] || 0) + 1, accountB);
+    const pendingB = [`${accountB}:${nextBCall}`, `${accountB}:${nextBCall + 1}`];
+    await picker.selectOption(accountB);
+    for (const key of pendingB) await page.waitForFunction(k => window.__id3SolPending[k] === true, key);
+    await capture(page, `${evidencePrefix}-b-pendente-390`);
+    assert.equal(await titleALocator.count(), 0,
+      'a solicitação de A não pode continuar visível quando B está selecionada e suas leituras estão pendentes');
+    assert.equal(await contractOptionA.count(), 0,
+      'o contrato de A não pode ser oferecido no formulário enquanto B está selecionada');
+    assert.equal(await page.getByText('Carregando solicitações…', { exact: true }).count(), 1);
+    assert.equal(await page.getByText(/Nenhuma solicitação de serviço adicional registrada/).count(), 0,
+      'B pendente não pode ser anunciada como B vazia');
+
+    const viewportEvidence = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      await page.waitForTimeout(80);
+      viewportEvidence.push(await page.evaluate(() => {
+        const width = document.documentElement.clientWidth;
+        return { width, horizontalOverflow: document.documentElement.scrollWidth - width };
+      }));
+      if (width !== 390) await capture(page, `${evidencePrefix}-b-pendente-${width}`);
+    }
+    assert.ok(viewportEvidence.every(item => item.horizontalOverflow <= 1),
+      `Solicitações não deve transbordar horizontalmente: ${JSON.stringify(viewportEvidence)}`);
+
+    for (const key of pendingB) await page.evaluate(k => window.__id3SolReleases[k](), key);
+    const emptyB = page.getByText(/Nenhuma solicitação de serviço adicional registrada/);
+    await emptyB.waitFor();
+    assert.equal(await titleALocator.count(), 0);
+    assert.equal(await contractOptionA.count(), 0);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await capture(page, `${evidencePrefix}-b-vazio-390`);
+
+    // Fora de ordem: as duas leituras de A ficam pendentes; as duas de B são
+    // iniciadas e concluídas primeiro. A resposta antiga de A não pode vencer.
+    const nextACall = await page.evaluate(account => (window.__id3SolCalls[account] || 0) + 1, accountA);
+    const pendingA = [`${accountA}:${nextACall}`, `${accountA}:${nextACall + 1}`];
+    await picker.focus();
+    await page.keyboard.press('ArrowUp');
+    for (const key of pendingA) await page.waitForFunction(k => window.__id3SolPending[k] === true, key);
+    assert.equal(await picker.inputValue(), accountA);
+    assert.equal(await picker.evaluate(element => element === document.activeElement), true,
+      'a troca por teclado preserva o foco no seletor de conta');
+    const nextBCall2 = await page.evaluate(account => (window.__id3SolCalls[account] || 0) + 1, accountB);
+    const pendingB2 = [`${accountB}:${nextBCall2}`, `${accountB}:${nextBCall2 + 1}`];
+    await page.keyboard.press('ArrowDown');
+    for (const key of pendingB2) await page.waitForFunction(k => window.__id3SolPending[k] === true, key);
+    assert.equal(await picker.inputValue(), accountB);
+    for (const key of pendingB2) await page.evaluate(k => window.__id3SolReleases[k](), key);
+    await emptyB.waitFor();
+    for (const key of pendingA) await page.evaluate(k => window.__id3SolReleases[k](), key);
+    for (const key of pendingA) await page.waitForFunction(k => window.__id3SolCompleted[k] === true, key);
+    await page.waitForTimeout(200);
+    assert.equal(await picker.inputValue(), accountB);
+    assert.equal(await titleALocator.count(), 0,
+      'a resposta antiga de A não pode substituir o resultado mais recente de B');
+    assert.equal(await contractOptionA.count(), 0,
+      'o contrato antigo de A não pode reaparecer no formulário de B');
+    assert.equal(await emptyB.count(), 1,
+      'o vazio confirmado da resposta mais recente de B deve permanecer visível');
+    await capture(page, `${evidencePrefix}-b-resposta-fora-de-ordem-390`);
+
+    if (process.env.UX_PORTAL_EVIDENCE_DIR) {
+      await writeFile(path.join(process.env.UX_PORTAL_EVIDENCE_DIR, `${evidencePrefix}-medidas.json`), JSON.stringify({
+        route: '/cliente/app/solicitacoes',
+        serverReadA: { requests: requestResponseA.body.serviceRequests.length, contracts: contractsResponseA.body.contracts.length },
+        serverReadB: { requests: requestResponseB.body.serviceRequests.length, contracts: contractsResponseB.body.contracts.length },
+        viewportEvidence,
+        keyboard: 'ArrowUp/ArrowDown no seletor nativo; foco preservado',
+        outOfOrder: `B:${nextBCall2}..${nextBCall2 + 1} concluídas antes de A:${nextACall}..${nextACall + 1}; resultado final permaneceu em B`,
+        humanAcceptanceExecuted: false,
+      }, null, 2) + '\n');
+    }
+    await context.close();
+  } finally {
+    await browser?.close();
+    await pool.query('DELETE FROM cli_service_requests WHERE id = $1', [requestA]);
+    await pool.query('DELETE FROM client_contracts WHERE id = $1', [contractA]);
+    await pool.query('DELETE FROM client_access_grants WHERE id = ANY($1::uuid[])', [[grantA, grantB]]);
+    await pool.query('DELETE FROM client_accounts WHERE id = ANY($1::uuid[])', [[accountA, accountB]]);
+  }
+});
+
+test('browser ID3: chamados isola a leitura por conta e traduz erro de reabertura', { skip: !RUN }, async () => {
+  const accountA = randomUUID();
+  const accountB = randomUUID();
+  const grantA = randomUUID();
+  const grantB = randomUUID();
+  const ticketA = randomUUID();
+  const titleA = `Chamado sintetico ID3 A ${randomUUID().slice(0, 8)}`;
+  const evidencePrefix = process.env.UX_PORTAL_EVIDENCE_PREFIX || 'ux-pro-id3-chamados-leitura';
+  await pool.query(
+    "INSERT INTO client_accounts (id, display_name, created_by) VALUES ($1::uuid, 'ID3 Chamados Conta A Sintetica', 'ti'), ($2::uuid, 'ID3 Chamados Conta B Sintetica', 'ti')",
+    [accountA, accountB],
+  );
+  await pool.query(
+    `INSERT INTO client_access_grants (id, identity_id, client_account_id, reason, granted_by)
+     SELECT $1::uuid, id, $2::uuid, 'fixture sintetica ID3 chamados', 'ti' FROM auth_identities WHERE email = $3
+     UNION ALL
+     SELECT $4::uuid, id, $5::uuid, 'fixture sintetica ID3 chamados', 'ti' FROM auth_identities WHERE email = $3`,
+    [grantA, accountA, clientEmail, grantB, accountB],
+  );
+  await pool.query(
+    `INSERT INTO client_tickets (id, client_account_id, opened_by_identity, category, title, details, status)
+     VALUES ($1::uuid, $2::uuid, (SELECT id FROM auth_identities WHERE email = $3), 'Outro assunto', $4,
+             'Descricao sintetica exclusiva do teste de leitura por conta.', 'resolved')`,
+    [ticketA, accountA, clientEmail, titleA],
+  );
+
+  const responseA = await api(`/api/client/tickets?account=${accountA}`, { cookie: clientCookie });
+  const responseB = await api(`/api/client/tickets?account=${accountB}`, { cookie: clientCookie });
+  assert.equal(responseA.status, 200);
+  assert.deepEqual(responseA.body.tickets.map(ticket => ticket.title), [titleA]);
+  assert.equal(responseB.status, 200);
+  assert.deepEqual(responseB.body.tickets, []);
+
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'pt-BR' });
+    await context.addCookies(clientCookie.split('; ').filter(Boolean).map(item => {
+      const separator = item.indexOf('=');
+      return { name: item.slice(0, separator), value: item.slice(separator + 1), url: baseUrl };
+    }));
+    const page = await context.newPage();
+    page.setDefaultTimeout(20_000);
+    await page.addInitScript(() => {
+      window.__id3TicketCalls = {};
+      window.__id3TicketPending = {};
+      window.__id3TicketCompleted = {};
+      window.__id3TicketReleases = {};
+      window.__id3HoldTickets = false;
+      const original = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : (input?.url || '');
+        // Somente a leitura GET é controlada; POST/PATCH vão direto ao servidor.
+        if (!url.includes('/api/client/tickets?')) return original(input, init);
+        const account = new URL(url, window.location.origin).searchParams.get('account') || 'unknown';
+        const call = (window.__id3TicketCalls[account] || 0) + 1;
+        window.__id3TicketCalls[account] = call;
+        const key = `${account}:${call}`;
+        if (window.__id3HoldTickets) {
+          window.__id3TicketPending[key] = true;
+          await new Promise(resolve => {
+            window.__id3TicketReleases[key] = () => {
+              delete window.__id3TicketPending[key];
+              resolve();
+            };
+          });
+        }
+        const response = await original(input, init);
+        window.__id3TicketCompleted[key] = true;
+        return response;
+      };
+    });
+    await page.goto(`${baseUrl}/cliente/app/chamados`, { waitUntil: 'domcontentloaded' });
+    const titleALocator = page.getByText(titleA, { exact: true });
+    await titleALocator.waitFor();
+    await capture(page, `${evidencePrefix}-a-carregado-390`);
+
+    // Prova da tradução de erro: um motivo curto devolve 400 com
+    // ticket_reopen_reason_required. Com workspaceFetch no PATCH, o corpo era
+    // consumido e a UI mostrava a mensagem genérica de conexão.
+    await page.getByLabel(`Motivo para reabrir chamado ${titleA}`).fill('curto');
+    await page.getByRole('button', { name: 'Reabrir chamado' }).click();
+    const reopenError = page.getByText('Informe um motivo de reabertura com pelo menos 10 caracteres.', { exact: true });
+    await reopenError.waitFor();
+    assert.equal(await page.getByText('Não foi possível conectar agora. Tente novamente em instantes.').count(), 0,
+      'o motivo específico do servidor não pode ser substituído por erro genérico de conexão');
+    await capture(page, `${evidencePrefix}-a-erro-reabertura-traduzido-390`);
+    const reopenTranslation = { visible: true, message: 'ticket_reopen_reason_required traduzido' };
+
+    // B:1 pendente: no código anterior, o chamado de A continuava visível sob
+    // o cabeçalho de B e o vazio podia aparecer antes da resposta.
+    await page.evaluate(() => { window.__id3HoldTickets = true; });
+    const picker = page.getByLabel('Conta de cliente selecionada');
+    const pendingB1 = `${accountB}:1`;
+    await picker.selectOption(accountB);
+    await page.waitForFunction(key => window.__id3TicketPending[key] === true, pendingB1);
+    await capture(page, `${evidencePrefix}-b-pendente-390`);
+    assert.equal(await titleALocator.count(), 0,
+      'o chamado de A não pode continuar visível quando B está selecionada e sua leitura está pendente');
+    assert.equal(await page.getByText('Carregando chamados…', { exact: true }).count(), 1);
+    assert.equal(await page.getByText(/Você ainda não abriu chamados para este cadastro/).count(), 0,
+      'B pendente não pode ser anunciada como B vazia');
+
+    const viewportEvidence = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      await page.waitForTimeout(80);
+      viewportEvidence.push(await page.evaluate(() => {
+        const width = document.documentElement.clientWidth;
+        return { width, horizontalOverflow: document.documentElement.scrollWidth - width };
+      }));
+      if (width !== 390) await capture(page, `${evidencePrefix}-b-pendente-${width}`);
+    }
+    assert.ok(viewportEvidence.every(item => item.horizontalOverflow <= 1),
+      `Chamados não deve transbordar horizontalmente: ${JSON.stringify(viewportEvidence)}`);
+
+    await page.evaluate(key => window.__id3TicketReleases[key](), pendingB1);
+    const emptyB = page.getByText(/Você ainda não abriu chamados para este cadastro/);
+    await emptyB.waitFor();
+    assert.equal(await titleALocator.count(), 0);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await capture(page, `${evidencePrefix}-b-vazio-390`);
+
+    const nextACall = await page.evaluate(account => (window.__id3TicketCalls[account] || 0) + 1, accountA);
+    const pendingA2 = `${accountA}:${nextACall}`;
+    await picker.focus();
+    await page.keyboard.press('ArrowUp');
+    await page.waitForFunction(key => window.__id3TicketPending[key] === true, pendingA2);
+    assert.equal(await picker.inputValue(), accountA);
+    assert.equal(await picker.evaluate(element => element === document.activeElement), true,
+      'a troca por teclado preserva o foco no seletor de conta');
+    const nextBCall = await page.evaluate(account => (window.__id3TicketCalls[account] || 0) + 1, accountB);
+    const pendingB2 = `${accountB}:${nextBCall}`;
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(key => window.__id3TicketPending[key] === true, pendingB2);
+    assert.equal(await picker.inputValue(), accountB);
+    await page.evaluate(key => window.__id3TicketReleases[key](), pendingB2);
+    await emptyB.waitFor();
+    await page.evaluate(key => window.__id3TicketReleases[key](), pendingA2);
+    await page.waitForFunction(key => window.__id3TicketCompleted[key] === true, pendingA2);
+    await page.waitForTimeout(200);
+    assert.equal(await picker.inputValue(), accountB);
+    assert.equal(await titleALocator.count(), 0,
+      'a resposta antiga de A não pode substituir o resultado mais recente de B');
+    assert.equal(await emptyB.count(), 1,
+      'o vazio confirmado da resposta mais recente de B deve permanecer visível');
+    await capture(page, `${evidencePrefix}-b-resposta-fora-de-ordem-390`);
+
+    if (process.env.UX_PORTAL_EVIDENCE_DIR) {
+      await writeFile(path.join(process.env.UX_PORTAL_EVIDENCE_DIR, `${evidencePrefix}-medidas.json`), JSON.stringify({
+        route: '/cliente/app/chamados',
+        serverReadA: { status: responseA.status, tickets: responseA.body.tickets.length },
+        serverReadB: { status: responseB.status, tickets: responseB.body.tickets.length },
+        reopenTranslation,
+        viewportEvidence,
+        keyboard: 'ArrowUp/ArrowDown no seletor nativo; foco preservado',
+        outOfOrder: `B:${nextBCall} concluída antes de A:${nextACall}; resultado final permaneceu em B`,
+        humanAcceptanceExecuted: false,
+      }, null, 2) + '\n');
+    }
+    await context.close();
+  } finally {
+    await browser?.close();
+    await pool.query('DELETE FROM client_ticket_status_audit WHERE ticket_id = $1', [ticketA]);
+    await pool.query('DELETE FROM client_ticket_messages WHERE ticket_id = $1', [ticketA]);
+    await pool.query('DELETE FROM client_tickets WHERE id = $1', [ticketA]);
+    await pool.query('DELETE FROM client_access_grants WHERE id = ANY($1::uuid[])', [[grantA, grantB]]);
+    await pool.query('DELETE FROM client_accounts WHERE id = ANY($1::uuid[])', [[accountA, accountB]]);
+  }
+});
+
+test('browser ID3: reclamações restritas ficam na conta ativa e não exibem o relato', { skip: !RUN }, async () => {
+  const accountA = randomUUID();
+  const accountB = randomUUID();
+  const grantA = randomUUID();
+  const grantB = randomUUID();
+  const complaintA = randomUUID();
+  const titleA = `Reclamacao sintetica ID3 A ${randomUUID().slice(0, 8)}`;
+  const descriptionA = `Relato restrito sintetico ID3 ${randomUUID().slice(0, 8)} — nao deve aparecer na listagem do portal.`;
+  const protocolA = `CLI-COMP-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${randomUUID().slice(0, 4).toUpperCase()}`;
+  const evidencePrefix = process.env.UX_PORTAL_EVIDENCE_PREFIX || 'ux-pro-id3-reclamacoes-leitura';
+  await pool.query(
+    "INSERT INTO client_accounts (id, display_name, created_by) VALUES ($1::uuid, 'ID3 Reclamacoes Conta A Sintetica', 'ti'), ($2::uuid, 'ID3 Reclamacoes Conta B Sintetica', 'ti')",
+    [accountA, accountB],
+  );
+  await pool.query(
+    `INSERT INTO client_access_grants (id, identity_id, client_account_id, reason, granted_by)
+     SELECT $1::uuid, id, $2::uuid, 'fixture sintetica ID3 reclamacoes', 'ti' FROM auth_identities WHERE email = $3
+     UNION ALL
+     SELECT $4::uuid, id, $5::uuid, 'fixture sintetica ID3 reclamacoes', 'ti' FROM auth_identities WHERE email = $3`,
+    [grantA, accountA, clientEmail, grantB, accountB],
+  );
+  // A migração 146 exige, para origin='portal_cliente', idempotency_key e
+  // request_fingerprint válidos — a jornada real deriva ambos da sessão.
+  await pool.query(
+    `INSERT INTO cli_employee_complaints
+       (id, protocol, client_account_id, category, severity, title, description, status,
+        origin, created_by_identity, idempotency_key, request_fingerprint)
+     VALUES ($1::uuid, $2, $3::uuid, 'outro', 'baixa', $4, $5, 'pendente',
+             'portal_cliente', (SELECT id FROM auth_identities WHERE email = $6), $7, $8)`,
+    [complaintA, protocolA, accountA, titleA, descriptionA, clientEmail,
+     `id3-complaint-fixture-${randomUUID().slice(0, 8)}`, randomBytes(32).toString('hex')],
+  );
+
+  const responseA = await api(`/api/client/employee-complaints?account=${accountA}`, { cookie: clientCookie });
+  const responseB = await api(`/api/client/employee-complaints?account=${accountB}`, { cookie: clientCookie });
+  assert.equal(responseA.status, 200);
+  assert.deepEqual(responseA.body.complaints.map(item => item.title), [titleA]);
+  assert.equal(responseA.body.hrMinimalShare.length, 4);
+  assert.equal(responseB.status, 200);
+  assert.deepEqual(responseB.body.complaints, []);
+
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'pt-BR' });
+    await context.addCookies(clientCookie.split('; ').filter(Boolean).map(item => {
+      const separator = item.indexOf('=');
+      return { name: item.slice(0, separator), value: item.slice(separator + 1), url: baseUrl };
+    }));
+    const page = await context.newPage();
+    page.setDefaultTimeout(20_000);
+    await page.addInitScript(() => {
+      window.__id3ComplaintCalls = {};
+      window.__id3ComplaintPending = {};
+      window.__id3ComplaintCompleted = {};
+      window.__id3ComplaintReleases = {};
+      window.__id3HoldComplaints = false;
+      const original = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : (input?.url || '');
+        if (!url.includes('/api/client/employee-complaints?')) return original(input, init);
+        const account = new URL(url, window.location.origin).searchParams.get('account') || 'unknown';
+        const call = (window.__id3ComplaintCalls[account] || 0) + 1;
+        window.__id3ComplaintCalls[account] = call;
+        const key = `${account}:${call}`;
+        if (window.__id3HoldComplaints) {
+          window.__id3ComplaintPending[key] = true;
+          await new Promise(resolve => {
+            window.__id3ComplaintReleases[key] = () => {
+              delete window.__id3ComplaintPending[key];
+              resolve();
+            };
+          });
+        }
+        const response = await original(input, init);
+        window.__id3ComplaintCompleted[key] = true;
+        return response;
+      };
+    });
+    await page.goto(`${baseUrl}/cliente/app/reclamacoes-colaborador`, { waitUntil: 'domcontentloaded' });
+    const titleALocator = page.getByText(titleA, { exact: true });
+    await titleALocator.waitFor();
+    await capture(page, `${evidencePrefix}-a-carregado-390`);
+
+    // Privacidade: a API devolve `description`, mas a página do portal NUNCA
+    // pode renderizar o relato — nem na lista, nem no envelope mínimo do RH.
+    // E9: `useClientSpace` pode disparar um segundo load() e trocar a lista
+    // pelo spinner entre o waitFor do título e a medição do corpo. Esperar o
+    // estado estável (protocolo + envelope do RH presentes, spinner ausente)
+    // elimina a falha intermitente sem waitForTimeout arbitrário.
+    const bodyText = await waitForStableBodyText(page, {
+      required: [titleA, protocolA, 'Protocolo', 'Severidade'],
+      forbidden: ['Carregando reclamações…', 'Aguardando uma leitura concluída…'],
+    });
+    assert.equal(bodyText.includes(descriptionA), false,
+      'o relato restrito não pode aparecer na página do portal');
+    assert.equal(bodyText.includes(protocolA), true, 'o protocolo precisa estar visível');
+    assert.ok(bodyText.includes('Protocolo') && bodyText.includes('Severidade'),
+      'o envelope mínimo do RH precisa estar descrito');
+    const privacyEvidence = { descriptionRendered: false, protocolVisible: true, hrEnvelopeVisible: true };
+
+    await page.evaluate(() => { window.__id3HoldComplaints = true; });
+    const picker = page.getByLabel('Conta de cliente selecionada');
+    const pendingB1 = `${accountB}:1`;
+    await picker.selectOption(accountB);
+    await page.waitForFunction(key => window.__id3ComplaintPending[key] === true, pendingB1);
+    await capture(page, `${evidencePrefix}-b-pendente-390`);
+    assert.equal(await titleALocator.count(), 0,
+      'a reclamação de A não pode continuar visível quando B está selecionada e sua leitura está pendente');
+    assert.equal(await page.getByText('Carregando reclamações…', { exact: true }).count(), 1);
+    assert.equal(await page.getByText(/Nenhuma reclamação registrada por você nesta conta/).count(), 0,
+      'B pendente não pode ser anunciada como B sem reclamações');
+    const pendingBody = await page.locator('body').innerText();
+    assert.equal(pendingBody.includes(descriptionA), false,
+      'nem mesmo durante a troca de conta o relato pode vazar');
+
+    const viewportEvidence = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      await page.waitForTimeout(80);
+      viewportEvidence.push(await page.evaluate(() => {
+        const width = document.documentElement.clientWidth;
+        return { width, horizontalOverflow: document.documentElement.scrollWidth - width };
+      }));
+      if (width !== 390) await capture(page, `${evidencePrefix}-b-pendente-${width}`);
+    }
+    assert.ok(viewportEvidence.every(item => item.horizontalOverflow <= 1),
+      `Reclamações não deve transbordar horizontalmente: ${JSON.stringify(viewportEvidence)}`);
+
+    await page.evaluate(key => window.__id3ComplaintReleases[key](), pendingB1);
+    const emptyB = page.getByText(/Nenhuma reclamação registrada por você nesta conta/);
+    await emptyB.waitFor();
+    assert.equal(await titleALocator.count(), 0);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await capture(page, `${evidencePrefix}-b-vazio-390`);
+
+    const nextACall = await page.evaluate(account => (window.__id3ComplaintCalls[account] || 0) + 1, accountA);
+    const pendingA2 = `${accountA}:${nextACall}`;
+    await picker.focus();
+    await page.keyboard.press('ArrowUp');
+    await page.waitForFunction(key => window.__id3ComplaintPending[key] === true, pendingA2);
+    assert.equal(await picker.inputValue(), accountA);
+    assert.equal(await picker.evaluate(element => element === document.activeElement), true,
+      'a troca por teclado preserva o foco no seletor de conta');
+    const nextBCall = await page.evaluate(account => (window.__id3ComplaintCalls[account] || 0) + 1, accountB);
+    const pendingB2 = `${accountB}:${nextBCall}`;
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(key => window.__id3ComplaintPending[key] === true, pendingB2);
+    assert.equal(await picker.inputValue(), accountB);
+    await page.evaluate(key => window.__id3ComplaintReleases[key](), pendingB2);
+    await emptyB.waitFor();
+    await page.evaluate(key => window.__id3ComplaintReleases[key](), pendingA2);
+    await page.waitForFunction(key => window.__id3ComplaintCompleted[key] === true, pendingA2);
+    await page.waitForTimeout(200);
+    assert.equal(await picker.inputValue(), accountB);
+    assert.equal(await titleALocator.count(), 0,
+      'a resposta antiga de A não pode substituir o resultado mais recente de B');
+    assert.equal(await emptyB.count(), 1,
+      'o vazio confirmado da resposta mais recente de B deve permanecer visível');
+    await capture(page, `${evidencePrefix}-b-resposta-fora-de-ordem-390`);
+
+    if (process.env.UX_PORTAL_EVIDENCE_DIR) {
+      await writeFile(path.join(process.env.UX_PORTAL_EVIDENCE_DIR, `${evidencePrefix}-medidas.json`), JSON.stringify({
+        route: '/cliente/app/reclamacoes-colaborador',
+        serverReadA: { status: responseA.status, complaints: responseA.body.complaints.length, hrMinimalShare: responseA.body.hrMinimalShare.length },
+        serverReadB: { status: responseB.status, complaints: responseB.body.complaints.length },
+        privacyEvidence,
+        viewportEvidence,
+        keyboard: 'ArrowUp/ArrowDown no seletor nativo; foco preservado',
+        outOfOrder: `B:${nextBCall} concluída antes de A:${nextACall}; resultado final permaneceu em B`,
+        humanAcceptanceExecuted: false,
+      }, null, 2) + '\n');
+    }
+    await context.close();
+  } finally {
+    await browser?.close();
+    await pool.query('DELETE FROM cli_employee_complaint_messages WHERE complaint_id = $1', [complaintA]);
+    await pool.query('DELETE FROM cli_employee_complaint_history WHERE complaint_id = $1', [complaintA]);
+    await pool.query('DELETE FROM cli_employee_complaints WHERE id = $1', [complaintA]);
+    await pool.query('DELETE FROM client_access_grants WHERE id = ANY($1::uuid[])', [[grantA, grantB]]);
+    await pool.query('DELETE FROM client_accounts WHERE id = ANY($1::uuid[])', [[accountA, accountB]]);
+  }
+});
+
+test('browser ID3: documentos e links de download ficam presos à conta ativa', { skip: !RUN }, async () => {
+  const accountA = randomUUID();
+  const accountB = randomUUID();
+  const grantA = randomUUID();
+  const grantB = randomUUID();
+  const documentA = randomUUID();
+  const titleA = `Documento sintetico ID3 A ${randomUUID().slice(0, 8)}`;
+  const evidencePrefix = process.env.UX_PORTAL_EVIDENCE_PREFIX || 'ux-pro-id3-documentos-leitura';
+  await pool.query(
+    "INSERT INTO client_accounts (id, display_name, created_by) VALUES ($1::uuid, 'ID3 Documentos Conta A Sintetica', 'ti'), ($2::uuid, 'ID3 Documentos Conta B Sintetica', 'ti')",
+    [accountA, accountB],
+  );
+  await pool.query(
+    `INSERT INTO client_access_grants (id, identity_id, client_account_id, reason, granted_by)
+     SELECT $1::uuid, id, $2::uuid, 'fixture sintetica ID3 documentos', 'ti' FROM auth_identities WHERE email = $3
+     UNION ALL
+     SELECT $4::uuid, id, $5::uuid, 'fixture sintetica ID3 documentos', 'ti' FROM auth_identities WHERE email = $3`,
+    [grantA, accountA, clientEmail, grantB, accountB],
+  );
+  await pool.query(
+    `INSERT INTO client_documents
+       (id, client_account_id, title, category, original_filename, content_type, size_bytes, storage_key, uploaded_by)
+     VALUES ($1::uuid, $2::uuid, $3, 'Geral', 'sintetico-id3.txt', 'text/plain', 42, $4, 'ti')`,
+    [documentA, accountA, titleA, randomBytes(24).toString('hex')],
+  );
+
+  const responseA = await api(`/api/client/documents?account=${accountA}`, { cookie: clientCookie });
+  const responseB = await api(`/api/client/documents?account=${accountB}`, { cookie: clientCookie });
+  assert.equal(responseA.status, 200);
+  assert.deepEqual(responseA.body.documents.map(item => item.title), [titleA]);
+  assert.equal(responseB.status, 200);
+  assert.deepEqual(responseB.body.documents, []);
+
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'pt-BR' });
+    await context.addCookies(clientCookie.split('; ').filter(Boolean).map(item => {
+      const separator = item.indexOf('=');
+      return { name: item.slice(0, separator), value: item.slice(separator + 1), url: baseUrl };
+    }));
+    const page = await context.newPage();
+    page.setDefaultTimeout(20_000);
+    await page.addInitScript(() => {
+      window.__id3DocCalls = {};
+      window.__id3DocPending = {};
+      window.__id3DocCompleted = {};
+      window.__id3DocReleases = {};
+      window.__id3HoldDocs = false;
+      const original = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : (input?.url || '');
+        if (!url.includes('/api/client/documents?')) return original(input, init);
+        const account = new URL(url, window.location.origin).searchParams.get('account') || 'unknown';
+        const call = (window.__id3DocCalls[account] || 0) + 1;
+        window.__id3DocCalls[account] = call;
+        const key = `${account}:${call}`;
+        if (window.__id3HoldDocs) {
+          window.__id3DocPending[key] = true;
+          await new Promise(resolve => {
+            window.__id3DocReleases[key] = () => {
+              delete window.__id3DocPending[key];
+              resolve();
+            };
+          });
+        }
+        const response = await original(input, init);
+        window.__id3DocCompleted[key] = true;
+        return response;
+      };
+    });
+    await page.goto(`${baseUrl}/cliente/app/documentos`, { waitUntil: 'domcontentloaded' });
+    const titleALocator = page.getByText(titleA, { exact: true });
+    const downloadLinks = page.locator('a[href*="/api/client/documents/"]');
+    await titleALocator.waitFor();
+    assert.equal(await downloadLinks.count(), 1, 'A precisa ter exatamente um link de download');
+    assert.match(await downloadLinks.first().getAttribute('href') || '', new RegExp(documentA),
+      'o link precisa apontar para o documento da conta ativa');
+    await capture(page, `${evidencePrefix}-a-carregado-390`);
+
+    // B:1 pendente: no código anterior, o documento de A — e o seu LINK de
+    // download — continuavam na tela de B.
+    await page.evaluate(() => { window.__id3HoldDocs = true; });
+    const picker = page.getByLabel('Conta de cliente selecionada');
+    const pendingB1 = `${accountB}:1`;
+    await picker.selectOption(accountB);
+    await page.waitForFunction(key => window.__id3DocPending[key] === true, pendingB1);
+    await capture(page, `${evidencePrefix}-b-pendente-390`);
+    assert.equal(await titleALocator.count(), 0,
+      'o documento de A não pode continuar visível quando B está selecionada e sua leitura está pendente');
+    assert.equal(await downloadLinks.count(), 0,
+      'nenhum link de download de A pode permanecer clicável na tela de B');
+    assert.equal(await page.getByText('Carregando documentos…', { exact: true }).count(), 1);
+    assert.equal(await page.getByText(/Nenhum documento foi compartilhado ainda com este cadastro/).count(), 0,
+      'B pendente não pode ser anunciada como B sem documentos');
+
+    const viewportEvidence = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      await page.waitForTimeout(80);
+      viewportEvidence.push(await page.evaluate(() => {
+        const width = document.documentElement.clientWidth;
+        return { width, horizontalOverflow: document.documentElement.scrollWidth - width };
+      }));
+      if (width !== 390) await capture(page, `${evidencePrefix}-b-pendente-${width}`);
+    }
+    assert.ok(viewportEvidence.every(item => item.horizontalOverflow <= 1),
+      `Documentos não deve transbordar horizontalmente: ${JSON.stringify(viewportEvidence)}`);
+
+    await page.evaluate(key => window.__id3DocReleases[key](), pendingB1);
+    const emptyB = page.getByText(/Nenhum documento foi compartilhado ainda com este cadastro/);
+    await emptyB.waitFor();
+    assert.equal(await titleALocator.count(), 0);
+    assert.equal(await downloadLinks.count(), 0);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await capture(page, `${evidencePrefix}-b-vazio-390`);
+
+    const nextACall = await page.evaluate(account => (window.__id3DocCalls[account] || 0) + 1, accountA);
+    const pendingA2 = `${accountA}:${nextACall}`;
+    await picker.focus();
+    await page.keyboard.press('ArrowUp');
+    await page.waitForFunction(key => window.__id3DocPending[key] === true, pendingA2);
+    assert.equal(await picker.inputValue(), accountA);
+    assert.equal(await picker.evaluate(element => element === document.activeElement), true,
+      'a troca por teclado preserva o foco no seletor de conta');
+    const nextBCall = await page.evaluate(account => (window.__id3DocCalls[account] || 0) + 1, accountB);
+    const pendingB2 = `${accountB}:${nextBCall}`;
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(key => window.__id3DocPending[key] === true, pendingB2);
+    assert.equal(await picker.inputValue(), accountB);
+    await page.evaluate(key => window.__id3DocReleases[key](), pendingB2);
+    await emptyB.waitFor();
+    await page.evaluate(key => window.__id3DocReleases[key](), pendingA2);
+    await page.waitForFunction(key => window.__id3DocCompleted[key] === true, pendingA2);
+    await page.waitForTimeout(200);
+    assert.equal(await picker.inputValue(), accountB);
+    assert.equal(await titleALocator.count(), 0,
+      'a resposta antiga de A não pode substituir o resultado mais recente de B');
+    assert.equal(await downloadLinks.count(), 0,
+      'a resposta antiga de A não pode devolver um link de download para B');
+    assert.equal(await emptyB.count(), 1,
+      'o vazio confirmado da resposta mais recente de B deve permanecer visível');
+    await capture(page, `${evidencePrefix}-b-resposta-fora-de-ordem-390`);
+
+    if (process.env.UX_PORTAL_EVIDENCE_DIR) {
+      await writeFile(path.join(process.env.UX_PORTAL_EVIDENCE_DIR, `${evidencePrefix}-medidas.json`), JSON.stringify({
+        route: '/cliente/app/documentos',
+        serverReadA: { status: responseA.status, documents: responseA.body.documents.length },
+        serverReadB: { status: responseB.status, documents: responseB.body.documents.length },
+        downloadLinksOnA: 1,
+        downloadLinksOnBPending: 0,
+        downloadLinksOnBFinal: 0,
+        viewportEvidence,
+        keyboard: 'ArrowUp/ArrowDown no seletor nativo; foco preservado',
+        outOfOrder: `B:${nextBCall} concluída antes de A:${nextACall}; resultado final permaneceu em B`,
+        humanAcceptanceExecuted: false,
+      }, null, 2) + '\n');
+    }
+    await context.close();
+  } finally {
+    await browser?.close();
+    await pool.query('DELETE FROM client_documents WHERE id = $1', [documentA]);
+    await pool.query('DELETE FROM client_access_grants WHERE id = ANY($1::uuid[])', [[grantA, grantB]]);
+    await pool.query('DELETE FROM client_accounts WHERE id = ANY($1::uuid[])', [[accountA, accountB]]);
+  }
+});
+
+test('browser ID3: satisfação mantém pesquisas e select na conta ativa e traduz nota fora da escala', { skip: !RUN }, async () => {
+  const accountA = randomUUID();
+  const accountB = randomUUID();
+  const grantA = randomUUID();
+  const grantB = randomUUID();
+  const surveyA = randomUUID();
+  const protocolA = `SAT-CLI-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${randomUUID().slice(0, 4).toUpperCase()}`;
+  const purposeA = `Finalidade sintetica ID3 ${randomUUID().slice(0, 8)}`;
+  const evidencePrefix = process.env.UX_PORTAL_EVIDENCE_PREFIX || 'ux-pro-id3-satisfacao-leitura';
+  await pool.query(
+    "INSERT INTO client_accounts (id, display_name, created_by) VALUES ($1::uuid, 'ID3 Satisfacao Conta A Sintetica', 'ti'), ($2::uuid, 'ID3 Satisfacao Conta B Sintetica', 'ti')",
+    [accountA, accountB],
+  );
+  await pool.query(
+    `INSERT INTO client_access_grants (id, identity_id, client_account_id, reason, granted_by)
+     SELECT $1::uuid, id, $2::uuid, 'fixture sintetica ID3 satisfacao', 'ti' FROM auth_identities WHERE email = $3
+     UNION ALL
+     SELECT $4::uuid, id, $5::uuid, 'fixture sintetica ID3 satisfacao', 'ti' FROM auth_identities WHERE email = $3`,
+    [grantA, accountA, clientEmail, grantB, accountB],
+  );
+  // Migração 152: origin='ext06_canonica' exige finalidade, metodologia, fonte,
+  // escala, regra de acompanhamento, destinatário e autor.
+  await pool.query(
+    `INSERT INTO cli_satisfaction_surveys
+       (id, protocol, client_account_id, survey_type, status, origin, purpose, methodology,
+        methodology_source, scale_min, scale_max, follow_up_operator, follow_up_threshold,
+        target_identity_id, created_by_identity)
+     VALUES ($1::uuid, $2, $3::uuid, 'periodica', 'pendente', 'ext06_canonica', $4, 'generica',
+             'Fonte sintetica ID3 para teste de escala', 1, 5, 'lte', 2,
+             (SELECT id FROM auth_identities WHERE email = $5),
+             (SELECT id FROM auth_identities WHERE email = $5))`,
+    [surveyA, protocolA, accountA, purposeA, clientEmail],
+  );
+
+  const responseA = await api(`/api/client/satisfaction-surveys?account=${accountA}`, { cookie: clientCookie });
+  const responseB = await api(`/api/client/satisfaction-surveys?account=${accountB}`, { cookie: clientCookie });
+  assert.equal(responseA.status, 200);
+  assert.deepEqual(responseA.body.surveys.map(item => item.protocol), [protocolA]);
+  assert.equal(responseA.body.surveys[0].scale_min, 1);
+  assert.equal(responseA.body.surveys[0].scale_max, 5);
+  assert.equal(responseB.status, 200);
+  assert.deepEqual(responseB.body.surveys, []);
+
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'pt-BR' });
+    await context.addCookies(clientCookie.split('; ').filter(Boolean).map(item => {
+      const separator = item.indexOf('=');
+      return { name: item.slice(0, separator), value: item.slice(separator + 1), url: baseUrl };
+    }));
+    const page = await context.newPage();
+    page.setDefaultTimeout(20_000);
+    await page.addInitScript(() => {
+      window.__id3SurveyCalls = {};
+      window.__id3SurveyPending = {};
+      window.__id3SurveyCompleted = {};
+      window.__id3SurveyReleases = {};
+      window.__id3HoldSurveys = false;
+      const original = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : (input?.url || '');
+        // Somente a leitura GET é controlada; o POST vai direto ao servidor.
+        if (!url.includes('/api/client/satisfaction-surveys?')) return original(input, init);
+        const account = new URL(url, window.location.origin).searchParams.get('account') || 'unknown';
+        const call = (window.__id3SurveyCalls[account] || 0) + 1;
+        window.__id3SurveyCalls[account] = call;
+        const key = `${account}:${call}`;
+        if (window.__id3HoldSurveys) {
+          window.__id3SurveyPending[key] = true;
+          await new Promise(resolve => {
+            window.__id3SurveyReleases[key] = () => {
+              delete window.__id3SurveyPending[key];
+              resolve();
+            };
+          });
+        }
+        const response = await original(input, init);
+        window.__id3SurveyCompleted[key] = true;
+        return response;
+      };
+    });
+    await page.goto(`${baseUrl}/cliente/app/satisfacao`, { waitUntil: 'domcontentloaded' });
+    // <option> é "hidden" para o Playwright: esperar por 'attached', não por visibilidade.
+    const protocolALocator = page.locator('select option').filter({ hasText: protocolA });
+    await protocolALocator.first().waitFor({ state: 'attached' });
+    assert.equal(await protocolALocator.count(), 1, 'a pesquisa pendente de A precisa estar no <select>');
+    await capture(page, `${evidencePrefix}-a-carregado-390`);
+
+    // Prova de tradução em HTTP real: removemos os atributos min/max do input
+    // (a validação nativa bloquearia) e enviamos nota 9 numa escala 1–5. O
+    // servidor responde 400 score_outside_declared_scale; a UI precisa exibir
+    // a mensagem específica, não um erro genérico de conexão.
+    await page.getByLabel('Pesquisa pendente').selectOption(surveyA);
+    await page.getByPlaceholder(/Descreva o que motivou a nota/).fill('Comentario sintetico com mais de dez caracteres para o teste.');
+    await page.evaluate(() => {
+      const input = document.querySelector('input[type="number"]');
+      input?.removeAttribute('min');
+      input?.removeAttribute('max');
+    });
+    await page.locator('input[type="number"]').fill('9');
+    await page.getByRole('button', { name: 'Enviar resposta' }).click();
+    const scaleError = page.getByText('A nota precisa estar dentro da escala declarada da pesquisa.', { exact: true });
+    await scaleError.waitFor();
+    assert.equal(await page.getByText('Não foi possível conectar agora. Tente novamente em instantes.').count(), 0,
+      'o motivo específico do servidor não pode virar erro genérico de conexão');
+    await capture(page, `${evidencePrefix}-a-nota-fora-da-escala-traduzida-390`);
+    const errorTranslation = { status: 400, code: 'score_outside_declared_scale', friendlyMessageVisible: true };
+
+    // B:1 pendente: no código anterior, a pesquisa de A continuava no
+    // histórico E no <select> do formulário sob B.
+    await page.evaluate(() => { window.__id3HoldSurveys = true; });
+    const picker = page.getByLabel('Conta de cliente selecionada');
+    const pendingB1 = `${accountB}:1`;
+    await picker.selectOption(accountB);
+    await page.waitForFunction(key => window.__id3SurveyPending[key] === true, pendingB1);
+    await capture(page, `${evidencePrefix}-b-pendente-390`);
+    assert.equal(await protocolALocator.count(), 0,
+      'a pesquisa de A não pode continuar no <select> quando B está selecionada');
+    assert.equal(await page.getByText(purposeA, { exact: false }).count(), 0,
+      'a finalidade da pesquisa de A não pode continuar visível em B');
+    assert.equal(await page.getByText('Carregando pesquisas…', { exact: true }).count(), 1);
+    assert.equal(await page.getByText(/Nenhuma pesquisa de satisfação registrada/).count(), 0,
+      'B pendente não pode ser anunciada como B sem pesquisas');
+
+    const viewportEvidence = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      await page.waitForTimeout(80);
+      viewportEvidence.push(await page.evaluate(() => {
+        const width = document.documentElement.clientWidth;
+        return { width, horizontalOverflow: document.documentElement.scrollWidth - width };
+      }));
+      if (width !== 390) await capture(page, `${evidencePrefix}-b-pendente-${width}`);
+    }
+    assert.ok(viewportEvidence.every(item => item.horizontalOverflow <= 1),
+      `Satisfação não deve transbordar horizontalmente: ${JSON.stringify(viewportEvidence)}`);
+
+    await page.evaluate(key => window.__id3SurveyReleases[key](), pendingB1);
+    const emptyB = page.getByText(/Nenhuma pesquisa de satisfação registrada/);
+    await emptyB.waitFor();
+    assert.equal(await protocolALocator.count(), 0);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await capture(page, `${evidencePrefix}-b-vazio-390`);
+
+    const nextACall = await page.evaluate(account => (window.__id3SurveyCalls[account] || 0) + 1, accountA);
+    const pendingA2 = `${accountA}:${nextACall}`;
+    await picker.focus();
+    await page.keyboard.press('ArrowUp');
+    await page.waitForFunction(key => window.__id3SurveyPending[key] === true, pendingA2);
+    assert.equal(await picker.inputValue(), accountA);
+    assert.equal(await picker.evaluate(element => element === document.activeElement), true,
+      'a troca por teclado preserva o foco no seletor de conta');
+    const nextBCall = await page.evaluate(account => (window.__id3SurveyCalls[account] || 0) + 1, accountB);
+    const pendingB2 = `${accountB}:${nextBCall}`;
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(key => window.__id3SurveyPending[key] === true, pendingB2);
+    assert.equal(await picker.inputValue(), accountB);
+    await page.evaluate(key => window.__id3SurveyReleases[key](), pendingB2);
+    await emptyB.waitFor();
+    await page.evaluate(key => window.__id3SurveyReleases[key](), pendingA2);
+    await page.waitForFunction(key => window.__id3SurveyCompleted[key] === true, pendingA2);
+    await page.waitForTimeout(200);
+    assert.equal(await picker.inputValue(), accountB);
+    assert.equal(await protocolALocator.count(), 0,
+      'a resposta antiga de A não pode devolver a pesquisa ao <select> de B');
+    assert.equal(await emptyB.count(), 1,
+      'o vazio confirmado da resposta mais recente de B deve permanecer visível');
+    await capture(page, `${evidencePrefix}-b-resposta-fora-de-ordem-390`);
+
+    if (process.env.UX_PORTAL_EVIDENCE_DIR) {
+      await writeFile(path.join(process.env.UX_PORTAL_EVIDENCE_DIR, `${evidencePrefix}-medidas.json`), JSON.stringify({
+        route: '/cliente/app/satisfacao',
+        serverReadA: { status: responseA.status, surveys: responseA.body.surveys.length, scale: [1, 5] },
+        serverReadB: { status: responseB.status, surveys: responseB.body.surveys.length },
+        errorTranslation,
+        selectOptionsOnBPending: 0,
+        selectOptionsOnBFinal: 0,
+        viewportEvidence,
+        keyboard: 'ArrowUp/ArrowDown no seletor nativo; foco preservado',
+        outOfOrder: `B:${nextBCall} concluída antes de A:${nextACall}; resultado final permaneceu em B`,
+        humanAcceptanceExecuted: false,
+      }, null, 2) + '\n');
+    }
+    await context.close();
+  } finally {
+    await browser?.close();
+    await pool.query('DELETE FROM cli_satisfaction_events WHERE survey_id = $1', [surveyA]);
+    await pool.query('DELETE FROM cli_satisfaction_responses WHERE survey_id = $1', [surveyA]);
+    await pool.query('DELETE FROM cli_satisfaction_action_plans WHERE survey_id = $1', [surveyA]);
+    await pool.query('DELETE FROM cli_satisfaction_surveys WHERE id = $1', [surveyA]);
+    await pool.query('DELETE FROM client_access_grants WHERE id = ANY($1::uuid[])', [[grantA, grantB]]);
+    await pool.query('DELETE FROM client_accounts WHERE id = ANY($1::uuid[])', [[accountA, accountB]]);
+  }
+});
+
+test('browser ID3: renovação mantém comunicações, restrição e datas na conta ativa e traduz 409 real', { skip: !RUN }, async () => {
+  const accountA = randomUUID();
+  const accountB = randomUUID();
+  const grantA = randomUUID();
+  const grantB = randomUUID();
+  const companyA = randomUUID();
+  const contractA = randomUUID();
+  const renewalA = randomUUID();
+  const communicationA = randomUUID();
+  const blockingA = randomUUID();
+  const day = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+  const protocolSuffix = randomUUID().replaceAll('-', '').toUpperCase();
+  const protocolA = `REN-CLI-${day}-${protocolSuffix.slice(0, 4)}`;
+  const protocolBlockingA = `REN-CLI-${day}-${protocolSuffix.slice(4, 8)}`;
+  const titleA = `Proposta de renovacao sintetica ID3 ${protocolSuffix.slice(0, 6)}`;
+  const contentA = 'Comunicacao sintetica do cenario ID3 para provar isolamento por conta no portal do cliente.';
+  const blockReasonA = 'Encerramento sintetico registrado para o cenario ID3 de isolamento por conta.';
+  const contractTitleA = `Contrato sintetico ID3 ${protocolSuffix.slice(0, 6)}`;
+  const renewalTitleA = `Renovacao CRM sintetica ID3 ${protocolSuffix.slice(0, 6)}`;
+  const evidencePrefix = process.env.UX_PORTAL_EVIDENCE_PREFIX || 'ux-pro-id3-renovacao-leitura';
+
+  // A tem empresa CRM, contrato com vencimento, renovação no CRM, uma proposta
+  // respondível e um encerramento bloqueante (restrição declarada). B não tem
+  // nada. A leitura do portal precisa devolver quatro coleções vazias em B.
+  await pool.query(
+    `INSERT INTO crm_companies (id, display_name, type, status, created_by)
+     VALUES ($1::uuid, 'ID3 Renovacao Empresa A Sintetica', 'client', 'active', 'ti')`,
+    [companyA],
+  );
+  await pool.query(
+    `INSERT INTO client_accounts (id, display_name, created_by, crm_company_id)
+     VALUES ($1::uuid, 'ID3 Renovacao Conta A Sintetica', 'ti', $3::uuid),
+            ($2::uuid, 'ID3 Renovacao Conta B Sintetica', 'ti', NULL)`,
+    [accountA, accountB, companyA],
+  );
+  await pool.query(
+    `INSERT INTO client_access_grants (id, identity_id, client_account_id, reason, granted_by)
+     SELECT $1::uuid, id, $2::uuid, 'fixture sintetica ID3 renovacao', 'ti' FROM auth_identities WHERE email = $3
+     UNION ALL
+     SELECT $4::uuid, id, $5::uuid, 'fixture sintetica ID3 renovacao', 'ti' FROM auth_identities WHERE email = $3`,
+    [grantA, accountA, clientEmail, grantB, accountB],
+  );
+  await pool.query(
+    `INSERT INTO client_contracts (id, client_account_id, title, service, status, ends_on, created_by)
+     VALUES ($1::uuid, $2::uuid, $3, 'Portaria', 'active', '2027-01-31'::date, 'ti')`,
+    [contractA, accountA, contractTitleA],
+  );
+  await pool.query(
+    `INSERT INTO crm_renewals (id, company_id, title, status, renewal_date, created_by)
+     VALUES ($1::uuid, $2::uuid, $3, 'planejada', '2027-02-15'::date, 'ti')`,
+    [renewalA, companyA, renewalTitleA],
+  );
+  await pool.query(
+    `INSERT INTO cli_renewal_communications
+       (id, protocol, client_account_id, contract_id, comm_type, title, content, sent_at, is_blocking, block_reason, created_by_identity)
+     VALUES ($1::uuid, $2, $3::uuid, $4::uuid, 'proposta_renovacao', $5, $6, NOW(), false, NULL,
+             (SELECT id FROM auth_identities WHERE email = $7))`,
+    [communicationA, protocolA, accountA, contractA, titleA, contentA, clientEmail],
+  );
+  await pool.query(
+    `INSERT INTO cli_renewal_communications
+       (id, protocol, client_account_id, contract_id, comm_type, title, content, sent_at, is_blocking, block_reason, created_by_identity)
+     VALUES ($1::uuid, $2, $3::uuid, NULL, 'encerramento', $4, $5, NOW(), true, $6,
+             (SELECT id FROM auth_identities WHERE email = $7))`,
+    [blockingA, protocolBlockingA, accountA, 'Encerramento sintetico ID3', contentA, blockReasonA, clientEmail],
+  );
+
+  const responseA = await api(`/api/client/renewal-communications?account=${accountA}`, { cookie: clientCookie });
+  const responseB = await api(`/api/client/renewal-communications?account=${accountB}`, { cookie: clientCookie });
+  assert.equal(responseA.status, 200, JSON.stringify(responseA.body));
+  assert.equal(responseA.body.communications.length, 2);
+  assert.equal(responseA.body.accessRestriction.restricted, true);
+  assert.equal(responseA.body.renewalDates.contracts.length, 1);
+  assert.equal(responseA.body.renewalDates.crmRenewals.length, 1);
+  assert.equal(responseB.status, 200, JSON.stringify(responseB.body));
+  assert.deepEqual(responseB.body.communications, []);
+  assert.equal(responseB.body.accessRestriction.restricted, false);
+  assert.deepEqual(responseB.body.renewalDates.contracts, []);
+  assert.deepEqual(responseB.body.renewalDates.crmRenewals, []);
+
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'pt-BR' });
+    await context.addCookies(clientCookie.split('; ').filter(Boolean).map(item => {
+      const separator = item.indexOf('=');
+      return { name: item.slice(0, separator), value: item.slice(separator + 1), url: baseUrl };
+    }));
+    const page = await context.newPage();
+    page.setDefaultTimeout(20_000);
+    await page.addInitScript(() => {
+      window.__id3RenewalCalls = {};
+      window.__id3RenewalPending = {};
+      window.__id3RenewalCompleted = {};
+      window.__id3RenewalReleases = {};
+      window.__id3HoldRenewal = false;
+      const original = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : (input?.url || '');
+        // Somente a leitura GET é controlada; o POST vai direto ao servidor.
+        if (!url.includes('/api/client/renewal-communications?')) return original(input, init);
+        const account = new URL(url, window.location.origin).searchParams.get('account') || 'unknown';
+        const call = (window.__id3RenewalCalls[account] || 0) + 1;
+        window.__id3RenewalCalls[account] = call;
+        const key = `${account}:${call}`;
+        if (window.__id3HoldRenewal) {
+          window.__id3RenewalPending[key] = true;
+          await new Promise(resolve => {
+            window.__id3RenewalReleases[key] = () => {
+              delete window.__id3RenewalPending[key];
+              resolve();
+            };
+          });
+        }
+        const response = await original(input, init);
+        window.__id3RenewalCompleted[key] = true;
+        return response;
+      };
+    });
+    await page.goto(`${baseUrl}/cliente/app/renovacao`, { waitUntil: 'domcontentloaded' });
+    // <option> é "hidden" para o Playwright: esperar por 'attached'.
+    const optionA = page.locator('select option').filter({ hasText: protocolA });
+    const optionBlockingA = page.locator('select option').filter({ hasText: protocolBlockingA });
+    const restriction = page.getByText('Restrição de acesso declarada', { exact: true });
+    await optionA.first().waitFor({ state: 'attached' });
+    assert.equal(await optionA.count(), 1, 'a comunicação respondível de A precisa estar no <select>');
+    assert.equal(await restriction.count(), 1, 'a restrição declarada de A precisa estar visível em A');
+    assert.ok(await page.getByText(contractTitleA, { exact: false }).count() >= 1);
+    assert.ok(await page.getByText(renewalTitleA, { exact: false }).count() >= 1);
+    await capture(page, `${evidencePrefix}-a-carregado-390`);
+
+    // Prova de tradução em HTTP real: com a tela já carregada, outra sessão
+    // (mesma identidade, mesma cookie) registra primeiro a manifestação. O
+    // envio da UI recebe 409 response_already_registered; com workspaceFetch o
+    // corpo seria consumido e viraria erro genérico de conexão.
+    await page.locator('form select').nth(0).selectOption(communicationA);
+    await page.locator('form select').nth(1).selectOption('interesse_renovar');
+    const previous = await api('/api/client/renewal-communications', {
+      method: 'POST', cookie: clientCookie,
+      headers: { 'Idempotency-Key': `cli12-id3-pre-${randomUUID()}` },
+      body: { communication_id: communicationA, response_kind: 'interesse_renovar' },
+    });
+    assert.equal(previous.status, 201, `o registro concorrente deveria ser 201, veio ${previous.status} ${JSON.stringify(previous.body)}`);
+    await page.getByRole('button', { name: 'Registrar manifestação' }).click();
+    const friendlyConflict = page.getByText('Esta manifestação já está registrada para esta comunicação.', { exact: true });
+    await friendlyConflict.waitFor();
+    assert.equal(await page.getByText('Não foi possível conectar agora. Tente novamente em instantes.').count(), 0,
+      'o 409 específico do servidor não pode virar erro genérico de conexão');
+    await capture(page, `${evidencePrefix}-a-409-traduzido-390`);
+    const errorTranslation = { status: 409, code: 'response_already_registered', friendlyMessageVisible: true };
+
+    // B:1 pendente: no código anterior, comunicações, restrição e datas de A
+    // continuavam renderizadas sob B, inclusive no <select> enviável.
+    await page.evaluate(() => { window.__id3HoldRenewal = true; });
+    const picker = page.getByLabel('Conta de cliente selecionada');
+    const pendingB1 = `${accountB}:1`;
+    await picker.selectOption(accountB);
+    await page.waitForFunction(key => window.__id3RenewalPending[key] === true, pendingB1);
+    await capture(page, `${evidencePrefix}-b-pendente-390`);
+    assert.equal(await optionA.count(), 0, 'a comunicação de A não pode continuar no <select> de B');
+    assert.equal(await optionBlockingA.count(), 0, 'o encerramento de A não pode continuar no <select> de B');
+    assert.equal(await restriction.count(), 0, 'a restrição declarada de A não pode aparecer em B');
+    assert.equal(await page.getByText(contentA, { exact: false }).count(), 0, 'o conteúdo de A não pode aparecer em B');
+    assert.equal(await page.getByText(contractTitleA, { exact: false }).count(), 0, 'o contrato de A não pode aparecer em B');
+    assert.equal(await page.getByText(renewalTitleA, { exact: false }).count(), 0, 'a renovação CRM de A não pode aparecer em B');
+    assert.equal(await page.getByText('Carregando comunicações…', { exact: true }).count(), 1);
+    assert.equal(await page.getByText(/Nenhuma comunicação de renovação registrada/).count(), 0,
+      'B pendente não pode ser anunciada como B sem comunicações');
+
+    const viewportEvidence = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      await page.waitForTimeout(80);
+      viewportEvidence.push(await page.evaluate(() => {
+        const width = document.documentElement.clientWidth;
+        return { width, horizontalOverflow: document.documentElement.scrollWidth - width };
+      }));
+      if (width !== 390) await capture(page, `${evidencePrefix}-b-pendente-${width}`);
+    }
+    assert.ok(viewportEvidence.every(item => item.horizontalOverflow <= 1),
+      `Renovação não deve transbordar horizontalmente: ${JSON.stringify(viewportEvidence)}`);
+
+    await page.evaluate(key => window.__id3RenewalReleases[key](), pendingB1);
+    const emptyB = page.getByText('Nenhuma comunicação de renovação registrada para esta conta.', { exact: true });
+    await emptyB.waitFor();
+    assert.equal(await page.getByText('Nenhum contrato ou renovação com registro canônico nesta conta.', { exact: true }).count(), 1);
+    assert.equal(await optionA.count(), 0);
+    assert.equal(await optionBlockingA.count(), 0);
+    assert.equal(await restriction.count(), 0);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await capture(page, `${evidencePrefix}-b-vazio-390`);
+
+    const nextACall = await page.evaluate(account => (window.__id3RenewalCalls[account] || 0) + 1, accountA);
+    const pendingA2 = `${accountA}:${nextACall}`;
+    await picker.focus();
+    await page.keyboard.press('ArrowUp');
+    await page.waitForFunction(key => window.__id3RenewalPending[key] === true, pendingA2);
+    assert.equal(await picker.inputValue(), accountA);
+    assert.equal(await picker.evaluate(element => element === document.activeElement), true,
+      'a troca por teclado preserva o foco no seletor de conta');
+    const nextBCall = await page.evaluate(account => (window.__id3RenewalCalls[account] || 0) + 1, accountB);
+    const pendingB2 = `${accountB}:${nextBCall}`;
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(key => window.__id3RenewalPending[key] === true, pendingB2);
+    assert.equal(await picker.inputValue(), accountB);
+    await page.evaluate(key => window.__id3RenewalReleases[key](), pendingB2);
+    await emptyB.waitFor();
+    await page.evaluate(key => window.__id3RenewalReleases[key](), pendingA2);
+    await page.waitForFunction(key => window.__id3RenewalCompleted[key] === true, pendingA2);
+    await page.waitForTimeout(200);
+    assert.equal(await picker.inputValue(), accountB);
+    assert.equal(await optionA.count(), 0, 'a resposta antiga de A não pode devolver a comunicação ao <select> de B');
+    assert.equal(await optionBlockingA.count(), 0);
+    assert.equal(await restriction.count(), 0, 'a resposta antiga de A não pode devolver a restrição a B');
+    assert.equal(await page.getByText(contractTitleA, { exact: false }).count(), 0,
+      'a resposta antiga de A não pode devolver as datas de A a B');
+    assert.equal(await emptyB.count(), 1,
+      'o vazio confirmado da resposta mais recente de B deve permanecer visível');
+    await capture(page, `${evidencePrefix}-b-resposta-fora-de-ordem-390`);
+
+    if (process.env.UX_PORTAL_EVIDENCE_DIR) {
+      await writeFile(path.join(process.env.UX_PORTAL_EVIDENCE_DIR, `${evidencePrefix}-medidas.json`), JSON.stringify({
+        route: '/cliente/app/renovacao',
+        serverReadA: {
+          status: responseA.status,
+          communications: responseA.body.communications.length,
+          restricted: responseA.body.accessRestriction.restricted,
+          contracts: responseA.body.renewalDates.contracts.length,
+          crmRenewals: responseA.body.renewalDates.crmRenewals.length,
+        },
+        serverReadB: {
+          status: responseB.status,
+          communications: responseB.body.communications.length,
+          restricted: responseB.body.accessRestriction.restricted,
+          contracts: responseB.body.renewalDates.contracts.length,
+          crmRenewals: responseB.body.renewalDates.crmRenewals.length,
+        },
+        errorTranslation,
+        selectOptionsOnBPending: 0,
+        restrictionVisibleOnBPending: 0,
+        selectOptionsOnBFinal: 0,
+        viewportEvidence,
+        keyboard: 'ArrowUp/ArrowDown no seletor nativo; foco preservado',
+        outOfOrder: `B:${nextBCall} concluída antes de A:${nextACall}; resultado final permaneceu em B`,
+        humanAcceptanceExecuted: false,
+      }, null, 2) + '\n');
+    }
+    await context.close();
+  } finally {
+    await browser?.close();
+    await pool.query('DELETE FROM cli_renewal_comm_responses WHERE communication_id = ANY($1::uuid[])', [[communicationA, blockingA]]);
+    await pool.query('DELETE FROM cli_renewal_communications WHERE id = ANY($1::uuid[])', [[communicationA, blockingA]]);
+    await pool.query('DELETE FROM client_contracts WHERE id = $1', [contractA]);
+    await pool.query('DELETE FROM crm_renewals WHERE id = $1', [renewalA]);
+    await pool.query('DELETE FROM client_access_grants WHERE id = ANY($1::uuid[])', [[grantA, grantB]]);
+    // client_accounts.crm_company_id é ON DELETE RESTRICT: contas antes da empresa.
+    await pool.query('DELETE FROM client_accounts WHERE id = ANY($1::uuid[])', [[accountA, accountB]]);
+    await pool.query('DELETE FROM crm_companies WHERE id = $1', [companyA]);
+  }
+});
+
+test('browser ID3: relatórios mantêm lista e aceites na conta ativa e traduzem 400 do PATCH', { skip: !RUN }, async () => {
+  const accountA = randomUUID();
+  const accountB = randomUUID();
+  const grantA = randomUUID();
+  const grantB = randomUUID();
+  const reportSentA = randomUUID();
+  const reportDoneA = randomUUID();
+  const titleA = `Relatorio sintetico ID3 ${randomUUID().slice(0, 8)}`;
+  const titleDoneA = `Relatorio ciente ID3 ${randomUUID().slice(0, 8)}`;
+  const summaryA = 'Resumo sintetico do cenario ID3 para provar isolamento da lista de relatorios por conta ativa no portal.';
+  const acknowledgementNoteA = 'Ciencia sintetica ID3';
+  const evidencePrefix = process.env.UX_PORTAL_EVIDENCE_PREFIX || 'ux-pro-id3-relatorios-leitura';
+
+  await pool.query(
+    `INSERT INTO client_accounts (id, display_name, created_by)
+     VALUES ($1::uuid, 'ID3 Relatorios Conta A Sintetica', 'ti'),
+            ($2::uuid, 'ID3 Relatorios Conta B Sintetica', 'ti')`,
+    [accountA, accountB],
+  );
+  await pool.query(
+    `INSERT INTO client_access_grants (id, identity_id, client_account_id, reason, granted_by)
+     SELECT $1::uuid, id, $2::uuid, 'fixture sintetica ID3 relatorios', 'ti' FROM auth_identities WHERE email = $3
+     UNION ALL
+     SELECT $4::uuid, id, $5::uuid, 'fixture sintetica ID3 relatorios', 'ti' FROM auth_identities WHERE email = $3`,
+    [grantA, accountA, clientEmail, grantB, accountB],
+  );
+  // Migração 140: só status approved/sent/acknowledged aparecem no portal.
+  // O primeiro ainda aceita ciência (e renderiza o botão/textarea); o segundo
+  // já está aceito e exibe o histórico.
+  await pool.query(
+    `INSERT INTO client_reports
+       (id, client_account_id, report_type, title, summary, period_start, period_end,
+        status, approved_at, sent_at, created_by)
+     VALUES ($1::uuid, $2::uuid, 'execution', $3, $4, '2026-10-01'::date, '2026-10-25'::date,
+             'sent', NOW(), NOW(), 'ti')`,
+    [reportSentA, accountA, titleA, summaryA],
+  );
+  await pool.query(
+    `INSERT INTO client_reports
+       (id, client_account_id, report_type, title, summary, status, approved_at, sent_at,
+        acknowledged_at, acknowledgement_note, acknowledged_by_identity, created_by)
+     VALUES ($1::uuid, $2::uuid, 'measurement', $3, $4, 'acknowledged', NOW(), NOW(),
+             NOW(), $5, (SELECT id FROM auth_identities WHERE email = $6), 'ti')`,
+    [reportDoneA, accountA, titleDoneA, summaryA, acknowledgementNoteA, clientEmail],
+  );
+
+  const responseA = await api(`/api/client/reports?account=${accountA}`, { cookie: clientCookie });
+  const responseB = await api(`/api/client/reports?account=${accountB}`, { cookie: clientCookie });
+  assert.equal(responseA.status, 200, JSON.stringify(responseA.body));
+  assert.equal(responseA.body.reports.length, 2);
+  assert.equal(responseB.status, 200, JSON.stringify(responseB.body));
+  assert.deepEqual(responseB.body.reports, []);
+
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'pt-BR' });
+    await context.addCookies(clientCookie.split('; ').filter(Boolean).map(item => {
+      const separator = item.indexOf('=');
+      return { name: item.slice(0, separator), value: item.slice(separator + 1), url: baseUrl };
+    }));
+    const page = await context.newPage();
+    page.setDefaultTimeout(20_000);
+    await page.addInitScript(() => {
+      window.__id3ReportCalls = {};
+      window.__id3ReportPending = {};
+      window.__id3ReportCompleted = {};
+      window.__id3ReportReleases = {};
+      window.__id3HoldReports = false;
+      const original = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : (input?.url || '');
+        // Somente a leitura GET é controlada; o PATCH vai direto ao servidor.
+        if (!url.includes('/api/client/reports?')) return original(input, init);
+        const account = new URL(url, window.location.origin).searchParams.get('account') || 'unknown';
+        const call = (window.__id3ReportCalls[account] || 0) + 1;
+        window.__id3ReportCalls[account] = call;
+        const key = `${account}:${call}`;
+        if (window.__id3HoldReports) {
+          window.__id3ReportPending[key] = true;
+          await new Promise(resolve => {
+            window.__id3ReportReleases[key] = () => {
+              delete window.__id3ReportPending[key];
+              resolve();
+            };
+          });
+        }
+        const response = await original(input, init);
+        window.__id3ReportCompleted[key] = true;
+        return response;
+      };
+    });
+    await page.goto(`${baseUrl}/cliente/app/relatorios`, { waitUntil: 'domcontentloaded' });
+    const titleALocator = page.getByText(titleA, { exact: true });
+    const titleDoneALocator = page.getByText(titleDoneA, { exact: true });
+    await titleALocator.waitFor();
+    assert.equal(await titleDoneALocator.count(), 1, 'o relatório já aceito de A precisa estar na lista');
+    assert.equal(await page.getByText('Ciência registrada', { exact: true }).count(), 1);
+    assert.equal(await page.getByPlaceholder('Observação opcional para o aceite/ciência').count(), 1);
+    await capture(page, `${evidencePrefix}-a-carregado-390`);
+
+    // Prova de tradução em HTTP real: observação de 2 caracteres é recusada
+    // pelo servidor com 400 report_acknowledgement_too_short. Com workspaceFetch
+    // o corpo seria consumido e o mapa de mensagens nunca seria alcançado.
+    await page.getByPlaceholder('Observação opcional para o aceite/ciência').fill('ab');
+    await page.getByRole('button', { name: 'Registrar aceite/ciência' }).click();
+    const shortNote = page.getByText('A observação deve ter pelo menos 3 caracteres ou ficar vazia.', { exact: true });
+    await shortNote.waitFor();
+    assert.equal(await page.getByText('Não foi possível conectar agora. Tente novamente em instantes.').count(), 0,
+      'o 400 específico do servidor não pode virar erro genérico de conexão');
+    await capture(page, `${evidencePrefix}-a-400-traduzido-390`);
+    const errorTranslation = { status: 400, code: 'report_acknowledgement_too_short', friendlyMessageVisible: true };
+
+    // B:1 pendente: no código anterior, os relatórios de A (inclusive o botão
+    // de aceite e a observação digitada) continuavam renderizados sob B.
+    await page.evaluate(() => { window.__id3HoldReports = true; });
+    const picker = page.getByLabel('Conta de cliente selecionada');
+    const pendingB1 = `${accountB}:1`;
+    await picker.selectOption(accountB);
+    await page.waitForFunction(key => window.__id3ReportPending[key] === true, pendingB1);
+    await capture(page, `${evidencePrefix}-b-pendente-390`);
+    assert.equal(await titleALocator.count(), 0, 'o relatório de A não pode continuar na lista de B');
+    assert.equal(await titleDoneALocator.count(), 0, 'o relatório aceito de A não pode continuar em B');
+    assert.equal(await page.getByText(summaryA, { exact: false }).count(), 0, 'o resumo de A não pode aparecer em B');
+    assert.equal(await page.getByPlaceholder('Observação opcional para o aceite/ciência').count(), 0,
+      'o botão/textarea de aceite de A não pode continuar clicável em B');
+    assert.equal(await shortNote.count(), 0, 'a mensagem de erro da conta A precisa ser limpa na troca');
+    assert.equal(await page.getByText('Carregando relatórios…', { exact: true }).count(), 1);
+    assert.equal(await page.getByText('Nenhum relatório aprovado para este cadastro.', { exact: true }).count(), 0,
+      'B pendente não pode ser anunciada como B sem relatórios');
+
+    const viewportEvidence = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      await page.waitForTimeout(80);
+      viewportEvidence.push(await page.evaluate(() => {
+        const width = document.documentElement.clientWidth;
+        return { width, horizontalOverflow: document.documentElement.scrollWidth - width };
+      }));
+      if (width !== 390) await capture(page, `${evidencePrefix}-b-pendente-${width}`);
+    }
+    assert.ok(viewportEvidence.every(item => item.horizontalOverflow <= 1),
+      `Relatórios não deve transbordar horizontalmente: ${JSON.stringify(viewportEvidence)}`);
+
+    await page.evaluate(key => window.__id3ReportReleases[key](), pendingB1);
+    const emptyB = page.getByText('Nenhum relatório aprovado para este cadastro.', { exact: true });
+    await emptyB.waitFor();
+    assert.equal(await titleALocator.count(), 0);
+    assert.equal(await titleDoneALocator.count(), 0);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await capture(page, `${evidencePrefix}-b-vazio-390`);
+
+    const nextACall = await page.evaluate(account => (window.__id3ReportCalls[account] || 0) + 1, accountA);
+    const pendingA2 = `${accountA}:${nextACall}`;
+    await picker.focus();
+    await page.keyboard.press('ArrowUp');
+    await page.waitForFunction(key => window.__id3ReportPending[key] === true, pendingA2);
+    assert.equal(await picker.inputValue(), accountA);
+    assert.equal(await picker.evaluate(element => element === document.activeElement), true,
+      'a troca por teclado preserva o foco no seletor de conta');
+    const nextBCall = await page.evaluate(account => (window.__id3ReportCalls[account] || 0) + 1, accountB);
+    const pendingB2 = `${accountB}:${nextBCall}`;
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(key => window.__id3ReportPending[key] === true, pendingB2);
+    assert.equal(await picker.inputValue(), accountB);
+    await page.evaluate(key => window.__id3ReportReleases[key](), pendingB2);
+    await emptyB.waitFor();
+    await page.evaluate(key => window.__id3ReportReleases[key](), pendingA2);
+    await page.waitForFunction(key => window.__id3ReportCompleted[key] === true, pendingA2);
+    await page.waitForTimeout(200);
+    assert.equal(await picker.inputValue(), accountB);
+    assert.equal(await titleALocator.count(), 0, 'a resposta antiga de A não pode devolver o relatório a B');
+    assert.equal(await titleDoneALocator.count(), 0);
+    assert.equal(await page.getByPlaceholder('Observação opcional para o aceite/ciência').count(), 0,
+      'a resposta antiga de A não pode devolver o botão de aceite a B');
+    assert.equal(await emptyB.count(), 1,
+      'o vazio confirmado da resposta mais recente de B deve permanecer visível');
+    await capture(page, `${evidencePrefix}-b-resposta-fora-de-ordem-390`);
+
+    if (process.env.UX_PORTAL_EVIDENCE_DIR) {
+      await writeFile(path.join(process.env.UX_PORTAL_EVIDENCE_DIR, `${evidencePrefix}-medidas.json`), JSON.stringify({
+        route: '/cliente/app/relatorios',
+        serverReadA: { status: responseA.status, reports: responseA.body.reports.length },
+        serverReadB: { status: responseB.status, reports: responseB.body.reports.length },
+        errorTranslation,
+        reportTitlesOnBPending: 0,
+        acknowledgeInputsOnBPending: 0,
+        reportTitlesOnBFinal: 0,
+        viewportEvidence,
+        keyboard: 'ArrowUp/ArrowDown no seletor nativo; foco preservado',
+        outOfOrder: `B:${nextBCall} concluída antes de A:${nextACall}; resultado final permaneceu em B`,
+        humanAcceptanceExecuted: false,
+      }, null, 2) + '\n');
+    }
+    await context.close();
+  } finally {
+    await browser?.close();
+    await pool.query('DELETE FROM client_report_status_audit WHERE report_id = ANY($1::uuid[])', [[reportSentA, reportDoneA]]);
+    await pool.query('DELETE FROM client_reports WHERE id = ANY($1::uuid[])', [[reportSentA, reportDoneA]]);
     await pool.query('DELETE FROM client_access_grants WHERE id = ANY($1::uuid[])', [[grantA, grantB]]);
     await pool.query('DELETE FROM client_accounts WHERE id = ANY($1::uuid[])', [[accountA, accountB]]);
   }
@@ -3661,5 +5207,1180 @@ test('browser: ajuste de ponto percorre Jornada do titular e Ponto e ajustes do 
     await employeeContext?.close();
     await rhBrowser?.close();
     await employeeBrowser.close();
+  }
+});
+
+// UX-PRO-03 — primeira promoção "com prova" de um componente órfão de
+// /admin/ti (família PLT-14, DependencyClient). A decisão de 02/10 exige rota
+// real, autorização decidida no servidor, fonte/data-base, drill-down, erro de
+// leitura com retry e subteste no gate. Este cenário prova, em PostgreSQL 17 e
+// Chromium reais: (1) o papel é negado a rh e permitido a ti pela API; (2) a
+// aba é alcançável por teclado e mostra os registros do banco; (3) dois estados
+// A/B não vazam um no outro; (4) 503 e 403 produzem estados distintos, e o
+// retry recupera a leitura; (5) 320/390/768/1440 sem transbordo.
+test('browser UX-PRO-03: PLT-14 Dependências promovida com prova (papel, fonte, A/B, erro e retry)', { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: 'ti' });
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const staffIds = [ti.id, rh.id];
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const MARK = 'qa-plt14-%';
+
+  const seed = async (label, total, packageName) => {
+    await pool.query('DELETE FROM dependency_updates WHERE notes LIKE $1', [MARK]);
+    await pool.query('DELETE FROM dependency_vulnerabilities WHERE audit_id IN (SELECT id FROM dependency_audits WHERE notes LIKE $1)', [MARK]);
+    await pool.query('DELETE FROM dependency_audits WHERE notes LIKE $1', [MARK]);
+    await pool.query(
+      `INSERT INTO dependency_audits (total_dependencies, prod_dependencies, dev_dependencies,
+        vulnerabilities_high, outdated_count, status, notes, created_by)
+       VALUES ($1,30,7,2,1,'pendente',$2,$3)`,
+      [total, `${MARK.slice(0, -1)}${label}`, `QA-PLT14-${label}`],
+    );
+    await pool.query(
+      `INSERT INTO dependency_updates (package_name, current_version, latest_version,
+        update_type, is_breaking, status, notes)
+       VALUES ($1,'1.0.0','2.0.0','major',$2,'pendente',$3)`,
+      [packageName, label === 'B', `${MARK.slice(0, -1)}${label}`],
+    );
+  };
+
+  try {
+    // ---------- prova de autorização no SERVIDOR (não só na UI) ----------
+    await seed('A', 4123, 'seg-pacote-ALFA');
+    const deniedByRole = await api('/api/admin/dependencies/audits', { cookie: rhCookie });
+    assert.equal(deniedByRole.status, 403, `rh não pode consultar dependências: veio ${deniedByRole.status}`);
+    const allowedForTi = await api('/api/admin/dependencies/audits', { cookie: tiCookie });
+    assert.equal(allowedForTi.status, 200);
+    assert.ok(Array.isArray(allowedForTi.body.audits), 'a resposta precisa trazer a lista');
+
+    // ---------- estado A: quatro larguras, teclado e sem transbordo ----------
+    const readings = [];
+    for (const [width, height] of [[320, 844], [390, 844], [768, 900], [1440, 900]]) {
+      const browser = await launchBrowser();
+      try {
+        const { context, page } = await openPage(browser, '/admin/ti', tiCookie, { width, height });
+        const tab = page.getByRole('button', { name: 'Dependências', exact: true });
+        await tab.waitFor();
+        await tab.focus();
+        const focused = await page.evaluate(() => document.activeElement?.textContent?.trim() || '');
+        assert.match(focused, /Dependências/, `a aba precisa receber foco em ${width}`);
+        await page.keyboard.press('Enter');
+        await page.getByRole('heading', { name: 'Dependências, vulnerabilidades e atualizações' }).waitFor();
+        await page.getByText(/Fonte: tabelas/).waitFor();
+        // O cabeçalho aparece antes da leitura: esperar o registro canônico.
+        await page.getByText(/QA-PLT14-A/).first().waitFor();
+        const text = await page.locator('body').innerText();
+        assert.match(text, /QA-PLT14-A/, `registro A precisa aparecer em ${width}`);
+        assert.match(text, /seg-pacote-ALFA/);
+        assert.match(text, /Data-base:/);
+        assert.doesNotMatch(text, /QA-PLT14-B/, `registro B não pode vazar em ${width}`);
+        assert.doesNotMatch(text, /seg-pacote-BETA/);
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(overflow <= 1, `PLT-14 overflow ${overflow} em ${width}`);
+        readings.push({ width, overflow, keyboard: focused });
+        await context.close();
+      } finally {
+        await browser.close();
+      }
+    }
+    assert.deepEqual(readings.map(item => item.width), [320, 390, 768, 1440]);
+
+    // ---------- estado B: os dados de A desaparecem ----------
+    await seed('B', 8456, 'seg-pacote-BETA');
+    const bBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(bBrowser, '/admin/ti', tiCookie, { width: 1440, height: 900 });
+      await page.getByRole('button', { name: 'Dependências', exact: true }).click();
+      await page.getByText(/Fonte: tabelas/).waitFor();
+      await page.getByText(/QA-PLT14-B/).first().waitFor();
+      const text = await page.locator('body').innerText();
+      assert.match(text, /QA-PLT14-B/, 'o estado B precisa aparecer');
+      assert.match(text, /seg-pacote-BETA/);
+      assert.match(text, /BREAKING/, 'a atualização de B é incompatível e precisa ser sinalizada');
+      assert.doesNotMatch(text, /QA-PLT14-A/, 'o registro de A não pode sobrar na leitura de B');
+      assert.doesNotMatch(text, /seg-pacote-ALFA/);
+      await context.close();
+    } finally {
+      await bBrowser.close();
+    }
+
+    // ---------- 503: erro declarado, e retry recupera sem recarregar ----------
+    const failureBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(failureBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/admin/dependencies/audits'],
+        status: 503, code: 'qa_forced_failure',
+        onPage: p => p.addInitScript(() => { window.__qaFetchOriginal = window.fetch.bind(window); }),
+      });
+      await page.getByRole('button', { name: 'Dependências', exact: true }).click();
+      const errorState = page.locator('[data-ui-state="error"]');
+      await errorState.waitFor();
+      const errorText = await errorState.innerText();
+      assert.match(errorText, /Falha na consulta/);
+      assert.doesNotMatch(errorText, /Nenhum registro/, 'falha não pode parecer lista vazia');
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await page.evaluate(() => { window.fetch = window.__qaFetchOriginal; });
+      await errorState.getByRole('button', { name: 'Tentar novamente' }).click();
+      await page.getByText(/QA-PLT14-B/).first().waitFor();
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0, 'retry precisa sair do estado de erro');
+      assert.match(await page.locator('body').innerText(), /QA-PLT14-B/, 'retry precisa trazer a leitura real');
+      await context.close();
+    } finally {
+      await failureBrowser.close();
+    }
+
+    // ---------- 403: negado é diferente de erro e de vazio ----------
+    const deniedBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(deniedBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/admin/dependencies/audits'],
+        status: 403, code: 'forbidden',
+      });
+      await page.getByRole('button', { name: 'Dependências', exact: true }).click();
+      const deniedState = page.locator('[data-ui-state="denied"]');
+      await deniedState.waitFor();
+      assert.match(await deniedState.innerText(), /Acesso não autorizado/);
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await context.close();
+    } finally {
+      await deniedBrowser.close();
+    }
+  } finally {
+    await pool.query('DELETE FROM dependency_updates WHERE notes LIKE $1', [MARK]).catch(() => {});
+    await pool.query('DELETE FROM dependency_vulnerabilities WHERE audit_id IN (SELECT id FROM dependency_audits WHERE notes LIKE $1)', [MARK]).catch(() => {});
+    await pool.query('DELETE FROM dependency_audits WHERE notes LIKE $1', [MARK]).catch(() => {});
+    for (const id of staffIds) {
+      await pool.query('DELETE FROM auth_access_audit WHERE actor_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_sessions WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_staff_profiles WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_credentials WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_identities WHERE id=$1', [id]).catch(() => {});
+    }
+  }
+});
+
+// UX-PRO-03 — 2ª promoção "com prova": PLT-18 (documentação de manutenção).
+// Além do padrão da 1ª promoção, este cenário exercita ESCRITA real pela UI
+// (POST de documento, PATCH de publicação e PATCH de nova versão), fechando a
+// limitação registrada em UX-PRO-03-PROMOCAO-DEPENDENCIAS-2026-10-27.md.
+test('browser UX-PRO-03: PLT-18 documentação de manutenção (papel, A/B, POST, PATCH, erro e retry)', { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: 'ti' });
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const staffIds = [ti.id, rh.id];
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const MARK = 'qa-plt18-%';
+  const LONG_CONTENT = 'Conteúdo sintético de manutenção usado apenas pelo gate QA. '.repeat(3);
+
+  const seed = async ({ title, slug, category, createdBy, tag }) => {
+    await pool.query('DELETE FROM maintenance_docs WHERE slug LIKE $1', [MARK]);
+    await pool.query(
+      `INSERT INTO maintenance_docs (category, status, title, slug, content, version,
+        is_published, published_at, tags, created_by)
+       VALUES ($1,'publicado',$2,$3,$4,1,true,now(),$5,$6)`,
+      [category, title, slug, LONG_CONTENT, [tag, 'qa-plt18'], createdBy],
+    );
+  };
+
+  try {
+    // ---------- autorização no SERVIDOR ----------
+    await seed({ title: 'QA-PLT18-ALFA — documento sintético de arquitetura', slug: 'qa-plt18-alfa', category: 'arquitetura', createdBy: 'QA-PLT18-A', tag: 'qa-plt18-a' });
+    const deniedByRole = await api('/api/admin/maintenance/docs', { cookie: rhCookie });
+    assert.equal(deniedByRole.status, 403, `rh não pode consultar a documentação: veio ${deniedByRole.status}`);
+    const allowedForTi = await api('/api/admin/maintenance/docs', { cookie: tiCookie });
+    assert.equal(allowedForTi.status, 200);
+    assert.ok(Array.isArray(allowedForTi.body.docs));
+
+    // ---------- estado A: quatro larguras, teclado, sem transbordo ----------
+    const readings = [];
+    for (const [width, height] of [[320, 844], [390, 844], [768, 900], [1440, 900]]) {
+      const browser = await launchBrowser();
+      try {
+        const { context, page } = await openPage(browser, '/admin/ti', tiCookie, { width, height });
+        const tab = page.getByRole('button', { name: 'Documentação de manutenção', exact: true });
+        await tab.waitFor();
+        await tab.focus();
+        const focused = await page.evaluate(() => document.activeElement?.textContent?.trim() || '');
+        assert.match(focused, /Documentação de manutenção/, `a aba precisa receber foco em ${width}`);
+        await page.keyboard.press('Enter');
+        await page.getByRole('heading', { name: 'Documentação de manutenção' }).waitFor();
+        await page.getByText(/Fonte: tabelas/).waitFor();
+        await page.getByText(/QA-PLT18-ALFA/).first().waitFor();
+        const text = await page.locator('body').innerText();
+        assert.match(text, /QA-PLT18-ALFA/);
+        assert.match(text, /qa-plt18-alfa/);
+        assert.match(text, /Data-base:/);
+        assert.doesNotMatch(text, /QA-PLT18-BETA/, `B não pode vazar em ${width}`);
+        assert.doesNotMatch(text, /qa-plt18-beta/);
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(overflow <= 1, `PLT-18 overflow ${overflow} em ${width}`);
+        readings.push({ width, overflow, keyboard: focused });
+        await context.close();
+      } finally {
+        await browser.close();
+      }
+    }
+    assert.deepEqual(readings.map(item => item.width), [320, 390, 768, 1440]);
+
+    // ---------- troca de estado COM detalhe aberto + escrita real pela UI ----------
+    const journeyBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(journeyBrowser, '/admin/ti', tiCookie, { width: 1440, height: 900 });
+      await page.getByRole('button', { name: 'Documentação de manutenção', exact: true }).click();
+      await page.getByText(/QA-PLT18-ALFA/).first().waitFor();
+
+      // Detalhe de A: conteúdo integral e histórico.
+      await page.getByRole('button', { name: 'Abrir e ver histórico' }).first().click();
+      await page.getByRole('heading', { name: 'Documento selecionado' }).waitFor();
+      await page.getByText(/Histórico de versões/).waitFor();
+      assert.match(await page.locator('body').innerText(), /QA-PLT18-ALFA/);
+
+      // Troca para B no banco; "Atualizar leitura" não pode deixar A visível.
+      await seed({ title: 'QA-PLT18-BETA — documento sintético de diagnóstico', slug: 'qa-plt18-beta', category: 'diagnostico', createdBy: 'QA-PLT18-B', tag: 'qa-plt18-b' });
+      await page.getByRole('button', { name: 'Atualizar leitura' }).click();
+      await page.getByText(/QA-PLT18-BETA/).first().waitFor();
+      let text = await page.locator('body').innerText();
+      assert.doesNotMatch(text, /QA-PLT18-ALFA/, 'o documento de A não pode sobrar em B');
+      assert.doesNotMatch(text, /qa-plt18-alfa/);
+      assert.equal(await page.getByRole('heading', { name: 'Documento selecionado' }).count(), 0,
+        'a troca de leitura precisa limpar o detalhe anterior');
+
+      // POST pela interface: formulário -> 201 -> lista atualizada.
+      await page.locator('summary').filter({ hasText: 'Registrar documento' }).click();
+      await page.getByLabel('Título', { exact: true }).fill('Documento criado pela interface QA PLT18');
+      await page.getByLabel('Slug', { exact: false }).fill('qa-plt18-criado-ui');
+      await page.getByLabel('Conteúdo', { exact: true }).fill('Conteúdo sintético criado pela interface do gate QA para provar o POST de documentação de manutenção.');
+      await page.getByLabel('Tags separadas por vírgula', { exact: true }).fill('qa-plt18-ui');
+      await page.getByRole('button', { name: 'Registrar documento' }).click();
+      await page.getByText(/Documento registrado\./).waitFor();
+      await page.getByText(/Documento criado pela interface QA PLT18/).first().waitFor();
+
+      // O mutate reabre o registro devolvido: esperar o h4 do detalhe pronto.
+      await page.getByRole('heading', { name: /Documento criado pela interface QA PLT18 · v1/ }).waitFor();
+      await page.getByRole('button', { name: 'Publicar', exact: true }).click();
+      await page.getByText(/Documento publicado\./).waitFor();
+      await page.getByRole('heading', { name: /Documento criado pela interface QA PLT18 · v1/ }).waitFor();
+      text = await page.locator('body').innerText();
+      assert.match(text, /publicado/, 'a publicação precisa aparecer no detalhe');
+
+      // PATCH de nova versão: outro id, histórico com resumo e autor.
+      await page.locator('summary').filter({ hasText: 'Nova versão com conteúdo revisado' }).click();
+      await page.getByLabel('Novo conteúdo', { exact: false }).fill('Segunda versão sintética do documento de manutenção criada pela interface do gate QA para provar versionamento.');
+      await page.getByRole('button', { name: 'Nova versão', exact: true }).click();
+      await page.getByText(/Nova versão registrada\./).waitFor();
+      // O mutate recarrega a lista e reabre o NOVO id: esperar o detalhe v2.
+      await page.getByRole('heading', { name: /Documento criado pela interface QA PLT18 · v2/ }).waitFor();
+      await page.getByText(/v1 → v2/).first().waitFor();
+      text = await page.locator('body').innerText();
+      assert.match(text, /v1 → v2/, 'o histórico precisa registrar a transição de versão');
+      assert.match(text, /Atualização de conteúdo via TI|change_summary/);
+      await context.close();
+    } finally {
+      await journeyBrowser.close();
+    }
+
+    // ---------- 503: erro declarado e retry sem recarregar ----------
+    const failureBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(failureBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/admin/maintenance/docs'],
+        status: 503, code: 'qa_forced_failure',
+        onPage: p => p.addInitScript(() => { window.__qaFetchOriginal = window.fetch.bind(window); }),
+      });
+      await page.getByRole('button', { name: 'Documentação de manutenção', exact: true }).click();
+      const errorState = page.locator('[data-ui-state="error"]');
+      await errorState.waitFor();
+      assert.match(await errorState.innerText(), /Falha na consulta/);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await page.evaluate(() => { window.fetch = window.__qaFetchOriginal; });
+      await errorState.getByRole('button', { name: 'Tentar novamente' }).click();
+      await page.getByText(/QA-PLT18-BETA/).first().waitFor();
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0, 'retry precisa sair do erro');
+      await context.close();
+    } finally {
+      await failureBrowser.close();
+    }
+
+    // ---------- 403: negado distinto de erro e de vazio ----------
+    const deniedBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(deniedBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/admin/maintenance/docs'],
+        status: 403, code: 'forbidden',
+      });
+      await page.getByRole('button', { name: 'Documentação de manutenção', exact: true }).click();
+      const deniedState = page.locator('[data-ui-state="denied"]');
+      await deniedState.waitFor();
+      assert.match(await deniedState.innerText(), /Acesso não autorizado/);
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await context.close();
+    } finally {
+      await deniedBrowser.close();
+    }
+  } finally {
+    await pool.query('DELETE FROM maintenance_docs WHERE slug LIKE $1', [MARK]).catch(() => {});
+    for (const id of staffIds) {
+      await pool.query('DELETE FROM auth_access_audit WHERE actor_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_sessions WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_staff_profiles WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_credentials WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_identities WHERE id=$1', [id]).catch(() => {});
+    }
+  }
+});
+
+// E17 — validação de UUID 8-4-4-12 recusava TODO uuid real em 7 módulos do
+// servidor. Este cenário usa HTTP real contra PostgreSQL 17 (sem navegador) e
+// prova que, com um UUID canônico, a requisição CHEGA ao banco: a resposta de
+// "registro inexistente" é 404, nunca 400 de validação de id. Antes da
+// correção cada caso devolvia o respectivo `invalid_*_id`.
+test('http E17: UUID canônico chega ao banco nos sete módulos afetados', { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: 'ti' });
+  const cookie = await loginStaffHttp(ti.email);
+  // As rotas /api/admin/hr/* têm um gate granular na borda (employees.write),
+  // anterior ao handler. Provisionar a permissão é preparação de QA, não
+  // mudança de autorização em produção: sem ela o caso de RH nem chega à
+  // validação de UUID que queremos provar.
+  await pool.query(
+    `INSERT INTO auth_permissions (identity_id, permission, scope_type, reason)
+     VALUES ($1, 'employees.write', 'global', 'Gate E17: prova de UUID em RH (QA)')`,
+    [ti.id],
+  );
+  const cases = [];
+  const add = (name, method, pathname, body, uuidError, accepted) =>
+    cases.push({ name, method, pathname, body, uuidError, accepted });
+
+  add('observabilidade/alertas', 'PATCH', `/api/admin/observability/alerts/${randomUUID()}`,
+    { action: 'acknowledge' }, 'invalid_alert_id', [404, 200]);
+  add('privacidade/políticas', 'GET', `/api/admin/privacy/policies/${randomUUID()}`,
+    undefined, 'invalid_policy_id', [404, 200]);
+  add('lgpd/solicitações', 'GET', `/api/admin/lgpd/requests/${randomUUID()}`,
+    undefined, 'invalid_request_id', [404, 200]);
+  add('ambientes/checks', 'POST', '/api/admin/environments/checks',
+    { env_id: randomUUID(), check_type: 'isolation_verify', status: 'passou' }, 'invalid_env_id', [404, 201]);
+  add('orçamentos', 'PATCH', '/api/admin/budgets',
+    { id: randomUUID(), actual_amount: 10 }, 'invalid_id', [404, 200]);
+  add('alertas de uso', 'PATCH', '/api/admin/usage/alerts',
+    { id: randomUUID() }, 'invalid_id', [404, 200]);
+  add('RH/avaliações', 'PATCH', '/api/admin/hr/evaluations',
+    { id: randomUUID(), status: 'em_avaliacao' }, 'invalid_id', [404, 200]);
+
+  const results = [];
+  for (const item of cases) {
+    const response = await api(item.pathname, { method: item.method, body: item.body, cookie });
+    const error = response.body && typeof response.body === 'object' ? response.body.error : null;
+    results.push({ name: item.name, status: response.status, error });
+  }
+  for (let i = 0; i < cases.length; i += 1) {
+    const item = cases[i];
+    const result = results[i];
+    assert.notEqual(result.error, item.uuidError,
+      `${item.name}: UUID canônico foi recusado pela validação (${result.status} ${result.error})`);
+    assert.ok(item.accepted.includes(result.status),
+      `${item.name}: esperado chegar ao banco (${item.accepted.join('/')}), veio ${result.status} ${result.error}`);
+  }
+  try {
+    await pool.query('DELETE FROM auth_permissions WHERE identity_id=$1', [ti.id]).catch(() => {});
+    await pool.query('DELETE FROM auth_sessions WHERE identity_id=$1', [ti.id]).catch(() => {});
+    await pool.query('DELETE FROM auth_staff_profiles WHERE identity_id=$1', [ti.id]).catch(() => {});
+    await pool.query('DELETE FROM auth_credentials WHERE identity_id=$1', [ti.id]).catch(() => {});
+    await pool.query('DELETE FROM auth_identities WHERE id=$1', [ti.id]).catch(() => {});
+  } catch { /* cluster descartável */ }
+});
+
+// UX-PRO-03 — 3ª promoção "com prova": PLT-16 (orçamento, métricas e alertas
+// de uso). Além do padrão das duas primeiras promoções, este cenário prova as
+// QUATRO ações de escrita pela interface. O acknowledge de alerta é um PATCH
+// por UUID — exatamente o endpoint que o E17 destravou em budget-api.mjs.
+test('browser UX-PRO-03: PLT-16 Orçamento e uso (papel, A/B, POST/PATCH, erro e retry)', { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: 'ti' });
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const staffIds = [ti.id, rh.id];
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+
+  const seed = async ({ label, marker, budgetValue }) => {
+    await pool.query("DELETE FROM usage_alerts WHERE title LIKE 'QA-PLT16-%' OR title LIKE '%QA PLT16%'").catch(() => {});
+    await pool.query("DELETE FROM usage_metrics WHERE source LIKE 'qa-plt16-%'").catch(() => {});
+    await pool.query("DELETE FROM operational_budgets WHERE name LIKE 'QA-PLT16-%' OR name LIKE 'Orçamento criado pela interface QA PLT16%'").catch(() => {});
+    const budget = await pool.query(
+      `INSERT INTO operational_budgets (name, category, period_start, period_end,
+        budgeted_amount, actual_amount, alert_threshold_percent, notes, created_by)
+       VALUES ($1,'infra', CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', $2, 100, 80, $3, 'qa-plt16')
+       RETURNING id`,
+      [`QA-PLT16-${label} — orçamento sintético`, budgetValue, marker],
+    );
+    await pool.query(
+      `INSERT INTO usage_metrics (metric, category, value, unit, source)
+       VALUES ('storage_gb','armazenamento',5,'GB',$1)`,
+      [marker],
+    );
+    await pool.query(
+      `INSERT INTO usage_alerts (budget_id, metric, category, severity, title, message,
+        threshold_value, current_value)
+       VALUES ($1,'outro','infra','warning',$2,$3,800,900)`,
+      [budget.rows[0].id, `QA-PLT16-${label} — alerta sintético de uso`, `Alerta sintético QA PLT16 ${label} para reconhecimento no gate de integração.`],
+    );
+  };
+
+  try {
+    // ---------- autorização no SERVIDOR ----------
+    await seed({ label: 'ALFA', marker: 'qa-plt16-a', budgetValue: 1000 });
+    for (const pathname of ['/api/admin/budgets', '/api/admin/usage/metrics', '/api/admin/usage/alerts']) {
+      const denied = await api(pathname, { cookie: rhCookie });
+      assert.equal(denied.status, 403, `rh não pode consultar ${pathname}: veio ${denied.status}`);
+      const allowed = await api(pathname, { cookie: tiCookie });
+      assert.equal(allowed.status, 200, `ti precisa consultar ${pathname}: veio ${allowed.status}`);
+    }
+
+    // ---------- estado A: quatro larguras, teclado, sem transbordo ----------
+    const readings = [];
+    for (const [width, height] of [[320, 844], [390, 844], [768, 900], [1440, 900]]) {
+      const browser = await launchBrowser();
+      try {
+        const { context, page } = await openPage(browser, '/admin/ti', tiCookie, { width, height });
+        const tab = page.getByRole('button', { name: 'Orçamento e uso', exact: true });
+        await tab.waitFor();
+        await tab.focus();
+        const focused = await page.evaluate(() => document.activeElement?.textContent?.trim() || '');
+        assert.match(focused, /Orçamento e uso/, `a aba precisa receber foco em ${width}`);
+        await page.keyboard.press('Enter');
+        await page.getByRole('heading', { name: 'Orçamento e uso' }).waitFor();
+        await page.getByText(/Fonte: tabelas/).waitFor();
+        await page.getByText(/QA-PLT16-ALFA/).first().waitFor();
+        const text = await page.locator('body').innerText();
+        assert.match(text, /QA-PLT16-ALFA/);
+        assert.match(text, /Data-base:/);
+        assert.match(text, /planejamento sintético/i, 'a tela precisa declarar que os valores são sintéticos');
+        assert.doesNotMatch(text, /QA-PLT16-BETA/, `B não pode vazar em ${width}`);
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(overflow <= 1, `PLT-16 overflow ${overflow} em ${width}`);
+        readings.push({ width, overflow });
+        await context.close();
+      } finally {
+        await browser.close();
+      }
+    }
+    assert.deepEqual(readings.map(item => item.width), [320, 390, 768, 1440]);
+
+    // ---------- escrita real pela UI + troca de estado ----------
+    const journeyBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(journeyBrowser, '/admin/ti', tiCookie, { width: 1440, height: 900 });
+      await page.getByRole('button', { name: 'Orçamento e uso', exact: true }).click();
+      await page.getByText(/QA-PLT16-ALFA/).first().waitFor();
+
+      const now = Date.now();
+      const start = new Date(now - 5 * 86400000).toISOString().slice(0, 10);
+      const end = new Date(now + 25 * 86400000).toISOString().slice(0, 10);
+
+      // POST orçamento.
+      await page.locator('summary').filter({ hasText: 'Registrar orçamento' }).click();
+      await page.getByLabel('Nome', { exact: true }).fill('Orçamento criado pela interface QA PLT16');
+      await page.getByLabel('Início do período', { exact: true }).fill(start);
+      await page.getByLabel('Fim do período', { exact: true }).fill(end);
+      await page.getByLabel('Valor orçado', { exact: true }).fill('1000');
+      await page.getByRole('button', { name: 'Registrar orçamento' }).click();
+      await page.getByText(/Orçamento registrado\./).waitFor();
+      await page.getByText(/Orçamento criado pela interface QA PLT16/).first().waitFor();
+
+      // PATCH uso: ao atingir 95% o servidor gera o alerta.
+      const budgetCard = page.locator('li').filter({ hasText: 'Orçamento criado pela interface QA PLT16' }).first();
+      await budgetCard.getByLabel('Novo valor de uso').fill('950');
+      await budgetCard.getByRole('button', { name: 'Atualizar uso' }).click();
+      await page.getByText(/Uso atualizado\./).waitFor();
+      await page.getByText(/em 95\.0%/).first().waitFor();
+
+      // POST métrica.
+      await page.locator('summary').filter({ hasText: 'Registrar métrica' }).click();
+      await page.getByLabel('Origem', { exact: true }).fill('qa-plt16-ui');
+      await page.getByRole('button', { name: 'Registrar métrica' }).click();
+      await page.getByText(/Métrica registrada\./).waitFor();
+
+      // PATCH acknowledge: prova ponta a ponta da correção E17 (uuidRe).
+      const alertCard = page.locator('li').filter({ hasText: 'QA-PLT16-ALFA — alerta sintético' }).first();
+      await alertCard.getByRole('button', { name: 'Reconhecer alerta' }).click();
+      await page.getByText(/Alerta reconhecido\./).waitFor();
+      await page.getByText(/reconhecido por/).first().waitFor();
+
+      // Troca para B no banco: A (e as mensagens antigas) não podem sobrar.
+      await seed({ label: 'BETA', marker: 'qa-plt16-b', budgetValue: 2000 });
+      await page.getByRole('button', { name: 'Atualizar leitura' }).click();
+      await page.getByText(/QA-PLT16-BETA/).first().waitFor();
+      const text = await page.locator('body').innerText();
+      assert.doesNotMatch(text, /QA-PLT16-ALFA/, 'o estado A não pode sobrar na leitura de B');
+      assert.match(text, /QA-PLT16-BETA/);
+      assert.doesNotMatch(text, /Alerta reconhecido\./, 'mensagem de operação antiga não pode sobreviver à releitura');
+      assert.doesNotMatch(text, /Uso atualizado\./);
+      await context.close();
+    } finally {
+      await journeyBrowser.close();
+    }
+
+    // ---------- 503: erro declarado e retry sem recarregar ----------
+    const failureBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(failureBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/admin/budgets'],
+        status: 503, code: 'qa_forced_failure',
+        onPage: p => p.addInitScript(() => { window.__qaFetchOriginal = window.fetch.bind(window); }),
+      });
+      await page.getByRole('button', { name: 'Orçamento e uso', exact: true }).click();
+      const errorState = page.locator('[data-ui-state="error"]');
+      await errorState.waitFor();
+      assert.match(await errorState.innerText(), /Falha na consulta/);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await page.evaluate(() => { window.fetch = window.__qaFetchOriginal; });
+      await errorState.getByRole('button', { name: 'Tentar novamente' }).click();
+      await page.getByText(/QA-PLT16-BETA/).first().waitFor();
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0, 'retry precisa sair do erro');
+      await context.close();
+    } finally {
+      await failureBrowser.close();
+    }
+
+    // ---------- 403: negado distinto de erro e de vazio ----------
+    const deniedBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(deniedBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/admin/budgets'],
+        status: 403, code: 'forbidden',
+      });
+      await page.getByRole('button', { name: 'Orçamento e uso', exact: true }).click();
+      const deniedState = page.locator('[data-ui-state="denied"]');
+      await deniedState.waitFor();
+      assert.match(await deniedState.innerText(), /Acesso não autorizado/);
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await context.close();
+    } finally {
+      await deniedBrowser.close();
+    }
+  } finally {
+    await pool.query("DELETE FROM usage_alerts WHERE title LIKE 'QA-PLT16-%' OR title LIKE '%QA PLT16%'").catch(() => {});
+    await pool.query("DELETE FROM usage_metrics WHERE source LIKE 'qa-plt16-%'").catch(() => {});
+    await pool.query("DELETE FROM operational_budgets WHERE name LIKE 'QA-PLT16-%' OR name LIKE 'Orçamento criado pela interface QA PLT16%'").catch(() => {});
+    for (const id of staffIds) {
+      await pool.query('DELETE FROM auth_access_audit WHERE actor_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_sessions WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_staff_profiles WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_credentials WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_identities WHERE id=$1', [id]).catch(() => {});
+    }
+  }
+});
+
+// UX-PRO-03 — 4ª promoção "com prova": PLT-17 (inventário declarativo de
+// ambientes e verificações de isolamento). Além do padrão das promoções
+// anteriores, esta fatia prova que o aviso declarativo aparece em todas as
+// larguras e que a regra de negócio do servidor (produção exige sinalizador de
+// dados reais) chega traduzida à interface. O gate NUNCA cria um ambiente com
+// sinalizador de produção ativado com sucesso — apenas exercita a recusa.
+test('browser UX-PRO-03: PLT-17 Ambientes e isolamento (papel, A/B, POST/PATCH, erro e retry)', { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: 'ti' });
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const staffIds = [ti.id, rh.id];
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+
+  const seed = async ({ label, dbName, notes }) => {
+    await pool.query("DELETE FROM environments WHERE name LIKE 'QA-PLT17-%' OR name LIKE 'Ambiente criado pela interface QA PLT17%' OR name LIKE 'Ambiente inválido QA PLT17%'").catch(() => {});
+    const env = await pool.query(
+      `INSERT INTO environments (name, env_type, db_name, db_user, storage_bucket,
+        domain, is_production, has_real_data, status, notes, created_by)
+       VALUES ($1,'development',$2,$3,$4,NULL,false,false,'em_verificacao',$5,'qa-plt17')
+       RETURNING id`,
+      [`QA-PLT17-${label}`, dbName, `${dbName}_user`, `qa-plt17-${label.toLowerCase()}-bucket`, notes],
+    );
+    await pool.query(
+      `INSERT INTO env_data_checks (env_id, check_type, status, details, checked_by)
+       VALUES ($1,'account_separation','pendente',$2::jsonb,$3)`,
+      [env.rows[0].id, JSON.stringify({ synthetic: true, label }), `QA-PLT17-${label}`],
+    );
+  };
+
+  try {
+    // ---------- autorização no SERVIDOR ----------
+    await seed({ label: 'ALFA', dbName: 'qa_plt17_a', notes: 'qa-plt17-a' });
+    for (const pathname of ['/api/admin/environments', '/api/admin/environments/checks']) {
+      const denied = await api(pathname, { cookie: rhCookie });
+      assert.equal(denied.status, 403, `rh não pode consultar ${pathname}: veio ${denied.status}`);
+      const allowed = await api(pathname, { cookie: tiCookie });
+      assert.equal(allowed.status, 200, `ti precisa consultar ${pathname}: veio ${allowed.status}`);
+    }
+
+    // ---------- estado A: quatro larguras, teclado, aviso, sem transbordo ----------
+    const readings = [];
+    for (const [width, height] of [[320, 844], [390, 844], [768, 900], [1440, 900]]) {
+      const browser = await launchBrowser();
+      try {
+        const { context, page } = await openPage(browser, '/admin/ti', tiCookie, { width, height });
+        const tab = page.getByRole('button', { name: 'Ambientes e isolamento', exact: true });
+        await tab.waitFor();
+        await tab.focus();
+        const focused = await page.evaluate(() => document.activeElement?.textContent?.trim() || '');
+        assert.match(focused, /Ambientes e isolamento/, `a aba precisa receber foco em ${width}`);
+        await page.keyboard.press('Enter');
+        await page.getByRole('heading', { name: 'Ambientes e isolamento' }).waitFor();
+        await page.getByText(/Fonte: tabelas/).waitFor();
+        await page.getByText(/QA-PLT17-ALFA/).first().waitFor();
+        const text = await page.locator('body').innerText();
+        assert.match(text, /QA-PLT17-ALFA/);
+        assert.match(text, /inventário declarativo/i, 'o aviso declarativo precisa estar visível');
+        assert.match(text, /não conecta/i);
+        assert.match(text, /NO-GO/);
+        assert.match(text, /decisão do proprietário/i);
+        assert.match(text, /Data-base:/);
+        assert.doesNotMatch(text, /QA-PLT17-BETA/, `B não pode vazar em ${width}`);
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(overflow <= 1, `PLT-17 overflow ${overflow} em ${width}`);
+        readings.push({ width, overflow });
+        await context.close();
+      } finally {
+        await browser.close();
+      }
+    }
+    assert.deepEqual(readings.map(item => item.width), [320, 390, 768, 1440]);
+
+    // ---------- escrita real pela UI + erro traduzido + troca de estado ----------
+    const journeyBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(journeyBrowser, '/admin/ti', tiCookie, { width: 1440, height: 900 });
+      const openDetails = async name => {
+        const summary = page.locator('summary').filter({ hasText: name }).first();
+        const isOpen = await summary.evaluate(element => element.parentElement?.open ?? false);
+        if (!isOpen) await summary.click();
+      };
+      await page.getByRole('button', { name: 'Ambientes e isolamento', exact: true }).click();
+      await page.getByText(/QA-PLT17-ALFA/).first().waitFor();
+
+      // POST ambiente — deliberadamente development, sem sinalizadores reais.
+      await openDetails('Registrar ambiente');
+      await page.getByLabel('Nome', { exact: true }).fill('Ambiente criado pela interface QA PLT17');
+      await page.getByLabel('Banco', { exact: true }).fill('qa_plt17_ui_db');
+      await page.getByLabel('Usuário do banco', { exact: true }).fill('qa_plt17_ui_user');
+      await page.getByLabel('Bucket de armazenamento', { exact: true }).fill('qa-plt17-ui-bucket');
+      await page.getByRole('button', { name: 'Registrar ambiente' }).click();
+      await page.getByText(/Ambiente registrado no inventário\./).waitFor();
+      await page.getByText(/Ambiente criado pela interface QA PLT17/).first().waitFor();
+
+      // PATCH verificação de isolamento (prova do E17 por UUID).
+      const envCard = page.locator('li').filter({ hasText: 'Ambiente criado pela interface QA PLT17' }).first();
+      await envCard.getByRole('button', { name: 'Verificar isolamento' }).click();
+      await page.getByText(/Isolamento confirmado\./).waitFor();
+
+      // POST verificação: seleciona o ambiente pelo botão do card.
+      const envCard2 = page.locator('li').filter({ hasText: 'Ambiente criado pela interface QA PLT17' }).first();
+      await envCard2.getByRole('button', { name: 'Usar para verificação' }).click();
+      await openDetails('Registrar verificação');
+      await page.getByRole('button', { name: 'Registrar verificação' }).click();
+      await page.getByText(/Verificação registrada\./).waitFor();
+
+      // Erro real do servidor traduzido: produção sem sinalizador de dados reais.
+      await openDetails('Registrar ambiente');
+      await page.getByLabel('Nome', { exact: true }).fill('Ambiente inválido QA PLT17');
+      await page.getByLabel('Banco', { exact: true }).fill('qa_plt17_bad_db');
+      await page.getByLabel('Usuário do banco', { exact: true }).fill('qa_plt17_bad_user');
+      await page.getByLabel('Bucket de armazenamento', { exact: true }).fill('qa-plt17-bad-bucket');
+      await page.getByLabel('Sinalizador declarativo: produção').check();
+      await page.getByRole('button', { name: 'Registrar ambiente' }).click();
+      await page.getByText(/exige o sinalizador de dados reais/).waitFor();
+      assert.equal(await page.getByText(/Ambiente inválido QA PLT17/).count(), 0,
+        'o ambiente recusado pelo servidor não pode aparecer como criado');
+
+      // Troca para B no banco: A e mensagens antigas não podem sobrar.
+      await seed({ label: 'BETA', dbName: 'qa_plt17_b', notes: 'qa-plt17-b' });
+      await page.getByRole('button', { name: 'Atualizar leitura' }).click();
+      await page.getByText(/QA-PLT17-BETA/).first().waitFor();
+      const text = await page.locator('body').innerText();
+      assert.doesNotMatch(text, /QA-PLT17-ALFA/, 'o estado A não pode sobrar na leitura de B');
+      assert.match(text, /QA-PLT17-BETA/);
+      assert.doesNotMatch(text, /Isolamento confirmado\./, 'mensagem antiga não pode sobreviver à releitura');
+      assert.doesNotMatch(text, /exige o sinalizador de dados reais/);
+      await context.close();
+    } finally {
+      await journeyBrowser.close();
+    }
+
+    // ---------- 503: erro declarado e retry sem recarregar ----------
+    const failureBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(failureBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/admin/environments'],
+        status: 503, code: 'qa_forced_failure',
+        onPage: p => p.addInitScript(() => { window.__qaFetchOriginal = window.fetch.bind(window); }),
+      });
+      await page.getByRole('button', { name: 'Ambientes e isolamento', exact: true }).click();
+      const errorState = page.locator('[data-ui-state="error"]');
+      await errorState.waitFor();
+      assert.match(await errorState.innerText(), /Falha na consulta/);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await page.evaluate(() => { window.fetch = window.__qaFetchOriginal; });
+      await errorState.getByRole('button', { name: 'Tentar novamente' }).click();
+      await page.getByText(/QA-PLT17-BETA/).first().waitFor();
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0, 'retry precisa sair do erro');
+      await context.close();
+    } finally {
+      await failureBrowser.close();
+    }
+
+    // ---------- 403: negado distinto de erro e de vazio ----------
+    const deniedBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(deniedBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/admin/environments'],
+        status: 403, code: 'forbidden',
+      });
+      await page.getByRole('button', { name: 'Ambientes e isolamento', exact: true }).click();
+      const deniedState = page.locator('[data-ui-state="denied"]');
+      await deniedState.waitFor();
+      assert.match(await deniedState.innerText(), /Acesso não autorizado/);
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await context.close();
+    } finally {
+      await deniedBrowser.close();
+    }
+  } finally {
+    await pool.query("DELETE FROM environments WHERE name LIKE 'QA-PLT17-%' OR name LIKE 'Ambiente criado pela interface QA PLT17%' OR name LIKE 'Ambiente inválido QA PLT17%'").catch(() => {});
+    for (const id of staffIds) {
+      await pool.query('DELETE FROM auth_access_audit WHERE actor_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_sessions WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_staff_profiles WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_credentials WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_identities WHERE id=$1', [id]).catch(() => {});
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------
+// UX-PRO-03 — 5ª promoção com prova: PLT-11 retenção por categoria, exceções
+// formais, jobs de descarte e histórico minimizado. Papel admin/ti no servidor,
+// escrita real pela UI, erro traduzido, A/B e retry em Chromium real.
+// ---------------------------------------------------------------------------
+test('browser UX-PRO-03: PLT-11 Retenção e descarte (papel, A/B, POST/PATCH, job, erro e retry)', { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: 'ti' });
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const staffIds = [ti.id, rh.id];
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+
+  const cleanup = async () => {
+    await pool.query("DELETE FROM disposal_logs WHERE job_id IN (SELECT id FROM disposal_jobs WHERE notes LIKE 'QA-PLT11-%')").catch(() => {});
+    await pool.query("DELETE FROM disposal_jobs WHERE notes LIKE 'QA-PLT11-%'").catch(() => {});
+    await pool.query("DELETE FROM retention_exceptions WHERE field_reference LIKE 'QA-PLT11-%'").catch(() => {});
+    await pool.query("DELETE FROM data_retention_policies WHERE field_pattern LIKE 'QA-PLT11-%' OR description LIKE 'QA-PLT11-%'").catch(() => {});
+  };
+  const seed = async label => {
+    await cleanup();
+    await pool.query(
+      `INSERT INTO data_retention_policies (category, field_pattern, retention_days, description, legal_basis, disposal_method, exceptional_retention_allowed, max_exception_days, created_by)
+       VALUES ('contato',$1,365,$2,'cumprimento_legal','exclusao_logica',true,730,'qa-plt11')`,
+      [`QA-PLT11-${label}-*`, `QA-PLT11-${label} política sintética de retenção para conferência em navegador.`],
+    );
+    await pool.query(
+      `INSERT INTO retention_exceptions (category, field_reference, reason, justification, status, requested_retention_days, expires_at, requested_by)
+       VALUES ('contato',$1,$2,$3,'solicitado',180,CURRENT_DATE + 180,'qa-plt11')`,
+      [`QA-PLT11-${label} campo`, `QA-PLT11-${label} motivo sintético com mais de dez caracteres.`,
+        `QA-PLT11-${label} justificativa sintética com mais de dez caracteres.`],
+    );
+  };
+
+  try {
+    // ---------- autorização no SERVIDOR ----------
+    await seed('ALFA');
+    for (const pathname of ['/api/admin/retention/policies', '/api/admin/retention/disposal/jobs']) {
+      const denied = await api(pathname, { cookie: rhCookie });
+      assert.equal(denied.status, 403, `rh não pode consultar ${pathname}: veio ${denied.status}`);
+      const allowed = await api(pathname, { cookie: tiCookie });
+      assert.equal(allowed.status, 200, `ti precisa consultar ${pathname}: veio ${allowed.status}`);
+    }
+
+    // ---------- estado A: quatro larguras, teclado, fonte e honestidade ----------
+    const readings = [];
+    for (const [width, height] of [[320, 844], [390, 844], [768, 900], [1440, 900]]) {
+      const browser = await launchBrowser();
+      try {
+        const { context, page } = await openPage(browser, '/admin/ti', tiCookie, { width, height });
+        const tab = page.getByRole('button', { name: 'Retenção e descarte', exact: true });
+        await tab.waitFor();
+        await tab.focus();
+        const focused = await page.evaluate(() => document.activeElement?.textContent?.trim() || '');
+        assert.match(focused, /Retenção e descarte/, `a aba precisa receber foco em ${width}`);
+        await page.keyboard.press('Enter');
+        await page.getByRole('heading', { name: 'Retenção e descarte' }).waitFor();
+        await page.getByText(/Fonte: tabelas/).waitFor();
+        await page.getByText(/QA-PLT11-ALFA/).first().waitFor();
+        const text = await page.locator('body').innerText();
+        assert.match(text, /QA-PLT11-ALFA/);
+        assert.match(text, /Data-base:/);
+        assert.match(text, /simulação sintética/i);
+        assert.match(text, /não apaga dados pessoais reais/i);
+        assert.match(text, /parecer jurídico/i);
+        assert.match(text, /NO-GO/);
+        assert.doesNotMatch(text, /QA-PLT11-BETA/, `B não pode vazar em ${width}`);
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(overflow <= 1, `PLT-11 overflow ${overflow} em ${width}`);
+        readings.push({ width, overflow });
+        await context.close();
+      } finally {
+        await browser.close();
+      }
+    }
+    assert.deepEqual(readings.map(item => item.width), [320, 390, 768, 1440]);
+
+    // ---------- escrita real pela UI: POST, PATCH, job e erro traduzido ----------
+    const journeyBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(journeyBrowser, '/admin/ti', tiCookie, { width: 1440, height: 900 });
+      const openDetails = async name => {
+        const summary = page.locator('summary').filter({ hasText: name }).first();
+        const isOpen = await summary.evaluate(element => element.parentElement?.open ?? false);
+        if (!isOpen) await summary.click();
+      };
+      await page.getByRole('button', { name: 'Retenção e descarte', exact: true }).click();
+      await page.getByText(/QA-PLT11-ALFA/).first().waitFor();
+
+      // POST política — upsert com descrição válida.
+      await openDetails('Registrar política de retenção');
+      await page.getByLabel('Padrão de campo').fill('QA-PLT11-UI campo');
+      await page.getByLabel('Descrição da finalidade').fill('QA-PLT11 política criada pela interface com finalidade declarada.');
+      await page.getByRole('button', { name: 'Salvar política' }).click();
+      await page.getByText(/Política de retenção registrada\./).waitFor();
+      await page.getByText(/QA-PLT11-UI campo/).first().waitFor();
+
+      // Erro real do servidor traduzido: descrição curta demais.
+      await openDetails('Registrar política de retenção');
+      await page.getByLabel('Descrição da finalidade').fill('curta');
+      await page.getByRole('button', { name: 'Salvar política' }).click();
+      await page.getByText(/descrição da finalidade precisa ter pelo menos 10 caracteres/i).waitFor();
+
+      // POST exceção formal.
+      await openDetails('Solicitar exceção formal');
+      await page.getByLabel('Referência do campo').fill('QA-PLT11-UI exceção');
+      await page.getByLabel('Motivo da exceção').fill('QA-PLT11 motivo sintético com mais de dez caracteres.');
+      await page.getByLabel('Justificativa da exceção').fill('QA-PLT11 justificativa sintética com mais de dez caracteres.');
+      await page.getByRole('button', { name: 'Solicitar exceção formal' }).click();
+      await page.getByText(/Exceção formal registrada\./).waitFor();
+      await page.getByText(/QA-PLT11-UI exceção/).first().waitFor();
+
+      // PATCH por UUID (prova do E17 neste módulo): aprovar exceção.
+      const card = page.locator('li').filter({ hasText: 'QA-PLT11-UI exceção' }).first();
+      await card.getByRole('button', { name: 'Usar para revisão' }).click();
+      await openDetails('Atualizar status da exceção');
+      await page.getByLabel('Próximo status').selectOption('aprovado');
+      await page.getByLabel('Dias aprovados').fill('200');
+      await page.getByRole('button', { name: 'Atualizar status da exceção' }).click();
+      await page.getByText(/Status da exceção atualizado\./).waitFor();
+
+      // POST job de descarte — simulação sintética auditada.
+      await page.getByLabel('Notas do job').fill('QA-PLT11 job sintético de conferência');
+      await page.getByRole('button', { name: 'Executar job de descarte' }).click();
+      await page.getByText(/Job de descarte executado \(simulação sintética\)\./).waitFor();
+
+      // Troca para B no banco: A e mensagens antigas não podem sobrar.
+      await seed('BETA');
+      await page.getByRole('button', { name: 'Atualizar leitura' }).click();
+      await page.getByText(/QA-PLT11-BETA/).first().waitFor();
+      const text = await page.locator('body').innerText();
+      assert.doesNotMatch(text, /QA-PLT11-ALFA/, 'o estado A não pode sobrar na leitura de B');
+      assert.doesNotMatch(text, /QA-PLT11-UI campo/, 'registro criado em A não pode sobreviver a B');
+      assert.match(text, /QA-PLT11-BETA/);
+      assert.doesNotMatch(text, /Política de retenção registrada\./, 'mensagem antiga não pode sobreviver à releitura');
+      assert.doesNotMatch(text, /descrição da finalidade precisa ter pelo menos 10/);
+      await context.close();
+    } finally {
+      await journeyBrowser.close();
+    }
+
+    // ---------- 503: erro declarado e retry sem recarregar ----------
+    const failureBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(failureBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/admin/retention/policies'],
+        status: 503, code: 'qa_forced_failure',
+        onPage: p => p.addInitScript(() => { window.__qaFetchOriginal = window.fetch.bind(window); }),
+      });
+      await page.getByRole('button', { name: 'Retenção e descarte', exact: true }).click();
+      const errorState = page.locator('[data-ui-state="error"]');
+      await errorState.waitFor();
+      assert.match(await errorState.innerText(), /Falha na consulta/);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await page.evaluate(() => { window.fetch = window.__qaFetchOriginal; });
+      await errorState.getByRole('button', { name: 'Tentar novamente' }).click();
+      await page.getByText(/QA-PLT11-BETA/).first().waitFor();
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0, 'retry precisa sair do erro');
+      await context.close();
+    } finally {
+      await failureBrowser.close();
+    }
+
+    // ---------- 403: negado distinto de erro e de vazio ----------
+    const deniedBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(deniedBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/admin/retention/policies'],
+        status: 403, code: 'forbidden',
+      });
+      await page.getByRole('button', { name: 'Retenção e descarte', exact: true }).click();
+      const deniedState = page.locator('[data-ui-state="denied"]');
+      await deniedState.waitFor();
+      assert.match(await deniedState.innerText(), /Acesso não autorizado/);
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await context.close();
+    } finally {
+      await deniedBrowser.close();
+    }
+  } finally {
+    await cleanup();
+    for (const id of staffIds) {
+      await pool.query('DELETE FROM auth_access_audit WHERE actor_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_sessions WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_staff_profiles WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_credentials WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_identities WHERE id=$1', [id]).catch(() => {});
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------
+// UX-PRO-03 — 6ª promoção com prova: PLT-13 configurações, flags, manutenção,
+// rollout e reversão. Papel admin/ti no servidor, segredo mascarado, separação
+// negócio/infra, escrita real, A/B e retry em Chromium real.
+// ---------------------------------------------------------------------------
+test('browser UX-PRO-03: PLT-13 Configurações e rollout (papel, A/B, POST/PATCH, segredo, erro e retry)', { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: 'ti' });
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const staffIds = [ti.id, rh.id];
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+
+  const cleanup = async () => {
+    // ILIKE: a API normaliza key para minúsculas, enquanto o seed usa
+    // maiúsculas; sem isso a flag criada pela UI sobreviveria ao estado B.
+    await pool.query("DELETE FROM config_history WHERE flag_id IN (SELECT id FROM config_flags WHERE key ILIKE 'QA-PLT13-%')").catch(() => {});
+    await pool.query("DELETE FROM rollout_plans WHERE title ILIKE 'QA-PLT13-%' OR flag_id IN (SELECT id FROM config_flags WHERE key ILIKE 'QA-PLT13-%')").catch(() => {});
+    await pool.query("DELETE FROM maintenance_windows WHERE title ILIKE 'QA-PLT13-%'").catch(() => {});
+    await pool.query("DELETE FROM config_flags WHERE key ILIKE 'QA-PLT13-%'").catch(() => {});
+  };
+  const seed = async label => {
+    await cleanup();
+    const flag = await pool.query(
+      `INSERT INTO config_flags (key, category, status, value, description, is_secret, is_business, environment, rollout_percentage, created_by)
+       VALUES ($1,'infra','ativo',$2::jsonb,$3,false,false,'development',25,'qa-plt13') RETURNING id`,
+      [`QA-PLT13-${label}-flag`, JSON.stringify({ synthetic: true, label }),
+        `QA-PLT13-${label} flag sintética de infraestrutura para conferência.`],
+    );
+    await pool.query(
+      `INSERT INTO maintenance_windows (title, description, scheduled_start, scheduled_end, affected_services, is_business_impact, rollback_plan, created_by)
+       VALUES ($1,$2,now() + interval '1 day',now() + interval '1 day 2 hours',ARRAY['api','db'],false,$3,'qa-plt13')`,
+      [`QA-PLT13-${label} janela de manutenção`,
+        `QA-PLT13-${label} descrição sintética com mais de vinte caracteres.`,
+        `QA-PLT13-${label} plano de reversão declarado`],
+    );
+    await pool.query(
+      `INSERT INTO rollout_plans (flag_id, title, description, target_percentage, steps, created_by)
+       VALUES ($1,$2,$3,100,'[]'::jsonb,'qa-plt13')`,
+      [flag.rows[0].id, `QA-PLT13-${label} plano de rollout`,
+        `QA-PLT13-${label} descrição sintética com mais de vinte caracteres.`],
+    );
+  };
+
+  try {
+    // ---------- autorização no SERVIDOR ----------
+    await seed('ALFA');
+    for (const pathname of ['/api/admin/config/flags', '/api/admin/config/maintenance', '/api/admin/config/rollouts']) {
+      const denied = await api(pathname, { cookie: rhCookie });
+      assert.equal(denied.status, 403, `rh não pode consultar ${pathname}: veio ${denied.status}`);
+      const allowed = await api(pathname, { cookie: tiCookie });
+      assert.equal(allowed.status, 200, `ti precisa consultar ${pathname}: veio ${allowed.status}`);
+    }
+
+    // ---------- estado A: quatro larguras, teclado, fonte e honestidade ----------
+    const readings = [];
+    for (const [width, height] of [[320, 844], [390, 844], [768, 900], [1440, 900]]) {
+      const browser = await launchBrowser();
+      try {
+        const { context, page } = await openPage(browser, '/admin/ti', tiCookie, { width, height });
+        const tab = page.getByRole('button', { name: 'Configurações e rollout', exact: true });
+        await tab.waitFor();
+        await tab.focus();
+        const focused = await page.evaluate(() => document.activeElement?.textContent?.trim() || '');
+        assert.match(focused, /Configurações e rollout/, `a aba precisa receber foco em ${width}`);
+        await page.keyboard.press('Enter');
+        await page.getByRole('heading', { name: 'Configurações e rollout' }).waitFor();
+        await page.getByText(/Fonte: tabelas/).waitFor();
+        await page.getByText(/QA-PLT13-ALFA/).first().waitFor();
+        const text = await page.locator('body').innerText();
+        assert.match(text, /QA-PLT13-ALFA/);
+        assert.match(text, /Data-base:/);
+        assert.match(text, /mascarado pelo servidor/i, 'a UI precisa declarar o mascaramento de segredos');
+        assert.match(text, /inventário declarativo/i);
+        assert.match(text, /não ativa produção/i);
+        assert.match(text, /NO-GO/);
+        assert.match(text, /decisão do proprietário/i);
+        assert.doesNotMatch(text, /QA-PLT13-BETA/, `B não pode vazar em ${width}`);
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(overflow <= 1, `PLT-13 overflow ${overflow} em ${width}`);
+        readings.push({ width, overflow });
+        await context.close();
+      } finally {
+        await browser.close();
+      }
+    }
+    assert.deepEqual(readings.map(item => item.width), [320, 390, 768, 1440]);
+
+    // ---------- escrita real pela UI ----------
+    const journeyBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(journeyBrowser, '/admin/ti', tiCookie, { width: 1440, height: 900 });
+      // O `mutate` mostra a mensagem de sucesso ANTES de terminar o reload,
+      // que remonta a aba e fecha os <details>. Esperar aria-busy=false
+      // garante que a leitura estabilizou; setar `open` direto evita toggle.
+      const openDetails = async name => {
+        await page.waitForFunction(() => {
+          const section = document.querySelector('section[aria-busy]');
+          return section && section.getAttribute('aria-busy') === 'false';
+        }, null, { timeout: 20000 });
+        const summary = page.locator('summary').filter({ hasText: name }).first();
+        await summary.evaluate(element => {
+          const details = element.closest('details');
+          if (details) details.open = true;
+        });
+      };
+      await page.getByRole('button', { name: 'Configurações e rollout', exact: true }).click();
+      await page.getByText(/QA-PLT13-ALFA/).first().waitFor();
+
+      // POST flag — inventário declarativo, ambiente development.
+      await openDetails('Registrar flag');
+      await page.getByLabel('Chave da flag').fill('QA-PLT13-UI flag');
+      await page.getByLabel('Descrição da flag').fill('QA-PLT13 flag criada pela interface, apenas inventário.');
+      await page.getByRole('button', { name: 'Salvar flag' }).click();
+      await page.getByText(/Flag registrada no inventário\./).waitFor();
+      await page.getByText(/qa-plt13-ui_flag/i).first().waitFor();
+
+      // Erro real do servidor: segredo de infra não pode ser regra de negócio.
+      await openDetails('Registrar flag');
+      await page.getByLabel('Chave da flag').fill('QA-PLT13-UI segredo invalido');
+      await page.getByLabel('Descrição da flag').fill('QA-PLT13 combinação inválida de segredo com negócio.');
+      await page.getByLabel('Segredo de infraestrutura').check();
+      await page.getByRole('button', { name: 'Salvar flag' }).click();
+      await page.getByText(/flag secreta de infraestrutura não pode ser marcada como regra de negócio/i).waitFor();
+
+      // GET detalhe + PATCH com histórico (prova do E17 por UUID).
+      const flagCard = page.locator('li').filter({ hasText: /qa-plt13-ui_flag/i }).first();
+      await flagCard.getByRole('button', { name: 'Abrir flag' }).click();
+      await page.getByText(/Histórico \(1\)/).waitFor();
+      await openDetails('Atualizar flag');
+      await page.getByLabel('Novo rollout').fill('60');
+      await page.getByLabel('Motivo da alteração').fill('QA-PLT13 ajuste de rollout pelo console');
+      await page.getByRole('button', { name: 'Atualizar flag' }).click();
+      await page.getByText(/Flag atualizada com histórico registrado\./).waitFor();
+
+      // POST rollback: volta ao valor anterior do histórico.
+      await page.getByRole('button', { name: 'Reverter ao histórico' }).first().click();
+      await page.getByText(/Flag revertida ao valor anterior do histórico\./).waitFor();
+
+      // POST manutenção e PATCH de transição.
+      await openDetails('Agendar manutenção');
+      await page.getByLabel('Título da janela').fill('QA-PLT13-UI janela de manutenção');
+      await page.getByLabel('Descrição da janela').fill('QA-PLT13 janela sintética com mais de vinte caracteres para conferência.');
+      await page.getByLabel('Início da janela').fill('2026-11-01T10:00');
+      await page.getByLabel('Fim da janela').fill('2026-11-01T12:00');
+      await page.getByLabel('Plano de reversão').fill('QA-PLT13 reverter janela e notificar responsáveis');
+      await page.getByRole('button', { name: 'Agendar manutenção' }).click();
+      await page.getByText(/Janela de manutenção agendada\./).waitFor();
+      await page.getByText(/QA-PLT13-UI janela de manutenção/).first().waitFor();
+
+      // POST rollout e PATCH de aprovação.
+      await openDetails('Criar plano de rollout');
+      await page.getByLabel('Título do rollout').fill('QA-PLT13-UI plano de rollout');
+      await page.getByLabel('Descrição do rollout').fill('QA-PLT13 plano sintético com mais de vinte caracteres para conferência.');
+      await page.getByRole('button', { name: 'Criar plano de rollout' }).click();
+      await page.getByText(/Plano de rollout criado\./).waitFor();
+      const rolloutCard = page.locator('li').filter({ hasText: 'QA-PLT13-UI plano de rollout' }).first();
+      await rolloutCard.getByRole('button', { name: 'Aprovar rollout' }).click();
+      await page.getByText(/Rollout aprovado\./).waitFor();
+
+      // Troca para B no banco: A, a seleção e mensagens antigas não podem sobrar.
+      await seed('BETA');
+      await page.getByRole('button', { name: 'Atualizar leitura' }).click();
+      await page.getByText(/QA-PLT13-BETA/).first().waitFor();
+      const text = await page.locator('body').innerText();
+      assert.doesNotMatch(text, /QA-PLT13-ALFA/, 'o estado A não pode sobrar na leitura de B');
+      assert.doesNotMatch(text, /qa-plt13-ui_flag/i, 'flag criada em A não pode sobreviver a B');
+      assert.doesNotMatch(text, /Flag selecionada:/, 'a seleção órfã de A precisa ser limpa no reload');
+      assert.match(text, /QA-PLT13-BETA/);
+      assert.doesNotMatch(text, /Flag registrada no inventário\./, 'mensagem antiga não pode sobreviver à releitura');
+      assert.doesNotMatch(text, /Rollout aprovado\./);
+      assert.doesNotMatch(text, /flag secreta de infraestrutura não pode ser marcada/);
+      await context.close();
+    } finally {
+      await journeyBrowser.close();
+    }
+
+    // ---------- 503: erro declarado e retry sem recarregar ----------
+    const failureBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(failureBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/admin/config/flags'],
+        status: 503, code: 'qa_forced_failure',
+        onPage: p => p.addInitScript(() => { window.__qaFetchOriginal = window.fetch.bind(window); }),
+      });
+      await page.getByRole('button', { name: 'Configurações e rollout', exact: true }).click();
+      const errorState = page.locator('[data-ui-state="error"]');
+      await errorState.waitFor();
+      assert.match(await errorState.innerText(), /Falha na consulta/);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await page.evaluate(() => { window.fetch = window.__qaFetchOriginal; });
+      await errorState.getByRole('button', { name: 'Tentar novamente' }).click();
+      await page.getByText(/QA-PLT13-BETA/).first().waitFor();
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0, 'retry precisa sair do erro');
+      await context.close();
+    } finally {
+      await failureBrowser.close();
+    }
+
+    // ---------- 403: negado distinto de erro e de vazio ----------
+    const deniedBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(deniedBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/admin/config/flags'],
+        status: 403, code: 'forbidden',
+      });
+      await page.getByRole('button', { name: 'Configurações e rollout', exact: true }).click();
+      const deniedState = page.locator('[data-ui-state="denied"]');
+      await deniedState.waitFor();
+      assert.match(await deniedState.innerText(), /Acesso não autorizado/);
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await context.close();
+    } finally {
+      await deniedBrowser.close();
+    }
+  } finally {
+    await cleanup();
+    for (const id of staffIds) {
+      await pool.query('DELETE FROM auth_access_audit WHERE actor_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_sessions WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_staff_profiles WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_credentials WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_identities WHERE id=$1', [id]).catch(() => {});
+    }
   }
 });

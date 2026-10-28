@@ -1,3 +1,5 @@
+> **Estado vigente (26/10/2026, `main` 6b4212d):** este documento é **histórico** — registra o estado da sua própria data e pode conter filas/contagens já superadas. A fonte única de estado é [`STATUS-VIGENTE.md`](STATUS-VIGENTE.md); a auditoria completa está em [`AUDITORIA-FATIAS-PENDENTES-E-ERROS-2026-10-26.md`](AUDITORIA-FATIAS-PENDENTES-E-ERROS-2026-10-26.md). Produção segue **NO-GO**.
+
 # Estado da execução — entrega local integral
 
 ## Estado vigente — Aplicação em banco de destino: decisões, ensaio e runbook (2026-10-04)
