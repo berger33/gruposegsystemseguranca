@@ -47,6 +47,13 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 | `somente_documento` | só há citação em documentos | **92** |
 | `somente_codigo` / `sem_evidencia_legivel` | — | **0** |
 
+> **Reconciliação de 28/10/2026 (E23):** as contagens desta seção são as da
+> fotografia de 27/10. O JSON/CSV vigentes em `main` `5f45fc0` registram
+> **23 `gate_nomeado`**, **113 `mencionado_em_gate`** e **86 `somente_documento`**,
+> com **21** `a_revalidar` sem menção em gate e **1.600** arquivos varridos. A
+> diferença vem do mapa SEC (27→28/10) e da guarda de UI do CLI-03. Os números
+> do artefato gerado prevalecem sobre este texto; `--check` é a fonte.
+
 > **Aviso central:** "mencionado em gate" **não é prova de jornada**. Um ID pode
 > ser citado num assert de vocabulário e ainda assim não ter jornada, RBAC,
 > A/B, erro/vazio ou aceite. A classe só diz **onde procurar**.

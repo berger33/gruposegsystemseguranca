@@ -2,8 +2,10 @@ node_modules/
 .next*/
 out/
 dist/*
-# Aviso de pacote obsoleto precisa acompanhar o código (E13).
-!dist/LEIA-ME.md
+# E21: o aviso de pacote obsoleto é versionado UMA vez, em downloads/LEIA-ME.md.
+# tests/package-artifacts.test.mjs materializa dist/LEIA-ME.md a partir dele a cada
+# execução; como dist/ está fora dos snapshots do ambiente, mantê-lo no índice
+# deixaria a árvore suja (?? dist/LEIA-ME.md) sem garantir o arquivo no clone.
 .env
 .env.*
 !.env.example
