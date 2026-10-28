@@ -167,3 +167,17 @@ test('UX-PRO-03 CLI-05/06/07/08: cada painel é uma região nomeada (escopo sem 
   assert.match(component, /<h3 id="cli-visits-title">Agenda de visitas \(/);
   assert.match(component, /<h3 id="cli-reports-title">Relatórios de execução, medição e aceite \(/);
 });
+
+// Achado do gate (28/10): `cli_tickets_v2.status` é ENUM (cli_ticket_status).
+// O PATCH comparava o mesmo parâmetro com literais crus em CASE WHEN
+// ($2='resolvido'), o PostgreSQL não conseguia deduzir um tipo único para $2 e
+// TODO PATCH de status virava 500 ("inconsistent types deduced for parameter
+// $2"), provado contra PostgreSQL descartável. Os literais precisam carregar o
+// tipo do enum.
+test('UX-PRO-03 CLI-05/06/07/08: o PATCH de status tipa os literais do enum', () => {
+  assert.match(api, /CASE WHEN \$2='resolvido'::cli_ticket_status THEN NOW\(\)/,
+    'o literal de comparação precisa do tipo do enum');
+  assert.match(api, /'aguardando_cliente'::cli_ticket_status/, 'a lista do CASE também precisa de tipo');
+  assert.doesNotMatch(api, /CASE WHEN \$2='(resolvido|encerrado)' THEN/,
+    'comparar o parâmetro com literal sem tipo volta a derrubar o PATCH em 500');
+});

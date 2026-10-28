@@ -152,6 +152,53 @@ tela: escopar por **landmark**. Cada painel já era uma região nomeada
 `getByRole('region', { name: /^Chamados v2/ })` e equivalentes; o 8º bloco focal
 congela essa estrutura. Nenhum rótulo foi renomeado para acomodar teste.
 
+### 2.6. Quinto achado — e o mais grave: TODO PATCH de status devolvia 500
+
+Com o teste instrumentado (§2.5), o gate respondeu o que faltava:
+
+```
+PATCH do chamado precisa ser 200; corpo: {"error":"internal_error","request_id":"bbbe63c0-…"}
+500 !== 200
+```
+
+Reproduzido fora do navegador, contra PostgreSQL 17 descartável com as 181
+migrações e o handler chamado direto (`createCliAdvancedApi`), a exceção é:
+
+```
+inconsistent types deduced for parameter $2
+  SQL: UPDATE cli_tickets_v2 SET status=$2, … ,
+       resolved_at=CASE WHEN $2='resolvido' THEN NOW()
+                   WHEN $2 IN ('aberto','em_atendimento','aguardando_cliente') THEN NULL …
+```
+
+`cli_tickets_v2.status` é **enum** (`cli_ticket_status`, migração 075), então
+`status=$2` deduz `$2` como enum e `$2='resolvido'` deduz `$2` como texto; o
+planejador recusa. Consequência real: **qualquer mudança de estado de chamado
+pela tela era impossível** — o recurso existia, a UI era nova, e nenhum
+consumidor jamais tinha chamado esse PATCH. É a definição de "órfão sem prova".
+
+Correção mínima, no servidor, sem tocar em contrato: os literais de comparação
+receberam o tipo do enum (`'resolvido'::cli_ticket_status`, e a lista
+`IN (…)` idem). Prova depois da correção, todas contra PostgreSQL descartável:
+
+| operação | antes | depois |
+|---|---|---|
+| aberto → em_atendimento | **500** `inconsistent types deduced` | **200** |
+| em_atendimento → aguardando_cliente | — | **200** |
+| aguardando_cliente → resolvido | — | **200** |
+| resolvido → encerrado | — | **200** |
+| encerrado → aberto (reabertura com motivo) | — | **200** |
+| visita agendada → confirmada | — | **200** |
+| visita confirmada → reagendada (com motivo) | — | **200** |
+| relatório rascunho → em_revisão | — | **200** |
+| relatório em_revisão → aprovado | — | **200** |
+| mensagem no chamado / metadado de anexo / pausa de SLA | — | **201** |
+| detalhe do chamado (mensagens + anexos + histórico + pausas) | — | **200** |
+
+A sonda foi um script temporário, **não versionado**; o que ficou no repositório
+é o 9º bloco focal (guarda do tipo do enum) e o cenário de navegador, que agora
+também exerce a **pausa de SLA** — as **nove** escritas passam a ter cenário.
+
 ## 3. O que mudou (aditivo)
 
 - **`src/app/admin/ti/CliAdvancedClient.tsx`** — reescrito. O protótipo tinha hex
@@ -205,6 +252,7 @@ despachado de forma diferente. Os 39 órfãos restantes continuam sem rota.
 | Drill-down ao registro canônico | `<details>` com JSON integral de chamado, anexo, visita e relatório + históricos |
 | Erro de leitura com retry + subteste no gate | `503` → `data-ui-state="error"`; retry → volta à leitura; `403` → `denied` distinto de `error` e de `empty` |
 | Alias que não mata o papel dono | 5º bloco focal: a tela só pode usar `/api/cli/*`; RED provado devolvendo dois endpoints para `/api/hr/` (0 esperado → 2 falhas), GREEN 5/5 depois |
+| PATCH de status vivo | 9º bloco focal: os literais do `CASE` precisam do tipo `cli_ticket_status`; a prova comportamental é a sonda contra PostgreSQL descartável (tabela do §2.6) e o cenário de navegador |
 | Escopo por região, sem `nth` | 8º bloco focal: os três painéis precisam seguir como regiões nomeadas (`aria-labelledby` + `<h3 id>`); o cenário do gate usa essa estrutura em vez de índice de montagem |
 | Nome acessível limpo | 7º bloco focal: o texto de ajuda não pode morar dentro do `<label>`; RED provado restaurando o `<label>` que envolvia a ajuda (1 falha), GREEN 7/7 |
 | Nome acessível não ambíguo | 6º bloco focal: `<summary>` também é botão na árvore de acessibilidade, então resumo e botão do mesmo formulário não podem ter o **mesmo nome**. RED provado devolvendo `Novo chamado` → `Registrar chamado` (1 falha), GREEN 6/6 |
@@ -213,10 +261,10 @@ despachado de forma diferente. Os 39 órfãos restantes continuam sem rota.
 
 | Verificação | Resultado |
 |---|---|
-| Teste focal `tests/ux-pro-03-ti-cli-v2-ui.test.mjs` | **RED 0/4 → GREEN 4/4** (RED provado restaurando o protótipo do `HEAD`); com os blocos do alias, dos nomes, da ajuda e das regiões, **8/8** |
+| Teste focal `tests/ux-pro-03-ti-cli-v2-ui.test.mjs` | **RED 0/4 → GREEN 4/4** (RED provado restaurando o protótipo do `HEAD`); com os blocos do alias, dos nomes, da ajuda, das regiões e do enum, **9/9** |
 | `npm run typecheck` | **0 erro** |
 | `npm run build` | **106/106** páginas |
-| `npm test` | **1186 asserções: 1184 passam, 2 falham** — exatamente o par do **E22** (`libnspr4.so` ausente: `ux-pro-09e-pu4`, navegador), não regressão desta fatia |
+| `npm test` | **1187 asserções: 1185 passam, 2 falham** — exatamente o par do **E22** (`libnspr4.so` ausente: `ux-pro-09e-pu4`, navegador), não regressão desta fatia |
 | `node scripts/qa-wave0-static.mjs` | **5/5** |
 | `ux-pro-03-ti-inventory.mjs --check` | **83 componentes, 7 promoções com relatório** |
 | `ux-pro-00-inventory.mjs --check` | **101 rotas** |

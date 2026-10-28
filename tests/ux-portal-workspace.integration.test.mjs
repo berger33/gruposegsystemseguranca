@@ -6594,6 +6594,19 @@ test('browser UX-PRO-03: CLI-05/06/07/08 console do cliente v2 (papel, A/B, POST
       await page.getByText(/Nenhum byte foi enviado/).waitFor();
       await settle();
 
+      // CLI-05: pausa de SLA explícita — a nona escrita, antes sem cenário.
+      await openDetails('Pausa e retomada de SLA');
+      await ticketsPanel().getByLabel('Observações', { exact: true }).fill('Pausa sintética registrada no gate CLI-05');
+      const [slaResponse] = await Promise.all([
+        page.waitForResponse(response => response.request().method() === 'POST'
+          && new URL(response.url()).pathname === '/api/cli/ticket-sla-pauses'),
+        page.getByRole('button', { name: 'Aplicar ação de SLA' }).click(),
+      ]);
+      assert.equal(slaResponse.status(), 201,
+        `pausa de SLA precisa ser 201; corpo: ${await slaResponse.text().catch(() => '')}`);
+      await page.getByText(/Pausa de SLA registrada explicitamente/).waitFor();
+      await settle();
+
       // CLI-07: agendar visita e reagendar com motivo.
       await openDetails('Nova visita');
       await visitsPanel().getByLabel('Conta do cliente (UUID)', { exact: true }).fill(accountA);

@@ -3894,7 +3894,7 @@
         "src/app/admin/ti/CliAdvancedClient.tsx",
         "src/server/cli-advanced-api.mjs"
       ],
-      "ocorrencias_gate": 18,
+      "ocorrencias_gate": 21,
       "ocorrencias_documento": 22,
       "ocorrencias_codigo": 4,
       "aceite_humano": "nao_registrado",
