@@ -6516,14 +6516,21 @@ test('browser UX-PRO-03: CLI-05/06/07/08 console do cliente v2 (papel, A/B, POST
       const settle = () => page.waitForFunction(() =>
         Array.from(document.querySelectorAll('section[aria-busy]'))
           .every(element => element.getAttribute('aria-busy') === 'false'));
+      // Os três painéis são regiões nomeadas (`aria-labelledby` no <h3> que traz
+      // a contagem). Escopar por região é o que mantém os rótulos repetidos
+      // ("Título", "Novo estado", "Conta do cliente (UUID)") sem `nth()`, que já
+      // apontou para o painel errado quando a contagem mudou.
+      const ticketsPanel = () => page.getByRole('region', { name: /^Chamados v2/ });
+      const visitsPanel = () => page.getByRole('region', { name: /^Agenda de visitas/ });
+      const reportsPanel = () => page.getByRole('region', { name: /^Relatórios de execução/ });
       await page.getByRole('button', { name: 'Portal do cliente v2', exact: true }).click();
       await page.getByText(/QA-CLI08-ALFA/).first().waitFor();
 
       // CLI-05: POST de chamado.
       await openDetails('Novo chamado');
-      await page.getByLabel('Conta do cliente (UUID)', { exact: true }).nth(0).fill(accountA);
-      await page.getByLabel('Título', { exact: true }).nth(0).fill('QA-CLI08 Chamado criado pela interface');
-      await page.getByLabel('Descrição', { exact: true }).nth(0).fill('Descrição sintética criada no gate, sem dado real.');
+      await ticketsPanel().getByLabel('Conta do cliente (UUID)', { exact: true }).fill(accountA);
+      await ticketsPanel().getByLabel('Título', { exact: true }).fill('QA-CLI08 Chamado criado pela interface');
+      await ticketsPanel().getByLabel('Descrição', { exact: true }).fill('Descrição sintética criada no gate, sem dado real.');
       await page.getByRole('button', { name: 'Registrar chamado' }).click();
       await page.getByText(/Chamado registrado com protocolo/).waitFor();
       await settle();
@@ -6533,8 +6540,8 @@ test('browser UX-PRO-03: CLI-05/06/07/08 console do cliente v2 (papel, A/B, POST
       const ticketCard = page.locator('li').filter({ hasText: 'QA-CLI08 Chamado criado pela interface' }).first();
       await ticketCard.getByRole('button', { name: 'Usar este chamado nos formulários' }).click();
       await openDetails('Alterar estado, responsável e reabertura');
-      await page.getByLabel('Novo estado', { exact: true }).selectOption('em_atendimento');
-      await page.getByLabel('Motivo da transição', { exact: true }).fill('Triagem inicial do gate CLI-06');
+      await ticketsPanel().getByLabel('Novo estado', { exact: true }).selectOption('em_atendimento');
+      await ticketsPanel().getByLabel('Motivo da transição', { exact: true }).fill('Triagem inicial do gate CLI-06');
       await page.getByRole('button', { name: 'Atualizar estado do chamado' }).click();
       await page.getByText(/Estado do chamado atualizado/).waitFor();
       await settle();
@@ -6545,7 +6552,7 @@ test('browser UX-PRO-03: CLI-05/06/07/08 console do cliente v2 (papel, A/B, POST
       await page.getByRole('heading', { name: /Detalhe do chamado/ }).waitFor();
       await page.getByText(/Histórico de estados/).waitFor();
       await openDetails('Mensagem no chamado');
-      await page.getByLabel('Mensagem', { exact: true }).fill('Mensagem sintética do gate CLI-05.');
+      await ticketsPanel().getByLabel('Mensagem', { exact: true }).fill('Mensagem sintética do gate CLI-05.');
       await page.getByRole('button', { name: 'Registrar mensagem' }).click();
       await page.getByText(/Mensagem registrada no chamado/).waitFor();
       await settle();
@@ -6553,18 +6560,18 @@ test('browser UX-PRO-03: CLI-05/06/07/08 console do cliente v2 (papel, A/B, POST
 
       // Anexo: registra METADADO e a tela precisa negar que houve upload.
       await openDetails('Metadado de anexo');
-      await page.getByLabel('Nome do arquivo', { exact: true }).fill('qa-cli05-sintetico.pdf');
-      await page.getByLabel('Referência do arquivo', { exact: true }).fill('referencia-qa-cli05-sintetica');
-      await page.getByLabel('Chave de armazenamento', { exact: true }).fill(`qa-cli05-${randomUUID().slice(0, 8)}`);
+      await ticketsPanel().getByLabel('Nome do arquivo', { exact: true }).fill('qa-cli05-sintetico.pdf');
+      await ticketsPanel().getByLabel('Referência do arquivo', { exact: true }).fill('referencia-qa-cli05-sintetica');
+      await ticketsPanel().getByLabel('Chave de armazenamento', { exact: true }).fill(`qa-cli05-${randomUUID().slice(0, 8)}`);
       await page.getByRole('button', { name: 'Registrar metadado de anexo' }).click();
       await page.getByText(/Nenhum byte foi enviado/).waitFor();
       await settle();
 
       // CLI-07: agendar visita e reagendar com motivo.
       await openDetails('Nova visita');
-      await page.getByLabel('Conta do cliente (UUID)', { exact: true }).nth(1).fill(accountA);
-      await page.getByLabel('Título', { exact: true }).nth(1).fill('QA-CLI07 Visita criada pela interface');
-      await page.getByLabel('Data e hora', { exact: true }).fill('2026-11-05T09:30');
+      await visitsPanel().getByLabel('Conta do cliente (UUID)', { exact: true }).fill(accountA);
+      await visitsPanel().getByLabel('Título', { exact: true }).fill('QA-CLI07 Visita criada pela interface');
+      await visitsPanel().getByLabel('Data e hora', { exact: true }).fill('2026-11-05T09:30');
       await page.getByRole('button', { name: 'Agendar visita' }).click();
       await page.getByText(/Visita agendada com protocolo VIS-CLI/).waitFor();
       await settle();
@@ -6572,18 +6579,18 @@ test('browser UX-PRO-03: CLI-05/06/07/08 console do cliente v2 (papel, A/B, POST
       const visitCard = page.locator('li').filter({ hasText: 'QA-CLI07 Visita criada pela interface' }).first();
       await visitCard.getByRole('button', { name: 'Usar esta visita para confirmar/reagendar' }).click();
       await openDetails('Confirmar, reagendar ou encerrar visita');
-      await page.getByLabel('Novo estado', { exact: true }).nth(1).selectOption('reagendada');
-      await page.getByLabel('Nova data e hora', { exact: true }).fill('2026-11-08T14:00');
-      await page.getByLabel('Motivo do reagendamento', { exact: true }).fill('Reagendamento sintético por indisponibilidade do cliente');
+      await visitsPanel().getByLabel('Novo estado', { exact: true }).selectOption('reagendada');
+      await visitsPanel().getByLabel('Nova data e hora', { exact: true }).fill('2026-11-08T14:00');
+      await visitsPanel().getByLabel('Motivo do reagendamento', { exact: true }).fill('Reagendamento sintético por indisponibilidade do cliente');
       await page.getByRole('button', { name: 'Atualizar visita' }).click();
       await page.getByText(/Visita atualizada para reagendada/).waitFor();
       await settle();
 
       // CLI-08: criar relatório, revisar e provar que aprovar sem revisão falha.
       await openDetails('Novo relatório');
-      await page.getByLabel('Conta do cliente (UUID)', { exact: true }).nth(2).fill(accountA);
-      await page.getByLabel('Título', { exact: true }).nth(2).fill('QA-CLI08 Relatorio criado pela interface');
-      await page.getByLabel('Conteúdo', { exact: true }).fill('Conteúdo sintético do relatório criado no gate CLI-08, sem dado real.');
+      await reportsPanel().getByLabel('Conta do cliente (UUID)', { exact: true }).fill(accountA);
+      await reportsPanel().getByLabel('Título', { exact: true }).fill('QA-CLI08 Relatorio criado pela interface');
+      await reportsPanel().getByLabel('Conteúdo', { exact: true }).fill('Conteúdo sintético do relatório criado no gate CLI-08, sem dado real.');
       await page.getByRole('button', { name: 'Criar relatório' }).click();
       await page.getByText(/Relatório criado como rascunho/).waitFor();
       await settle();
@@ -6591,14 +6598,14 @@ test('browser UX-PRO-03: CLI-05/06/07/08 console do cliente v2 (papel, A/B, POST
       await reportCard.getByRole('button', { name: 'Usar este relatório na revisão' }).click();
       await openDetails('Revisar, aprovar, rejeitar ou marcar como enviado');
       // Regra real do servidor: aprovar sem revisão é recusado e traduzido.
-      await page.getByLabel('Novo estado', { exact: true }).nth(2).selectOption('aprovado');
+      await reportsPanel().getByLabel('Novo estado', { exact: true }).selectOption('aprovado');
       await page.getByRole('button', { name: 'Atualizar relatório' }).click();
       await page.getByText(/precisa passar por revisão antes da aprovação/).waitFor();
       assert.equal(await page.getByText(/Relatório atualizado para aprovado/).count(), 0,
         'o relatório recusado pelo servidor não pode aparecer como aprovado');
       // Caminho correto: revisão com notas, depois aprovação.
-      await page.getByLabel('Novo estado', { exact: true }).nth(2).selectOption('em_revisao');
-      await page.getByLabel('Notas de revisão', { exact: true }).fill('Revisão sintética do gate CLI-08 sem dado real');
+      await reportsPanel().getByLabel('Novo estado', { exact: true }).selectOption('em_revisao');
+      await reportsPanel().getByLabel('Notas de revisão', { exact: true }).fill('Revisão sintética do gate CLI-08 sem dado real');
       await page.getByRole('button', { name: 'Atualizar relatório' }).click();
       await page.getByText(/Relatório atualizado para em_revisao/).waitFor();
       await settle();

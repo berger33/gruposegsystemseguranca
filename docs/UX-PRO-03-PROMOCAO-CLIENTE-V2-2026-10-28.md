@@ -134,6 +134,24 @@ Correção: `<label htmlFor={id}>{rótulo}</label>` + `id` no controle +
 `aria-describedby` para a ajuda, que passou a ficar **fora** do `<label>`. O 7º
 bloco focal proíbe `<small>` dentro de `<label>`.
 
+### 2.5. Quarto achado do gate: três painéis, três `Novo estado`
+
+Depois da correção do §2.4 o cenário avançou até o segundo `select` e parou em:
+
+```
+strict mode violation: getByLabel('Novo estado', { exact: true }) resolved to 3 elements
+  1) Chamados v2 (2)  2) Agenda de visitas (1)  3) Relatórios de execução, medição e aceite (1)
+```
+
+Os três painéis repetem rótulos de propósito (`Título`, `Novo estado`, `Conta do
+cliente (UUID)`) — é o mesmo vocabulário para o mesmo tipo de campo. O teste
+usava `nth(índice)`, que depende da **ordem de montagem** e por isso aponta para
+o painel errado quando um painel está vazio. Correção no teste, sem tocar na
+tela: escopar por **landmark**. Cada painel já era uma região nomeada
+(`aria-labelledby` no `<h3>` que traz a contagem), então o cenário passou a usar
+`getByRole('region', { name: /^Chamados v2/ })` e equivalentes; o 8º bloco focal
+congela essa estrutura. Nenhum rótulo foi renomeado para acomodar teste.
+
 ## 3. O que mudou (aditivo)
 
 - **`src/app/admin/ti/CliAdvancedClient.tsx`** — reescrito. O protótipo tinha hex
@@ -187,6 +205,7 @@ despachado de forma diferente. Os 39 órfãos restantes continuam sem rota.
 | Drill-down ao registro canônico | `<details>` com JSON integral de chamado, anexo, visita e relatório + históricos |
 | Erro de leitura com retry + subteste no gate | `503` → `data-ui-state="error"`; retry → volta à leitura; `403` → `denied` distinto de `error` e de `empty` |
 | Alias que não mata o papel dono | 5º bloco focal: a tela só pode usar `/api/cli/*`; RED provado devolvendo dois endpoints para `/api/hr/` (0 esperado → 2 falhas), GREEN 5/5 depois |
+| Escopo por região, sem `nth` | 8º bloco focal: os três painéis precisam seguir como regiões nomeadas (`aria-labelledby` + `<h3 id>`); o cenário do gate usa essa estrutura em vez de índice de montagem |
 | Nome acessível limpo | 7º bloco focal: o texto de ajuda não pode morar dentro do `<label>`; RED provado restaurando o `<label>` que envolvia a ajuda (1 falha), GREEN 7/7 |
 | Nome acessível não ambíguo | 6º bloco focal: `<summary>` também é botão na árvore de acessibilidade, então resumo e botão do mesmo formulário não podem ter o **mesmo nome**. RED provado devolvendo `Novo chamado` → `Registrar chamado` (1 falha), GREEN 6/6 |
 
@@ -194,10 +213,10 @@ despachado de forma diferente. Os 39 órfãos restantes continuam sem rota.
 
 | Verificação | Resultado |
 |---|---|
-| Teste focal `tests/ux-pro-03-ti-cli-v2-ui.test.mjs` | **RED 0/4 → GREEN 4/4** (RED provado restaurando o protótipo do `HEAD`); com os blocos do alias, dos nomes e da ajuda, **7/7** |
+| Teste focal `tests/ux-pro-03-ti-cli-v2-ui.test.mjs` | **RED 0/4 → GREEN 4/4** (RED provado restaurando o protótipo do `HEAD`); com os blocos do alias, dos nomes, da ajuda e das regiões, **8/8** |
 | `npm run typecheck` | **0 erro** |
 | `npm run build` | **106/106** páginas |
-| `npm test` | **1185 asserções: 1183 passam, 2 falham** — exatamente o par do **E22** (`libnspr4.so` ausente: `ux-pro-09e-pu4`, navegador), não regressão desta fatia |
+| `npm test` | **1186 asserções: 1184 passam, 2 falham** — exatamente o par do **E22** (`libnspr4.so` ausente: `ux-pro-09e-pu4`, navegador), não regressão desta fatia |
 | `node scripts/qa-wave0-static.mjs` | **5/5** |
 | `ux-pro-03-ti-inventory.mjs --check` | **83 componentes, 7 promoções com relatório** |
 | `ux-pro-00-inventory.mjs --check` | **101 rotas** |

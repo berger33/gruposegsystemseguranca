@@ -151,3 +151,19 @@ test('UX-PRO-03 CLI-05/06/07/08: o texto de ajuda fica fora do <label> (nome ace
     assert.ok(!inner.includes('<small'), 'nenhum <small> de ajuda pode viver dentro de um <label>');
   }
 });
+
+// Os três painéis repetem rótulos ("Título", "Novo estado", "Conta do cliente
+// (UUID)"). O gate de navegador reprovou com `strict mode violation: getByLabel
+// ('Novo estado') resolved to 3 elements` — e o `nth(índice)` que existia antes
+// depende da ordem de montagem, que muda quando um painel fica vazio. A saída
+// correta é escopar por região: cada painel é um landmark nomeado.
+test('UX-PRO-03 CLI-05/06/07/08: cada painel é uma região nomeada (escopo sem nth)', () => {
+  for (const id of ['cli-tickets-title', 'cli-visits-title', 'cli-reports-title']) {
+    assert.ok(component.includes(`aria-labelledby="${id}"`), `o painel precisa de aria-labelledby="${id}"`);
+    assert.match(component, new RegExp(`<h3 id="${id}">`), `o painel precisa do <h3 id="${id}">`);
+  }
+  // O <h3> de cada painel começa por um texto estável, usado como escopo no gate.
+  assert.match(component, /<h3 id="cli-tickets-title">Chamados v2 \(/);
+  assert.match(component, /<h3 id="cli-visits-title">Agenda de visitas \(/);
+  assert.match(component, /<h3 id="cli-reports-title">Relatórios de execução, medição e aceite \(/);
+});
