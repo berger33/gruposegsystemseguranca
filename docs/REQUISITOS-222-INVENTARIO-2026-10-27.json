@@ -3895,7 +3895,7 @@
         "src/server/cli-advanced-api.mjs"
       ],
       "ocorrencias_gate": 16,
-      "ocorrencias_documento": 22,
+      "ocorrencias_documento": 23,
       "ocorrencias_codigo": 4,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
