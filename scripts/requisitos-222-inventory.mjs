@@ -102,6 +102,7 @@ const SKIP = [
   // o índice e o --check ficaria frágil (auto-referência).
   'docs/STATUS-VIGENTE.md',
   'docs/AUDITORIA-FATIAS-PENDENTES-E-ERROS-2026-10-26.md',
+  'docs/AUDITORIA-FATIAS-PENDENTES-2026-10-28.md',
 ];
 
 async function readWorkspace() {

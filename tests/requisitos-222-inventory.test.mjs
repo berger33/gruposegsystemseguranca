@@ -87,8 +87,12 @@ test('reauditoria 222: nenhum ID inventa aceite humano ou reauditoria integral',
     assert.ok(['gate_nomeado', 'mencionado_em_gate', 'somente_documento', 'somente_codigo', 'sem_evidencia_legivel']
       .includes(row.classe_evidencia_atual), `${row.id}: classe de evidência inesperada`);
   }
-  assert.equal(data.resumo.porClasseEvidencia.gate_nomeado, 22);
-  assert.equal(data.resumo.porClasseEvidencia.mencionado_em_gate, 114);
+  // Retrato congelado. 22/114/86 → 23/113/86 em 28/10: a fatia CLI-03 de UI
+  // criou `tests/cli03-contract-published-details-ui.test.mjs`, então CLI-03
+  // passou de `mencionado_em_gate` para `gate_nomeado`. É evidência textual
+  // acrescentada, não promoção de aceite (0/222 continua).
+  assert.equal(data.resumo.porClasseEvidencia.gate_nomeado, 23);
+  assert.equal(data.resumo.porClasseEvidencia.mencionado_em_gate, 113);
   assert.equal(data.resumo.porClasseEvidencia.somente_documento, 86);
   assert.ok(data.requisitos.filter(row => row.prefixo === 'SEC')
     .every(row => row.classe_evidencia_atual === 'mencionado_em_gate'),
