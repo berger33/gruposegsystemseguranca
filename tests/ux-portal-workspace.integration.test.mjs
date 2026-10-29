@@ -6894,8 +6894,12 @@ test('browser UX-PRO-03: FIN cadastros de apoio (papel, POST real, histórico de
       await suppliersPanel().getByLabel('Nome do fornecedor', { exact: true }).fill('ab');
       await suppliersPanel().getByRole('button', { name: 'Cadastrar fornecedor' }).click();
       await page.getByRole('alert').filter({ hasText: /entre 3 e 200 caracteres/ }).waitFor();
-      assert.equal(await page.getByText(/criado no cadastro financeiro/).count(), 1,
-        'a recusa não pode gerar uma segunda mensagem de sucesso');
+      // Iniciar uma nova operação limpa o feedback anterior: o operador não
+      // pode ver "criado" junto com a recusa do segundo envio.
+      assert.equal(await page.getByText(/criado no cadastro financeiro/).count(), 0,
+        'a recusa precisa limpar a mensagem de sucesso anterior');
+      assert.equal(await suppliersPanel().getByText('ab', { exact: true }).count(), 0,
+        'o fornecedor recusado não pode aparecer na lista');
       await context.close();
     } finally {
       await journeyBrowser.close();

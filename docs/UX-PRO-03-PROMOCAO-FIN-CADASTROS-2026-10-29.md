@@ -138,6 +138,23 @@ O job *UX-PRO-10B prévias* (workflow independente, 5 cenários de layout) repro
 erro de compilação (`npm run build` **106/106** e `typecheck` 0 na mesma árvore). Registrado como falha de
 infraestrutura do runner, não atribuída a esta fatia.
 
+### 4.3.2 Segunda rodada: a asserção estava errada, a tela não
+
+Depois da correção acima, o gate voltou a reprovar — agora por uma asserção **minha** que descrevia o
+comportamento errado:
+
+```
+a recusa não pode gerar uma segunda mensagem de sucesso
+0 !== 1
+```
+
+A tela limpa o feedback ao iniciar nova operação (é o que se quer: o operador não pode ler "criado" junto
+com a recusa do envio seguinte), então a contagem correta é **0**. O teste passou a exigir **0** mensagem de
+sucesso e **0** ocorrência do fornecedor recusado na lista. Na mesma execução, um teste **anterior a esta
+fatia** (`browser ID3: cobranças não anuncia lista vazia antes de concluir a leitura`, linha 620) falhou por
+`Timeout 15000ms exceeded` em `waitForFunction` — o mesmo teste havia passado na execução anterior do mesmo
+commit-base, então é flakiness de tempo do runner, registrada aqui e não atribuída à fatia.
+
 ### 4.4 Gates locais
 
 | Gate | Resultado |
