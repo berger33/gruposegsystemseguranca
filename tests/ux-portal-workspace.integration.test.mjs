@@ -7544,3 +7544,310 @@ test('browser UX-PRO-03: monitoramento e automação determinística (papel, A/B
     }
   }
 });
+
+// ---------------------------------------------------------------------------
+// UX-PRO-03 — reclamações de colaboradores: o console de TI é mais estreito
+// que a API (RH legítimo com projeção mínima). Dados e identidades sintéticos;
+// o banco inteiro é descartado pelo runner, inclusive o histórico imutável.
+// ---------------------------------------------------------------------------
+test('browser UX-PRO-03: reclamações de colaboradores (papéis, isolamento, escritas, falhas e quatro larguras)', { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: 'ti' });
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const comercial = await provisionStaff(pool, { role: 'comercial' });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhStaffCookie = await loginStaffHttp(rh.email);
+  const comercialCookie = await loginStaffHttp(comercial.email);
+  const suffix = randomUUID().slice(0, 8);
+  const titleA = `QA-RECL-${suffix}-ALFA`;
+  const titleB = `QA-RECL-${suffix}-BETA`;
+  const titleUI = `QA-RECL-${suffix}-TELA`;
+  const descriptionA = `Descrição sintética exclusiva de ALFA ${suffix}, canal restrito.`;
+  const descriptionB = `Descrição sintética exclusiva de BETA ${suffix}, canal restrito.`;
+  const base = '/api/admin/employee-complaints';
+  const create = async (title, description) => api(base, { method: 'POST', cookie: tiCookie,
+    body: { title, description, category: 'outro', severity: 'media', employee_reference: `REF-SINTETICA-${suffix}` } });
+  const createdA = await create(titleA, descriptionA);
+  const createdB = await create(titleB, descriptionB);
+  assert.equal(createdA.status, 201);
+  assert.equal(createdB.status, 201);
+  const idA = createdA.body.id;
+  const idB = createdB.body.id;
+  assert.match(createdA.body.employee_reference_hash, /^[a-f0-9]{64}$/);
+
+  // Servidor: TI autorizado, comercial negado, RH legítimo com acesso mínimo.
+  assert.equal((await api(base, { cookie: tiCookie })).status, 200);
+  const deniedRead = await api(base, { cookie: comercialCookie });
+  assert.equal(deniedRead.status, 403);
+  assert.equal(deniedRead.body.error, 'forbidden_restricted_channel');
+  const deniedWrite = await api(base, { method: 'PATCH', cookie: comercialCookie,
+    body: { id: idA, status: 'em_analise', reason: 'Motivo sintético da tentativa negada.' } });
+  assert.equal(deniedWrite.status, 403);
+  assert.equal(deniedWrite.body.error, 'forbidden_restricted_channel');
+  const rhList = await api(base, { cookie: rhStaffCookie });
+  assert.equal(rhList.status, 200);
+  assert.ok(!rhList.body.items.some(item => item.id === idA || item.id === idB), 'RH não lista relatos não compartilhados');
+  const rhDetailBefore = await api(`${base}/${idA}`, { cookie: rhStaffCookie });
+  assert.equal(rhDetailBefore.status, 404);
+  assert.equal(rhDetailBefore.body.error, 'not_found');
+  const rhCreate = await api(base, { method: 'POST', cookie: rhStaffCookie,
+    body: { title: 'Tentativa sintética do RH', description: 'Descrição sintética suficientemente longa.' } });
+  assert.equal(rhCreate.status, 403, 'RH não cria na via administrativa');
+  const rhShareDenied = await api('/api/admin/employee-complaint-hr-shares', { cookie: rhStaffCookie });
+  assert.equal(rhShareDenied.status, 401, 'somente admin/ti consultam compartilhamentos pela rota administrativa estrita');
+  // Preservar o erro existente evita que uma correção genérica devolva a linha
+  // completa ao RH sem decisão sobre o contrato e a autorização.
+  const rhPatch = await api(base, { method: 'PATCH', cookie: rhStaffCookie,
+    body: { id: idA, status: 'em_apuracao', reason: 'Motivo sintético de teste pelo RH.' } });
+  assert.equal(rhPatch.status, 500);
+  assert.equal(rhPatch.body.error, 'internal_error');
+  assert.ok(!('description' in rhPatch.body) && !('employee_reference' in rhPatch.body));
+  assert.equal((await pool.query('SELECT status FROM cli_employee_complaints WHERE id=$1', [idA])).rows[0].status, 'pendente');
+
+  for (const cookie of [rhStaffCookie, comercialCookie]) {
+    const browser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(browser, '/admin/ti', cookie);
+      await page.locator('[data-admin-gate="forbidden"]').waitFor();
+      assert.equal(await page.getByRole('button', { name: 'Reclamações de colaboradores', exact: true }).count(), 0);
+      await context.close();
+    } finally { await browser.close(); }
+  }
+
+  // Quatro larguras: teclado, estados, rótulos e ausência de transbordo com
+  // detalhe e formulário expandidos (não somente na tela inicial vazia).
+  for (const width of [320, 390, 768, 1440]) {
+    const browser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(browser, '/admin/ti', tiCookie, { width, height: 900 });
+      const tab = page.getByRole('button', { name: 'Reclamações de colaboradores', exact: true });
+      await tab.waitFor(); await tab.focus(); await page.keyboard.press('Enter');
+      const area = page.locator('section[aria-labelledby="complaint-title"]');
+      await area.getByRole('heading', { name: 'Reclamações de colaboradores' }).waitFor();
+      const list = page.locator('section[aria-labelledby="complaint-list-title"]');
+      await list.getByText(titleA, { exact: false }).waitFor();
+      await list.locator('li').filter({ hasText: titleA }).getByRole('button', { name: 'Ver detalhes' }).click();
+      const detail = page.locator('section[aria-labelledby="complaint-detail-title"]');
+      await detail.getByText(descriptionA, { exact: false }).waitFor();
+      await detail.locator('summary').filter({ hasText: 'Registrar mensagem restrita' }).click();
+      await area.locator('summary').filter({ hasText: 'Nova reclamação restrita' }).click();
+      const missingLabels = await area.locator('input,select,textarea').evaluateAll(controls => controls.filter(control => !control.labels || control.labels.length === 0).map(control => control.outerHTML));
+      assert.deepEqual(missingLabels, [], `todos os campos precisam de rótulo em ${width}px`);
+      const body = await area.innerText();
+      assert.match(body, /Fonte:/); assert.match(body, /Data-base:/); assert.match(body, /texto claro/i);
+      assert.match(body, /não faz upload/i); assert.match(body, /NO-GO/);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.ok(overflow <= 1, `reclamações transbordam ${overflow}px em ${width}px`);
+      await context.close();
+    } finally { await browser.close(); }
+  }
+
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openPage(browser, '/admin/ti', tiCookie, { width: 1440, height: 900 });
+    await page.getByRole('button', { name: 'Reclamações de colaboradores', exact: true }).click();
+    const area = page.locator('section[aria-labelledby="complaint-title"]');
+    const list = page.locator('section[aria-labelledby="complaint-list-title"]');
+    const detail = page.locator('section[aria-labelledby="complaint-detail-title"]');
+    await list.getByText(titleA, { exact: false }).waitFor();
+    const responseFor = (path, method) => page.waitForResponse(response => new URL(response.url()).pathname === path && response.request().method() === method);
+    const row = title => list.locator('li').filter({ hasText: title });
+
+    // POST inválido mede status/corpo e mostra tradução, sem vazar código cru.
+    await area.locator('summary').filter({ hasText: 'Nova reclamação restrita' }).click();
+    await area.getByLabel('Título da reclamação').fill(titleUI);
+    await area.getByLabel('Descrição da reclamação').fill('curta');
+    let pending = responseFor(base, 'POST');
+    await area.getByRole('button', { name: 'Criar reclamação canal restrito' }).click();
+    let response = await pending;
+    assert.equal(response.status(), 400); assert.equal((await response.json()).error, 'invalid_description');
+    await area.getByRole('alert').getByText('A descrição precisa ter entre 20 e 5000 caracteres.').waitFor();
+    assert.doesNotMatch(await area.innerText(), /invalid_description/);
+
+    // POST real, com hash calculado e referência em texto claro (limite honesto).
+    const reference = `REF-UI-SINTETICA-${suffix}`;
+    await area.getByLabel('Descrição da reclamação').fill(`Descrição sintética criada pela interface ${suffix}, suficientemente longa.`);
+    await area.getByLabel('Referência do colaborador').fill(reference);
+    pending = responseFor(base, 'POST');
+    await area.getByRole('button', { name: 'Criar reclamação canal restrito' }).click();
+    response = await pending; const uiComplaint = await response.json();
+    assert.equal(response.status(), 201); assert.ok(uiComplaint.id);
+    assert.equal(uiComplaint.employee_reference, reference);
+    assert.equal(uiComplaint.employee_reference_hash, (await import('node:crypto')).createHash('sha256').update(reference).digest('hex'));
+    await area.getByRole('status').getByText('Reclamação registrada no canal restrito.').waitFor();
+    await row(titleUI).getByRole('button', { name: 'Ver detalhes' }).waitFor();
+
+    // As duas transições antes disponíveis no protótipo funcionam, com corpo.
+    pending = responseFor(base, 'PATCH');
+    await row(titleUI).getByRole('button', { name: 'Em análise' }).click();
+    response = await pending; const analyzed = await response.json();
+    assert.equal(response.status(), 200); assert.equal(analyzed.id, uiComplaint.id); assert.equal(analyzed.status, 'em_analise');
+    await detail.getByText(titleUI, { exact: false }).waitFor();
+    await area.getByRole('status').getByText('Reclamação marcada em análise.').waitFor();
+    pending = responseFor(base, 'PATCH');
+    await row(titleUI).getByRole('button', { name: 'Resolver' }).click();
+    response = await pending; const resolved = await response.json();
+    assert.equal(response.status(), 200); assert.equal(resolved.status, 'resolvida'); assert.ok(resolved.resolved_at);
+    await detail.getByText(titleUI, { exact: false }).waitFor();
+
+    // A mensagem enviada com o corpo original não pode mais cair em 400.
+    await detail.locator('summary').filter({ hasText: 'Registrar mensagem restrita' }).click();
+    const messageText = `Mensagem sintética visível ao RH ${suffix}.`;
+    await detail.getByLabel('Mensagem restrita', { exact: true }).fill(messageText);
+    await detail.getByLabel('Tipo de remetente').selectOption('rh');
+    await detail.getByLabel('Mensagem visível ao RH').check();
+    pending = responseFor('/api/admin/employee-complaint-messages', 'POST');
+    await detail.getByRole('button', { name: 'Enviar mensagem restrita' }).click();
+    response = await pending; const message = await response.json();
+    assert.equal(response.status(), 201); assert.equal(message.complaint_id, uiComplaint.id); assert.equal(message.message, messageText);
+    await detail.getByText(messageText, { exact: false }).waitFor();
+    assert.match(await detail.locator('li').filter({ hasText: messageText }).innerText(), /restrita: sim/);
+
+    // Referência é metadado e não finge upload de arquivo.
+    await detail.locator('summary').filter({ hasText: 'Registrar referência de evidência' }).click();
+    await detail.getByLabel('Nome da evidência').fill(`QA-evidencia-${suffix}.txt`);
+    await detail.getByLabel('Endereço declarado da evidência').fill(`referencia-sintetica-${suffix}`);
+    await detail.getByLabel('Chave declarada de armazenamento').fill(`chave-sintetica-${suffix}`);
+    await detail.getByLabel('Evidência visível ao RH').check();
+    pending = responseFor('/api/admin/employee-complaint-evidences', 'POST');
+    await detail.getByRole('button', { name: 'Anexar evidência restrita' }).click();
+    response = await pending; const evidence = await response.json();
+    assert.equal(response.status(), 201); assert.equal(evidence.complaint_id, uiComplaint.id); assert.equal(evidence.is_hr_visible, true);
+    await detail.getByText(`QA-evidencia-${suffix}.txt`, { exact: false }).waitFor();
+    assert.match(await detail.locator('li').filter({ hasText: `QA-evidencia-${suffix}.txt` }).innerText(), /restrita: sim/);
+
+    // O compartilhamento é explícito, mínimo e justificado.
+    await detail.locator('summary').filter({ hasText: 'Compartilhar campo mínimo com RH' }).click();
+    await detail.getByLabel('Campo a compartilhar').selectOption('category');
+    await detail.getByLabel('Valor mínimo compartilhado').fill('outro');
+    await detail.getByLabel('Justificativa do compartilhamento').fill(`Justificativa sintética para o RH ${suffix}.`);
+    pending = responseFor('/api/admin/employee-complaint-hr-shares', 'POST');
+    await detail.getByRole('button', { name: 'Compartilhar mínimo com RH justificado' }).click();
+    response = await pending; const share = await response.json();
+    assert.equal(response.status(), 201); assert.equal(share.complaint_id, uiComplaint.id); assert.equal(share.shared_field, 'category');
+    await detail.getByText(/Compartilhamentos com RH \(1\)/).waitFor();
+    const rhDetailAfter = await api(`${base}/${uiComplaint.id}`, { cookie: rhStaffCookie });
+    assert.equal(rhDetailAfter.status, 200);
+    for (const key of ['description', 'employee_reference', 'employee_reference_hash', 'client_account_id', 'title']) assert.ok(!(key in rhDetailAfter.body.complaint), `RH não recebe ${key}`);
+    assert.ok(rhDetailAfter.body.messages.some(item => item.message === messageText));
+    assert.ok(rhDetailAfter.body.evidences.some(item => item.file_name === evidence.file_name));
+    const rhMessage = await api('/api/admin/employee-complaint-messages', { method: 'POST', cookie: rhStaffCookie,
+      body: { complaint_id: uiComplaint.id, sender_type: 'rh', message: `Resposta sintética pelo RH ${suffix}.`, is_hr_visible: true } });
+    assert.equal(rhMessage.status, 201); assert.equal(rhMessage.body.complaint_id, uiComplaint.id);
+
+    // A → B: não sobra detalhe nem rascunho de A; resposta atrasada de A não
+    // pode substituir B. As respostas são reais e apenas atrasadas no browser.
+    await row(titleA).getByRole('button', { name: 'Ver detalhes' }).click();
+    await detail.getByText(descriptionA, { exact: false }).waitFor();
+    await detail.locator('summary').filter({ hasText: 'Registrar mensagem restrita' }).click();
+    await detail.getByLabel('Mensagem restrita', { exact: true }).fill(`RASCUNHO-ALFA-${suffix}`);
+    await row(titleB).getByRole('button', { name: 'Ver detalhes' }).click();
+    await detail.getByText(descriptionB, { exact: false }).waitFor();
+    assert.doesNotMatch(await detail.innerText(), /exclusiva de ALFA/);
+    await detail.locator('summary').filter({ hasText: 'Registrar mensagem restrita' }).click();
+    assert.equal(await detail.getByLabel('Mensagem restrita', { exact: true }).inputValue(), '');
+    await page.evaluate(id => {
+      const original = window.fetch.bind(window); window.__complaintOriginalFetch = original;
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : input.url;
+        const result = await original(input, init);
+        if (new URL(url, location.origin).pathname.endsWith(`/employee-complaints/${id}`)) {
+          await new Promise(resolve => { window.__releaseComplaintDetail = resolve; });
+          window.__complaintDetailReturned = true;
+        }
+        return result;
+      };
+    }, idA);
+    await row(titleA).getByRole('button', { name: 'Ver detalhes' }).click();
+    await page.waitForFunction(() => typeof window.__releaseComplaintDetail === 'function');
+    await row(titleB).getByRole('button', { name: 'Ver detalhes' }).click();
+    await detail.getByText(descriptionB, { exact: false }).waitFor();
+    await page.evaluate(() => window.__releaseComplaintDetail());
+    await page.waitForFunction(() => window.__complaintDetailReturned === true);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.match(await detail.innerText(), /exclusiva de BETA/);
+    assert.doesNotMatch(await detail.innerText(), /exclusiva de ALFA/);
+    await page.evaluate(() => { window.fetch = window.__complaintOriginalFetch; });
+
+    // Sequência independente da lista: A atrasado chega após B e é descartado.
+    await page.evaluate(({ a, b }) => {
+      const original = window.fetch.bind(window); window.__complaintOriginalFetch = original;
+      let order = 0;
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (new URL(url, location.origin).pathname !== '/api/admin/employee-complaints' || (init?.method && init.method !== 'GET')) return original(input, init);
+        const current = ++order; const response = await original(input, init); const data = await response.json();
+        if (current === 1) await new Promise(resolve => { window.__releaseComplaintList = resolve; });
+        if (current === 1) window.__complaintListReturned = true;
+        return new Response(JSON.stringify({ ...data, items: data.items.filter(item => item.id === (current === 1 ? a : b)) }), { status: response.status, headers: { 'content-type': 'application/json' } });
+      };
+    }, { a: idA, b: idB });
+    await area.getByRole('button', { name: 'Atualizar reclamações' }).click();
+    await page.waitForFunction(() => typeof window.__releaseComplaintList === 'function');
+    await area.getByRole('button', { name: 'Atualizar reclamações' }).click();
+    await list.getByText(titleB, { exact: false }).waitFor();
+    await page.evaluate(() => window.__releaseComplaintList());
+    await page.waitForFunction(() => window.__complaintListReturned === true);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.match(await list.innerText(), new RegExp(titleB));
+    assert.doesNotMatch(await list.innerText(), new RegExp(titleA));
+    assert.doesNotMatch(await detail.innerText(), /exclusiva de (ALFA|BETA)/, 'releitura remove detalhe antigo');
+    await page.evaluate(() => { window.fetch = window.__complaintOriginalFetch; });
+    await area.getByRole('button', { name: 'Atualizar reclamações' }).click();
+    await list.getByText(titleA, { exact: false }).waitFor();
+
+    // 503, payload malformado e 403 são distintos de vazio; retry de lista e de
+    // detalhe usa o mesmo servidor depois de desligada a injeção local.
+    await page.evaluate(() => {
+      const original = window.fetch.bind(window); window.__complaintOriginalFetch = original; window.__complaintFailure = '';
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : input.url;
+        const pathname = new URL(url, location.origin).pathname;
+        if (init?.method && init.method !== 'GET') return original(input, init);
+        if (pathname === '/api/admin/employee-complaints' && window.__complaintFailure === 'list503') return new Response(JSON.stringify({ error: 'indisponivel_sintetico' }), { status: 503, headers: { 'content-type': 'application/json' } });
+        if (pathname === '/api/admin/employee-complaints' && window.__complaintFailure === 'list403') return new Response(JSON.stringify({ error: 'forbidden_restricted_channel' }), { status: 403, headers: { 'content-type': 'application/json' } });
+        if (pathname === '/api/admin/employee-complaints' && window.__complaintFailure === 'listInvalid') return new Response(JSON.stringify({ items: {} }), { status: 200, headers: { 'content-type': 'application/json' } });
+        if (pathname.startsWith('/api/admin/employee-complaints/') && window.__complaintFailure === 'detail503') return new Response(JSON.stringify({ error: 'indisponivel_sintetico' }), { status: 503, headers: { 'content-type': 'application/json' } });
+        if (pathname.startsWith('/api/admin/employee-complaints/') && window.__complaintFailure === 'detailInvalid') {
+          const result = await original(input, init); const data = await result.json(); data.messages = {};
+          return new Response(JSON.stringify(data), { status: 200, headers: { 'content-type': 'application/json' } });
+        }
+        return original(input, init);
+      };
+    });
+    await page.evaluate(() => { window.__complaintFailure = 'list503'; });
+    await area.getByRole('button', { name: 'Atualizar reclamações' }).click();
+    await list.locator('[data-ui-state="error"]').waitFor();
+    assert.equal(await list.locator('[data-ui-state="empty"]').count(), 0);
+    assert.doesNotMatch(await list.innerText(), /indisponivel_sintetico/);
+    await page.evaluate(() => { window.__complaintFailure = ''; });
+    await list.getByRole('button', { name: 'Tentar novamente' }).click();
+    await list.getByText(titleB, { exact: false }).waitFor();
+    await page.evaluate(() => { window.__complaintFailure = 'listInvalid'; });
+    await area.getByRole('button', { name: 'Atualizar reclamações' }).click();
+    await list.getByText(/payload inválido/i).waitFor();
+    assert.equal(await list.locator('[data-ui-state="empty"]').count(), 0);
+    await page.evaluate(() => { window.__complaintFailure = ''; });
+    await list.getByRole('button', { name: 'Tentar novamente' }).click();
+    await list.getByText(titleA, { exact: false }).waitFor();
+    await page.evaluate(() => { window.__complaintFailure = 'detail503'; });
+    await row(titleA).getByRole('button', { name: 'Ver detalhes' }).click();
+    await detail.locator('[data-ui-state="error"]').waitFor();
+    await page.evaluate(() => { window.__complaintFailure = ''; });
+    await detail.getByRole('button', { name: 'Tentar novamente' }).click();
+    await detail.getByText(descriptionA, { exact: false }).waitFor();
+    await page.evaluate(() => { window.__complaintFailure = 'detailInvalid'; });
+    await row(titleB).getByRole('button', { name: 'Ver detalhes' }).click();
+    await detail.getByText(/payload inválido/i).waitFor();
+    assert.doesNotMatch(await detail.innerText(), /exclusiva de (ALFA|BETA)/);
+    await page.evaluate(() => { window.__complaintFailure = ''; });
+    await detail.getByRole('button', { name: 'Tentar novamente' }).click();
+    await detail.getByText(descriptionB, { exact: false }).waitFor();
+    await page.evaluate(() => { window.__complaintFailure = 'list403'; });
+    await area.getByRole('button', { name: 'Atualizar reclamações' }).click();
+    await list.locator('[data-ui-state="denied"]').waitFor();
+    assert.equal(await list.locator('[data-ui-state="error"]').count(), 0);
+    assert.doesNotMatch(await detail.innerText(), /exclusiva de (ALFA|BETA)/);
+    await page.evaluate(() => { window.fetch = window.__complaintOriginalFetch; });
+    await context.close();
+  } finally { await browser.close(); }
+});

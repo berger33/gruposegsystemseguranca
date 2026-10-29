@@ -35,7 +35,7 @@
 "EmpProfileClient.tsx","103","orfao","","","2","0","","nao_montado","orfao_nao_promovido"
 "EmpPwaClient.tsx","342","orfao","","","8","0","","nao_montado","orfao_nao_promovido"
 "EmpSelfClient.tsx","240","orfao","","","7","0","","nao_montado","orfao_nao_promovido"
-"EmployeeComplaintClient.tsx","96","orfao","","","5","0","","nao_montado","orfao_nao_promovido"
+"EmployeeComplaintClient.tsx","345","console","TiConsole","reclamacoes_colaboradores","5","0","ux-pro-03-ti-reclamacoes-colaboradores-ui.test.mjs","ti|admin","com_prova"
 "EnvClient.tsx","279","console","TiConsole","ambientes","2","0","ux-pro-03-ti-env-ui.test.mjs","ti|admin","com_prova"
 "EquipmentClient.tsx","69","workspace","src/app/admin/comercial/ComercialWorkspace.tsx","","1","0","ux-pro-03-catalog-equipment-ui.test.mjs","herdado do workspace","montado_em_workspace"
 "ExtAdvancedClient.tsx","156","orfao","","","8","0","ext07-compliance.integration.test.mjs","nao_montado","orfao_nao_promovido"

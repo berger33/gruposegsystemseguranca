@@ -1,8 +1,12 @@
+import { createHash } from 'node:crypto';
+
 export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, requireSession, requireRole }) {
   const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
   const readJson = async (req) => { const chunks=[]; for await (const c of req) chunks.push(c); const raw=Buffer.concat(chunks).toString('utf8'); if(!raw) return {}; try{ return JSON.parse(raw);} catch{ return {}; } };
   const generateProtocol = (prefix) => { const d=new Date(); const y=d.getFullYear().toString(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); const rand=Math.random().toString(36).substring(2,6).toUpperCase(); return `${prefix}-${y}${m}${day}-${rand}`; };
-  const hashValue = (v) => { try{ const crypto=require('node:crypto'); return crypto.createHash('sha256').update(String(v)).digest('hex'); } catch{ return null; } };
+  // Este módulo é ESM: require() não existe aqui e antes devolvia null para
+  // toda referência. O campo original em texto continua preservado no schema.
+  const hashValue = (v) => createHash('sha256').update(String(v)).digest('hex');
 
   // CLI-15: projeção mínima para o RH — somente o envelope justificado e
   // compartilhado; nunca descrição, conta, identidade do cliente ou referência
@@ -85,7 +89,12 @@ export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, require
       const nextStatus=status||cur.status;
       const valid=['pendente','em_analise','em_apuracao','resolvida','arquivada','cancelada','escalonada'];
       if(!valid.includes(nextStatus)) return json(res,400,{error:'invalid_status'});
-      const { rows } = await pool.query(`UPDATE cli_employee_complaints SET status=$2, responsible_name=COALESCE($3,responsible_name), responsible_id=COALESCE($4,responsible_id), due_date=COALESCE($5,due_date), resolved_at=CASE WHEN $2 IN ('resolvida','arquivada') THEN NOW() ELSE resolved_at END, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, nextStatus, responsible_name, sess.identityId||null, due_date]);
+      // A correção do enum é limitada a admin/ti: no caminho RH o contrato
+      // legado devolve a linha completa mesmo para reclamação não compartilhada.
+      // Desbloqueá-lo sem decisão de autorização vazaria descrição/referência;
+      // mudar sua projeção ou permissão também exige decisão do proprietário.
+      const statusParameter = isAdmin ? '$2::cli_complaint_status' : '$2';
+      const { rows } = await pool.query(`UPDATE cli_employee_complaints SET status=${statusParameter}, responsible_name=COALESCE($3,responsible_name), responsible_id=COALESCE($4,responsible_id), due_date=COALESCE($5,due_date), resolved_at=CASE WHEN ${statusParameter} IN ('resolvida','arquivada') THEN NOW() ELSE resolved_at END, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, nextStatus, responsible_name, sess.identityId||null, due_date]);
       await pool.query(`INSERT INTO cli_employee_complaint_history (complaint_id, previous_status, next_status, reason, changed_by_identity, changed_by_name, is_hr_share) VALUES ($1,$2,$3,$4,$5,$6,false)`, [id, cur.status, nextStatus, reason, sess.identityId||null, sess.role||null]);
       await auditLog({ action:'cli_complaint_status', actor:sess.identityId||'system', target:id, meta:{ from: cur.status, to: nextStatus, reason: reason.substring(0,200) } });
       return json(res,200,rows[0]);
@@ -135,8 +144,8 @@ export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, require
     const isRH=!isAdmin && requireRole(sess,['rh']);
     if(!isAdmin && !isRH) return json(res,403,{error:'forbidden_restricted_channel'});
     const url=new URL(req.url,'http://localhost');
-    const complaint_id=url.searchParams.get('complaint_id') || (await readJson(req)).complaint_id;
     if(req.method==='GET'){
+      const complaint_id=url.searchParams.get('complaint_id') || (await readJson(req)).complaint_id;
       if(!complaint_id) return json(res,400,{error:'missing_complaint_id'});
       if(isRH){
         const { rows } = await pool.query(`SELECT * FROM cli_employee_complaint_messages WHERE complaint_id=$1 AND is_hr_visible=true ORDER BY created_at ASC`, [complaint_id]);
@@ -146,8 +155,10 @@ export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, require
       return json(res,200,{items:rows});
     }
     if(req.method==='POST'){
+      // Um stream HTTP só pode ser lido uma vez; aceitar tanto o corpo
+      // original quanto o identificador opcional na query, sem mudar precedência.
       const b=await readJson(req);
-      const cid=b.complaint_id||complaint_id;
+      const cid=b.complaint_id||url.searchParams.get('complaint_id');
       const message=String(b.message||'').trim();
       const sender_type=String(b.sender_type||'cliente').trim();
       const is_internal=!!b.is_internal;

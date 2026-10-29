@@ -3,25 +3,25 @@
   "resumo": "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
   "data": "2026-10-27",
   "criterio": "promover por area somente com prova (decisao de 02/10); prova estatica nao substitui gate de navegador nem aceite humano",
-  "tiConsoleSha256": "3e5b6f77f91c36d7398b9dc5bbfb37f8a9695267deddd6303d8a629b3ac804cc",
+  "tiConsoleSha256": "937257e4e7ed9b5f60e396af8778a26c54bd38a750bce27e4c1f3a7fa3053b4c",
   "pageSha256": "360bf2564469679a4cc7c0b6b9274f05557188f701a3f3b89649ce4d70d56313",
   "total": 84,
-  "abas": 22,
-  "importsDinamicos": 22,
+  "abas": 23,
+  "importsDinamicos": 23,
   "console": {
-    "total": 22,
-    "comProva": 22,
+    "total": 23,
+    "comProva": 23,
     "lacunas": []
   },
   "workspace": {
     "total": 25
   },
   "orfos": {
-    "total": 37,
+    "total": 36,
     "promovidosSemSairDaClassificacao": 0
   },
   "promocoesComProva": {
-    "total": 9,
+    "total": 10,
     "todasMontadas": true,
     "detalhes": [
       {
@@ -77,6 +77,12 @@
         "aba": "monitoramento_ext",
         "familia": "central de monitoramento/vídeo, biometria e automações determinísticas (escopo reduzido às três famílias cujo contrato legado segue vivo; relatórios/inteligência/emergencial têm rota canônica e não foram montados)",
         "relatorio": "docs/UX-PRO-03-PROMOCAO-MONITORAMENTO-2026-10-29.md"
+      },
+      {
+        "componente": "EmployeeComplaintClient.tsx",
+        "aba": "reclamacoes_colaboradores",
+        "familia": "reclamações de colaboradores em canal administrativo restrito e compartilhamento mínimo com RH",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-RECLAMACOES-COLABORADORES-2026-10-29.md"
       }
     ]
   },
