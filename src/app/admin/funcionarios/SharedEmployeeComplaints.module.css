@@ -1,0 +1,146 @@
+.workspace {
+  --shared-border: var(--ux-color-border);
+  --shared-text: var(--ux-color-text);
+  --shared-muted: var(--ux-color-muted);
+  --shared-focus: var(--ux-color-focus);
+  color: var(--shared-text);
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.header {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.header h2,
+.listPanel h3,
+.detailPanel h3,
+.form h4 { margin: 0; }
+.header p { color: var(--shared-muted); margin: .35rem 0 0; max-width: 72ch; }
+
+.privacyNotice,
+.limitNote {
+  background: var(--ux-color-canvas);
+  border: 1px solid var(--shared-border);
+  border-radius: .6rem;
+  margin: 0;
+  padding: .75rem .9rem;
+}
+.limitNote { color: var(--shared-muted); font-size: .9rem; }
+
+.columns {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(17rem, .85fr) minmax(0, 1.4fr);
+  min-width: 0;
+}
+
+.listPanel,
+.detailPanel {
+  background: var(--ux-color-surface);
+  border: 1px solid var(--shared-border);
+  border-radius: .75rem;
+  min-width: 0;
+  padding: 1rem;
+}
+.listPanel h3,
+.detailPanel h3 { font-size: 1.05rem; margin-bottom: .8rem; }
+
+.items { display: grid; gap: .6rem; list-style: none; margin: 0; padding: 0; }
+.items li { min-width: 0; }
+.itemButton {
+  align-items: flex-start;
+  background: transparent;
+  border: 1px solid var(--shared-border);
+  border-radius: .55rem;
+  color: inherit;
+  cursor: pointer;
+  display: grid;
+  gap: .25rem;
+  min-width: 0;
+  padding: .75rem;
+  text-align: left;
+  width: 100%;
+  overflow-wrap: anywhere;
+}
+.itemButton:hover,
+.itemSelected { background: var(--ux-color-canvas); border-color: var(--shared-focus); }
+.protocol { font-weight: 700; }
+.statusLine { font-weight: 600; }
+.dateLine,
+.hint { color: var(--shared-muted); font-size: .9rem; }
+
+.state { color: var(--shared-muted); margin: .5rem 0; }
+.error {
+  background: var(--ux-color-error-soft);
+  border: 1px solid var(--ux-color-error);
+  border-radius: .55rem;
+  color: var(--ux-color-error);
+  margin: .6rem 0;
+  padding: .75rem;
+}
+.error p { margin: 0 0 .6rem; }
+.success {
+  background: var(--ux-color-success-soft);
+  border: 1px solid var(--ux-color-success);
+  border-radius: .55rem;
+  margin: 0;
+  padding: .75rem;
+}
+
+.facts { display: grid; gap: .6rem; margin: 0; }
+.facts > div { border-bottom: 1px solid var(--shared-border); display: grid; gap: .2rem; padding-bottom: .55rem; }
+.facts dt { color: var(--shared-muted); font-size: .87rem; font-weight: 600; }
+.facts dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.form { border-top: 1px solid var(--shared-border); display: grid; gap: .8rem; margin-top: 1rem; padding-top: 1rem; }
+.field { display: grid; gap: .35rem; min-width: 0; }
+.field label { font-weight: 650; }
+.field select,
+.field textarea {
+  background: var(--ux-color-surface);
+  border: 1px solid var(--shared-border);
+  border-radius: .45rem;
+  color: inherit;
+  font: inherit;
+  max-width: 100%;
+  min-width: 0;
+  padding: .65rem .7rem;
+  width: 100%;
+}
+.field textarea { resize: vertical; }
+.hint { margin: 0; }
+.primaryButton,
+.secondaryButton,
+.retryButton {
+  border: 1px solid var(--shared-focus);
+  border-radius: .5rem;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+  min-height: 2.7rem;
+  padding: .55rem .85rem;
+}
+.primaryButton { background: var(--shared-focus); color: var(--ux-color-canvas); justify-self: start; }
+.secondaryButton,
+.retryButton { background: var(--ux-color-surface); color: var(--shared-focus); }
+.primaryButton:disabled,
+.secondaryButton:disabled { cursor: not-allowed; opacity: .65; }
+
+.workspace :focus-visible { outline: 3px solid var(--shared-focus); outline-offset: 3px; }
+
+@media (max-width: 900px) {
+  .columns { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 650px) {
+  .header { align-items: stretch; flex-direction: column; }
+  .secondaryButton,
+  .retryButton,
+  .primaryButton { justify-self: stretch; width: 100%; }
+  .listPanel,
+  .detailPanel { padding: .75rem; }
+}
