@@ -6878,8 +6878,13 @@ test('browser UX-PRO-03: FIN cadastros de apoio (papel, POST real, histórico de
       const historyBody = await historyResponse.json();
       assert.ok(Array.isArray(historyBody.history) && historyBody.history.length >= 1,
         'o histórico da conta baixada precisa ter pelo menos a criação e a baixa');
-      await historyPanel().getByText(/Baixa sintética do gate UX-PRO-03 FIN cadastros/).waitFor();
-      await historyPanel().getByText(/→ recebido/).first().waitFor();
+      // O motivo aparece no cartão E no JSON canônico do drill-down: localizar
+      // pelo texto livre viola o modo estrito do Playwright (defeito achado
+      // pelo próprio gate no CI). O cartão é a unidade que interessa.
+      const settledCard = historyPanel().locator('li')
+        .filter({ hasText: 'Baixa sintética do gate UX-PRO-03 FIN cadastros' }).first();
+      await settledCard.waitFor();
+      assert.match(await settledCard.innerText(), /→ recebido/, 'a baixa precisa levar a conta a recebido');
       // Registro canônico no drill-down.
       const summary = historyPanel().locator('summary').filter({ hasText: 'Registro canônico da baixa (JSON)' }).first();
       await summary.click();

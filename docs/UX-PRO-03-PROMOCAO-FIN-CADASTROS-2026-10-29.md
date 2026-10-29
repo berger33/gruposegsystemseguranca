@@ -117,6 +117,27 @@ recusa de nome curto traduzida sem segundo "sucesso", 503 com retry sem recarreg
 **negado** (nunca vazio). Localmente validado por `node --check` e pelos gates HTTP/PostgreSQL acima
 — nesta sandbox falta `libnspr4.so` (E22), então o Chromium só executa no runner.
 
+### 4.3.1 O gate do CI achou um defeito no próprio teste (corrigido)
+
+Na PR #304 o job *UX portais* executou o cenário com Chromium real e reprovou:
+
+```
+locator.waitFor: strict mode violation: getByRole('region', { name: /^Histórico de baixa/ })
+  .getByText(/Baixa sintética do gate UX-PRO-03 FIN cadastros/) resolved to 2 elements:
+  1) <span> aka getByText('saldo R$ 0,00 → R$ 12.345,00')
+  2) <pre class="FinRegistryClient_pre__lzISe">{ "id": ...
+```
+
+O motivo da baixa aparece **duas vezes de propósito**: no cartão (texto para o operador) e no JSON canônico
+do drill-down. A asserção foi reescrita para escopar o **cartão** (`li` filtrado pelo motivo) e medir o
+`→ recebido` nele — mesma lição do gate anterior: escopar por região, não por texto solto. A tela não mudou;
+o defeito era do teste.
+
+O job *UX-PRO-10B prévias* (workflow independente, 5 cenários de layout) reprovou no mesmo push com
+`server_did_not_start` nos **cinco** subtestes — falha de boot do `server.mjs --dev` após as migrações, sem
+erro de compilação (`npm run build` **106/106** e `typecheck` 0 na mesma árvore). Registrado como falha de
+infraestrutura do runner, não atribuída a esta fatia.
+
 ### 4.4 Gates locais
 
 | Gate | Resultado |
