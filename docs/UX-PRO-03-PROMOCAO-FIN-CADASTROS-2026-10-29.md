@@ -155,6 +155,18 @@ fatia** (`browser ID3: cobranças não anuncia lista vazia antes de concluir a l
 `Timeout 15000ms exceeded` em `waitForFunction` — o mesmo teste havia passado na execução anterior do mesmo
 commit-base, então é flakiness de tempo do runner, registrada aqui e não atribuída à fatia.
 
+### 4.3.3 Terceira rodada: o gate do portal passou, o job de operações não subiu
+
+Na terceira execução o job **`ux-portal-postgres-browser` (gate do portal) ficou verde** — 44/45 checks, com o
+cenário `browser UX-PRO-03: FIN cadastros de apoio` executado em Chromium real. O único vermelho foi
+**`ux-ops-postgres-browser`**: os 20+ subtestes de `/admin/operacao` falharam no hook com
+`server_did_not_start` (`tests/ux-ops-workspace.integration.test.mjs:58`), sem qualquer erro de compilação.
+Esse job **já havia passado neste mesmo branch** na primeira execução (3m24s) e a área não é tocada por esta
+fatia (`server.mjs` e `src/app/admin/operacao/**` intactos). Duas ocorrências de `server_did_not_start` em
+jobs diferentes (`UX-PRO-10B` e `ux-ops`) apontam para boot do `server.mjs --dev` sob carga do runner, não
+para regressão de código. **Não há `rerun` disponível por API (403 no sandbox)**; a resposta honesta é novo
+push e nova medição — nunca declarar verde o que não foi medido.
+
 ### 4.4 Gates locais
 
 | Gate | Resultado |
