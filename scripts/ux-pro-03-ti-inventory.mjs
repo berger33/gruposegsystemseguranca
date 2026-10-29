@@ -76,6 +76,12 @@ const PROMOCOES_COM_PROVA = [
     familia: 'PLT-13 configurações, flags, manutenção, rollout e reversão',
     relatorio: 'docs/UX-PRO-03-PROMOCAO-CONFIGURACOES-ROLLOUT-2026-10-27.md',
   },
+  {
+    componente: 'CliAdvancedClient.tsx',
+    aba: 'cliente',
+    familia: 'CLI-05/06/07/08 lado administrativo dos recursos v2 do portal do cliente',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-CLIENTE-V2-2026-10-28.md',
+  },
 ];
 
 const sha256 = value => createHash('sha256').update(value).digest('hex');
@@ -115,8 +121,8 @@ export async function collect() {
   const testSources = await readMap(testFiles.map(file => path.join(root, 'tests', file)));
 
   const tabsDeclaration = consoleSrc.match(/const tabs=(\[[\s\S]*?\]) as const;/)?.[1] ?? '';
-  const tabs = [...tabsDeclaration.matchAll(/\['([a-z_]+)','([^']+)'\]/g)].map(match => ({ key: match[1], label: match[2] }));
-  const renders = [...consoleSrc.matchAll(/active==='([a-z_]+)'&&<(\w+)\/>/g)]
+  const tabs = [...tabsDeclaration.matchAll(/\['([a-z0-9_]+)','([^']+)'\]/g)].map(match => ({ key: match[1], label: match[2] }));
+  const renders = [...consoleSrc.matchAll(/active==='([a-z0-9_]+)'&&<(\w+)\/>/g)]
     .map(match => ({ key: match[1], component: match[2] }));
   const dynamicNames = [...consoleSrc.matchAll(/const\s+(\w+)\s*=\s*dynamic\(\(\)\s*=>\s*import\(['"]\.\/([^'"]+)['"]\)\)/g)]
     .map(match => match[2]);
