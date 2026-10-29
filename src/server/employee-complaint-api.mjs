@@ -1,6 +1,15 @@
 import { createHash } from 'node:crypto';
 
-export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, requireSession, requireRole }) {
+// Enum de situação aceito pelo schema (093) — o mesmo que o PATCH legado valida.
+const COMPLAINT_STATUS = ['pendente','em_analise','em_apuracao','resolvida','arquivada','cancelada','escalonada'];
+// E17: 8-4-4-4-12. Sem o 4º grupo a validação recusaria todo UUID real.
+const COMPLAINT_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Projeção mínima: as MESMAS colunas que o RH já recebe na leitura. Nunca
+// `RETURNING *` nesta rota — descrição, título, referência, hash, conta,
+// contatos e vínculos internos ficam fora do SELECT, do UPDATE e da resposta.
+const MINIMAL_COLUMNS = 'id, protocol, category, severity, status, is_restricted, minimal_share, is_shared_with_hr, shared_with_hr_at, created_at';
+
+export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, requireSession, requireRole, writeAudit }) {
   const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
   const readJson = async (req) => { const chunks=[]; for await (const c of req) chunks.push(c); const raw=Buffer.concat(chunks).toString('utf8'); if(!raw) return {}; try{ return JSON.parse(raw);} catch{ return {}; } };
   const generateProtocol = (prefix) => { const d=new Date(); const y=d.getFullYear().toString(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); const rand=Math.random().toString(36).substring(2,6).toUpperCase(); return `${prefix}-${y}${m}${day}-${rand}`; };
@@ -251,5 +260,78 @@ export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, require
     return json(res,405,{error:'method_not_allowed'});
   };
 
-  return { handleComplaints, handleComplaintById, handleMessages, handleEvidences, handleHrShare };
+  // Auditoria transacional: a mesma conexão da escrita, para que falha de
+  // auditoria desfaça a transição. `writeAudit` é um ponto de injeção
+  // declarado para provar o rollback em PostgreSQL real; o padrão grava
+  // `audit_log` com a mesma forma do `auditLog` administrativo.
+  const auditWriter = typeof writeAudit === 'function'
+    ? writeAudit
+    : async (client, entry) => {
+      await client.query(
+        `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)`,
+        [entry.action, entry.actor, entry.target, entry.meta ? JSON.stringify(entry.meta) : null],
+      );
+    };
+
+  // Jornada ADITIVA do RH: atualização de situação em relato que foi
+  // explicitamente compartilhado com o RH. Existe porque o PATCH legado
+  // (`handleComplaints`) devolve 500 ao RH (PostgreSQL 42P08) e, se fosse
+  // "consertado" de forma irrestrita, devolveria a linha completa de relato
+  // NÃO compartilhado. Nenhuma das duas coisas é alterada aqui: a rota legada
+  // e seus consumidores continuam exatamente como estavam.
+  //
+  // Regras desta rota:
+  //  - mesma origem, sessão de equipe e papel nomeado no servidor
+  //    (`rh`, e também `admin`/`ti` porque já operam o canal; `marcelo`,
+  //    `comercial` e demais papéis recebem 403);
+  //  - o relato precisa ter `is_restricted=true` E `is_shared_with_hr=true`;
+  //    caso contrário responde 404 `not_found`, sem revelar existência;
+  //  - validação de id/status/motivo/`expected_status` antes de abrir transação;
+  //  - `SELECT … FOR UPDATE` + comparência de `expected_status` para não
+  //    sobrescrever decisão concorrente (409 `status_conflict`);
+  //  - situação igual à atual não fabrica histórico (409 `status_unchanged`);
+  //  - UPDATE com enum explícito (`$2::cli_complaint_status`, causa do 42P08),
+  //    histórico e auditoria na MESMA transação; qualquer falha → ROLLBACK e
+  //    503 `complaint_status_unavailable`, sem escrita parcial;
+  //  - a resposta usa apenas a projeção mínima já existente do RH.
+  const handleHrStatus = async (req,res) => {
+    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
+    const sess=await requireSession(req);
+    if(!sess) return json(res,401,{error:'unauthorized'});
+    const isAdmin=requireRole(sess,['admin','ti']);
+    const isRH=!isAdmin && requireRole(sess,['rh']);
+    if(!isAdmin && !isRH) return json(res,403,{error:'forbidden_restricted_channel'});
+    if(req.method!=='PATCH') return json(res,405,{error:'method_not_allowed'});
+    const b=await readJson(req);
+    const id=b&&typeof b.id==='string'?b.id.trim():'';
+    if(!COMPLAINT_ID_RE.test(id)) return json(res,400,{error:'invalid_id'});
+    const status=b&&typeof b.status==='string'?b.status.trim():'';
+    if(!COMPLAINT_STATUS.includes(status)) return json(res,400,{error:'invalid_status'});
+    const reason=b&&typeof b.reason==='string'?b.reason.trim():'';
+    if(reason.length<10||reason.length>1000) return json(res,400,{error:'invalid_reason'});
+    const expected=b&&typeof b.expected_status==='string'&&b.expected_status.trim()?b.expected_status.trim():null;
+    if(expected && !COMPLAINT_STATUS.includes(expected)) return json(res,400,{error:'invalid_expected_status'});
+    const client=await pool.connect();
+    try{
+      await client.query('BEGIN');
+      const { rows } = await client.query(`SELECT ${MINIMAL_COLUMNS} FROM cli_employee_complaints WHERE id=$1 AND is_restricted=true AND is_shared_with_hr=true FOR UPDATE`,[id]);
+      if(!rows.length){ await client.query('ROLLBACK'); return json(res,404,{error:'not_found'}); }
+      const cur=rows[0];
+      if(expected && expected!==cur.status){ await client.query('ROLLBACK'); return json(res,409,{error:'status_conflict',current_status:cur.status}); }
+      if(status===cur.status){ await client.query('ROLLBACK'); return json(res,409,{error:'status_unchanged',current_status:cur.status}); }
+      const { rows: updated } = await client.query(`UPDATE cli_employee_complaints SET status=$2::cli_complaint_status, resolved_at=CASE WHEN $2::cli_complaint_status IN ('resolvida','arquivada') THEN NOW() ELSE resolved_at END, updated_at=NOW() WHERE id=$1 AND is_restricted=true AND is_shared_with_hr=true RETURNING ${MINIMAL_COLUMNS}`,[id,status]);
+      // Corrida: o relato deixou de estar compartilhado entre a leitura e a escrita.
+      if(!updated.length){ await client.query('ROLLBACK'); return json(res,404,{error:'not_found'}); }
+      const { rows: history } = await client.query(`INSERT INTO cli_employee_complaint_history (complaint_id, previous_status, next_status, reason, changed_by_identity, changed_by_name, is_hr_share) VALUES ($1,$2,$3,$4,$5,$6,false) RETURNING previous_status, next_status, is_hr_share, created_at`,[id,cur.status,status,reason,sess.identityId||null,String(sess.role||'rh').substring(0,200)]);
+      await auditWriter(client,{ action:'cli_complaint_hr_status', actor:sess.identityId||'system', target:id, meta:{ from: cur.status, to: status, role: String(sess.role||''), reason: reason.substring(0,200), minimal_share: true } });
+      await client.query('COMMIT');
+      return json(res,200,{ complaint: hrMinimalProjection(updated[0]), history: history[0]||null, note:'Situação atualizada em relato compartilhado: o RH recebe somente o envelope mínimo compartilhado.' });
+    } catch(error){
+      await client.query('ROLLBACK').catch(()=>{});
+      console.error('cli_complaint_hr_status failed', error instanceof Error ? error.message : error);
+      return json(res,503,{error:'complaint_status_unavailable'});
+    } finally { client.release(); }
+  };
+
+  return { handleComplaints, handleComplaintById, handleMessages, handleEvidences, handleHrShare, handleHrStatus };
 }

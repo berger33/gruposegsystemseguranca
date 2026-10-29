@@ -7851,3 +7851,325 @@ test('browser UX-PRO-03: reclamações de colaboradores (papéis, isolamento, es
     await context.close();
   } finally { await browser.close(); }
 });
+
+// ---------------------------------------------------------------------------
+// UX-PRO — jornada do RH em relatos explicitamente compartilhados.
+//
+// Operação ADITIVA `/api/admin/employee-complaint-hr-status`: o RH atualiza a
+// situação de um relato compartilhado com projeção mínima, mesma origem,
+// sessão, validação, checagem de compartilhamento, `FOR UPDATE`, concorrência
+// explícita e histórico+auditoria na MESMA transação. O PATCH legado continua
+// devolvendo 500 ao RH (dívida registrada, coberta no cenário anterior) e o
+// caminho admin|ti segue igual.
+// ---------------------------------------------------------------------------
+const HR_STATUS_ENDPOINT = '/api/admin/employee-complaint-hr-status';
+const MINIMAL_KEYS = ['category', 'created_at', 'id', 'is_restricted', 'is_shared_with_hr', 'minimal_share',
+  'protocol', 'severity', 'shared_with_hr_at', 'status'];
+const RESTRICTED_KEYS = ['description', 'title', 'employee_reference', 'employee_reference_hash',
+  'client_account_id', 'contract_id', 'contact_id', 'employee_id', 'request_fingerprint', 'responsible_id'];
+
+test('browser UX-PRO RH: relatos compartilhados (papéis, escrita real, concorrência, A/B, 503 e quatro larguras)', { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: 'ti' });
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const comercial = await provisionStaff(pool, { role: 'comercial' });
+  const marcelo = await provisionStaff(pool, { role: 'marcelo' });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const comercialCookie = await loginStaffHttp(comercial.email);
+  const marceloCookie = await loginStaffHttp(marcelo.email);
+
+  const suffix = randomUUID().slice(0, 8);
+  const base = '/api/admin/employee-complaints';
+  const descriptionA = `Descrição sintética exclusiva COMPARTILHADA ${suffix}, canal restrito do RH.`;
+  const descriptionB = `Descrição sintética exclusiva NAO-COMPARTILHADA ${suffix}, canal restrito do RH.`;
+  const create = (title, description) => api(base, { method: 'POST', cookie: tiCookie,
+    body: { title, description, category: 'outro', severity: 'media', employee_reference: `REF-RH-${suffix}` } });
+
+  const createdA = await create(`QA-RH-${suffix}-COMPARTILHADA`, descriptionA);
+  const createdB = await create(`QA-RH-${suffix}-NAO-COMPARTILHADA`, descriptionB);
+  const createdC = await create(`QA-RH-${suffix}-LEGADO-TI`, `Descrição sintética do caminho administrativo ${suffix}, canal restrito.`);
+  assert.equal(createdA.status, 201);
+  assert.equal(createdB.status, 201);
+  assert.equal(createdC.status, 201);
+  const idA = createdA.body.id;
+  const idB = createdB.body.id;
+  const idC = createdC.body.id;
+  const protocolA = createdA.body.protocol;
+  const protocolB = createdB.body.protocol;
+
+  // Compartilhamento explícito e justificado da A (feito pelo TI, rota estrita).
+  const share = await api('/api/admin/employee-complaint-hr-shares', { method: 'POST', cookie: tiCookie,
+    body: { complaint_id: idA, shared_field: 'category', shared_value: 'outro', justification: `Justificativa sintética de compartilhamento ${suffix}.` } });
+  assert.equal(share.status, 201);
+
+  const historyCount = async (id) => (await pool.query('SELECT count(*)::int AS n FROM cli_employee_complaint_history WHERE complaint_id=$1', [id])).rows[0].n;
+  const statusOf = async (id) => (await pool.query('SELECT status FROM cli_employee_complaints WHERE id=$1', [id])).rows[0].status;
+
+  // --- Papéis: quem decide é o servidor --------------------------------
+  const comercialList = await api(base, { cookie: comercialCookie });
+  assert.equal(comercialList.status, 403);
+  const comercialPatch = await api(HR_STATUS_ENDPOINT, { method: 'PATCH', cookie: comercialCookie,
+    body: { id: idA, status: 'em_analise', reason: 'Motivo sintético do comercial, negado.' } });
+  assert.equal(comercialPatch.status, 403);
+  assert.equal(comercialPatch.body.error, 'forbidden_restricted_channel');
+  const marceloList = await api(base, { cookie: marceloCookie });
+  assert.equal(marceloList.status, 403);
+  const marceloPatch = await api(HR_STATUS_ENDPOINT, { method: 'PATCH', cookie: marceloCookie,
+    body: { id: idA, status: 'em_analise', reason: 'Motivo sintético do Marcelo, negado.' } });
+  assert.equal(marceloPatch.status, 403);
+  assert.equal(marceloPatch.body.error, 'forbidden_restricted_channel');
+  assert.equal(await statusOf(idA), 'pendente', 'negativa não altera a situação');
+
+  // --- Leitura do RH: só o compartilhado, só a projeção mínima ---------
+  const rhList = await api(base, { cookie: rhCookie });
+  assert.equal(rhList.status, 200);
+  assert.ok(rhList.body.items.some(item => item.protocol === protocolA), 'RH lista o relato compartilhado');
+  assert.ok(!rhList.body.items.some(item => item.id === idB || item.id === idC), 'RH não lista relato não compartilhado');
+  const rhDetail = await api(`${base}/${idA}`, { cookie: rhCookie });
+  assert.equal(rhDetail.status, 200);
+  assert.deepEqual(Object.keys(rhDetail.body.complaint).sort(), MINIMAL_KEYS);
+  for (const key of RESTRICTED_KEYS) assert.ok(!(key in rhDetail.body.complaint), `RH não recebe ${key}`);
+  assert.ok(!JSON.stringify(rhDetail.body).includes(descriptionA), 'a descrição não aparece em lugar algum da resposta do RH');
+  assert.equal((await api(`${base}/${idB}`, { cookie: rhCookie })).status, 404);
+  assert.equal((await api(`${base}/${idC}`, { cookie: rhCookie })).status, 404);
+
+  // --- Validação e compartilhamento na escrita -------------------------
+  const unsharedWrite = await api(HR_STATUS_ENDPOINT, { method: 'PATCH', cookie: rhCookie,
+    body: { id: idB, status: 'em_analise', reason: 'Motivo sintético em relato não compartilhado.' } });
+  assert.equal(unsharedWrite.status, 404);
+  assert.equal(unsharedWrite.body.error, 'not_found');
+  assert.ok(!('description' in unsharedWrite.body) && !('employee_reference' in unsharedWrite.body));
+  assert.equal(await statusOf(idB), 'pendente');
+
+  const invalidStatus = await api(HR_STATUS_ENDPOINT, { method: 'PATCH', cookie: rhCookie,
+    body: { id: idA, status: 'situacao_inventada', reason: 'Motivo sintético com mais de dez caracteres.' } });
+  assert.equal(invalidStatus.status, 400);
+  assert.equal(invalidStatus.body.error, 'invalid_status');
+  const shortReason = await api(HR_STATUS_ENDPOINT, { method: 'PATCH', cookie: rhCookie,
+    body: { id: idA, status: 'em_analise', reason: 'curto' } });
+  assert.equal(shortReason.status, 400);
+  assert.equal(shortReason.body.error, 'invalid_reason');
+  const emptyStatus = await api(HR_STATUS_ENDPOINT, { method: 'GET', cookie: rhCookie });
+  assert.equal(emptyStatus.status, 405);
+  assert.equal(await statusOf(idA), 'pendente');
+
+  const historyBefore = await historyCount(idA);
+  const stale = await api(HR_STATUS_ENDPOINT, { method: 'PATCH', cookie: rhCookie,
+    body: { id: idA, status: 'em_apuracao', reason: 'Motivo sintético de decisão concorrente.', expected_status: 'em_analise' } });
+  assert.equal(stale.status, 409);
+  assert.equal(stale.body.error, 'status_conflict');
+  assert.equal(stale.body.current_status, 'pendente');
+  assert.equal(await statusOf(idA), 'pendente');
+  assert.equal(await historyCount(idA), historyBefore, 'conflito não cria histórico');
+
+  // --- Rota legada preservada: RH 500, admin|ti 200 --------------------
+  const legacyRh = await api(base, { method: 'PATCH', cookie: rhCookie,
+    body: { id: idA, status: 'em_apuracao', reason: 'Motivo sintético do caminho legado do RH.' } });
+  assert.equal(legacyRh.status, 500);
+  assert.equal(legacyRh.body.error, 'internal_error');
+  assert.equal(await statusOf(idA), 'pendente');
+  const legacyTi = await api(base, { method: 'PATCH', cookie: tiCookie,
+    body: { id: idC, status: 'em_analise', reason: 'Motivo sintético do caminho administrativo.' } });
+  assert.equal(legacyTi.status, 200);
+  assert.equal(await statusOf(idC), 'em_analise');
+
+  // --- Escrita real da operação nova, com status e corpo ---------------
+  const write = await api(HR_STATUS_ENDPOINT, { method: 'PATCH', cookie: rhCookie,
+    body: { id: idA, status: 'em_analise', reason: `Motivo sintético do RH ${suffix}.`, expected_status: 'pendente' } });
+  assert.equal(write.status, 200);
+  assert.deepEqual(Object.keys(write.body.complaint).sort(), MINIMAL_KEYS);
+  assert.equal(write.body.complaint.status, 'em_analise');
+  assert.equal(write.body.history.previous_status, 'pendente');
+  assert.equal(write.body.history.next_status, 'em_analise');
+  for (const key of RESTRICTED_KEYS) assert.ok(!(key in write.body.complaint), `a resposta da escrita não contém ${key}`);
+  assert.equal(await statusOf(idA), 'em_analise');
+  assert.equal(await historyCount(idA), historyBefore + 1, 'a transição grava exatamente um histórico');
+  const auditRow = await pool.query(
+    `SELECT action, actor FROM audit_log WHERE action='cli_complaint_hr_status' AND target=$1 ORDER BY created_at DESC`, [idA]);
+  assert.ok(auditRow.rows.length >= 1, 'a auditoria registra a transição');
+  assert.equal(auditRow.rows[0].actor, rh.id);
+  const sameStatus = await api(HR_STATUS_ENDPOINT, { method: 'PATCH', cookie: rhCookie,
+    body: { id: idA, status: 'em_analise', reason: 'Motivo sintético repetindo a situação atual.' } });
+  assert.equal(sameStatus.status, 409);
+  assert.equal(sameStatus.body.error, 'status_unchanged');
+  assert.equal(await historyCount(idA), historyBefore + 1, 'situação repetida não fabrica histórico');
+
+  // --- Navegador como RH ----------------------------------------------
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openPage(browser, '/admin/funcionarios', rhCookie, { width: 1440, height: 900 });
+    const tab = page.getByRole('tab', { name: 'Reclamações compartilhadas', exact: true });
+    await tab.waitFor();
+    await tab.click();
+    const area = page.locator('section[aria-labelledby="rh-reclamacoes-compartilhadas-titulo"]');
+    await area.getByRole('heading', { name: /Reclamações compartilhadas/ }).waitFor();
+    const list = area.locator('ul[aria-label="Relatos compartilhados com o RH"]');
+    await list.getByText(protocolA, { exact: false }).waitFor();
+    assert.doesNotMatch(await list.innerText(), new RegExp(protocolB), 'relato não compartilhado não aparece para o RH');
+    assert.doesNotMatch(await area.innerText(), /exclusiva COMPARTILHADA|exclusiva NAO-COMPARTILHADA/,
+      'a descrição integral não é exibida ao RH');
+
+    await list.locator('li').filter({ hasText: protocolA }).getByRole('button', { name: 'Ver detalhes' }).click();
+    const detail = page.locator('section[aria-labelledby="rh-reclamacao-detalhe-titulo"]');
+    await detail.getByRole('heading', { name: new RegExp(protocolA) }).waitFor();
+    const detailText = await detail.innerText();
+    // O envelope é um <dl>; o texto é comparado com espaços normalizados para
+    // não depender do layout de dt/dd em cada largura.
+    const factsText = (await detail.locator('dl').innerText()).replace(/\s+/g, ' ');
+    assert.match(factsText, /Categoria:? Outro/);
+    assert.match(factsText, /Severidade:? Média/);
+    assert.match(factsText, /Situação:? Em análise/);
+    assert.match(detailText, /Nenhum campo além da projeção mínima/, 'nada além do mínimo foi compartilhado');
+    assert.doesNotMatch(detailText, /exclusiva COMPARTILHADA/);
+
+    // Escrita pela tela, com resposta real medida em status e corpo.
+    await detail.getByLabel('Nova situação').selectOption('escalonada');
+    await detail.getByLabel('Motivo da atualização').fill(`Motivo sintético registrado pela tela ${suffix}.`);
+    const pendingWrite = page.waitForResponse(response => new URL(response.url()).pathname === HR_STATUS_ENDPOINT
+      && response.request().method() === 'PATCH');
+    await detail.getByRole('button', { name: 'Registrar situação' }).click();
+    const writeResponse = await pendingWrite;
+    assert.equal(writeResponse.status(), 200);
+    assert.equal((await writeResponse.json()).complaint.status, 'escalonada');
+    await area.getByRole('status').getByText(/Situação registrada: Escalonada/).waitFor();
+    await detail.getByText(/Em análise → Escalonada/).waitFor();
+    assert.equal(await statusOf(idA), 'escalonada');
+
+    // 503 injetado apenas em window.fetch: erro distinto de vazio, com retry.
+    await page.evaluate(endpoint => {
+      const original = window.fetch.bind(window);
+      window.__rhComplaintOriginalFetch = original;
+      window.__rhComplaintFailure = '';
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (window.__rhComplaintFailure === 'status503' && new URL(url, location.origin).pathname === endpoint) {
+          return new Response(JSON.stringify({ error: 'indisponivel_sintetico' }), { status: 503, headers: { 'content-type': 'application/json' } });
+        }
+        return original(input, init);
+      };
+    }, HR_STATUS_ENDPOINT);
+    await page.evaluate(() => { window.__rhComplaintFailure = 'status503'; });
+    await detail.getByLabel('Nova situação').selectOption('resolvida');
+    await detail.getByLabel('Motivo da atualização').fill(`Motivo sintético com falha injetada ${suffix}.`);
+    await detail.getByRole('button', { name: 'Registrar situação' }).click();
+    // O aviso da escrita fica acima da lista/detalhe, na mesma área da aba.
+    await area.getByRole('alert').getByText(/Não foi possível registrar a situação/).waitFor();
+    assert.doesNotMatch(await detail.innerText(), /indisponivel_sintetico/, 'código cru não vaza na tela');
+    assert.equal(await statusOf(idA), 'escalonada', 'falha injetada não grava nada');
+    await page.evaluate(() => { window.__rhComplaintFailure = ''; });
+    const pendingRetry = page.waitForResponse(response => new URL(response.url()).pathname === HR_STATUS_ENDPOINT
+      && response.request().method() === 'PATCH');
+    await detail.getByRole('button', { name: 'Registrar situação' }).click();
+    const retryResponse = await pendingRetry;
+    assert.equal(retryResponse.status(), 200);
+    await area.getByRole('status').getByText(/Situação registrada: Resolvida/).waitFor();
+    assert.equal(await statusOf(idA), 'resolvida');
+    await page.evaluate(() => { window.fetch = window.__rhComplaintOriginalFetch; });
+
+    // A/B: o relato não compartilhado nunca aparece, nem após reler a lista.
+    await area.getByRole('button', { name: 'Atualizar relatos' }).click();
+    await list.getByText(protocolA, { exact: false }).waitFor();
+    assert.doesNotMatch(await area.innerText(), new RegExp(protocolB));
+    assert.doesNotMatch(await area.innerText(), /exclusiva NAO-COMPARTILHADA/);
+    await context.close();
+  } finally { await browser.close(); }
+
+  // --- Marcelo: a página abre (gate), a API nega e a tela diz isso -----
+  const marceloBrowser = await launchBrowser();
+  try {
+    const { context, page } = await openPage(marceloBrowser, '/admin/funcionarios', marceloCookie, { width: 1440, height: 900 });
+    const tab = page.getByRole('tab', { name: 'Reclamações compartilhadas', exact: true });
+    await tab.waitFor();
+    await tab.click();
+    const area = page.locator('section[aria-labelledby="rh-reclamacoes-compartilhadas-titulo"]');
+    await area.locator('[data-ui-state="denied"]').waitFor();
+    assert.equal(await area.locator('[data-ui-state="error"]').count(), 0, 'negado não é erro genérico');
+    const text = await area.innerText();
+    assert.match(text, /Seu papel não opera este canal/);
+    assert.doesNotMatch(text, new RegExp(protocolA));
+    assert.doesNotMatch(text, /exclusiva COMPARTILHADA/);
+    await context.close();
+  } finally { await marceloBrowser.close(); }
+
+  // --- Quatro larguras, com detalhe e formulário abertos ---------------
+  for (const width of [320, 390, 768, 1440]) {
+    const viewportBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(viewportBrowser, '/admin/funcionarios', rhCookie, { width, height: 900 });
+      const tab = page.getByRole('tab', { name: 'Reclamações compartilhadas', exact: true });
+      await tab.waitFor();
+      await tab.click();
+      const area = page.locator('section[aria-labelledby="rh-reclamacoes-compartilhadas-titulo"]');
+      const list = area.locator('ul[aria-label="Relatos compartilhados com o RH"]');
+      await list.getByText(protocolA, { exact: false }).waitFor();
+      await list.locator('li').filter({ hasText: protocolA }).getByRole('button', { name: 'Ver detalhes' }).click();
+      const detail = page.locator('section[aria-labelledby="rh-reclamacao-detalhe-titulo"]');
+      await detail.getByRole('heading', { name: new RegExp(protocolA) }).waitFor();
+      const missingLabels = await detail.locator('textarea,select').evaluateAll(controls => controls
+        .filter(control => !control.labels || control.labels.length === 0).map(control => control.outerHTML));
+      assert.deepEqual(missingLabels, [], `todo campo precisa de rótulo em ${width}px`);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.ok(overflow <= 1, `reclamações do RH transbordam ${overflow}px em ${width}px`);
+      await context.close();
+    } finally { await viewportBrowser.close(); }
+  }
+});
+
+// Rollback REAL em PostgreSQL: a mesma transação (situação + histórico +
+// auditoria) é desfeita por inteiro quando a auditoria falha. O ponto de
+// injeção `writeAudit` existe só para tornar o rollback observável; o fluxo
+// padrão grava `audit_log` na mesma conexão.
+test('UX-PRO RH: falha da auditoria desfaz situação e histórico em PostgreSQL real', { skip: !RUN }, async () => {
+  const { createEmployeeComplaintApi } = await import('../src/server/employee-complaint-api.mjs');
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const suffix = randomUUID().slice(0, 8);
+  const inserted = await pool.query(
+    `INSERT INTO cli_employee_complaints
+       (protocol, category, severity, title, description, is_shared_with_hr, shared_with_hr_at, shared_reason)
+     VALUES ($1,'outro','media',$2,$3,true,NOW(),$4) RETURNING id`,
+    [`CLI-COMP-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${suffix.slice(0, 4).toUpperCase()}`,
+      `QA-RH-ROLLBACK-${suffix}`, `Descrição sintética de rollback ${suffix}, canal restrito.`,
+      `Justificativa sintética de rollback ${suffix}.`]);
+  const id = inserted.rows[0].id;
+
+  const body = { id, status: 'em_analise', reason: `Motivo sintético de rollback ${suffix}.`, expected_status: 'pendente' };
+  const makeRequest = () => ({
+    method: 'PATCH',
+    url: HR_STATUS_ENDPOINT,
+    async *[Symbol.asyncIterator]() { yield Buffer.from(JSON.stringify(body)); },
+  });
+  const makeResponse = () => ({ status: 0, payload: null, writeHead(status) { this.status = status; }, end(raw) { this.payload = JSON.parse(raw); } });
+  const base = {
+    pool: new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 }),
+    sameOrigin: () => true,
+    requireSession: async () => ({ role: 'rh', identityId: rh.id }),
+    requireRole: (session, roles) => roles.includes(session.role),
+    auditLog: async () => {},
+  };
+  try {
+    const failing = createEmployeeComplaintApi({ ...base, writeAudit: async () => { throw new Error('audit offline (sintético)'); } });
+    const failRes = makeResponse();
+    const originalError = console.error;
+    console.error = () => {};
+    try { await failing.handleHrStatus(makeRequest(), failRes); } finally { console.error = originalError; }
+    assert.equal(failRes.status, 503);
+    assert.equal(failRes.payload.error, 'complaint_status_unavailable');
+    assert.equal((await pool.query('SELECT status FROM cli_employee_complaints WHERE id=$1', [id])).rows[0].status, 'pendente',
+      'a situação é desfeita pelo ROLLBACK');
+    assert.equal((await pool.query('SELECT count(*)::int AS n FROM cli_employee_complaint_history WHERE complaint_id=$1', [id])).rows[0].n, 0,
+      'o histórico é desfeito pelo ROLLBACK');
+    assert.equal((await pool.query(`SELECT count(*)::int AS n FROM audit_log WHERE action='cli_complaint_hr_status' AND target=$1`, [id])).rows[0].n, 0);
+
+    // Mesmo handler, auditoria real: confirma tudo junto.
+    const working = createEmployeeComplaintApi(base);
+    const okRes = makeResponse();
+    await working.handleHrStatus(makeRequest(), okRes);
+    assert.equal(okRes.status, 200);
+    assert.equal(okRes.payload.complaint.status, 'em_analise');
+    assert.equal((await pool.query('SELECT status FROM cli_employee_complaints WHERE id=$1', [id])).rows[0].status, 'em_analise');
+    assert.equal((await pool.query('SELECT count(*)::int AS n FROM cli_employee_complaint_history WHERE complaint_id=$1', [id])).rows[0].n, 1);
+    assert.equal((await pool.query(`SELECT count(*)::int AS n FROM audit_log WHERE action='cli_complaint_hr_status' AND target=$1`, [id])).rows[0].n, 1);
+  } finally {
+    await base.pool.end().catch(() => {});
+  }
+});

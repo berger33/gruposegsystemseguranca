@@ -28,6 +28,7 @@ import HrBenefitsClient from '../ti/HrBenefitsClient';
 import HrTrainingClient from '../ti/HrTrainingClient';
 import HrAdvancedClient from '../ti/HrAdvancedClient';
 import TimeCorrectionReviews from './TimeCorrectionReviews';
+import SharedComplaints from './SharedComplaints';
 import UiState from '../../../components/ui/UiState';
 import UiBadge from '../../../components/ui/UiBadge';
 import { hrRequest, type HrErrorDescriptor } from '../../../lib/hr-request';
@@ -76,6 +77,9 @@ const TABS = [
   { id: 'folha', label: 'Fechamento e holerite' },
   { id: 'desligamento', label: 'Desligamento' },
   { id: 'processos', label: 'Demais processos de RH' },
+  // Jornada aditiva do RH: relatos sobre colaborador explicitamente
+  // compartilhados. Não é o console de TI — a API decide o que o papel vê.
+  { id: 'compartilhadas', label: 'Reclamações compartilhadas' },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
 
@@ -359,6 +363,7 @@ export default function RhWorkspace() {
             ) : null}
             {tab === 'desligamento' ? <Termination employees={employees} run={run} /> : null}
             {tab === 'processos' ? <HrProcesses /> : null}
+            {tab === 'compartilhadas' ? <SharedComplaints /> : null}
           </div>
         </>
       ) : null}

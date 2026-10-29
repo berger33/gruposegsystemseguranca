@@ -1,0 +1,144 @@
+/* UX-PRO — RH: relatos compartilhados. Tokens do design system; nenhuma cor
+   literal. Layout em coluna, com listas que quebram em telas estreitas. */
+
+.taskContainer {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.sectionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.list {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listItem {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-canvas);
+  min-width: 0;
+}
+
+.listMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  word-break: break-word;
+}
+
+.listMeta strong {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.detail {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-surface);
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.subheading {
+  margin: 6px 0 0;
+  font-size: .95rem;
+  line-height: 1.35;
+  color: var(--ux-color-text);
+}
+
+.sharedList {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+  overflow-wrap: anywhere;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ux-color-border);
+  min-width: 0;
+}
+
+.form textarea,
+.form select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--ux-color-border);
+  border-radius: var(--ux-radius-sm);
+  background: var(--ux-color-canvas);
+  color: var(--ux-color-text);
+  padding: 8px 10px;
+  font: inherit;
+  min-height: var(--ux-height-target, 44px);
+}
+
+.form textarea {
+  resize: vertical;
+}
+
+.form :is(button, select, textarea):focus-visible,
+.list :is(button):focus-visible,
+.sectionHeader :is(button):focus-visible {
+  outline: 2px solid var(--ux-color-focus);
+  outline-offset: 2px;
+}
+
+.form select:disabled,
+.form textarea:disabled {
+  color: var(--ux-color-muted);
+}
+
+/* Escolher a situação que já está em vigor não grava nada: o aviso fica
+   explícito e visível antes do envio. */
+.statusHint[data-conflict='true'] {
+  color: var(--ux-color-error);
+  font-weight: 700;
+}
+
+@media(max-width:900px) {
+  .detail {
+    padding: 12px;
+  }
+
+  .sectionHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media(max-width:650px) {
+  .listItem {
+    padding: 10px 12px;
+  }
+
+  .listMeta {
+    align-items: flex-start;
+  }
+
+  .sharedList {
+    padding-left: 16px;
+  }
+}
