@@ -188,7 +188,17 @@ export function createExtReportingApi({ pool, auditLog, sameOrigin, requireSessi
     return json(res,405,{error:'method_not_allowed'});
   };
 
-  // EXT-16 central monitoramento / video
+  // EXT-16 central monitoramento / vídeo — projeto separado, privacidade
+  // aprovada antes da implantação.
+  //
+  // Alinhamento com a migração 087 (defeito corrigido nesta fatia): a tabela
+  // `ext_central_projects` exige protocolo e avaliação de privacidade
+  // OBRIGATÓRIA (20..2000) e guarda as duas aprovações — não existe coluna de
+  // status neste recurso. O handler anterior inseria sem protocolo, mandava
+  // `client_account_id` (coluna inexistente) e atualizava `status`,
+  // `privacy_approved_at` e `privacy_approved_by_identity` (inexistentes):
+  // todo POST/PATCH devolvia 500. A tela agora registra somente o que o
+  // servidor realmente grava.
   const handleCentralProjects = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
     const sess=await requireSession(req);
@@ -203,43 +213,43 @@ export function createExtReportingApi({ pool, auditLog, sameOrigin, requireSessi
       const description=String(b.description||'').trim();
       const scope=String(b.scope||'').trim();
       const provider=b.provider?String(b.provider).trim():null;
-      const privacy_assessment=b.privacy_assessment?String(b.privacy_assessment).trim():null;
-      const client_account_id=b.client_account_id||null;
+      const privacy_assessment=String(b.privacy_assessment||'').trim();
       if(title.length<5||title.length>200) return json(res,400,{error:'invalid_title'});
       if(description.length<10||description.length>2000) return json(res,400,{error:'invalid_description'});
       if(scope.length<10||scope.length>2000) return json(res,400,{error:'invalid_scope'});
       if(provider && (provider.length<3||provider.length>200)) return json(res,400,{error:'invalid_provider'});
-      if(privacy_assessment && (privacy_assessment.length<10||privacy_assessment.length>5000)) return json(res,400,{error:'invalid_privacy_assessment'});
+      // Avaliação de privacidade é obrigatória neste recurso (NOT NULL na 087).
+      if(privacy_assessment.length<20||privacy_assessment.length>2000) return json(res,400,{error:'invalid_privacy_assessment'});
       const protocol=generateProtocol('CENT-EXT');
-      const { rows } = await pool.query(`INSERT INTO ext_central_projects (protocol, title, description, scope, provider, privacy_assessment, client_account_id, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`, [protocol, title, description, scope, provider, privacy_assessment, client_account_id, sess.identityId||null]);
+      const { rows } = await pool.query(`INSERT INTO ext_central_projects (protocol, title, description, scope, provider, privacy_assessment, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, [protocol, title, description, scope, provider, privacy_assessment, sess.identityId||null]);
       await auditLog({ action:'ext_central_project_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ protocol, scope } });
       return json(res,201,rows[0]);
     }
     if(req.method==='PATCH'){
       const b=await readJson(req);
       const id=b.id;
-      const status=b.status?String(b.status).trim():null;
-      const is_privacy_approved=b.is_privacy_approved;
-      const is_approved=b.is_approved;
       if(!id) return json(res,400,{error:'missing_id'});
       const { rows: existing } = await pool.query(`SELECT * FROM ext_central_projects WHERE id=$1`, [id]);
       if(!existing.length) return json(res,404,{error:'not_found'});
-      const nextStatus=status||existing[0].status;
-      const valid=['rascunho','em_analise_privacidade','aprovado_privacidade','em_implantacao','implantado','rejeitado','arquivado'];
-      if(!valid.includes(nextStatus)) return json(res,400,{error:'invalid_status'});
-      if(nextStatus==='em_implantacao' && !existing[0].is_privacy_approved && is_privacy_approved!==true) return json(res,400,{error:'privacy_approval_required_projeto_separado_privacidade_aprovada'});
-      const privacyApproved=is_privacy_approved!=null?!!is_privacy_approved:existing[0].is_privacy_approved;
-      const approved=is_approved!=null?!!is_approved:existing[0].is_approved;
-      const privacyApprovedAt=privacyApproved&&!existing[0].privacy_approved_at?new Date():existing[0].privacy_approved_at;
-      const approvedAt=approved&&!existing[0].approved_at?new Date():existing[0].approved_at;
-      const { rows } = await pool.query(`UPDATE ext_central_projects SET status=$2, is_privacy_approved=$3, privacy_approved_by_identity=$4, privacy_approved_at=$5, is_approved=$6, approved_by_identity=$7, approved_at=$8, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, nextStatus, privacyApproved, privacyApproved?sess.identityId||null:existing[0].privacy_approved_by_identity, privacyApprovedAt, approved, approved?sess.identityId||null:existing[0].approved_by_identity, approvedAt]);
-      await auditLog({ action:'ext_central_project_update', actor:sess.identityId||'system', target:id, meta:{ status: nextStatus, privacyApproved, approved } });
+      const current=existing[0];
+      const privacyApproved=b.is_privacy_approved!=null?!!b.is_privacy_approved:current.is_privacy_approved;
+      const approved=b.is_approved!=null?!!b.is_approved:current.is_approved;
+      // Regra de negócio preservada: implantação exige privacidade aprovada.
+      if(approved && !privacyApproved) return json(res,400,{error:'privacy_approval_required_projeto_separado_privacidade_aprovada'});
+      const { rows } = await pool.query(`UPDATE ext_central_projects SET is_privacy_approved=$2, is_approved=$3, approved_by_identity=CASE WHEN $3 THEN COALESCE(approved_by_identity,$4::uuid) ELSE approved_by_identity END, approved_at=CASE WHEN $3 AND approved_at IS NULL THEN NOW() ELSE approved_at END, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, privacyApproved, approved, sess.identityId||null]);
+      await auditLog({ action:'ext_central_project_update', actor:sess.identityId||'system', target:id, meta:{ privacyApproved, approved } });
       return json(res,200,rows[0]);
     }
     return json(res,405,{error:'method_not_allowed'});
   };
 
-  // EXT-17 biometria facial
+  // EXT-17 biometria facial — projeto separado, não coleta por padrão.
+  //
+  // Alinhamento com a migração 087 (defeito corrigido nesta fatia): o handler
+  // anterior inseria sem `protocol` (NOT NULL), validava impacto/base legal em
+  // faixas diferentes das do banco e atualizava `collection_active` quando a
+  // coluna se chama `is_collection_active`; além disso oferecia estados que não
+  // existem no enum `ext_biometry_status`. Todo POST/PATCH devolvia 500.
   const handleBiometryProjects = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
     const sess=await requireSession(req);
@@ -252,83 +262,91 @@ export function createExtReportingApi({ pool, auditLog, sameOrigin, requireSessi
       const b=await readJson(req);
       const title=String(b.title||'').trim();
       const description=String(b.description||'').trim();
-      const biometry_type=String(b.biometry_type||'facial').trim();
+      // Compatibilidade: o protótipo enviava `outra`; o enum do banco é `outro`.
+      const rawType=String(b.biometry_type||'facial').trim();
+      const biometry_type=rawType==='outra'?'outro':rawType;
       const necessity=String(b.necessity||'').trim();
       const impact_assessment=String(b.impact_assessment||'').trim();
       const legal_basis=String(b.legal_basis||'').trim();
-      const client_account_id=b.client_account_id||null;
+      // A tabela não tem coluna de conta do cliente: o vínculo fica no
+      // contrato/projeto correspondente. O campo é aceito e ignorado para não
+      // quebrar consumidores antigos do protótipo.
+
       if(title.length<5||title.length>200) return json(res,400,{error:'invalid_title'});
       if(description.length<10||description.length>2000) return json(res,400,{error:'invalid_description'});
-      const validTypes=['facial','digital','iris','voz','outra'];
-      if(!validTypes.includes(biometry_type)) return json(res,400,{error:'invalid_biometry_type'});
+      if(!['facial','digital','iris','voz','outro'].includes(biometry_type)) return json(res,400,{error:'invalid_biometry_type'});
       if(necessity.length<20||necessity.length>2000) return json(res,400,{error:'invalid_necessity'});
-      if(impact_assessment.length<20||impact_assessment.length>5000) return json(res,400,{error:'invalid_impact_assessment'});
-      if(legal_basis.length<10||legal_basis.length>2000) return json(res,400,{error:'invalid_legal_basis'});
+      if(impact_assessment.length<20||impact_assessment.length>2000) return json(res,400,{error:'invalid_impact_assessment'});
+      if(legal_basis.length<10||legal_basis.length>1000) return json(res,400,{error:'invalid_legal_basis'});
       const protocol=generateProtocol('BIO-EXT');
-      const { rows } = await pool.query(`INSERT INTO ext_biometry_projects (protocol, title, description, biometry_type, necessity, impact_assessment, legal_basis, client_account_id, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`, [protocol, title, description, biometry_type, necessity, impact_assessment, legal_basis, client_account_id, sess.identityId||null]);
+      const { rows } = await pool.query(`INSERT INTO ext_biometry_projects (protocol, title, description, biometry_type, necessity, impact_assessment, legal_basis, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`, [protocol, title, description, biometry_type, necessity, impact_assessment, legal_basis, sess.identityId||null]);
       await auditLog({ action:'ext_biometry_project_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ protocol, biometry_type } });
       return json(res,201,rows[0]);
     }
     if(req.method==='PATCH'){
       const b=await readJson(req);
       const id=b.id;
-      const status=b.status?String(b.status).trim():null;
-      const is_approved=b.is_approved;
-      const collection_active=b.collection_active;
       if(!id) return json(res,400,{error:'missing_id'});
       const { rows: existing } = await pool.query(`SELECT * FROM ext_biometry_projects WHERE id=$1`, [id]);
       if(!existing.length) return json(res,404,{error:'not_found'});
-      const nextStatus=status||existing[0].status;
-      const valid=['rascunho','em_analise_privacidade','aprovado_privacidade','em_implantacao','ativo','suspenso','arquivado','rejeitado'];
+      const current=existing[0];
+      const nextStatus=b.status?String(b.status).trim():current.status;
+      const valid=['rascunho','em_avaliacao','aprovado','rejeitado','em_implementacao','ativo','desativado'];
       if(!valid.includes(nextStatus)) return json(res,400,{error:'invalid_status'});
-      const approved=is_approved!=null?!!is_approved:existing[0].is_approved;
-      const collActive=collection_active!=null?!!collection_active:existing[0].collection_active;
-      if(collActive && !approved) return json(res,400,{error:'collection_requires_approval_nao_coletar_biometria_por_padrao'});
+      const approved=b.is_approved!=null?!!b.is_approved:current.is_approved;
+      const collectionActive=b.collection_active!=null?!!b.collection_active:current.is_collection_active;
+      // Regras preservadas: coleta e status ativo exigem projeto aprovado.
+      if(collectionActive && !approved) return json(res,400,{error:'collection_requires_approval_nao_coletar_biometria_por_padrao'});
       if(nextStatus==='ativo' && !approved) return json(res,400,{error:'approval_required_biometria_projeto_separado_privacidade_aprovada'});
-      const approvedAt=approved&&!existing[0].approved_at?new Date():existing[0].approved_at;
-      const { rows } = await pool.query(`UPDATE ext_biometry_projects SET status=$2, is_approved=$3, approved_by_identity=$4, approved_at=$5, collection_active=$6, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, nextStatus, approved, approved?sess.identityId||null:existing[0].approved_by_identity, approvedAt, collActive]);
-      await auditLog({ action:'ext_biometry_project_update', actor:sess.identityId||'system', target:id, meta:{ status: nextStatus, approved, collActive } });
+      const { rows } = await pool.query(`UPDATE ext_biometry_projects SET status=$2::ext_biometry_status, is_approved=$3, approved_by_identity=CASE WHEN $3 THEN COALESCE(approved_by_identity,$5::uuid) ELSE approved_by_identity END, approved_at=CASE WHEN $3 AND approved_at IS NULL THEN NOW() ELSE approved_at END, is_collection_active=$4, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, nextStatus, approved, collectionActive, sess.identityId||null]);
+      await auditLog({ action:'ext_biometry_project_update', actor:sess.identityId||'system', target:id, meta:{ status: nextStatus, approved, collectionActive } });
       return json(res,200,rows[0]);
     }
     return json(res,405,{error:'method_not_allowed'});
   };
 
-  // AI-10 automações determinísticas
+  // AI-10 automações determinísticas — vencimentos, distribuição de tarefa e
+  // cobrança interna antes de qualquer agente autônomo (AI-01..09 desligados).
+  //
+  // Alinhamento com a migração 087 (defeito corrigido nesta fatia): as tabelas
+  // são `ai_deterministic_automations`/`ai_automation_logs` (o handler antigo
+  // consultava `ext_ai_*`, que não existe) e não há coluna de agendamento. Os
+  // estados válidos são os do enum `ai_automation_status`. Todo GET/POST
+  // devolvia 500.
   const handleAiAutomations = async (req,res) => {
     if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
     const sess=await requireSession(req);
     if(!sess || !requireRole(sess,['admin','ti'])) return json(res,401,{error:'unauthorized'});
     if(req.method==='GET'){
-      const { rows } = await pool.query(`SELECT * FROM ext_ai_deterministic_automations ORDER BY name ASC LIMIT 200`);
+      const { rows } = await pool.query(`SELECT * FROM ai_deterministic_automations ORDER BY name ASC LIMIT 200`);
       return json(res,200,{items:rows, note:'AI-10 automacao deterministica vencimentos distribuicao tarefas cobranca interna antes agentes autonomos AI-01..09 desligado'});
     }
     if(req.method==='POST'){
       const b=await readJson(req);
       const name=String(b.name||'').trim();
       const description=String(b.description||'').trim();
-      const automation_type=String(b.automation_type||'vencimento').trim();
+      // Compatibilidade com o protótipo (`outra`); o enum do banco é `outro`.
+      const rawType=String(b.automation_type||'vencimento').trim();
+      const automation_type=rawType==='outra'?'outro':rawType;
       const rules=b.rules||{};
-      const schedule_cron=b.schedule_cron?String(b.schedule_cron).trim():null;
       if(name.length<3||name.length>200) return json(res,400,{error:'invalid_name'});
       if(description.length<10||description.length>2000) return json(res,400,{error:'invalid_description'});
-      const validTypes=['vencimento','distribuicao_tarefa','cobranca_interna','notificacao','relatorio','outra'];
+      const validTypes=['vencimento','distribuicao_tarefa','cobranca_interna','escalonamento','outro'];
       if(!validTypes.includes(automation_type)) return json(res,400,{error:'invalid_automation_type'});
-      if(schedule_cron && (schedule_cron.length<5||schedule_cron.length>100)) return json(res,400,{error:'invalid_schedule_cron'});
-      const { rows } = await pool.query(`INSERT INTO ext_ai_deterministic_automations (name, description, automation_type, rules, schedule_cron, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`, [name, description, automation_type, JSON.stringify(rules), schedule_cron, sess.identityId||null]);
+      const { rows } = await pool.query(`INSERT INTO ai_deterministic_automations (name, description, automation_type, rules, created_by_identity) VALUES ($1,$2,$3::ai_automation_type,$4,$5) RETURNING *`, [name, description, automation_type, JSON.stringify(rules), sess.identityId||null]);
       await auditLog({ action:'ext_ai_automation_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ name, automation_type } });
       return json(res,201,rows[0]);
     }
     if(req.method==='PATCH'){
       const b=await readJson(req);
       const id=b.id;
-      const status=b.status?String(b.status).trim():null;
       if(!id) return json(res,400,{error:'missing_id'});
-      const { rows: existing } = await pool.query(`SELECT * FROM ext_ai_deterministic_automations WHERE id=$1`, [id]);
+      const { rows: existing } = await pool.query(`SELECT * FROM ai_deterministic_automations WHERE id=$1`, [id]);
       if(!existing.length) return json(res,404,{error:'not_found'});
-      const nextStatus=status||existing[0].status;
-      const valid=['ativa','inativa','em_teste','falhou','pausada'];
+      const nextStatus=b.status?String(b.status).trim():existing[0].status;
+      const valid=['rascunho','ativa','pausada','desativada','falha'];
       if(!valid.includes(nextStatus)) return json(res,400,{error:'invalid_status'});
-      const { rows } = await pool.query(`UPDATE ext_ai_deterministic_automations SET status=$2, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, nextStatus]);
+      const { rows } = await pool.query(`UPDATE ai_deterministic_automations SET status=$2::ai_automation_status, is_active=CASE WHEN $2='ativa' THEN true WHEN $2 IN ('pausada','desativada','falha','rascunho') THEN false ELSE is_active END, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, nextStatus]);
       await auditLog({ action:'ext_ai_automation_update', actor:sess.identityId||'system', target:id, meta:{ status: nextStatus } });
       return json(res,200,rows[0]);
     }
@@ -342,32 +360,31 @@ export function createExtReportingApi({ pool, auditLog, sameOrigin, requireSessi
     if(req.method==='GET'){
       const url=new URL(req.url,'http://localhost');
       const automation_id=url.searchParams.get('automation_id');
-      let q=`SELECT * FROM ext_ai_automation_logs`;
+      let q=`SELECT * FROM ai_automation_logs`;
       const params=[];
       if(automation_id){ params.push(automation_id); q+=` WHERE automation_id=$${params.length}`; }
       q+=` ORDER BY created_at DESC LIMIT 200`;
       const { rows } = await pool.query(q, params);
-      return json(res,200,{items:rows});
+      return json(res,200,{items:rows, note:'registro manual e auditavel; a tela nao executa a automacao'});
     }
     if(req.method==='POST'){
       const b=await readJson(req);
       const automation_id=b.automation_id;
       const action=String(b.action||'').trim();
-      const result=b.result?String(b.result).trim():null;
-      const success=b.success!=null?!!b.success:true;
-      const duration_ms=b.duration_ms!=null?Number(b.duration_ms):null;
+      const result=String(b.result||'').trim();
+      const target_type=b.target_type?String(b.target_type).trim():null;
+      const target_id=b.target_id?String(b.target_id).trim():null;
+      const is_error=b.success!=null?!b.success:false;
       if(!automation_id) return json(res,400,{error:'missing_automation_id'});
       if(action.length<3||action.length>200) return json(res,400,{error:'invalid_action'});
-      if(result && (result.length<3||result.length>5000)) return json(res,400,{error:'invalid_result'});
-      if(duration_ms!=null && (!Number.isFinite(duration_ms)||duration_ms<0)) return json(res,400,{error:'invalid_duration'});
-      const { rows } = await pool.query(`INSERT INTO ext_ai_automation_logs (automation_id, action, result, success, duration_ms) VALUES ($1,$2,$3,$4,$5) RETURNING *`, [automation_id, action, result, success, duration_ms]);
-      // atualizar contadores automação
-      if(success){
-        await pool.query(`UPDATE ext_ai_deterministic_automations SET run_count=run_count+1, last_run_at=NOW(), next_run_at=NOW()+ (schedule_cron IS NOT NULL)::int * INTERVAL '1 hour', updated_at=NOW() WHERE id=$1`, [automation_id]);
-      } else {
-        await pool.query(`UPDATE ext_ai_deterministic_automations SET run_count=run_count+1, error_count=error_count+1, last_run_at=NOW(), updated_at=NOW() WHERE id=$1`, [automation_id]);
-      }
-      await auditLog({ action:'ext_ai_automation_log_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ automation_id, action, success } });
+      // `result` é NOT NULL e 10..1000 na 087: sem ele não há registro de execução.
+      if(result.length<10||result.length>1000) return json(res,400,{error:'invalid_result'});
+      if(target_type && (target_type.length<3||target_type.length>100)) return json(res,400,{error:'invalid_target_type'});
+      if(target_id && (target_id.length<3||target_id.length>200)) return json(res,400,{error:'invalid_target_id'});
+      const { rows } = await pool.query(`INSERT INTO ai_automation_logs (automation_id, action, target_type, target_id, result, is_error) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`, [automation_id, action, target_type, target_id, result, is_error]);
+      // Contadores: execução registrada atualiza run_count e error_count.
+      await pool.query(`UPDATE ai_deterministic_automations SET run_count=run_count+1, error_count=error_count + CASE WHEN $2 THEN 1 ELSE 0 END, last_run_at=NOW(), last_error=CASE WHEN $2 THEN $3 ELSE last_error END, updated_at=NOW() WHERE id=$1`, [automation_id, is_error, result]);
+      await auditLog({ action:'ext_ai_automation_log_create', actor:sess.identityId||'system', target:rows[0].id, meta:{ automation_id, is_error } });
       return json(res,201,rows[0]);
     }
     return json(res,405,{error:'method_not_allowed'});
