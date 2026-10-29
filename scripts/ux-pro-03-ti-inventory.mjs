@@ -82,6 +82,12 @@ const PROMOCOES_COM_PROVA = [
     familia: 'CLI-05/06/07/08 lado administrativo dos recursos v2 do portal do cliente',
     relatorio: 'docs/UX-PRO-03-PROMOCAO-CLIENTE-V2-2026-10-28.md',
   },
+  {
+    componente: 'LgpdRequestClient.tsx',
+    aba: 'lgpd',
+    familia: 'PLT-10 pedidos do titular com verificação de identidade, responsável, prazo de 15 dias e impedimentos documentados',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-PEDIDOS-LGPD-2026-10-28.md',
+  },
 ];
 
 const sha256 = value => createHash('sha256').update(value).digest('hex');

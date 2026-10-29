@@ -50,7 +50,7 @@ test('reauditoria 222: a matriz histórica tem exatamente 222 IDs únicos em 14 
     'CSV e JSON precisam listar os mesmos IDs na mesma ordem');
 });
 
-test('reauditoria 222: 46 a_revalidar, 21 sem menção após fatias CLI-02/03/05..08', async () => {
+test('reauditoria 222: 46 a_revalidar, 20 sem menção após fatias CLI-02/03/05..08 e PLT-10', async () => {
   const data = JSON.parse(await readFile(path.join(root, JSON_FILE), 'utf8'));
   const resumo = data.resumo;
   assert.equal(resumo.porEstadoDeclarado0410.a_revalidar, 46,
@@ -58,11 +58,12 @@ test('reauditoria 222: 46 a_revalidar, 21 sem menção após fatias CLI-02/03/05
   assert.equal(resumo.porEstadoConfirmado0410.a_revalidar, 45,
     'a coluna de estado confirmado registra 45; a diferença precisa continuar explícita');
   // 36 era o retrato inicial; PLT-11/13 reduziram 2. O mapa SEC reduziu
-  // 7 sem gate; fatias focais CLI-02/03/05..08 reduziram mais 6 para 21.
+  // 7 sem gate; fatias focais CLI-02/03/05..08 reduziram mais 6 para 21; a
+  // promoção da aba PLT-10 (28/10) tirou mais um do núcleo, deixando 20.
   // É menção técnica em gate, NÃO implementação integral nem aceite humano.
-  assert.equal(resumo.aRevalidarSemGate, 21);
-  // SEC-03 e CLI-02/03/05..08 têm mapa/prova técnica, sem inferir aceite.
-  for (const id of ['SEC-03', 'CLI-02', 'CLI-03', 'CLI-05', 'CLI-06', 'CLI-07', 'CLI-08']) {
+  assert.equal(resumo.aRevalidarSemGate, 20);
+  // SEC-03, CLI-02/03/05..08 e PLT-10 têm mapa/prova técnica, sem inferir aceite.
+  for (const id of ['SEC-03', 'CLI-02', 'CLI-03', 'CLI-05', 'CLI-06', 'CLI-07', 'CLI-08', 'PLT-10']) {
     assert.ok(!resumo.idsARevalidarSemGate.includes(id), `${id} tem evidência técnica focal`);
   }
   for (const id of ['PLT-03', 'PLT-15', 'EXT-16', 'EXT-17', 'AI-01', 'AI-10']) {
@@ -89,11 +90,13 @@ test('reauditoria 222: nenhum ID inventa aceite humano ou reauditoria integral',
   }
   // Retrato congelado. 22/114/86 → 23/113/86 em 28/10: a fatia CLI-03 de UI
   // criou `tests/cli03-contract-published-details-ui.test.mjs`, então CLI-03
-  // passou de `mencionado_em_gate` para `gate_nomeado`. É evidência textual
-  // acrescentada, não promoção de aceite (0/222 continua).
+  // passou de `mencionado_em_gate` para `gate_nomeado`. No mesmo dia a promoção
+  // da aba PLT-10 (teste focal nomeado por área, não pelo ID) moveu PLT-10 de
+  // `somente_documento` para `mencionado_em_gate`: 23/114/85. É evidência
+  // textual acrescentada, não promoção de aceite (0/222 continua).
   assert.equal(data.resumo.porClasseEvidencia.gate_nomeado, 23);
-  assert.equal(data.resumo.porClasseEvidencia.mencionado_em_gate, 113);
-  assert.equal(data.resumo.porClasseEvidencia.somente_documento, 86);
+  assert.equal(data.resumo.porClasseEvidencia.mencionado_em_gate, 114);
+  assert.equal(data.resumo.porClasseEvidencia.somente_documento, 85);
   assert.ok(data.requisitos.filter(row => row.prefixo === 'SEC')
     .every(row => row.classe_evidencia_atual === 'mencionado_em_gate'),
   'os 15 IDs SEC devem apontar para o mapa técnico de âncoras, sem inferir aceite');
