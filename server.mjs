@@ -4517,6 +4517,12 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/employee-complaint-hr-shares" || url.pathname === "/api/employee-complaint-hr-shares") {
     return employeeComplaintApi.handleHrShare(req, res);
   }
+  // UX-PRO: operação ADITIVA do RH para atualizar a situação de um relato
+  // explicitamente compartilhado. Não substitui nem altera o PATCH legado
+  // acima, que segue com o 500 registrado para o RH até decisão do proprietário.
+  if (url.pathname === "/api/admin/employee-complaint-hr-status") {
+    return employeeComplaintApi.handleHrStatus(req, res);
+  }
   // PUB-02 páginas por serviço e segmento contato claro FAQ revisada cases autorizados acessibilidade navegação desempenho
   if (url.pathname === "/api/admin/pub-segments" || url.pathname === "/api/pub-segments" || url.pathname === "/api/segments" || url.pathname === "/api/public/segments" || url.pathname === "/api/pub/segments") {
     return pubFaqAssistedApi.handleSegments(req, res);
@@ -6082,6 +6088,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/employee-complaint-evidences"
   || pathname === "/api/admin/employee-complaint-hr-shares"
   || pathname === "/api/employee-complaint-hr-shares"
+  || pathname === "/api/admin/employee-complaint-hr-status"
   || pathname === "/api/admin/pub-segments"
   || pathname === "/api/pub-segments"
   || pathname === "/api/segments"
