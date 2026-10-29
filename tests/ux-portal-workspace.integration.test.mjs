@@ -6716,3 +6716,235 @@ test('browser UX-PRO-03: CLI-05/06/07/08 console do cliente v2 (papel, A/B, POST
     }
   }
 });
+
+// ---------------------------------------------------------------------------
+// UX-PRO-03 — 8ª aba com prova do console de TI: FIN cadastros de apoio.
+// Escopo de LACUNA da família financeiro (decisão de 29/10): `/admin/financeiro`
+// já é rota real e cobre 26 dos 32 endpoints dos quatro `Fin*` órfãos, então os
+// órfãos NÃO foram promovidos. Esta aba entrega só o que não existia:
+// fornecedores, centros de custo e o drill-down do histórico de baixa.
+// O gate prova o papel decidido no servidor (rh 403 × ti 200), as duas
+// escritas pela UI com status medido, o histórico real, os quatro estados e
+// 390px sem transbordo.
+// ---------------------------------------------------------------------------
+test('browser UX-PRO-03: FIN cadastros de apoio (papel, POST real, histórico de baixa, erro e retry)', { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: 'ti' });
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const financeiro = await provisionStaff(pool, { role: 'financeiro' });
+  const staffIds = [ti.id, rh.id, financeiro.id];
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const financeiroCookie = await loginStaffHttp(financeiro.email);
+
+  const supplierName = `QA-FIN Fornecedor ${randomUUID().slice(0, 8)}`;
+  const centerName = `QA-FIN Centro ${randomUUID().slice(0, 8)}`;
+  const accountId = randomUUID();
+  let receivableId = "";
+
+  const cleanup = async () => {
+    await pool.query("DELETE FROM fin_suppliers WHERE name LIKE 'QA-FIN Fornecedor %'").catch(() => {});
+    await pool.query("DELETE FROM fin_cost_centers WHERE name LIKE 'QA-FIN Centro %'").catch(() => {});
+    if (receivableId) {
+      await pool.query('DELETE FROM fin_payment_history WHERE receivable_id=$1::uuid', [receivableId]).catch(() => {});
+      await pool.query('DELETE FROM fin_accounts_receivable WHERE id=$1::uuid', [receivableId]).catch(() => {});
+    }
+    await pool.query("DELETE FROM client_accounts WHERE display_name = 'QA FIN cadastros conta'").catch(() => {});
+  };
+
+  try {
+    await cleanup();
+    // A conta de cliente é pré-requisito de FK da conta a receber; criada aqui
+    // como provisionamento de teste, com nome fixo para a limpeza.
+    await pool.query(
+      "INSERT INTO client_accounts (id, display_name, created_by) VALUES ($1::uuid, 'QA FIN cadastros conta', 'ti')",
+      [accountId],
+    );
+
+    // ---------- autorização decidida no SERVIDOR ----------
+    for (const pathname of ['/api/fin/suppliers', '/api/fin/cost-centers']) {
+      const anonymous = await api(pathname);
+      assert.equal(anonymous.status, 401, `${pathname} precisa exigir sessão: veio ${anonymous.status}`);
+      const denied = await api(pathname, { cookie: rhCookie });
+      assert.equal(denied.status, 403, `rh não pode ler ${pathname}: veio ${denied.status}`);
+      const allowed = await api(pathname, { cookie: tiCookie });
+      assert.equal(allowed.status, 200, `ti precisa ler ${pathname}: veio ${allowed.status}`);
+    }
+    // Escrita sem motivo/validação continua decidida no servidor.
+    const shortName = await api('/api/fin/suppliers', {
+      method: 'POST', cookie: tiCookie, body: { name: 'ab', category: 'servico' },
+    });
+    assert.equal(shortName.status, 400, 'nome curto precisa ser recusado pelo servidor');
+    assert.equal(shortName.body.error, 'name_3_200');
+
+    // Conta real para o histórico de baixa: criada pela API canônica e baixada
+    // em `/admin/financeiro` (o gate não escreve baixa por esta aba).
+    const created = await api('/api/fin/receivables', {
+      method: 'POST', cookie: financeiroCookie,
+      body: {
+        client_account_id: accountId, competence_date: '2026-10-01', due_date: '2026-10-31',
+        amount_cents: 12345, recurrence_type: 'unica', description: 'QA-FIN conta sintética do gate de cadastros',
+      },
+    });
+    assert.equal(created.status, 201, `a conta sintética precisa ser criada: veio ${created.status}`);
+    receivableId = created.body.receivable.id;
+    const settled = await api('/api/fin/payments', {
+      method: 'POST', cookie: financeiroCookie,
+      body: {
+        account_type: 'receber', receivable_id: receivableId, amount_cents: 12345,
+        payment_method: 'pix', reason: 'Baixa sintética do gate UX-PRO-03 FIN cadastros',
+      },
+    });
+    assert.equal(settled.status, 201, `a baixa precisa ser registrada: veio ${settled.status}`);
+
+    // ---------- estado A: quatro larguras, teclado, fonte e limites ----------
+    const readings = [];
+    for (const [width, height] of [[390, 844], [768, 900], [1440, 900]]) {
+      const browser = await launchBrowser();
+      try {
+        const { context, page } = await openPage(browser, '/admin/ti', tiCookie, { width, height });
+        const tab = page.getByRole('button', { name: 'Cadastros financeiros', exact: true });
+        await tab.waitFor();
+        await tab.focus();
+        const focused = await page.evaluate(() => document.activeElement?.textContent?.trim() || '');
+        assert.match(focused, /Cadastros financeiros/, `a aba precisa receber foco em ${width}`);
+        await page.keyboard.press('Enter');
+        await page.getByRole('heading', { name: 'Fornecedores, centros de custo e histórico de baixa' }).waitFor();
+        await page.getByText(/Fonte: tabelas/).waitFor();
+        const text = await page.locator('body').innerText();
+        assert.match(text, /Data-base:/);
+        assert.match(text, /nenhum byte/i, 'o limite de armazenamento precisa estar visível');
+        assert.match(text, /NO-GO/);
+        assert.match(text, /0\/222/);
+        // A tela declara quem é dona da escrita financeira.
+        assert.match(text, /admin\/financeiro/);
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(overflow <= 1, `FIN cadastros overflow ${overflow} em ${width}`);
+        readings.push({ width, overflow });
+        await context.close();
+      } finally {
+        await browser.close();
+      }
+    }
+    assert.deepEqual(readings.map(item => item.width), [390, 768, 1440]);
+
+    // ---------- escrita real pela UI + histórico + tradução de erro ----------
+    const journeyBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(journeyBrowser, '/admin/ti', tiCookie, { width: 1440, height: 900 });
+      const settle = () => page.waitForFunction(() =>
+        Array.from(document.querySelectorAll('section[aria-busy]'))
+          .every(element => element.getAttribute('aria-busy') === 'false'));
+      const suppliersPanel = () => page.getByRole('region', { name: /^Fornecedores/ });
+      const centersPanel = () => page.getByRole('region', { name: /^Centros de custo/ });
+      const historyPanel = () => page.getByRole('region', { name: /^Histórico de baixa/ });
+
+      await page.getByRole('button', { name: 'Cadastros financeiros', exact: true }).click();
+      await historyPanel().waitFor();
+      await settle();
+
+      // Fornecedor: POST medido em status e corpo.
+      await suppliersPanel().getByLabel('Nome do fornecedor', { exact: true }).fill(supplierName);
+      await suppliersPanel().getByLabel('Documento declarado (opcional)', { exact: true }).fill('QA-FIN-DOC');
+      await suppliersPanel().getByLabel('Categoria do fornecedor', { exact: true }).selectOption('material');
+      const [supplierResponse] = await Promise.all([
+        page.waitForResponse(response => response.request().method() === 'POST'
+          && new URL(response.url()).pathname === '/api/fin/suppliers'),
+        suppliersPanel().getByRole('button', { name: 'Cadastrar fornecedor' }).click(),
+      ]);
+      assert.equal(supplierResponse.status(), 201, 'o POST do fornecedor precisa ser 201');
+      assert.equal((await supplierResponse.json()).supplier.name, supplierName, 'o corpo precisa confirmar o nome criado');
+      await page.getByText(new RegExp(`Fornecedor “${supplierName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}” criado`)).waitFor();
+      await settle();
+      await suppliersPanel().getByText(supplierName).first().waitFor();
+
+      // Centro de custo: POST medido em status e corpo.
+      await centersPanel().getByLabel('Nome do centro de custo', { exact: true }).fill(centerName);
+      const [centerResponse] = await Promise.all([
+        page.waitForResponse(response => response.request().method() === 'POST'
+          && new URL(response.url()).pathname === '/api/fin/cost-centers'),
+        centersPanel().getByRole('button', { name: 'Cadastrar centro de custo' }).click(),
+      ]);
+      assert.equal(centerResponse.status(), 201, 'o POST do centro de custo precisa ser 201');
+      assert.equal((await centerResponse.json()).costCenter.name, centerName);
+      await settle();
+      await centersPanel().getByText(centerName).first().waitFor();
+
+      // Drill-down do histórico de baixa da conta sintética (uma baixa real).
+      const [historyResponse] = await Promise.all([
+        page.waitForResponse(response => new URL(response.url()).pathname === '/api/fin/payment-history'),
+        historyPanel().getByLabel('Conta para consultar', { exact: true }).selectOption(receivableId),
+      ]);
+      assert.equal(historyResponse.status(), 200, 'o GET do histórico precisa ser 200');
+      const historyBody = await historyResponse.json();
+      assert.ok(Array.isArray(historyBody.history) && historyBody.history.length >= 1,
+        'o histórico da conta baixada precisa ter pelo menos a criação e a baixa');
+      await historyPanel().getByText(/Baixa sintética do gate UX-PRO-03 FIN cadastros/).waitFor();
+      await historyPanel().getByText(/→ recebido/).first().waitFor();
+      // Registro canônico no drill-down.
+      const summary = historyPanel().locator('summary').filter({ hasText: 'Registro canônico da baixa (JSON)' }).first();
+      await summary.click();
+      assert.match(await historyPanel().locator('pre').first().innerText(), /next_status/);
+
+      // Regra real do servidor: nome curto recusado e traduzido, não "criado".
+      await suppliersPanel().getByLabel('Nome do fornecedor', { exact: true }).fill('ab');
+      await suppliersPanel().getByRole('button', { name: 'Cadastrar fornecedor' }).click();
+      await page.getByRole('alert').filter({ hasText: /entre 3 e 200 caracteres/ }).waitFor();
+      assert.equal(await page.getByText(/criado no cadastro financeiro/).count(), 1,
+        'a recusa não pode gerar uma segunda mensagem de sucesso');
+      await context.close();
+    } finally {
+      await journeyBrowser.close();
+    }
+
+    // ---------- 503: erro declarado e retry sem recarregar ----------
+    const failureBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(failureBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/fin/cost-centers'],
+        status: 503, code: 'qa_forced_failure',
+        onPage: p => p.addInitScript(() => { window.__qaFetchOriginal = window.fetch.bind(window); }),
+      });
+      await page.getByRole('button', { name: 'Cadastros financeiros', exact: true }).click();
+      const errorState = page.locator('[data-ui-state="error"]');
+      await errorState.waitFor();
+      assert.match(await errorState.innerText(), /Falha na consulta/);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await page.evaluate(() => { window.__qaFetchOriginal && (window.fetch = window.__qaFetchOriginal); });
+      await errorState.getByRole('button', { name: 'Tentar novamente' }).click();
+      await page.getByRole('region', { name: /^Fornecedores/ }).waitFor();
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0, 'retry precisa sair do erro');
+      await context.close();
+    } finally {
+      await failureBrowser.close();
+    }
+
+    // ---------- 403: negado distinto de erro e de vazio ----------
+    const deniedBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(deniedBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/fin/suppliers'],
+        status: 403, code: 'forbidden',
+      });
+      await page.getByRole('button', { name: 'Cadastros financeiros', exact: true }).click();
+      const deniedState = page.locator('[data-ui-state="denied"]');
+      await deniedState.waitFor();
+      assert.match(await deniedState.innerText(), /Acesso não autorizado/);
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await context.close();
+    } finally {
+      await deniedBrowser.close();
+    }
+  } finally {
+    await cleanup();
+    for (const id of staffIds) {
+      await pool.query('DELETE FROM auth_access_audit WHERE actor_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_sessions WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_staff_profiles WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_credentials WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_identities WHERE id=$1', [id]).catch(() => {});
+    }
+  }
+});

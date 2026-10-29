@@ -45,6 +45,7 @@
 "FinBudgetClient.tsx","211","orfao","","","6","0","","nao_montado","orfao_nao_promovido"
 "FinClient.tsx","186","orfao","","","8","0","","nao_montado","orfao_nao_promovido"
 "FinManagementClient.tsx","192","orfao","","","8","0","","nao_montado","orfao_nao_promovido"
+"FinRegistryClient.tsx","461","console","TiConsole","financeiro_cadastros","5","0","ux-pro-03-fin-cadastros-ui.test.mjs","ti|admin","com_prova"
 "HealthcheckClient.tsx","239","console","TiConsole","saude","5","0","ux-pro-03-ti-healthcheck-ui.test.mjs","ti|admin","com_prova"
 "HrAbsenceClient.tsx","309","workspace","src/app/admin/funcionarios/RhWorkspace.tsx","","7","0","","herdado do workspace","montado_em_workspace"
 "HrAdvancedClient.tsx","423","workspace","src/app/admin/funcionarios/RhWorkspace.tsx","","12","0","","herdado do workspace","montado_em_workspace"

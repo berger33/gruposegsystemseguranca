@@ -3,14 +3,14 @@
   "resumo": "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
   "data": "2026-10-27",
   "criterio": "promover por area somente com prova (decisao de 02/10); prova estatica nao substitui gate de navegador nem aceite humano",
-  "tiConsoleSha256": "209c13303ae54b0c0c62743019cd6c589f5bc906eb6c6321234e792cb84ac811",
+  "tiConsoleSha256": "78b96cb2d7cc467d587263da9319ffcb65be79c612ecd8a58ec8f85c7626ea5f",
   "pageSha256": "360bf2564469679a4cc7c0b6b9274f05557188f701a3f3b89649ce4d70d56313",
-  "total": 83,
-  "abas": 19,
-  "importsDinamicos": 19,
+  "total": 84,
+  "abas": 20,
+  "importsDinamicos": 20,
   "console": {
-    "total": 19,
-    "comProva": 19,
+    "total": 20,
+    "comProva": 20,
     "lacunas": []
   },
   "workspace": {
@@ -69,7 +69,7 @@
     ]
   },
   "apis": {
-    "literais": 401,
+    "literais": 406,
     "semDispatch": 0
   }
 }

@@ -48,9 +48,11 @@ const tabsDeclaration = consoleSrc.match(/const tabs=(\[[\s\S]*?\]) as const;/)?
 // (PLT-14 Dependências, PLT-18 Documentação de manutenção, PLT-16 Orçamento
 // e uso, PLT-17 Ambientes e isolamento, PLT-11 Retenção e descarte, PLT-13
 // Configurações e rollout) + 1 promovida em 28/10 (CLI-05/06/07/08 Portal do
-// cliente v2). Toda nova ABA exige atualizar esta constante E o inventário/CSV
-// — é o atrito que a guarda deve impor.
-const EXPECTED_TABS = 19;
+// cliente v2) + 1 aba de lacuna em 29/10 (FIN cadastros de apoio: fornecedores,
+// centros de custo e histórico de baixa — a família `Fin*` NÃO foi promovida
+// porque `/admin/financeiro` já é rota real). Toda nova ABA exige atualizar
+// esta constante E o inventário/CSV — é o atrito que a guarda deve impor.
+const EXPECTED_TABS = 20;
 const tabKeys = [...tabsDeclaration.matchAll(/\['([a-z0-9_]+)','([^']+)'\]/g)].map(match => match[1]);
 const dynamicNames = [...consoleSrc.matchAll(/const\s+(\w+)\s*=\s*dynamic\(\(\)\s*=>\s*import\(['"]\.\/([^'"]+)['"]\)\)/g)].map(match => match[2]);
 const renders = [...consoleSrc.matchAll(/active==='([a-z0-9_]+)'&&<(\w+)\/>/g)].map(match => ({ key: match[1], component: match[2] }));
@@ -79,7 +81,7 @@ function importersOf(base, selfPath) {
     .map(([file]) => path.relative(root, file));
 }
 
-test('UX-PRO-03 reauditoria: as 19 abas montadas têm teste focal e todos os endpoints despachados', () => {
+test('UX-PRO-03 reauditoria: as 20 abas montadas têm teste focal e todos os endpoints despachados', () => {
   assert.equal(renders.length, EXPECTED_TABS, 'toda aba declarada precisa estar renderizada');
   for (const { key, component } of renders) {
     const source = componentSources.get(path.join(tiDir, `${component}.tsx`));
