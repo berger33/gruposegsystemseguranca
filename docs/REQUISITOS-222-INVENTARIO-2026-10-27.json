@@ -65,7 +65,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1613,
+    "arquivosVarridos": 1616,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -4243,13 +4243,12 @@
         "docs/ENTREGA-L08-RELATORIO-2026-10-03-CLI12-RENOVACAO.md"
       ],
       "arquivos_codigo": [
-        "src/app/admin/ti/EmployeeComplaintClient.tsx",
         "src/server/client-employee-complaint-api.mjs",
         "src/server/employee-complaint-api.mjs"
       ],
       "ocorrencias_gate": 15,
       "ocorrencias_documento": 55,
-      "ocorrencias_codigo": 6,
+      "ocorrencias_codigo": 5,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
