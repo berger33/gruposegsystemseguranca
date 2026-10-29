@@ -31,7 +31,23 @@ Isso responde também à pergunta "por que não o próximo da lista": o inventá
 não tem ordem, e três dos candidatos mais óbvios estão **bloqueados por decisão
 do proprietário ou por autorização de servidor**, não por falta de trabalho.
 
-## 2. Por que esta família — e os limites que ela declara na própria tela
+## 2. Por que esta família — e o que o gate encontrou no caminho
+
+Nenhuma tela consumia estes nove endpoints até aqui. Colocá-los numa aba real
+revelou, em **seis** achados, que "existir o handler" não é "funcionar": dois de
+servidor (um deles fatal), três de acessibilidade semântica e um de ordem no
+cliente. Todos foram corrigidos nesta fatia e todos têm guarda focal.
+
+| # | Achado | Onde estava | Correção |
+|---|---|---|---|
+| §2.2 | aliases `/api/hr/cli-*` devolvem **403 para `ti`** | borda legada de RH em `server.mjs` | tela usa o alias canônico `/api/cli/*` (E26 segue aberto como decisão) |
+| §2.3 | resumo e botão do formulário com o **mesmo nome** | tela | `Novo chamado`/`Nova visita`/`Novo relatório` |
+| §2.4 | texto de ajuda dentro do `<label>` **sujava o nome acessível** | tela | `htmlFor` + `aria-describedby` |
+| §2.5 | três `Novo estado`, teste dependia de `nth()` | cenário do gate | escopo por região nomeada |
+| §2.6 | **todo PATCH de status devolvia 500** (`enum` sem tipo) | `cli-advanced-api.mjs` | literais tipados `::cli_ticket_status` |
+| §2.7 | reload do detalhe **apagava o aviso de sucesso** | tela | `openTicket(id, false)` nas mutações |
+
+O restante desta seção descreve o servidor e os limites que a tela declara.
 
 `ensureAuth` (linhas 13–22 de `src/server/cli-advanced-api.mjs`) faz três coisas
 antes de qualquer `SELECT`:
@@ -285,17 +301,19 @@ despachado de forma diferente. Os 39 órfãos restantes continuam sem rota.
 | `ux-pro-00-inventory.mjs --check` | **101 rotas** |
 | `requisitos-222-inventory.mjs --check` | regenerado nesta fatia: **1603 arquivos varridos**, 222 IDs, **21 `a_revalidar` sem gate** (inalterado); CLI-05..08 ganharam `arquivos_codigo` com o componente e `arquivos_gate` com o teste focal |
 | `requisitos-sec-reaudit.mjs --check` | **35/35 âncoras** |
-| `test:ux-portal:pg` (workflow *UX portais*, Chromium real) | **43 testes: 42 passam, 1 falha** — só o cenário desta fatia, por nome acessível do campo (ver §2.4). O log do runner foi lido de fato; a falha foi corrigida e a re-execução é o que fecha a prova |
+| `test:ux-portal:pg` (workflow *UX portais*, Chromium real) | **43/43 no runner do GitHub** — inclusive o cenário desta fatia, depois dos seis defeitos do §2.2–§2.7. Verde confirmado no job da PR #303 |
 | `git diff --check` | limpo |
 
 ## 6. Limitações honestas
 
-- **A prova de navegador veio do CI, não da sandbox.** Localmente o Chromium não
-  abre (`libnspr4.so` ausente) e `apt-get` não alcança `deb.debian.org`; o painel
-  do GitHub também não mostra log sem login. O log do job foi obtido pelo
-  endpoint da API (`/actions/jobs/<id>/logs`, URL assinada) e é dele que saem os
-  três achados do §2.2–§2.4. A sandbox provou o HTTP (papel, 401/403/200) e o
-  navegador ficou com o CI — que é a limitação do E22, não desta fatia.
+- **A prova de navegador veio do CI, não da sandbox** — e o gate ficou **43/43**.
+  Localmente o Chromium não abre (`libnspr4.so` ausente) e `apt-get` não alcança
+  `deb.debian.org`; o painel do GitHub não mostra log sem login, então o log de
+  cada job foi lido pelo endpoint da API (`/actions/jobs/<id>/logs`, URL
+  assinada). Foi assim que os seis achados do §2.2–§2.7 apareceram — cinco
+  deles só visíveis com navegador de verdade. A sandbox provou o HTTP (papel,
+  401/403/200) e o comportamento dos handlers contra PostgreSQL descartável
+  (§2.6); o navegador ficou com o CI, o que continua sendo a limitação do E22.
 - **Sem escopo por conta (A3)**: a leitura v2 é global. O cenário A/B prova que
   o registro de B não aparece antes de existir, mas **não** prova isolamento por
   conta — porque ele não existe neste desenho. Isso está escrito na tela e aqui.
