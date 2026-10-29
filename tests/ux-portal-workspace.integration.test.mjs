@@ -7248,3 +7248,299 @@ test('browser UX-PRO-03: PLT-10 Pedidos LGPD (papel, A/B, POST/PATCH, verificaç
     }
   }
 });
+
+// ---------------------------------------------------------------------------
+// UX-PRO-03 — monitoramento e automação determinística (central/vídeo,
+// biometria e automações). Prova: papel decidido no servidor (admin|ti; `rh`
+// recebe 401 e não vê a aba), A/B sem resíduo, escrita real medida em status e
+// corpo (POST de projeto/automação/execução, PATCH de aprovação e de status),
+// as duas regras de LGPD do servidor recusando o caminho inseguro, 503 com
+// retry, 403 distinto de falha e quatro larguras sem transbordo.
+// ---------------------------------------------------------------------------
+test('browser UX-PRO-03: monitoramento e automação determinística (papel, A/B, POST/PATCH, privacidade, erro e retry)', { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: 'ti' });
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const staffIds = [ti.id, rh.id];
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const protocolo = prefixo => `${prefixo}-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${randomUUID().slice(0, 4).toUpperCase()}`;
+
+  const cleanup = async () => {
+    await pool.query("DELETE FROM ai_automation_logs WHERE automation_id IN (SELECT id FROM ai_deterministic_automations WHERE name LIKE 'QA-MON-%')").catch(() => {});
+    await pool.query("DELETE FROM ai_deterministic_automations WHERE name LIKE 'QA-MON-%'").catch(() => {});
+    await pool.query("DELETE FROM ext_biometry_projects WHERE title LIKE 'QA-MON-%'").catch(() => {});
+    await pool.query("DELETE FROM ext_central_projects WHERE title LIKE 'QA-MON-%'").catch(() => {});
+  };
+
+  const seed = async label => {
+    await cleanup();
+    await pool.query(
+      `INSERT INTO ext_central_projects (protocol, title, description, scope, privacy_assessment)
+       VALUES ($1,$2,$3,$4,$5)`,
+      [protocolo('CENT-EXT'), `QA-MON-${label} Central`, `QA-MON-${label} descrição sintética do projeto de central.`,
+        `QA-MON-${label} escopo sintético do projeto de central.`, `QA-MON-${label} avaliação de privacidade sintética do projeto.`],
+    );
+    await pool.query(
+      `INSERT INTO ext_biometry_projects (protocol, title, description, necessity, impact_assessment, legal_basis, biometry_type)
+       VALUES ($1,$2,$3,$4,$5,$6,'facial')`,
+      [protocolo('BIO-EXT'), `QA-MON-${label} Biometria`, `QA-MON-${label} descrição sintética do projeto de biometria.`,
+        `QA-MON-${label} necessidade sintética da biometria do posto.`,
+        `QA-MON-${label} relatório de impacto sintético da biometria.`,
+        `QA-MON-${label} base legal sintética da biometria.`],
+    );
+    await pool.query(
+      `INSERT INTO ai_deterministic_automations (name, description, automation_type, rules)
+       VALUES ($1,$2,'vencimento','{"dias_antes":5}'::jsonb)`,
+      [`QA-MON-${label} Automação`, `QA-MON-${label} descrição sintética da automação determinística.`],
+    );
+  };
+
+  const rowCentral = async title => (await pool.query('SELECT * FROM ext_central_projects WHERE title=$1', [title])).rows[0];
+  const rowBiometria = async title => (await pool.query('SELECT * FROM ext_biometry_projects WHERE title=$1', [title])).rows[0];
+  const rowAutomacao = async name => (await pool.query('SELECT * FROM ai_deterministic_automations WHERE name=$1', [name])).rows[0];
+  const logsDe = async id => (await pool.query('SELECT * FROM ai_automation_logs WHERE automation_id=$1', [id])).rows;
+
+  try {
+    // ---------- autorização no SERVIDOR ----------
+    await seed('ALFA');
+    const centralAlfa = await rowCentral('QA-MON-ALFA Central');
+    assert.ok(centralAlfa?.id, 'o projeto semeado precisa existir para a prova de autorização');
+    const deniedRead = await api('/api/ext/central-projects', { cookie: rhCookie });
+    assert.equal(deniedRead.status, 401, `rh não pode consultar a área de monitoramento: veio ${deniedRead.status}`);
+    assert.equal(deniedRead.body?.error, 'unauthorized');
+    const deniedWrite = await api('/api/ext/central-projects', {
+      method: 'PATCH', cookie: rhCookie, body: { id: centralAlfa.id, is_privacy_approved: true },
+    });
+    assert.equal(deniedWrite.status, 401, `rh não pode aprovar projeto: veio ${deniedWrite.status}`);
+    assert.equal((await rowCentral('QA-MON-ALFA Central')).is_privacy_approved, false,
+      'a tentativa negada não pode ter aprovado nada');
+    for (const pathname of ['/api/ext/central-projects', '/api/ext/biometry-projects', '/api/ext/ai-automations']) {
+      assert.equal((await api(pathname, { cookie: tiCookie })).status, 200, `ti precisa ler ${pathname}`);
+    }
+    // Aposentado pelo servidor: a tela não pode ter formulado escrita aqui.
+    const retired = await api('/api/ext/periodic-reports', { method: 'POST', cookie: tiCookie, body: { title: 'QA-MON legado' } });
+    assert.equal(retired.status, 410, `a rota legada de relatórios precisa continuar aposentada: veio ${retired.status}`);
+    assert.equal(retired.body?.canonical, '/api/ext/reports/periodic');
+
+    // `rh` tem sessão de equipe, mas o console de TI não é dele.
+    const gateBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(gateBrowser, '/admin/ti', rhCookie, { width: 1280, height: 900 });
+      await page.locator('[data-admin-gate="forbidden"]').waitFor();
+      assert.equal(await page.getByRole('button', { name: 'Central, biometria e automações', exact: true }).count(), 0,
+        'o console não pode oferecer a aba a um papel que a página não autoriza');
+      await context.close();
+    } finally {
+      await gateBrowser.close();
+    }
+
+    // ---------- estado A: quatro larguras, teclado, fonte e honestidade ----------
+    const readings = [];
+    for (const [width, height] of [[320, 844], [390, 844], [768, 900], [1440, 900]]) {
+      const browser = await launchBrowser();
+      try {
+        const { context, page } = await openPage(browser, '/admin/ti', tiCookie, { width, height });
+        const tab = page.getByRole('button', { name: 'Central, biometria e automações', exact: true });
+        await tab.waitFor();
+        await tab.focus();
+        const focused = await page.evaluate(() => document.activeElement?.textContent?.trim() || '');
+        assert.match(focused, /Central, biometria e automações/, `a aba precisa receber foco em ${width}`);
+        await page.keyboard.press('Enter');
+        await page.getByRole('heading', { name: 'Central, biometria e automações' }).waitFor();
+        await page.getByText(/Fonte: tabelas/).waitFor();
+        await page.getByText(/QA-MON-ALFA Central/).first().waitFor();
+        const text = await page.locator('body').innerText();
+        assert.match(text, /QA-MON-ALFA Biometria/);
+        assert.match(text, /QA-MON-ALFA Automação/);
+        assert.match(text, /Inteligência e monitoramento/);
+        assert.match(text, /Data-base:/);
+        assert.match(text, /não coleta biometria/i);
+        assert.match(text, /não executa/i);
+        assert.match(text, /NO-GO/);
+        assert.doesNotMatch(text, /QA-MON-BETA/, `B não pode vazar em ${width}`);
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        assert.ok(overflow <= 1, `monitoramento overflow ${overflow} em ${width}`);
+        readings.push({ width, overflow });
+        await context.close();
+      } finally {
+        await browser.close();
+      }
+    }
+    assert.deepEqual(readings.map(item => item.width), [320, 390, 768, 1440]);
+
+    // ---------- escrita real pela UI, medida em status + corpo ----------
+    const journeyBrowser = await launchBrowser();
+    const nomeAutomacao = 'QA-MON-UI Automação criada na tela';
+    const tituloBiometria = 'QA-MON-UI Biometria criada na tela';
+    const tituloCentral = 'QA-MON-UI Central criada na tela';
+    try {
+      const { context, page } = await openPage(journeyBrowser, '/admin/ti', tiCookie, { width: 1440, height: 900 });
+      await page.getByRole('button', { name: 'Central, biometria e automações', exact: true }).click();
+      await page.getByText(/QA-MON-ALFA Central/).first().waitFor();
+
+      // POST real: projeto de central. O servidor exige avaliação de privacidade.
+      const secaoCentral = page.locator('section[aria-labelledby="mon-novo-central-title"]');
+      await secaoCentral.getByLabel('Título do projeto de central').fill(tituloCentral);
+      await secaoCentral.getByLabel('Escopo do projeto de central').fill('QA-MON-UI escopo sintético do projeto de central.');
+      await secaoCentral.getByLabel('Descrição do projeto de central').fill('QA-MON-UI descrição sintética do projeto de central.');
+      await secaoCentral.getByLabel('Avaliação de privacidade do projeto de central').fill('QA-MON-UI avaliação de privacidade sintética do projeto.');
+      await secaoCentral.getByRole('button', { name: 'Criar projeto de central' }).click();
+      await page.getByText(/Projeto de central criado em rascunho/).waitFor();
+      const centralCriada = await rowCentral(tituloCentral);
+      assert.ok(centralCriada?.id, 'o projeto criado pela interface precisa estar no banco');
+      assert.match(centralCriada.protocol, /^CENT-EXT-\d{8}-[A-Z0-9]{4}$/);
+      assert.equal(centralCriada.is_privacy_approved, false);
+      await page.getByText(new RegExp(tituloCentral)).first().waitFor();
+
+      // Regra real do servidor: aprovação geral sem privacidade é recusada.
+      await page.locator('section[aria-labelledby="mon-central-title"] li').filter({ hasText: tituloCentral })
+        .getByRole('button', { name: /Abrir registro/ }).click();
+      const secaoTransicao = page.locator('section[aria-labelledby="mon-transicao-title"]');
+      await secaoTransicao.getByRole('checkbox', { name: 'aprovação geral registrada' }).check();
+      await secaoTransicao.getByRole('button', { name: 'Atualizar projeto de central' }).click();
+      await page.getByText(/Aprovar o projeto exige aprovação de privacidade registrada/).waitFor();
+      assert.equal((await rowCentral(tituloCentral)).is_approved, false, 'a recusa não pode ter aprovado o projeto');
+      await secaoTransicao.getByRole('checkbox', { name: 'aprovação de privacidade registrada' }).check();
+      await secaoTransicao.getByRole('button', { name: 'Atualizar projeto de central' }).click();
+      await page.getByText(/Projeto de central atualizado/).waitFor();
+      const centralAprovada = await rowCentral(tituloCentral);
+      assert.equal(centralAprovada.is_privacy_approved, true);
+      assert.equal(centralAprovada.is_approved, true);
+      assert.ok(centralAprovada.approved_at, 'o servidor precisa registrar a data da aprovação');
+
+      // POST real: projeto de biometria.
+      const secaoBiometria = page.locator('section[aria-labelledby="mon-novo-biometria-title"]');
+      await secaoBiometria.getByLabel('Título do projeto de biometria').fill(tituloBiometria);
+      await secaoBiometria.getByLabel('Descrição do projeto de biometria').fill('QA-MON-UI descrição sintética do projeto de biometria.');
+      await secaoBiometria.getByLabel('Necessidade da biometria').fill('QA-MON-UI necessidade sintética da biometria do posto.');
+      await secaoBiometria.getByLabel('Relatório de impacto da biometria').fill('QA-MON-UI relatório de impacto sintético da biometria.');
+      await secaoBiometria.getByLabel('Base legal da biometria').fill('QA-MON-UI base legal sintética.');
+      await secaoBiometria.getByRole('button', { name: 'Criar projeto de biometria' }).click();
+      await page.getByText(/Projeto de biometria criado em rascunho/).waitFor();
+      const biometriaCriada = await rowBiometria(tituloBiometria);
+      assert.ok(biometriaCriada?.id, 'o projeto de biometria criado pela interface precisa estar no banco');
+      assert.equal(biometriaCriada.is_collection_active, false, 'biometria não pode nascer coletando');
+      await page.getByText(new RegExp(tituloBiometria)).first().waitFor();
+
+      // Regra real do servidor: coleta sem aprovação é recusada.
+      await page.locator('section[aria-labelledby="mon-biometria-title"] li').filter({ hasText: tituloBiometria })
+        .getByRole('button', { name: /Abrir registro/ }).click();
+      await secaoTransicao.getByRole('checkbox', { name: 'coleta ativa' }).check();
+      await secaoTransicao.getByRole('button', { name: 'Atualizar projeto de biometria' }).click();
+      // O texto da seção também fala de coleta: a asserção usa a frase que só
+      // existe na mensagem traduzida do servidor.
+      await page.getByText(/ativar a coleta exige aprovação registrada do projeto/i).waitFor();
+      assert.equal((await rowBiometria(tituloBiometria)).is_collection_active, false,
+        'a recusa não pode ter ativado a coleta');
+      await secaoTransicao.getByRole('checkbox', { name: 'projeto aprovado' }).check();
+      await secaoTransicao.getByLabel('Status do projeto de biometria').selectOption('ativo');
+      await secaoTransicao.getByRole('button', { name: 'Atualizar projeto de biometria' }).click();
+      await page.getByText(/Projeto de biometria atualizado/).waitFor();
+      const biometriaAtiva = await rowBiometria(tituloBiometria);
+      assert.equal(biometriaAtiva.is_approved, true);
+      assert.equal(biometriaAtiva.is_collection_active, true);
+      assert.equal(biometriaAtiva.status, 'ativo');
+
+      // POST real: automação determinística (sem agendamento: coluna não existe).
+      const secaoAutomacao = page.locator('section[aria-labelledby="mon-nova-automacao-title"]');
+      await secaoAutomacao.getByLabel('Nome da automação').fill(nomeAutomacao);
+      await secaoAutomacao.getByLabel('Descrição da automação').fill('QA-MON-UI descrição sintética da automação determinística.');
+      await secaoAutomacao.getByLabel('Regras da automação (JSON)').fill('{"dias_antes":5}');
+      await secaoAutomacao.getByRole('button', { name: 'Criar automação' }).click();
+      await page.getByText(/Automação determinística criada/).waitFor();
+      const automacaoCriada = await rowAutomacao(nomeAutomacao);
+      assert.ok(automacaoCriada?.id, 'a automação criada pela interface precisa estar no banco');
+      assert.deepEqual(automacaoCriada.rules, { dias_antes: 5 });
+      assert.equal(automacaoCriada.status, 'rascunho');
+
+      // PATCH real de status da automação.
+      await page.locator('section[aria-labelledby="mon-automacoes-title"] li').filter({ hasText: nomeAutomacao })
+        .getByRole('button', { name: /Abrir registro/ }).click();
+      await secaoTransicao.getByLabel('Status da automação').selectOption('ativa');
+      await secaoTransicao.getByRole('button', { name: 'Atualizar automação' }).click();
+      await page.getByText(/Automação atualizada/).waitFor();
+      assert.equal((await rowAutomacao(nomeAutomacao)).status, 'ativa');
+
+      // POST real de execução: resultado é obrigatório (10..1000) no servidor.
+      const secaoExecucao = page.locator('section[aria-labelledby="mon-execucao-title"]');
+      await secaoExecucao.getByLabel('Automação da execução').selectOption(automacaoCriada.id);
+      await secaoExecucao.getByLabel('Ação registrada na execução').fill('QA-MON-UI execução declarada');
+      await secaoExecucao.getByLabel('Resultado da execução').fill('curto');
+      await secaoExecucao.getByRole('button', { name: 'Registrar execução' }).click();
+      await page.getByText(/O resultado da execução é obrigatório/i).waitFor();
+      assert.equal((await logsDe(automacaoCriada.id)).length, 0, 'a execução recusada não pode ter sido gravada');
+      await secaoExecucao.getByLabel('Resultado da execução').fill('QA-MON-UI resultado sintético da execução declarada.');
+      await secaoExecucao.getByRole('button', { name: 'Registrar execução' }).click();
+      await page.getByText(/Execução registrada no histórico/).waitFor();
+      const logs = await logsDe(automacaoCriada.id);
+      assert.equal(logs.length, 1, `a execução precisa estar no banco: ${logs.length}`);
+      assert.equal(logs[0].is_error, false);
+      assert.equal((await rowAutomacao(nomeAutomacao)).run_count, 1, 'o servidor precisa atualizar os contadores');
+      await page.getByText(/Histórico de execução \(1\)/).waitFor();
+
+      // Troca para B: nada de A pode sobreviver à releitura.
+      await seed('BETA');
+      await page.getByRole('button', { name: 'Carregar monitoramento' }).click();
+      await page.getByText(/QA-MON-BETA Central/).first().waitFor();
+      const text = await page.locator('body').innerText();
+      assert.doesNotMatch(text, /QA-MON-ALFA/, 'o estado A não pode sobrar na leitura de B');
+      assert.doesNotMatch(text, new RegExp(tituloCentral), 'registro criado em A não pode sobreviver a B');
+      assert.doesNotMatch(text, /Projeto de central criado em rascunho/, 'mensagem antiga não pode sobreviver à releitura');
+      assert.doesNotMatch(text, /Execução registrada no histórico/, 'mensagem de execução não pode sobreviver à releitura');
+      await context.close();
+    } finally {
+      await journeyBrowser.close();
+    }
+
+    // ---------- 503: erro declarado e retry sem recarregar ----------
+    const failureBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(failureBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/ext/central-projects'],
+        status: 503, code: 'central_projects_unavailable',
+        onPage: p => p.addInitScript(() => { window.__qaFetchOriginal = window.fetch.bind(window); }),
+      });
+      await page.getByRole('button', { name: 'Central, biometria e automações', exact: true }).click();
+      const errorState = page.locator('[data-ui-state="error"]');
+      await errorState.waitFor();
+      assert.match(await errorState.innerText(), /Falha na consulta/);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await page.evaluate(() => { window.fetch = window.__qaFetchOriginal; });
+      await errorState.getByRole('button', { name: 'Tentar novamente' }).click();
+      await page.getByText(/QA-MON-BETA Central/).first().waitFor();
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0, 'retry precisa sair do erro');
+      await context.close();
+    } finally {
+      await failureBrowser.close();
+    }
+
+    // ---------- 403: negado distinto de erro e de vazio ----------
+    const deniedBrowser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(deniedBrowser, '/admin/ti', tiCookie, {
+        width: 390, height: 844,
+        failRoutes: ['/api/ext/biometry-projects'],
+        status: 403, code: 'unauthorized',
+      });
+      await page.getByRole('button', { name: 'Central, biometria e automações', exact: true }).click();
+      const deniedState = page.locator('[data-ui-state="denied"]');
+      await deniedState.waitFor();
+      assert.match(await deniedState.innerText(), /Acesso não autorizado/);
+      assert.equal(await page.locator('[data-ui-state="error"]').count(), 0);
+      assert.equal(await page.locator('[data-ui-state="empty"]').count(), 0);
+      await context.close();
+    } finally {
+      await deniedBrowser.close();
+    }
+  } finally {
+    await cleanup();
+    for (const id of staffIds) {
+      await pool.query('DELETE FROM auth_access_audit WHERE actor_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_sessions WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_staff_profiles WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_credentials WHERE identity_id=$1', [id]).catch(() => {});
+      await pool.query('DELETE FROM auth_identities WHERE id=$1', [id]).catch(() => {});
+    }
+  }
+});

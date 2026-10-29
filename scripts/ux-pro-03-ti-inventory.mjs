@@ -88,6 +88,12 @@ const PROMOCOES_COM_PROVA = [
     familia: 'PLT-10 pedidos do titular com verificação de identidade, responsável, prazo de 15 dias e impedimentos documentados',
     relatorio: 'docs/UX-PRO-03-PROMOCAO-PEDIDOS-LGPD-2026-10-28.md',
   },
+  {
+    componente: 'ExtReportingClient.tsx',
+    aba: 'monitoramento_ext',
+    familia: 'central de monitoramento/vídeo, biometria e automações determinísticas (escopo reduzido às três famílias cujo contrato legado segue vivo; relatórios/inteligência/emergencial têm rota canônica e não foram montados)',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-MONITORAMENTO-2026-10-29.md',
+  },
 ];
 
 const sha256 = value => createHash('sha256').update(value).digest('hex');

@@ -65,7 +65,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1610,
+    "arquivosVarridos": 1613,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -6707,13 +6707,12 @@
         "scripts/qa-ext13-reports-postgres.mjs",
         "scripts/ux-pro-04-relatorios-browser-evidence.mjs",
         "src/app/admin/relatorios/ReportsWorkspace.tsx",
-        "src/app/admin/ti/ExtReportingClient.tsx",
         "src/server/ext-reporting-api.mjs",
         "src/server/ext-reports-api.mjs"
       ],
       "ocorrencias_gate": 34,
-      "ocorrencias_documento": 32,
-      "ocorrencias_codigo": 12,
+      "ocorrencias_documento": 33,
+      "ocorrencias_codigo": 10,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -6747,13 +6746,12 @@
       "arquivos_codigo": [
         "scripts/qa-ext14-intel-postgres.mjs",
         "src/app/admin/inteligencia/IntelWorkspace.tsx",
-        "src/app/admin/ti/ExtReportingClient.tsx",
         "src/server/ext-intel-api.mjs",
         "src/server/ext-reporting-api.mjs"
       ],
       "ocorrencias_gate": 36,
       "ocorrencias_documento": 24,
-      "ocorrencias_codigo": 12,
+      "ocorrencias_codigo": 11,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -6788,14 +6786,13 @@
         "scripts/qa-ext15-emergency-postgres.mjs",
         "scripts/qa-ux-emergency-postgres.mjs",
         "src/app/admin/emergencial/EmergencyWorkspace.tsx",
-        "src/app/admin/ti/ExtReportingClient.tsx",
         "src/lib/emergency-request.ts",
         "src/server/ext-emergency-api.mjs",
         "src/server/ext-reporting-api.mjs"
       ],
       "ocorrencias_gate": 33,
       "ocorrencias_documento": 37,
-      "ocorrencias_codigo": 13,
+      "ocorrencias_codigo": 11,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -6820,12 +6817,11 @@
         "docs/PROMPT-CONTINUACAO-F14-IA-RAG-REAL.md"
       ],
       "arquivos_codigo": [
-        "src/app/admin/ti/ExtReportingClient.tsx",
         "src/server/ext-reporting-api.mjs"
       ],
       "ocorrencias_gate": 0,
       "ocorrencias_documento": 16,
-      "ocorrencias_codigo": 2,
+      "ocorrencias_codigo": 1,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -6850,12 +6846,11 @@
         "docs/UX-10-EXPANSAO-2026-10-06.md"
       ],
       "arquivos_codigo": [
-        "src/app/admin/ti/ExtReportingClient.tsx",
         "src/server/ext-reporting-api.mjs"
       ],
       "ocorrencias_gate": 0,
       "ocorrencias_documento": 13,
-      "ocorrencias_codigo": 2,
+      "ocorrencias_codigo": 1,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -6880,7 +6875,6 @@
         "docs/PROMPT-CONTINUACAO-F14-IA-RAG-REAL.md"
       ],
       "arquivos_codigo": [
-        "src/app/admin/ti/ExtReportingClient.tsx",
         "src/server/ext-reporting-api.mjs"
       ],
       "ocorrencias_gate": 0,
@@ -7117,18 +7111,17 @@
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
+        "docs/UX-PRO-03-PROMOCAO-MONITORAMENTO-2026-10-29.md",
         "docs/auditoria-2026-10-04/02-PLANO-ARENA.md",
         "docs/auditoria-2026-10-04/AUDITORIA.md",
-        "docs/evidencias/F10-lote54-ollama-real-fallback-pglite-serial.md",
-        "docs/evidencias/F10-lote57-silent-pglite-widgets-rag-integration.md"
+        "docs/evidencias/F10-lote54-ollama-real-fallback-pglite-serial.md"
       ],
       "arquivos_codigo": [
-        "src/app/admin/ti/ExtReportingClient.tsx",
         "src/server/ext-reporting-api.mjs"
       ],
       "ocorrencias_gate": 0,
-      "ocorrencias_documento": 11,
-      "ocorrencias_codigo": 6,
+      "ocorrencias_documento": 12,
+      "ocorrencias_codigo": 2,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     }

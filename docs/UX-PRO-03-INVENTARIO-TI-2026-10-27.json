@@ -3,25 +3,25 @@
   "resumo": "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
   "data": "2026-10-27",
   "criterio": "promover por area somente com prova (decisao de 02/10); prova estatica nao substitui gate de navegador nem aceite humano",
-  "tiConsoleSha256": "7f73efe1098c1f4f27d64ded087a6ddc1c06eb50d8957fbee2193f463d032dda",
+  "tiConsoleSha256": "3e5b6f77f91c36d7398b9dc5bbfb37f8a9695267deddd6303d8a629b3ac804cc",
   "pageSha256": "360bf2564469679a4cc7c0b6b9274f05557188f701a3f3b89649ce4d70d56313",
   "total": 84,
-  "abas": 21,
-  "importsDinamicos": 21,
+  "abas": 22,
+  "importsDinamicos": 22,
   "console": {
-    "total": 21,
-    "comProva": 21,
+    "total": 22,
+    "comProva": 22,
     "lacunas": []
   },
   "workspace": {
     "total": 25
   },
   "orfos": {
-    "total": 38,
+    "total": 37,
     "promovidosSemSairDaClassificacao": 0
   },
   "promocoesComProva": {
-    "total": 8,
+    "total": 9,
     "todasMontadas": true,
     "detalhes": [
       {
@@ -71,11 +71,17 @@
         "aba": "lgpd",
         "familia": "PLT-10 pedidos do titular com verificação de identidade, responsável, prazo de 15 dias e impedimentos documentados",
         "relatorio": "docs/UX-PRO-03-PROMOCAO-PEDIDOS-LGPD-2026-10-28.md"
+      },
+      {
+        "componente": "ExtReportingClient.tsx",
+        "aba": "monitoramento_ext",
+        "familia": "central de monitoramento/vídeo, biometria e automações determinísticas (escopo reduzido às três famílias cujo contrato legado segue vivo; relatórios/inteligência/emergencial têm rota canônica e não foram montados)",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-MONITORAMENTO-2026-10-29.md"
       }
     ]
   },
   "apis": {
-    "literais": 406,
+    "literais": 402,
     "semDispatch": 0
   }
 }
