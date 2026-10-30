@@ -34,10 +34,12 @@ async function run() {
   try {
     const old = await post('/api/ai/rag', { rag_key: 'publico', query: 'Quais serviços?' });
     assert.equal(old.status, 410, 'rota beta simulada deve permanecer aposentada');
-    // FECH-01: o banco beta não publica conteúdo público (o texto descritivo
-    // legado é arquivado no init), então o escopo está VAZIO. "Sem conteúdo
-    // publicado" e "sem trecho relacionado" são estados distintos e o modelo
-    // não é chamado em nenhum dos dois.
+    // FECH-01: nenhum documento público está publicado, então o escopo está
+    // VAZIO. "Sem conteúdo publicado" e "sem trecho relacionado" são estados
+    // distintos e o modelo não é chamado em nenhum dos dois.
+    // E7: a demo usa o schema real (migrações 001–181); nele os índices RAG
+    // nascem em `rascunho` (095) — publicar é ato de curadoria, não default de
+    // banco. O teste faz esse passo como o operador faria.
     const empty = await post('/api/ai/answer', { rag_key: 'publico', query: 'zxqvkj oculto inexistente?' });
     assert.equal(empty.status, 200);
     assert.equal(empty.body.reason, 'empty_scope');
@@ -53,6 +55,16 @@ async function run() {
       assert.equal(login.status, 200);
       const cookie = login.headers.get('set-cookie')?.split(';')[0];
       assert.ok(cookie);
+      // Curadoria do índice público: sem isso a recuperação canônica não lê o
+      // corpus (o índice em rascunho é barrado no servidor), então o estado
+      // esperado seria `empty_scope` e não o caminho do modelo desligado.
+      const indexList = await fetch(base + '/api/admin/ai-rag-indexes', { headers: { Origin: base, Cookie: cookie } });
+      assert.equal(indexList.status, 200);
+      const publicoIndex = (await indexList.json()).items.find(index => index.rag_key === 'publico');
+      assert.ok(publicoIndex, 'o índice público precisa existir no schema real');
+      assert.equal(publicoIndex.status, 'rascunho', 'índice RAG nasce em rascunho: publicar é decisão humana');
+      const indexPublished = await fetch(base + '/api/admin/ai-rag-indexes', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Origin: base, Cookie: cookie }, body: JSON.stringify({ id: publicoIndex.id, status: 'publicado', is_approved: true, is_published: true }) });
+      assert.equal(indexPublished.status, 200, 'a curadoria precisa conseguir publicar o índice');
       const draft = await post('/api/admin/ai-rag-documents', { rag_key: 'publico', title: 'QA rascunho oculto', content: 'qa_draft_never_expose_2843 é um texto sintético que não deve aparecer em respostas públicas.', source: 'qa_local', keywords: ['qa_draft_never_expose_2843'] }, cookie);
       assert.equal(draft.status, 201, JSON.stringify(draft.body)+' — '+serverError.slice(-700));
       const probe = await post('/api/ai/answer', { rag_key: 'publico', query: 'Existe qa_draft_never_expose_2843?' });

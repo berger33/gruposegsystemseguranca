@@ -1,112 +1,46 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 
 let pgliteInstance = null;
 let poolWrapper = null;
 
 const MIGRATIONS_DIR = path.join(process.cwd(), 'db/migrations');
-const MIGRATIONS_LIST = [
-  '001-site-visual.sql',
-  '002-public-leads.sql',
-  '003-client-access.sql',
-  '004-client-space.sql',
-  '005-client-security.sql',
-  '006-admin-identities.sql',
-  '007-opcao-b-funcionarios.sql',
-  '008-document-contract-link.sql',
-  '009-mfa-challenge.sql',
-  '010-rbac-permissions.sql',
-  '011-audit-and-notifications.sql',
-  '012-integrations-and-catalog.sql',
-  '013-pub03-pub04-lead-enhancements.sql',
-  '014-crm-core.sql',
-  '015-crm-import.sql',
-  '016-crm11-catalog-enrichment.sql',
-  '017-crm12-equipment.sql',
-  '018-crm13-inspection.sql',
-  '019-crm14-labor-budget.sql',
-  '020-crm15-technical-budget.sql',
-  '021-crm16-cost-parameters.sql',
-  '022-crm17-price-scenarios.sql',
-  '023-crm18-discount-tiers.sql',
-  '024-crm19-proposals.sql',
-  '025-crm21-proposal-delivery.sql',
-  '026-crm22-acceptance-link.sql',
-  '027-crm23-contract-idempotent.sql',
-  '028-crm24-reports.sql',
-  '029-crm25-goals-commissions.sql',
-  '030-crm26-commercial-library.sql',
-  '031-crm27-partnerships-renewals.sql',
-  '032-con01-contract-units-docs.sql',
-  '033-con02-contract-posts-sla.sql',
-  '034-con03-contract-status-transitions.sql',
-  '035-con04-contract-amendments.sql',
-  '036-con05-contract-alerts.sql',
-  '037-con06-document-obligations.sql',
-  '038-con07-implantation-checklist.sql',
-  '039-con08-implantation-blocks.sql',
-  '040-con09-contract-closure.sql',
-  '041-con10-fiscal-dossier.sql',
-  '042-con11-management-diary.sql',
-  '043-plt05-notifications.sql',
-  '044-plt06-observability.sql',
-  '045-plt07-healthcheck.sql',
-  '046-plt08-backup.sql',
-  '047-plt09-privacy.sql',
-  '048-plt10-lgpd-requests.sql',
-  '049-plt11-retention.sql',
-  '050-plt12-incident-response.sql',
-  '051-plt13-config-flags.sql',
-  '052-plt14-dependencies.sql',
-  '053-plt15-integration-logs.sql',
-  '054-plt16-operational-budget.sql',
-  '055-plt17-env-isolation.sql',
-  '056-plt18-maintenance-docs.sql',
-  '057-hr01-cadastro-profissional.sql',
-  '058-emp01-perfil-proprio.sql',
-  '059-hr03-04-06-recrutamento-talentos-dossie.sql',
-  '060-hr07-08-09-desligamento-status-ferias.sql',
-  '061-hr10-11-12-afastamentos-ponto-banco-horas.sql',
-  '062-hr13-14-15-16-beneficios-adiantamentos-saude-integracao.sql',
-  '063-hr17-18-19-20-treinamento-competencias-uniformes-fechamento-dp.sql',
-  '064-hr21-22-23-24-holerites-avaliacoes-atendimento-indicadores.sql',
-  '065-emp02-03-04-05-plantao-escala-jornada-ausencia.sql',
-  '066-emp06-07-08-09-troca-passagem-ocorrencia-procedimentos.sql',
-  '067-emp10-11-12-13-documentos-holerites-solicitacoes-uniformes.sql',
-  '068-emp14-15-16-17-cursos-comunicados-atendimento-confidencial.sql',
-  '069-emp18-19-pwa-faq-acessibilidade.sql',
-  '070-ops01-02-03-04-estrutura-dimensionamento-escala-validacao.sql',
-  '071-ops05-06-07-08-cobertura-passagem-ocorrencia-checklist.sql',
-  '072-ops09-10-11-12-supervisao-ronda-chaves-relatorio.sql',
-  '073-ops13-14-15-16-metricas-escalas-limpeza-monitoramento.sql',
-  '074-cli01-02-03-04-portal-identidade-contatos-contratos-documentos.sql',
-  '075-cli05-06-07-08-chamados-visitas-relatorios.sql',
-  '076-cli09-10-11-12-13-14-cobrancas-oportunidade-satisfacao-renovacao-modos-seguranca.sql',
-  '077-fin01-02-03-04-contas-receber-pagar-recorrencia-pagamento.sql',
-  '078-fin05-06-07-08-conciliacao-cobranca-fluxo-custo.sql',
-  '079-fin09-10-11-12-resultado-despesa-fiscal-gateway.sql',
-  '080-fin13-14-15-16-orcamento-export-fechamento-comissao.sql',
-  '081-adm01-02-03-04-05-06-painel-aprovacao.sql',
-  '082-adm07-08-09-10-11-12-busca-relatorios-config-metas-diario-expansao.sql',
-  '083-ast01-02-03-04-05-06-estoque-reserva-ativo-entrega-requisicao.sql',
-  '084-ast07-08-09-10-11-12-inventario-os-manutencao-cftv-limpeza.sql',
-  '085-ext01-02-03-04-05-06-frota-terceiros-licitacoes-fornecedores-qualidade-satisfacao.sql',
-  '086-ext07-08-09-10-11-12-compliance-conhecimento-expansao-continuidade-analytics-editor.sql',
-  '087-ext13-14-15-16-17-relatorio-inteligencia-emergencial-central-biometria-ai10-automacoes.sql',
-  '088-pub06-cms-paginas-faq-cases-blog-vagas.sql',
-  '089-pub07-temas-preview-publicacao-rollback-preferencia.sql',
-  '090-pub08-seo-sitemap-redirects-dominio-noindex.sql',
-  '091-pub09-montador-pacote-comparador-servicos-planos.sql',
-  '092-pub10-origem-conversao-ab-test-minimizacao.sql',
-  '093-cli15-reclamacao-colaborador-canal-restrito-rh-minimo.sql',
-  '094-pub02-pub05-paginas-segmento-faq-assistida-handoff.sql',
-  '095-ai-rag-cliente-rh-marcelo-ollama-qwen3-bot-modes.sql',
-];
+const DEMO_SEED_PATH = path.join(process.cwd(), 'db/pglite-demo-seed.sql');
+
+// E7: o modo "beta lite" (`db/beta-pglite-init.sql`, 27 tabelas) saiu do caminho
+// padrão. A demo carrega o schema real aplicando as MESMAS migrações 001–181 do
+// PostgreSQL. Diretórios criados antes disso são RECUSADOS com mensagem
+// explícita: aplicar o ledger por cima do schema mínimo deixa o banco
+// inconsistente (medido: 14/181 migrações falham e sobra um híbrido de 560
+// tabelas). Demo "meio funcionando" é pior que demo que pede reset.
+const LEGACY_BETA_MARKER_LIKE = 'beta-pglite-init%';
+const DEMO_SEED_MARKER = 'pglite-demo-seed-v1.sql';
+const MIGRATION_FILE_PATTERN = /^\d{3}-.+\.sql$/;
+
+let schemaInfo = null;
+
+/**
+ * Arquivos de migração na ordem canônica (001…N). A lista vem do diretório, não
+ * de um array escrito à mão: qualquer migração nova entra na demo sem edição
+ * (o array antigo parou em 095 e nunca mais acompanhou o ledger).
+ */
+export function listMigrationFiles(directory = MIGRATIONS_DIR) {
+  return fs.readdirSync(directory).filter((name) => MIGRATION_FILE_PATTERN.test(name)).sort();
+}
+
+function migrationChecksum(sql) {
+  return createHash('sha256').update(sql).digest('hex');
+}
+
+export function getPGliteSchemaInfo() {
+  return schemaInfo;
+}
 
 function getPGliteInstance() {
   if (pgliteInstance) return pgliteInstance;
-  // Testes podem apontar para um diretório exclusivo sem limpar o PGlite do usuário.
+  // Testes e gates podem apontar para um diretório exclusivo sem limpar o PGlite do usuário.
   const dataDir = process.env.PGLITE_DATA_DIR
     ? path.resolve(process.env.PGLITE_DATA_DIR)
     : path.join(process.cwd(), '.data', 'pglite');
@@ -118,130 +52,122 @@ function getPGliteInstance() {
 function isPgliteDebug() {
   return process.env.PGLITE_DEBUG === 'true' || process.env.LOG_LEVEL === 'debug';
 }
+
 function pgliteLog(...args) {
   if (isPgliteDebug()) console.log(...args);
 }
-function pgliteWarn(...args) {
-  if (isPgliteDebug()) console.warn(...args);
+
+async function ensureLedger(db) {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS __migrations (
+      filename TEXT PRIMARY KEY,
+      applied_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await db.query('ALTER TABLE __migrations ADD COLUMN IF NOT EXISTS checksum TEXT');
 }
 
-async function ensureHelpers(db) {
-  try {
-    await db.exec(`
-      CREATE OR REPLACE FUNCTION set_updated_at() RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.updated_at = NOW();
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql;
+async function publicTableCount(db) {
+  const { rows } = await db.query(`
+    SELECT count(*)::int AS count FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_type = 'BASE TABLE' AND table_name <> '__migrations'
+  `);
+  return rows[0]?.count ?? 0;
+}
 
-      CREATE OR REPLACE FUNCTION crm_set_updated_at() RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.updated_at = NOW();
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql;
-
-      CREATE OR REPLACE FUNCTION notification_queue_set_updated_at() RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.updated_at = NOW();
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql;
-
-      CREATE OR REPLACE FUNCTION integrations_set_updated_at() RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.updated_at = NOW();
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql;
-
-      CREATE OR REPLACE FUNCTION service_catalog_set_updated_at() RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.updated_at = NOW();
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql;
-
-      CREATE OR REPLACE FUNCTION faq_set_updated_at() RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.updated_at = NOW();
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql;
-    `);
-  } catch (e) {
-    pgliteWarn('[PGlite] helpers creation warning', e.message);
+/**
+ * Recusa diretórios de demo criados pelo modo beta antigo. Sem isso, o mesmo
+ * `.data/pglite` continuaria abrindo com 27 tabelas (ou com um híbrido
+ * inconsistente se as migrações falhassem no meio) e a demo se confundiria com
+ * o produto — o defeito E7.
+ */
+async function refuseLegacyOrUnknownSchema(db) {
+  const legacy = await db.query('SELECT filename FROM __migrations WHERE filename LIKE $1', [LEGACY_BETA_MARKER_LIKE]);
+  const known = await db.query("SELECT count(*)::int AS count FROM __migrations WHERE filename LIKE '___-%'");
+  const tables = await publicTableCount(db);
+  const hasLegacyMarker = legacy.rows.length > 0;
+  const hasRealMigrations = (known.rows[0]?.count ?? 0) > 0;
+  if (hasLegacyMarker) {
+    throw new Error(
+      'pglite_legacy_beta_schema: este diretório foi criado pelo modo beta antigo (db/beta-pglite-init.sql, 27 tabelas). ' +
+      'A demo usa o schema real pelas migrações e não atualiza o schema mínimo in-place. ' +
+      'Apague o diretório do PGlite (padrão: .data/pglite) ou use o reset do lançador (ex.: npm run demo:reset) e suba de novo.',
+    );
+  }
+  if (tables > 0 && !hasRealMigrations) {
+    throw new Error(
+      'pglite_unknown_schema: o diretório do PGlite tem tabelas mas nenhuma migração registrada. ' +
+      'Não é possível provar de onde veio esse schema; apague o diretório (padrão: .data/pglite) e suba de novo.',
+    );
   }
 }
 
-async function ensureMigrationsTable(db) {
-  try {
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS __migrations (
-        filename TEXT PRIMARY KEY,
-        applied_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `);
-  } catch (e) {
-    pgliteWarn('[PGlite] could not create __migrations', e.message);
+async function applyMigrations(db) {
+  const files = listMigrationFiles();
+  if (files.length === 0) {
+    throw new Error(`pglite_migrations_missing: nenhum arquivo de migração em ${MIGRATIONS_DIR}`);
   }
+  const recorded = new Map();
+  const { rows } = await db.query("SELECT filename, checksum FROM __migrations WHERE filename LIKE '___-%'");
+  for (const row of rows) recorded.set(row.filename, row.checksum);
+  const mismatched = [];
+  let appliedNow = 0;
+  for (const file of files) {
+    const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8');
+    const checksum = migrationChecksum(sql);
+    if (recorded.has(file)) {
+      const previous = recorded.get(file);
+      // Sem checksum gravado (ledger antigo) não há como provar deriva; com
+      // checksum, arquivo editado depois de aplicado é recusa explícita — a
+      // mesma regra do migrador PostgreSQL (001–181 imutáveis).
+      if (previous && previous !== checksum) mismatched.push(file);
+      continue;
+    }
+    try {
+      await db.exec(sql);
+    } catch (error) {
+      try { await db.exec('ROLLBACK'); } catch {}
+      throw new Error(`pglite_migration_failed ${file}: ${String(error.message).slice(0, 240)}`);
+    }
+    await db.query(
+      'INSERT INTO __migrations (filename, checksum) VALUES ($1, $2) ON CONFLICT (filename) DO UPDATE SET checksum = EXCLUDED.checksum',
+      [file, checksum],
+    );
+    appliedNow += 1;
+    pgliteLog(`[PGlite] applied ${file}`);
+  }
+  if (mismatched.length > 0) {
+    throw new Error(
+      `pglite_migration_checksum_mismatch: ${mismatched.join(', ')} — migração já aplicada mudou de conteúdo. ` +
+      'Restaure o arquivo ou recrie o diretório do PGlite; não reescreva migração aplicada.',
+    );
+  }
+  return { files: files.length, appliedNow };
+}
+
+/**
+ * Conteúdo de demonstração (identidade staff sintética), nunca schema. O schema
+ * é 100% migração; isso só preserva o estado que a demo beta já tinha.
+ */
+async function applyDemoSeed(db) {
+  if (!fs.existsSync(DEMO_SEED_PATH)) return false;
+  const marker = await db.query('SELECT filename FROM __migrations WHERE filename = $1', [DEMO_SEED_MARKER]);
+  if (marker.rows.length > 0) return false;
+  await db.exec(fs.readFileSync(DEMO_SEED_PATH, 'utf8'));
+  await db.query('INSERT INTO __migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING', [DEMO_SEED_MARKER]);
+  return true;
 }
 
 async function runMigrationsIfNeeded() {
   const db = getPGliteInstance();
-  await ensureHelpers(db);
-  await ensureMigrationsTable(db);
-
-  // BETA mode: usar init simplificado para garantir 1-clique sem Docker
-  const betaInitPath = path.join(MIGRATIONS_DIR, '..', 'beta-pglite-init.sql');
-  // v2 acrescenta o mínimo de identidade/sessão de staff exigido pelo login
-  // endurecido. O marcador novo força uma única reaplicação idempotente em
-  // diretórios PGlite beta que já carregaram o init antigo.
-  const betaInitMarker = 'beta-pglite-init-v3.sql';
-  if (fs.existsSync(betaInitPath)) {
-    try {
-      const { rows } = await db.query('SELECT filename FROM __migrations WHERE filename=$1', [betaInitMarker]);
-      if (rows.length === 0) {
-        pgliteLog(`[PGlite] Running ${betaInitMarker} (schema mínimo RAG + sessão staff)`);
-        const sql = fs.readFileSync(betaInitPath, 'utf8');
-        await db.exec(sql);
-        await db.query('INSERT INTO __migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING', [betaInitMarker]);
-        pgliteLog(`[PGlite] ${betaInitMarker} applied — RAG cliente/rh/marcelo/publico + bot modes + sessão staff`);
-      } else {
-        pgliteLog(`[PGlite] ${betaInitMarker} already applied`);
-      }
-      pgliteLog('[PGlite] migrations check complete (beta mode — lite)');
-      return;
-    } catch (e) {
-      pgliteWarn('[PGlite] beta init failed, falling back to full migrations', e.message);
-    }
-  }
-
-  let applied = new Set();
-  try {
-    const res = await db.query('SELECT filename FROM __migrations');
-    applied = new Set(res.rows.map(r => r.filename));
-  } catch {}
-
-  for (const file of MIGRATIONS_LIST) {
-    if (applied.has(file)) continue;
-    const fullPath = path.join(MIGRATIONS_DIR, file);
-    if (!fs.existsSync(fullPath)) {
-      pgliteWarn(`[PGlite] migration missing ${file}`);
-      continue;
-    }
-    const sql = fs.readFileSync(fullPath, 'utf8');
-    try {
-      await db.exec(sql);
-      await db.query('INSERT INTO __migrations (filename) VALUES ($1) ON CONFLICT (filename) DO NOTHING', [file]);
-      pgliteLog(`[PGlite] applied ${file}`);
-    } catch (err) {
-      pgliteWarn(`[PGlite] bulk exec failed for ${file}: ${err.message}, marking as applied for beta`);
-      try { await db.query('INSERT INTO __migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING', [file]); } catch {}
-    }
-  }
-  pgliteLog('[PGlite] migrations check complete');
+  await ensureLedger(db);
+  await refuseLegacyOrUnknownSchema(db);
+  const { files, appliedNow } = await applyMigrations(db);
+  const seeded = await applyDemoSeed(db);
+  const tables = await publicTableCount(db);
+  schemaInfo = { migrationFiles: files, appliedNow, demoSeedApplied: seeded, tables };
+  pgliteLog(`[PGlite] schema pronto: ${files} migrações, ${tables} tabelas (${appliedNow} aplicadas agora)`);
+  return schemaInfo;
 }
 
 let queryQueue = Promise.resolve();
@@ -303,13 +229,15 @@ function createPoolWrapper() {
 }
 
 export async function getPGlitePool() {
-  const db = getPGliteInstance();
-  // Ensure migrations on first call
+  // Fail-closed: o marcador só é gravado DEPOIS do sucesso. Antes, uma falha no
+  // meio do bootstrap deixava o processo "migrado" e servindo um schema parcial.
   if (!globalThis.__pgliteMigrated) {
-    globalThis.__pgliteMigrated = true;
     await runMigrationsIfNeeded();
+    globalThis.__pgliteMigrated = true;
   }
-  return createPoolWrapper();
+  const wrapper = createPoolWrapper();
+  wrapper.schema = schemaInfo;
+  return wrapper;
 }
 
 export function getPGliteInstanceRaw() {

@@ -184,8 +184,11 @@ let pglitePoolPromise = null;
 async function getPGlitePoolLazy() {
   if (!pglitePoolPromise) {
     pglitePoolPromise = import('./src/server/pglite-pool.mjs').then(async (mod) => {
+      // E7: a demo aplica as mesmas migrações do PostgreSQL. O log diz o que foi
+      // medido (nº de migrações e tabelas), não uma promessa.
       const p = await mod.getPGlitePool();
-      console.log('[DB] Using PGlite beta (schema mínimo; não equivale às migrações PostgreSQL 001–096)');
+      const info = mod.getPGliteSchemaInfo?.();
+      console.log(`[DB] Using PGlite (PostgreSQL em WASM) — schema real por ${info?.migrationFiles ?? '?'} migrações de db/migrations, ${info?.tables ?? '?'} tabelas; demo local sem backup/worker/dados reais`);
       return p;
     });
   }
