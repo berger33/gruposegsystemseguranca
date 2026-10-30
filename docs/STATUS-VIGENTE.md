@@ -1,6 +1,12 @@
 # Status vigente — Grupo SEG System
 
-**Última reconciliação:** 29/10/2026 · **Base:** `d7b09e173885ff0bb8a5c802f4da28da6b35ef26` (merge da PR #306) · **Branch de trabalho:** `arena/e30676ab-gruposegsystemseguranca`.
+**Última reconciliação:** 29/10/2026 · **Base:** `d9d011c9904783d5f240ed4fbefdd3e581996a59` (merge da PR #307) · **Branch de trabalho:** `arena/50dc8432-gruposegsystemseguranca`.
+
+### Atualização corrente desta branch — jornada RH de reclamações compartilhadas
+
+A branch parte da `main` `d9d011c9904783d5f240ed4fbefdd3e581996a59`. Implementação aditiva em `/admin/funcionarios` e `/api/admin/hr/employee-complaints`, com projeção allowlist, sessão/origem/papel no servidor e PATCH transacional com lock, histórico e `audit_log`; rollback por falha de auditoria foi provado em PostgreSQL descartável. Teste focal RED 0/4 → GREEN 4/4. O cenário focal de Chromium/PostgreSQL foi medido isoladamente 1/1; a bateria completa final está registrada no relatório `docs/UX-PRO-03-RH-RECLAMACOES-COMPARTILHADAS-2026-10-29.md`.
+
+Preservados sem alteração o PATCH legado do RH (continua 500, sem escrita), as rotas admin|ti, o `AdminGate` (rh/marcelo/admin/ti), as 23 abas/10 promoções de TiConsole, a fila 222 (20 `a_revalidar` sem gate; 0/222 aceite humano), as 101 rotas, as migrações 001–181 e a próxima livre 182. Mensagens/evidências continuam sem checar `is_shared_with_hr`; não declarar essa dívida resolvida. **Produção: NO-GO.**
 
 > Este é o **único ponto de entrada de estado**. Todos os outros documentos `STATUS-*`, `CONTROLE-*`, `RELATORIO-PENDENCIAS-*`, `CRONOGRAMA-*`, `GAP-*` e os blocos "Continuação atual"/"Atualização corrente" do `README.md` são **registros históricos das respectivas datas**. Ao retomar o trabalho, conferir o SHA da `main` e atualizar **este** arquivo antes de escolher a próxima fatia.
 
@@ -11,7 +17,7 @@
 | Migrações aplicadas | **001–181** (próxima livre: **182**); 001–181 são imutáveis — gate `test:migrations:pg` **181/181** em dois passes, **581** tabelas, checksum negativo rejeitado (28/10) |
 | Rotas Next | **101** (`page.tsx`) / **106** páginas geradas |
 | Módulos de API | 134 em `src/server/` |
-| Testes | **220** arquivos `.mjs` no topo de `tests/` (+3 helpers em `tests/helpers/`); **157** arquivos explícitos no `test:unit` (base real: 156); `npm test` **1211/1211** com `AWS_EXECUTION_ENV=AWS_Lambda_nodejs22.x` (base: 1203/1203); **23** abas do `TiConsole` com prova focal; novo cenário de reclamações **1/1 isolado** em PostgreSQL descartável + Chromium; gate do portal **47/47** (base: 46/46); CLI-03 UI **8/8**; CLI-05..08 UI **10/10**; PLT-10 UI **4/4**; FIN cadastros de apoio **6/6**; gate do portal **42/42 em 3 execuções consecutivas** e **43/43 no runner do GitHub** depois da 7ª promoção (PR #303, **45/45 checks**) ; gates E6 rotas públicas **6/6 / 7/7 / 6/6**; gate 10B prévias **5/5** com **0 sinais < 4.5:1** (era 708); guarda E18 contraste **6/6**; guarda E18 Opção A **5/5**; guarda E9 estabilidade **7/7**; guarda E19 arquivos gerados **7/7**; `l04` **20/20** · `ext14` **18/18** · `demo-local` exit 0; gate IA FECH-01 **28/28**; guarda 222 IDs **6/6** |
+| Testes | **221** arquivos `.mjs` no topo de `tests/` (+3 helpers em `tests/helpers/`); **158** arquivos explícitos no `test:unit` (base real: 157); `npm test` **1215/1215** com `AWS_EXECUTION_ENV=AWS_Lambda_nodejs22.x` (base: 1211/1211); **23** abas do `TiConsole` com prova focal; novo cenário de reclamações **1/1 isolado** em PostgreSQL descartável + Chromium; gate do portal **48/48** (base: 47/47); CLI-03 UI **8/8**; CLI-05..08 UI **10/10**; PLT-10 UI **4/4**; FIN cadastros de apoio **6/6**; gate do portal **42/42 em 3 execuções consecutivas** e **43/43 no runner do GitHub** depois da 7ª promoção (PR #303, **45/45 checks**) ; gates E6 rotas públicas **6/6 / 7/7 / 6/6**; gate 10B prévias **5/5** com **0 sinais < 4.5:1** (era 708); guarda E18 contraste **6/6**; guarda E18 Opção A **5/5**; guarda E9 estabilidade **7/7**; guarda E19 arquivos gerados **7/7**; `l04` **20/20** · `ext14` **18/18** · `demo-local` exit 0; gate IA FECH-01 **28/28**; guarda 222 IDs **6/6** |
 | Workflows | **49** (três de rotas públicas + `ux-layout-previews-a11y-delivery.yml`, todos com `paths:` precisos e padrão de testes isolado) |
 | PRs | #306 **MERGED** (base desta fatia); #305 **MERGED** em 29/10; #303 **MERGED** com 45/45 checks verdes |
 | Dependências | `next`/`@next/env` 16.4.2; `nodemailer` 10.2.1; `npm audit` = 0 vulnerabilidades |

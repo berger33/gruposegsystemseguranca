@@ -251,5 +251,114 @@ export function createEmployeeComplaintApi({ pool, auditLog, sameOrigin, require
     return json(res,405,{error:'method_not_allowed'});
   };
 
-  return { handleComplaints, handleComplaintById, handleMessages, handleEvidences, handleHrShare };
+  // Fluxo aditivo de RH: separado do PATCH legado para preservar seus
+  // consumidores e impedir que uma linha completa chegue ao novo consumidor.
+  const hrWorkspaceColumns = `id, protocol, category, severity, status, is_restricted, minimal_share, is_shared_with_hr, shared_with_hr_at, created_at`;
+  const hrWorkspaceProjection = (row) => ({
+    id: row.id,
+    protocol: row.protocol,
+    category: row.category,
+    severity: row.severity,
+    status: row.status,
+    is_restricted: row.is_restricted,
+    minimal_share: row.minimal_share,
+    is_shared_with_hr: row.is_shared_with_hr,
+    shared_with_hr_at: row.shared_with_hr_at,
+    created_at: row.created_at,
+  });
+  const hrSharedFields = new Set(['title', 'minimal_description']);
+  const hrAllowedStatuses = new Set(['pendente', 'em_analise', 'em_apuracao', 'resolvida', 'arquivada', 'cancelada', 'escalonada']);
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  const handleHrWorkspace = async (req,res) => {
+    if(!sameOrigin(req)) return json(res,403,{error:'forbidden'});
+    const sess=await requireSession(req);
+    if(!sess) return json(res,401,{error:'unauthorized'});
+    if(!requireRole(sess,['rh','admin','ti'])) return json(res,403,{error:'forbidden_restricted_channel'});
+    const url=new URL(req.url,'http://localhost');
+    const base='/api/admin/hr/employee-complaints';
+    const id=url.pathname.startsWith(`${base}/`) ? url.pathname.slice(base.length+1) : null;
+
+    if(req.method==='GET' && !id){
+      try {
+        const { rows } = await pool.query(`SELECT ${hrWorkspaceColumns} FROM cli_employee_complaints WHERE is_restricted=true AND is_shared_with_hr=true ORDER BY created_at DESC LIMIT 200`);
+        return json(res,200,{items:rows.map(hrWorkspaceProjection)});
+      } catch {
+        return json(res,503,{error:'service_unavailable'});
+      }
+    }
+
+    if(id && !uuidPattern.test(id)) return json(res,400,{error:'invalid_id'});
+
+    if(req.method==='GET' && id){
+      try {
+        const { rows } = await pool.query(`SELECT ${hrWorkspaceColumns} FROM cli_employee_complaints WHERE id=$1 AND is_restricted=true AND is_shared_with_hr=true`, [id]);
+        if(!rows.length) return json(res,404,{error:'not_found'});
+        const { rows: sharedRows } = await pool.query(`SELECT shared_field, shared_value FROM cli_employee_complaint_hr_shares WHERE complaint_id=$1 AND shared_field = ANY($2::text[]) ORDER BY shared_at ASC`, [id, [...hrSharedFields]]);
+        const sharedFields=[];
+        for(const row of sharedRows){
+          if(hrSharedFields.has(row.shared_field) && typeof row.shared_value==='string') {
+            sharedFields.push({field:row.shared_field,value:row.shared_value});
+          }
+        }
+        return json(res,200,{item:hrWorkspaceProjection(rows[0]),sharedFields});
+      } catch {
+        return json(res,503,{error:'service_unavailable'});
+      }
+    }
+
+    if(req.method==='PATCH' && id){
+      const body=await readJson(req);
+      const status=typeof body.status==='string' ? body.status.trim() : '';
+      const expectedStatus=typeof body.expected_status==='string' ? body.expected_status.trim() : '';
+      const reason=typeof body.reason==='string' ? body.reason.trim() : '';
+      if(!hrAllowedStatuses.has(status)) return json(res,400,{error:'invalid_status'});
+      if(!hrAllowedStatuses.has(expectedStatus)) return json(res,400,{error:'invalid_expected_status'});
+      if(reason.length<10 || reason.length>1000) return json(res,400,{error:'invalid_reason'});
+
+      let client;
+      try {
+        client=await pool.connect();
+        await client.query('BEGIN');
+        const { rows: currentRows } = await client.query(`SELECT ${hrWorkspaceColumns} FROM cli_employee_complaints WHERE id=$1 AND is_restricted=true AND is_shared_with_hr=true FOR UPDATE`, [id]);
+        if(!currentRows.length){
+          await client.query('ROLLBACK');
+          return json(res,404,{error:'not_found'});
+        }
+        const current=currentRows[0];
+        if(current.status!==expectedStatus){
+          await client.query('ROLLBACK');
+          return json(res,409,{error:'stale_status'});
+        }
+        const { rows: updatedRows } = await client.query(
+          `UPDATE cli_employee_complaints SET status=$2::cli_complaint_status, resolved_at=CASE WHEN $2::cli_complaint_status IN ('resolvida','arquivada') THEN NOW() ELSE resolved_at END, updated_at=NOW() WHERE id=$1 AND is_restricted=true AND is_shared_with_hr=true RETURNING ${hrWorkspaceColumns}`,
+          [id,status],
+        );
+        if(!updatedRows.length){
+          await client.query('ROLLBACK');
+          return json(res,404,{error:'not_found'});
+        }
+        await client.query(
+          `INSERT INTO cli_employee_complaint_history (complaint_id, previous_status, next_status, reason, changed_by_identity, changed_by_name, is_hr_share) VALUES ($1,$2::cli_complaint_status,$3::cli_complaint_status,$4,$5,$6,false)`,
+          [id,current.status,status,reason,sess.identityId||null,sess.role||sess.userRole||null],
+        );
+        // Usa o mesmo action canônico do histórico legado, mas grava audit_log
+        // pelo client da transação: situação, histórico e auditoria são atômicos.
+        await client.query(
+          `INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4::jsonb)`,
+          ['cli_complaint_status',sess.identityId||sess.role||'system',id,JSON.stringify({from:current.status,to:status,reason:reason.substring(0,200),channel:'rh_shared'})],
+        );
+        await client.query('COMMIT');
+        return json(res,200,{item:hrWorkspaceProjection(updatedRows[0])});
+      } catch {
+        if(client) await client.query('ROLLBACK').catch(()=>{});
+        return json(res,503,{error:'service_unavailable'});
+      } finally {
+        client?.release();
+      }
+    }
+    return json(res,405,{error:'method_not_allowed'});
+  };
+
+  return { handleComplaints, handleComplaintById, handleMessages, handleEvidences, handleHrShare, handleHrWorkspace };
 }

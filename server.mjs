@@ -4496,6 +4496,12 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/ab-tests" || url.pathname === "/api/ab-tests" || url.pathname === "/api/public/ab-tests") {
     return originMetricsApi.handleAbTests(req, res);
   }
+  // Fluxo novo e aditivo do RH; as rotas legadas abaixo permanecem inalteradas.
+  if (url.pathname === "/api/admin/hr/employee-complaints") {
+    return employeeComplaintApi.handleHrWorkspace(req, res);
+  }
+  const hrEmployeeComplaintMatch = url.pathname.match(/^\/api\/admin\/hr\/employee-complaints\/([0-9a-f-]{36})$/i);
+  if (hrEmployeeComplaintMatch) return employeeComplaintApi.handleHrWorkspace(req, res);
   // CLI-15 reclamação colaborador canal restrito RH mínimo
   // CLI-15: canal restrito do cliente, somente sessão de cliente canônica.
   if (url.pathname === "/api/client/employee-complaints") {
@@ -6069,6 +6075,8 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/admin/ab-tests"
   || pathname === "/api/ab-tests"
   || pathname === "/api/public/ab-tests"
+  || pathname === "/api/admin/hr/employee-complaints"
+  || pathname.startsWith("/api/admin/hr/employee-complaints/")
   || pathname === "/api/admin/employee-complaints"
   || pathname === "/api/employee-complaints"
   || pathname === "/api/cli/employee-complaints"

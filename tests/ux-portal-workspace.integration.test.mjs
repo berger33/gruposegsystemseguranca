@@ -7851,3 +7851,228 @@ test('browser UX-PRO-03: reclamações de colaboradores (papéis, isolamento, es
     await context.close();
   } finally { await browser.close(); }
 });
+
+// UX-PRO-03/RH — nova via administrativa aditiva para relatos explicitamente
+// compartilhados. O teste preserva o 500 legado RH documentado acima e usa
+// PostgreSQL + HTTP/Chromium reais para provar o contrato novo.
+test('browser UX-PRO-03 RH: reclamações compartilhadas, projeção mínima, atualização transacional, retry e responsividade', { skip: !RUN }, async () => {
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const ti = await provisionStaff(pool, { role: 'ti' });
+  const admin = await provisionStaff(pool, { role: 'admin' });
+  const comercial = await provisionStaff(pool, { role: 'comercial' });
+  const marcelo = await provisionStaff(pool, { role: 'marcelo' });
+  const rhCookie = await loginStaffHttp(rh.email);
+  const tiCookie = await loginStaffHttp(ti.email);
+  const adminCookie = await loginStaffHttp(admin.email);
+  const comercialCookie = await loginStaffHttp(comercial.email);
+  const marceloCookie = await loginStaffHttp(marcelo.email);
+  const suffix = randomUUID().slice(0, 8);
+  const base = '/api/admin/employee-complaints';
+  const hrBase = '/api/admin/hr/employee-complaints';
+  const fixtures = {
+    a: { title: `RH-${suffix}-A-TITULO-PRIVADO`, description: `RH-${suffix}-A-DESCRICAO-INTEGRAL-PRIVADA`, reference: `RH-${suffix}-REFERENCIA-PRIVADA` },
+    b: { title: `RH-${suffix}-B-TITULO-PRIVADO`, description: `RH-${suffix}-B-DESCRICAO-INTEGRAL-PRIVADA`, reference: `RH-${suffix}-B-REFERENCIA-PRIVADA` },
+    hidden: { title: `RH-${suffix}-NAO-COMPARTILHADA`, description: `RH-${suffix}-RELATO-NAO-COMPARTILHADO-PRIVADO`, reference: `RH-${suffix}-HASH-PRIVADO` },
+    rollback: { title: `RH-${suffix}-ROLLBACK`, description: `RH-${suffix}-RELATO-ROLLBACK-PRIVADO`, reference: `RH-${suffix}-ROLLBACK-REF` },
+  };
+  const createComplaint = async (cookie, item) => api(base, { method: 'POST', cookie, body: {
+    title: item.title, description: item.description, employee_reference: item.reference,
+    category: 'comportamento', severity: 'alta',
+  } });
+  const shareField = async (cookie, complaintId, field, value) => api('/api/admin/employee-complaint-hr-shares', { method: 'POST', cookie, body: {
+    complaint_id: complaintId, shared_field: field, shared_value: value,
+    justification: `Compartilhamento sintético autorizado para ${field}.`,
+  } });
+
+  const createdA = await createComplaint(tiCookie, fixtures.a);
+  const createdB = await createComplaint(tiCookie, fixtures.b);
+  const createdHidden = await createComplaint(tiCookie, fixtures.hidden);
+  const createdRollback = await createComplaint(tiCookie, fixtures.rollback);
+  for (const created of [createdA, createdB, createdHidden, createdRollback]) assert.equal(created.status, 201);
+  const idA = createdA.body.id;
+  const idB = createdB.body.id;
+  const hiddenId = createdHidden.body.id;
+  const rollbackId = createdRollback.body.id;
+  const sharedTitle = `TITULO-EXPLICITAMENTE-COMPARTILHADO-${suffix}`;
+  const sharedSummary = `RESUMO-MINIMO-EXPLICITAMENTE-COMPARTILHADO-${suffix}`;
+  assert.equal((await shareField(tiCookie, idA, 'title', sharedTitle)).status, 201);
+  assert.equal((await shareField(tiCookie, idA, 'minimal_description', sharedSummary)).status, 201);
+  assert.equal((await shareField(tiCookie, idB, 'category', 'comportamento')).status, 201);
+  assert.equal((await shareField(tiCookie, rollbackId, 'category', 'comportamento')).status, 201);
+
+  const list = await api(hrBase, { cookie: rhCookie });
+  assert.equal(list.status, 200);
+  assert.ok(list.body.items.some(item => item.id === idA));
+  assert.ok(list.body.items.some(item => item.id === idB));
+  assert.ok(!list.body.items.some(item => item.id === hiddenId));
+  for (const forbidden of [fixtures.a.description, fixtures.a.reference, createdA.body.employee_reference_hash, fixtures.a.title]) {
+    assert.equal(JSON.stringify(list.body).includes(forbidden), false, `lista RH não deve conter ${forbidden}`);
+  }
+  const detailA = await api(`${hrBase}/${idA}`, { cookie: rhCookie });
+  assert.equal(detailA.status, 200);
+  assert.deepEqual(detailA.body.sharedFields, [
+    { field: 'title', value: sharedTitle }, { field: 'minimal_description', value: sharedSummary },
+  ]);
+  const detailB = await api(`${hrBase}/${idB}`, { cookie: rhCookie });
+  assert.equal(detailB.status, 200);
+  assert.deepEqual(detailB.body.sharedFields, []);
+  for (const forbidden of [fixtures.a.description, fixtures.a.reference, createdA.body.employee_reference_hash, fixtures.a.title]) {
+    assert.equal(JSON.stringify(detailA.body).includes(forbidden), false, `detalhe RH não deve conter ${forbidden}`);
+  }
+  assert.equal((await api(`${hrBase}/${hiddenId}`, { cookie: rhCookie })).status, 404);
+  assert.equal((await api(`${hrBase}/${hiddenId}`, { method: 'PATCH', cookie: rhCookie, body: {
+    status: 'em_analise', expected_status: 'pendente', reason: 'Tentativa em relato oculto.',
+  } })).status, 404);
+
+  for (const method of ['GET', 'PATCH']) {
+    const denied = await api(method === 'GET' ? hrBase : `${hrBase}/${idA}`, { method, cookie: comercialCookie,
+      ...(method === 'PATCH' ? { body: { status: 'em_analise', expected_status: 'pendente', reason: 'Tentativa de perfil comercial.' } } : {}),
+    });
+    assert.equal(denied.status, 403, `comercial deve receber 403 em ${method}`);
+  }
+  const marceloDenied = await api(hrBase, { cookie: marceloCookie });
+  assert.equal(marceloDenied.status, 403, 'Marcelo é aceito pela página RH, mas não por esta autorização de API');
+  assert.equal(JSON.stringify(marceloDenied.body).includes(sharedTitle), false);
+
+  // Admin e TI continuam com o contrato legado sem redução de acesso/resposta.
+  const legacyAdmin = await createComplaint(adminCookie, { title: `RH-${suffix}-ADMIN-LEGADO`, description: `Descrição sintética de admin com mais de vinte caracteres.`, reference: `RH-${suffix}-ADMIN-REF` });
+  const legacyTi = await createComplaint(tiCookie, { title: `RH-${suffix}-TI-LEGADO`, description: `Descrição sintética de TI com mais de vinte caracteres.`, reference: `RH-${suffix}-TI-REF` });
+  assert.equal(legacyAdmin.status, 201);
+  assert.equal(legacyTi.status, 201);
+  for (const [cookie, row] of [[adminCookie, legacyAdmin.body], [tiCookie, legacyTi.body]]) {
+    const preserved = await api(base, { method: 'PATCH', cookie, body: { id: row.id, status: 'em_analise', reason: 'Atualização legada sintética admin TI.' } });
+    assert.equal(preserved.status, 200);
+    assert.ok('description' in preserved.body, 'o contrato legado admin|ti continua intacto');
+  }
+  const legacyRh = await api(base, { method: 'PATCH', cookie: rhCookie, body: { id: idA, status: 'em_apuracao', reason: 'Erro legado continua observado.' } });
+  assert.equal(legacyRh.status, 500, 'a asserção 500 legada do RH é preservada; a UI usa a nova rota');
+  assert.equal((await pool.query('SELECT status FROM cli_employee_complaints WHERE id=$1', [idA])).rows[0].status, 'pendente');
+
+  // Falha intencional no INSERT da auditoria transacional: situação e histórico
+  // precisam voltar ao estado anterior no banco descartável.
+  const historyBefore = Number((await pool.query('SELECT count(*) AS n FROM cli_employee_complaint_history WHERE complaint_id=$1', [rollbackId])).rows[0].n);
+  await pool.query(`CREATE OR REPLACE FUNCTION qa_fail_shared_complaint_audit() RETURNS trigger AS $$
+    BEGIN
+      IF NEW.action='cli_complaint_status' AND NEW.target='${rollbackId}' THEN RAISE EXCEPTION 'synthetic audit failure'; END IF;
+      RETURN NEW;
+    END; $$ LANGUAGE plpgsql`);
+  await pool.query('CREATE TRIGGER qa_fail_shared_complaint_audit BEFORE INSERT ON audit_log FOR EACH ROW EXECUTE FUNCTION qa_fail_shared_complaint_audit()');
+  try {
+    const failed = await api(`${hrBase}/${rollbackId}`, { method: 'PATCH', cookie: rhCookie, body: {
+      status: 'em_analise', expected_status: 'pendente', reason: 'Auditoria sintética deve reverter.',
+    } });
+    assert.equal(failed.status, 503);
+    assert.equal((await pool.query('SELECT status FROM cli_employee_complaints WHERE id=$1', [rollbackId])).rows[0].status, 'pendente');
+    assert.equal(Number((await pool.query('SELECT count(*) AS n FROM cli_employee_complaint_history WHERE complaint_id=$1', [rollbackId])).rows[0].n), historyBefore);
+    assert.equal(Number((await pool.query("SELECT count(*) AS n FROM audit_log WHERE action='cli_complaint_status' AND target=$1", [rollbackId])).rows[0].n), 0);
+  } finally {
+    await pool.query('DROP TRIGGER IF EXISTS qa_fail_shared_complaint_audit ON audit_log');
+    await pool.query('DROP FUNCTION IF EXISTS qa_fail_shared_complaint_audit()');
+  }
+
+  const browser = await launchBrowser();
+  let context;
+  try {
+    const opened = await openPage(browser, '/admin/funcionarios', rhCookie, { width: 1440, height: 900 });
+    context = opened.context;
+    const page = opened.page;
+    const tab = page.getByRole('tab', { name: 'Reclamações compartilhadas', exact: true });
+    await tab.waitFor();
+    await tab.focus();
+    await page.keyboard.press('Enter');
+    const area = page.locator('section[aria-labelledby="shared-complaints-title"]');
+    await area.getByRole('heading', { name: 'Reclamações compartilhadas com o RH' }).waitFor();
+    const listPanel = area.locator('section[aria-labelledby="shared-complaints-list-title"]');
+    const detailPanel = area.locator('section[aria-labelledby="shared-complaint-detail-title"]');
+    const buttonForProtocol = protocol => listPanel.locator('li').filter({ hasText: protocol }).getByRole('button');
+    await buttonForProtocol(createdA.body.protocol).waitFor();
+
+    // A → B: detalhe explicitamente compartilhado some ao selecionar outro.
+    await buttonForProtocol(createdA.body.protocol).click();
+    await detailPanel.getByText(sharedTitle, { exact: true }).waitFor();
+    await detailPanel.getByText(sharedSummary, { exact: true }).waitFor();
+    let visible = await area.innerText();
+    for (const forbidden of [fixtures.a.description, fixtures.a.reference, createdA.body.employee_reference_hash, 'CONTA-RESTRITA', 'IDENTIDADE-RESTRITA']) assert.equal(visible.includes(forbidden), false);
+    await buttonForProtocol(createdB.body.protocol).click();
+    await detailPanel.getByText(createdB.body.protocol, { exact: true }).waitFor();
+    assert.equal((await detailPanel.getByText(sharedTitle, { exact: true }).count()), 0, 'campos de A não permanecem em B');
+
+    // Resposta atrasada de A não pode substituir o detalhe atualmente aberto B.
+    await page.evaluate(id => {
+      const original = window.fetch.bind(window); window.__hrComplaintFetch = original;
+      window.__hrComplaintHeld = false;
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : input.url;
+        const pathname = new URL(url, location.origin).pathname;
+        const response = await original(input, init);
+        if (pathname.endsWith(`/employee-complaints/${id}`) && (!init?.method || init.method === 'GET')) {
+          await new Promise(resolve => { window.__releaseHrComplaintA = resolve; });
+          window.__hrComplaintHeld = true;
+        }
+        return response;
+      };
+    }, idA);
+    await buttonForProtocol(createdA.body.protocol).click();
+    await page.waitForFunction(() => typeof window.__releaseHrComplaintA === 'function');
+    await buttonForProtocol(createdB.body.protocol).click();
+    await detailPanel.getByText(createdB.body.protocol, { exact: true }).waitFor();
+    await page.evaluate(() => window.__releaseHrComplaintA());
+    await page.waitForFunction(() => window.__hrComplaintHeld === true);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.match(await detailPanel.innerText(), new RegExp(createdB.body.protocol));
+    assert.doesNotMatch(await detailPanel.innerText(), new RegExp(sharedTitle));
+    await page.evaluate(() => { window.fetch = window.__hrComplaintFetch; });
+
+    // Gravação real pelo formulário, com corpo e status HTTP conferidos.
+    await detailPanel.getByLabel('Nova situação').selectOption('em_apuracao');
+    await detailPanel.getByLabel('Motivo da atualização').fill(`Acompanhamento RH sintético ${suffix}.`);
+    const patchResponsePromise = page.waitForResponse(response => response.url().endsWith(`/api/admin/hr/employee-complaints/${idB}`) && response.request().method() === 'PATCH');
+    await detailPanel.getByRole('button', { name: 'Salvar situação' }).click();
+    const patchResponse = await patchResponsePromise;
+    const patched = await patchResponse.json();
+    assert.equal(patchResponse.status(), 200);
+    assert.equal(patched.item.status, 'em_apuracao');
+    await detailPanel.locator('dd').filter({ hasText: 'Em apuração' }).waitFor();
+    const historyAfter = await pool.query('SELECT previous_status::text, next_status::text, reason, changed_by_identity FROM cli_employee_complaint_history WHERE complaint_id=$1 ORDER BY created_at DESC LIMIT 1', [idB]);
+    assert.deepEqual(historyAfter.rows[0], { previous_status: 'pendente', next_status: 'em_apuracao', reason: `Acompanhamento RH sintético ${suffix}.`, changed_by_identity: rh.id });
+    assert.equal(Number((await pool.query("SELECT count(*) AS n FROM audit_log WHERE action='cli_complaint_status' AND target=$1 AND meta->>'channel'='rh_shared'", [idB])).rows[0].n), 1);
+
+    // 503 de transporte simulado no browser mantém estado de erro e botão retry;
+    // repetir usa o servidor real e recupera a lista com situação atualizada.
+    await page.evaluate(() => {
+      const original = window.fetch.bind(window); window.__hrComplaintFetch = original; window.__failHrList = true;
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (new URL(url, location.origin).pathname === '/api/admin/hr/employee-complaints' && (!init?.method || init.method === 'GET') && window.__failHrList) {
+          window.__failHrList = false;
+          return new Response(JSON.stringify({ error: 'service_unavailable' }), { status: 503, headers: { 'content-type': 'application/json' } });
+        }
+        return original(input, init);
+      };
+    });
+    await area.getByRole('button', { name: 'Atualizar lista' }).click();
+    await listPanel.getByText('O serviço está temporariamente indisponível. Tente novamente.', { exact: true }).waitFor();
+    assert.equal(await listPanel.getByText(/Não há relatos compartilhados/).count(), 0);
+    await listPanel.getByRole('button', { name: 'Tentar novamente' }).click();
+    await buttonForProtocol(createdB.body.protocol).getByText(/Em apuração/).waitFor();
+    await page.evaluate(() => { window.fetch = window.__hrComplaintFetch; });
+
+    // Quatro larguras reais no conteúdo carregado, sem overflow do workspace.
+    const viewportEvidence = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      const measured = await area.evaluate(element => ({ scrollWidth: element.scrollWidth, clientWidth: element.clientWidth }));
+      viewportEvidence.push({ width, ...measured });
+      assert.ok(measured.scrollWidth <= measured.clientWidth + 1, `RH compartilhadas transbordou em ${width}px: ${JSON.stringify(measured)}`);
+    }
+    const missingLabels = await area.locator('input,select,textarea').evaluateAll(controls => controls.filter(control => !control.labels || control.labels.length === 0).map(control => control.outerHTML));
+    assert.deepEqual(missingLabels, [], 'campos do fluxo precisam de rótulo associado');
+    assert.ok(await area.locator(':focus-visible').count() >= 0);
+    if (process.env.UX_PORTAL_EVIDENCE_DIR) {
+      await writeFile(path.join(process.env.UX_PORTAL_EVIDENCE_DIR, `ux-pro-03-rh-reclamacoes-${suffix}-viewport.json`), JSON.stringify(viewportEvidence, null, 2));
+    }
+  } finally {
+    await context?.close();
+    await browser.close();
+  }
+});

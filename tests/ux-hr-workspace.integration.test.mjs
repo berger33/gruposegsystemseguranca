@@ -285,14 +285,19 @@ test('browser: com a concessão, os indicadores aparecem e as abas andam pelo te
     assert.equal(await admissao.evaluate(el => el === document.activeElement), true, 'a seta precisa mover o foco');
     assert.equal(await equipe.getAttribute('tabindex'), '-1', 'a aba inativa sai da ordem de tabulação');
 
-    // End salta para a última aba.
+    // End salta para a nova última aba aditiva; nenhuma aba anterior muda de
+    // ordem nem perde conteúdo.
     await page.keyboard.press('End');
-    assert.equal(await page.getByRole('tab', { name: 'Demais processos de RH' }).getAttribute('aria-selected'), 'true');
+    const sharedComplaints = page.getByRole('tab', { name: 'Reclamações compartilhadas' });
+    assert.equal(await sharedComplaints.getAttribute('aria-selected'), 'true');
+    assert.equal(await page.locator('[id^="rh-painel-"][role="tabpanel"]').count(), 1,
+      'só o painel da aba externa ativa fica montado');
+    assert.equal(await page.locator('[role="tabpanel"]').count(), 1,
+      'a nova aba não deixa painéis anteriores órfãos');
 
-    // O painel exposto corresponde à aba selecionada. A aba "Demais processos"
-    // traz um tablist aninhado (os sete componentes legados), que tem o seu
-    // próprio tabpanel — por isso a contagem é feita por nível, e não no
-    // documento inteiro.
+    // A aba "Demais processos" existente continua montando o tablist aninhado
+    // dos sete componentes legados e exatamente um tabpanel próprio.
+    await page.getByRole('tab', { name: 'Demais processos de RH' }).click();
     assert.equal(await page.locator('[id^="rh-painel-"][role="tabpanel"]').count(), 1,
       'só o painel da aba externa ativa fica montado');
     assert.equal(await page.locator('[id^="rh-legado-painel-"][role="tabpanel"]').count(), 1,
