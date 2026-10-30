@@ -30,7 +30,7 @@ prova rota alguma. Workflows seguem **49**.
 
 ### Método
 
-Uma única passada por **1.591 arquivos** de `tests/`, `.github/workflows/`,
+Uma única passada por **1.626 arquivos** de `tests/`, `.github/workflows/`,
 `docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, a auditoria de 26/10, a
 fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
 meta-estado, não prova de requisito, e evitam auto-referência. De cada arquivo o gerador extrai todos os IDs com
@@ -42,17 +42,19 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 
 | Classe | Significado | IDs |
 |---|---|---|
-| `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **21** |
-| `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **109** |
-| `somente_documento` | só há citação em documentos | **92** |
+| `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **23** |
+| `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **114** |
+| `somente_documento` | só há citação em documentos | **85** |
 | `somente_codigo` / `sem_evidencia_legivel` | — | **0** |
 
-> **Reconciliação de 28/10/2026 (E23):** as contagens desta seção são as da
-> fotografia de 27/10. O JSON/CSV vigentes em `main` `5f45fc0` registram
-> **23 `gate_nomeado`**, **113 `mencionado_em_gate`** e **86 `somente_documento`**,
-> com **21** `a_revalidar` sem menção em gate e **1.600** arquivos varridos. A
-> diferença vem do mapa SEC (27→28/10) e da guarda de UI do CLI-03. Os números
-> do artefato gerado prevalecem sobre este texto; `--check` é a fonte.
+> **Recontagem E23 (30/10/2026):** a tabela acima já não é a fotografia de 27/10
+> (21/109/92): são os números do **JSON vigente**, recontados a partir de
+> `docs/REQUISITOS-222-INVENTARIO-2026-10-27.json` e reproduzíveis por
+> `node scripts/requisitos-222-inventory.mjs --check`. A diferença vem do mapa SEC
+> (28/10) e das fatias de UI do CLI-02/03/05–10 e do PLT-10, cada uma com relatório
+> próprio. `somente_codigo` e `sem_evidencia_legivel` seguem em **0**. Este texto
+> **não** é ajustado à mão: `tests/requisitos-222-inventory.test.mjs` compara as
+> contagens e o núcleo duro abaixo com o JSON e falha na primeira divergência.
 
 > **Aviso central:** "mencionado em gate" **não é prova de jornada**. Um ID pode
 > ser citado num assert de vocabulário e ainda assim não ter jornada, RBAC,
@@ -67,23 +69,31 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 | `a_revalidar` (estado confirmado, 04/10) | **45** — a diferença de 1 é explícita, não corrigida |
 | `pronto_local` declarado | **164** |
 | `em_execucao` / `entregue` declarados | **6 / 6** |
-| **`a_revalidar` sem nenhuma menção em gate** | **27** |
+| **`a_revalidar` sem nenhuma menção em gate** | **20** |
 | Com aceite humano registrado | **0** |
 | Com reauditoria integral executada | **0** |
 
-### O núcleo duro (27 IDs)
+### O núcleo duro (20 IDs)
 
-`CLI-02`, `CLI-03`, `CLI-05`…`CLI-08`,
-`PLT-01`…`PLT-03`, `PLT-06`, `PLT-07`, `PLT-09`, `PLT-10`, `PLT-12`, `PLT-15`,
+`PLT-01`, `PLT-02`, `PLT-03`, `PLT-06`, `PLT-07`, `PLT-09`, `PLT-12`, `PLT-15`,
 `EXT-16`, `EXT-17`, `AI-01`…`AI-10`.
 
 São exatamente as famílias que a auditoria já apontava como bloqueadas:
-segurança/escopo de documentos, CLI/backup, plataforma, EXT-16/17 (biometria e
-central, bloqueadas por privacidade) e **toda a frente de IA real** (F14). **Atualizações posteriores:** as promoções PLT-11/13 tiraram esses IDs do núcleo. Em 28/10, a família SEC recebeu um **mapa de reauditoria técnica com 35 âncoras em 5 execuções de gates** (`docs/REQUISITOS-SEC-REAUDITORIA-2026-10-28.md`), passando os 15 IDs SEC de `somente_documento` para `mencionado_em_gate` neste inventário. Isso **não** significa que os requisitos foram implementados/revalidados: o relatório SEC marca `aceite_humano=nao_registrado` e `reauditoria_integral=nao_executada` em todos os 15. A classe textual indica somente que há evidência técnica mapeada.
+segurança/escopo de documentos, plataforma, EXT-16/17 (biometria e central,
+bloqueadas por privacidade) e **toda a frente de IA real** (F14).
 
-Entre os 46 `a_revalidar`, **19 têm alguma menção em gate** — por exemplo
-`SEC-01`…`SEC-15` (ver nota abaixo), `CLI-01`, `PLT-14/16/17/18`, `EXT-06/09`, `AI-06/09`. Isso **não**
-os torna revalidados: a menção é um ponto de partida, não um aceite.
+**Saíram do núcleo desde 27/10 (7 IDs, todos com relatório próprio):** `CLI-02` e
+`CLI-03` passaram a `gate_nomeado`; `CLI-05`…`CLI-08` e `PLT-10` passaram a
+`mencionado_em_gate`. A família SEC recebeu um **mapa de reauditoria técnica com 35 âncoras em 5 execuções de gates** (`docs/REQUISITOS-SEC-REAUDITORIA-2026-10-28.md`), levando os 15 IDs SEC de `somente_documento` para `mencionado_em_gate`. Isso **não** significa que os
+requisitos foram implementados/revalidados: o relatório SEC marca
+`aceite_humano=nao_registrado` e `reauditoria_integral=nao_executada` em todos os
+15. A classe textual indica somente que há evidência técnica mapeada.
+
+Entre os 46 `a_revalidar`, **26 têm alguma menção em gate**: `SEC-03`, `SEC-07`,
+`SEC-10`…`SEC-15`, `CLI-01`, `CLI-02` e `CLI-03` (`gate_nomeado`), `CLI-05`…`CLI-10`,
+`PLT-10`, `PLT-11`, `PLT-13`, `PLT-14`, `PLT-16`…`PLT-18`, `EXT-06` e `EXT-09`
+(`gate_nomeado`). Isso **não** os torna revalidados: a menção é um ponto de
+partida, não um aceite.
 
 ## 4. RED → GREEN
 
@@ -113,7 +123,7 @@ diferente de `nao_registrado` sem aceite real.
 | Verificação | Resultado |
 |---|---|
 | Guarda RED → GREEN | **0/6 → 6/6** |
-| `requisitos-222-inventory --check` | **OK** (222 IDs; 27 sem gate após mapa SEC) |
+| `requisitos-222-inventory --check` | **OK** (222 IDs; **20** sem gate no JSON vigente) |
 | `AWS_EXECUTION_ENV=AWS_Lambda_nodejs22.x npm test` | ver §7 |
 | `npm run typecheck` / `npm run build` | ver §7 |
 | `qa-wave0-static` / inventários `--check` / audit / `git diff --check` | ver §7 |
