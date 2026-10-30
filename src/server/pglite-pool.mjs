@@ -10,7 +10,7 @@ const MIGRATIONS_DIR = path.join(process.cwd(), 'db/migrations');
 const DEMO_SEED_PATH = path.join(process.cwd(), 'db/pglite-demo-seed.sql');
 
 // E7: o modo "beta lite" (`db/beta-pglite-init.sql`, 27 tabelas) saiu do caminho
-// padrão. A demo carrega o schema real aplicando as MESMAS migrações 001–181 do
+// padrão. A demo carrega o schema real aplicando as MESMAS migrações 001–182 do
 // PostgreSQL. Diretórios criados antes disso são RECUSADOS com mensagem
 // explícita: aplicar o ledger por cima do schema mínimo deixa o banco
 // inconsistente (medido: 14/181 migrações falham e sobra um híbrido de 560
@@ -119,7 +119,7 @@ async function applyMigrations(db) {
       const previous = recorded.get(file);
       // Sem checksum gravado (ledger antigo) não há como provar deriva; com
       // checksum, arquivo editado depois de aplicado é recusa explícita — a
-      // mesma regra do migrador PostgreSQL (001–181 imutáveis).
+      // mesma regra do migrador PostgreSQL (001–182 imutáveis).
       if (previous && previous !== checksum) mismatched.push(file);
       continue;
     }

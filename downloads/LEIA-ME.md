@@ -2,7 +2,7 @@
 
 **Reconciliação:** 28/10/2026 · `main` `5f45fc0` (PR #300) · fonte de estado: [`../docs/STATUS-VIGENTE.md`](../docs/STATUS-VIGENTE.md).
 
-Os arquivos `*.zip` deste diretório são **fotografias históricas** de prévias visuais (layouts 01–10) e de pacotes de QA/homologação. Os três pacotes executáveis (`seg-system-beta.zip`, `seg-system-qa-local.zip`, `seg-system-homologacao-local.zip`) foram gerados quando o repositório tinha cerca de **96 migrações**; o código fonte vigente contém **181 migrações** (001–181), **101 rotas** e dependências diferentes (`next` 16.4.2, `nodemailer` 10.2.1).
+Os arquivos `*.zip` deste diretório são **fotografias históricas** de prévias visuais (layouts 01–10) e de pacotes de QA/homologação. Os três pacotes executáveis (`seg-system-beta.zip`, `seg-system-qa-local.zip`, `seg-system-homologacao-local.zip`) foram gerados quando o repositório tinha cerca de **96 migrações**; o código fonte vigente contém **182 migrações** (001–182), **101 rotas** e dependências diferentes (`next` 16.4.2, `nodemailer` 10.2.1).
 
 Consequências práticas:
 

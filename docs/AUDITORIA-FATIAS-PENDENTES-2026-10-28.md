@@ -127,6 +127,7 @@ transacional e falha fechada.
 | 26/10 | ID3 completo (8 páginas do portal), E1/E2/E5/E10/E11/E12/E13 corrigidos, `STATUS-VIGENTE.md` criado |
 | 27/10 | Reauditoria do `TiConsole` + **6 promoções com prova** (PLT-11..18), E17 (8 regexes de UUID), E18 (contraste 708→0), E19 (65 runners protegidos), E3/E4 (13 aliases IA → 410), gates das rotas públicas (100 à época), inventário dos 222 IDs, E9 (3 de 4 frentes) |
 | 28/10 | Reauditoria técnica SEC (15 IDs, 35 âncoras, 5 gates), CLI-02 (delegação + UI de contatos, migração 181, gate L08 **54/54**), CLI-03 (rota de detalhe publicado, **53/53**), CLI-06..08 (prova focal do lado cliente, **52/52** na fatia) |
+| 29–30/10 | Suíte hermética **E22** (#312), **E23**/§3 conferido por guarda (#313), âncoras SEC por conteúdo **E25** (#314), contagem do ledger **E27**, demo **E7** com schema real (#317) e **E16** — executor durável do EXT-07 (migração 182, gate PG próprio **11/11**, PGlite **19/19**, `npm test` **1290/1290**) |
 
 **Não reimplementar** (já integrado e reconciliado): os resíduos **E2/E2-C1, E3/E3-R1, E5,
 E6/E6-C1 e E8 da série UX-PRO** (PRs #262–#283 — não confundir com os códigos E1–E24 desta
@@ -199,9 +200,9 @@ Regra vigente: **1 fatia = 1 PR**, com teste focal RED→GREEN, evidências e ch
 | C1 | **D7** — inline dinâmico do Layout 09 e foco do atalho público | **Bloqueado** por decisão do proprietário |
 | C2 | **C11** — escopo financeiro + 2 hits de dados (`FiscalWorkspace.tsx:80`, `ExpenseWorkspace.tsx:176`) | **Bloqueado** por decisão do proprietário |
 | C3 | **E15** — `server.mjs` monolítico (6.208 linhas, despacho manual em dois lugares) | Aberto; proposta: tabela canônica de rotas + teste de paridade |
-| C4 | **E16** — worker/scheduler durável | Aberto: só EXT-07 in-process opt-in; cadências CRM manuais; notificações dependem de chamada |
+| C4 | **E16** — worker/scheduler durável | **Fechada para o EXT-07** (182 + `src/server/durable-scheduler.mjs` + gate PG próprio). Cadências CRM/notificações seguem chamadas-manuais: a fila é o executor, não há job declarado para elas — ver §6.1 |
 | C5 | **E21** — pacotes obsoletos: **13 ZIPs** entre 16 arquivos versionados em `downloads/`+`dist/` (~171 MB) | Parcial: avisos existem, arquivos continuam versionados |
-| C6 | **E7** — demo PGlite com 27 tabelas vs 581 do PostgreSQL | Aberto (`db/beta-pglite-init.sql`) |
+| C6 | **E7** — demo PGlite com 27 tabelas vs 581 do PostgreSQL | **Fechada (#317)**: a demo aplica o ledger `db/migrations` (hoje 001–182, **581** tabelas de conteúdo) e `db/beta-pglite-init.sql` ficou histórico; gate `npm run test:pglite-schema` **19/19** |
 | C7 | **E20/E23** — deriva de documentação de estado e de números | Novos, ver §6 |
 | C8 | **E22** — `npm test` não é hermético (2 testes exigem Chromium do sistema) | Novo, ver §6 |
 
@@ -254,11 +255,24 @@ vez de simular o ator.
 
 ### 5.5 Jobs e notificações
 
-- Sem executor durável: `notification_queue` tem reivindicação atômica, backoff
-  e `local_outbox`, mas o processamento depende de acionamento manual.
-- EXT-07 é o único agendador (`EXT07_EVALUATE_INTERVAL_SECONDS` +
-  `EXT07_EVALUATE_IDENTITY`), **in-process** e desligado por padrão.
-- «Jobs vs reinício» continua pendente no plano F15.
+- **Executor durável existe desde o E16** (30/10): `durable_jobs` (migração 182) +
+  `src/server/durable-scheduler.mjs` — intenção gravada antes de executar,
+  reivindicação atômica com `FOR UPDATE SKIP LOCKED` + lease + `claim_token`,
+  conclusão do intervalo no mesmo COMMIT do efeito, backoff exponencial com teto,
+  retomada por outro processo depois de queda. A prova é um gate próprio em
+  PostgreSQL real (`npm run test:durable-scheduler:pg`, **11/11**), com o dono
+  morto por SIGKILL no meio do lease; em PGlite a contenção **não** é provável
+  (sessão única serializa) e o motor não é ligado na demo.
+- **O que ainda não tem executor:** `notification_queue` (tem reivindicação
+  atômica, backoff e `local_outbox` na tabela, mas o processamento continua
+  dependendo de acionamento manual — nada a plugar no `durable_jobs` nesta
+  fatia), as cadências de CRM e «Jobs vs reinício» do plano F15. Adoptar o motor
+  para esses jobs é trabalho novo, com gate próprio por família.
+- EXT-07 é o único agendador declarável (`EXT07_EVALUATE_INTERVAL_SECONDS` +
+  `EXT07_EVALUATE_IDENTITY`) e continua **desligado por padrão**; o modo
+  `in-process` segue sendo o default e o `durable` é opt-in por
+  `EXT07_SCHEDULER_MODE=durable` (exige a migração 182 aplicada — sem ela o
+  worker recusa ligar em vez de cair para o timer do processo).
 
 ### 5.6 IA / RAG
 
@@ -298,6 +312,7 @@ de destino**; checklist de produção (10 itens, nenhum marcado).
 | E10 | `EPERM` de symlink no Windows | Junction/entrada insegura equivalente, sem pular teste |
 | E11 | Índice `/qa/modulos` obsoleto | Reconciliado com o HEAD |
 | E17 | 8 regexes de UUID `8-4-4-12` quebradas em 7 módulos | 8 substituições + guarda + cenário HTTP |
+| **E16** | Sem worker/scheduler durável: automação morria com o processo e nada retomava o intervalo perdido | Migração **182** (`durable_jobs`: `job_key` único, lease, `claim_token`, backoff) + `src/server/durable-scheduler.mjs` + `EXT07_SCHEDULER_MODE=durable`. Prova em PostgreSQL real (gate `npm run test:durable-scheduler:pg`, **11/11**, cluster descartável): dono morto no meio do lease com SIGKILL não deixa efeito parcial; outro processo retoma o MESMO intervalo e o conclui exatamente uma vez; intervalo concluído não repete; falha permanente vira `falha` + retry no teto; três reivindicadores concorrentes, um único dono; controle negativo com SELECT ingênuo. **Limitação declarada:** contenção/`SKIP LOCKED` NÃO é provada em PGlite (sessão única serializa) — o gate PGlite prova só schema/boot/resume |
 | E18 | 708 amostras de contraste < 4.5:1 nas prévias | Opção A aplicada: **0** sinais < 4.5:1 no gate 10B |
 | E19 | 65 runners de QA sujavam `next-env.d.ts`/`tsconfig.json` | Guarda de saída síncrona; **67/67** runners protegidos |
 
@@ -313,7 +328,6 @@ de destino**; checklist de produção (10 itens, nenhum marcado).
 | **E13** | **13 ZIPs** versionados entre 16 arquivos em `downloads/`+`dist/` (~171 MB), com ~96 migrações | `git ls-files downloads dist` = 16 | Instalação de versão obsoleta; clone inchado | Regenerar ou mover para release externo | **Parcial** |
 | **E14** | 40 componentes TI órfãos + `AiBotWidget`, `ExtClient`, `UiPanel`, `Academia` fora do servidor | Inventário `--check` | Código sem rota, teste ou autorização exercida | Promover com prova, uma família por PR | **Parcial** |
 | **E15** | `server.mjs` monolítico (6.208 linhas, 134 módulos, despacho manual) | `server.mjs` + `route-dispatch-guard` | Cada fatia exige editar dois lugares | Tabela canônica de rotas com paridade testada | **Aberto** |
-| **E16** | Sem worker/scheduler durável | `src/server/ext-compliance-scheduler.mjs`; `.env.example` | Automações não sobrevivem a restart | Executor com ledger/idempotência e prova de retomada | **Aberto** |
 | **E18 residual** | 196 amostras indeterminadas (`complex_background`) e 108 `<option>` não medidos; sem revisão WCAG manual | Gate 10B | Não é aprovação de acessibilidade | Medição por pixel, reclassificação e revisão manual | **Parcial** |
 
 ### 6.3 Novos achados desta auditoria (28/10)
@@ -378,6 +392,10 @@ Sem decisão registrada, a fatia correspondente **não abre**:
 
 **Dívida (P2), em paralelo quando o CI estiver folgado:**
 **E22** (hermeticidade da suíte) → **E23** → **E21** → **E7** → **E16** → **E15**.
+Fechados dessa fila: **E22** (#312), **E23** (#313), **E7** (#317, base desta
+fatia) e **E16** (executor durável do EXT-07, 30/10 — ver §6.1). Restam **E21**
+(já entregue antes da #312, ver §6.1) e **E15** (`server.mjs` monolítico), que é
+a próxima da fila.
 
 **Produção (P3):** somente depois de A1–A6 e das 10 decisões acima.
 

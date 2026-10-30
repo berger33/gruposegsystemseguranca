@@ -66,8 +66,9 @@ docker compose --env-file .env.local -f infra/postgres/compose.yaml exec postgre
 
 | Verificação | SQL | Esperado |
 |---|---|---|
-| Ledger de migrações | `SELECT count(*), count(checksum) FROM __migrations;` | `156 | 156` |
+| Ledger de migrações | `SELECT count(*), count(checksum) FROM __migrations;` | as duas contagens coincidem, e coincidem com o total de arquivos `NNN-*.sql` em `db/migrations` no commit aplicado (não fixamos o número aqui de propósito: a contagem muda a cada migração e um número velho neste documento é a fonte clássica de falso diagnóstico) |
 | Tabela do agendador (mig. 156) | `SELECT to_regclass('public.ext_compliance_evaluation_runs');` | `ext_compliance_evaluation_runs` |
+| Fila durável (mig. 182, E16) | `SELECT to_regclass('public.durable_jobs');` | `durable_jobs` — sem ela, `EXT07_SCHEDULER_MODE=durable` recusa ligar |
 | Ausência de seed EXT-07 | `SELECT (SELECT count(*) FROM ext_compliance_obligations) AS obrigacoes, (SELECT count(*) FROM ext_compliance_documents) AS documentos, (SELECT count(*) FROM ext_compliance_tasks) AS tarefas;` | `0 | 0 | 0` — **sem seed é o esperado**: as obrigações passam a existir quando a equipe cadastrar via `/admin/compliance` |
 
 ## Etapa 4 — Identidade declarada do agendador
@@ -105,9 +106,94 @@ Reinicie o servidor (`npm run start` — o `server.mjs` carrega o `.env.local`).
 
 Notas:
 
-- Exige `DATABASE_URL` real (PostgreSQL): sem ela o agendador recusa ligar (o modo PGlite beta não possui o schema EXT-07) e loga a recusa.
+- Exige `DATABASE_URL` real (PostgreSQL): sem ela o agendador recusa ligar e loga a recusa. (A recusa é por `DATABASE_URL`, não por schema: a demo em PGlite tem as migrações desde o E7, mas é um só backend de teste e não executa worker durável.)
 - O **primeiro tick é imediato**: a primeira avaliação acontece no boot, não após 1 h.
 - Sem as variáveis, nenhuma avaliação automática ocorre — a rota explícita `POST /api/ext/compliance/evaluate` continua existindo em qualquer cenário.
+
+### 5.1 Executor durável (E16) — quando ligar e o que muda
+
+O modo padrão (`EXT07_SCHEDULER_MODE=in-process` ou ausente) é o timer do próprio
+processo: simples, mas se o processo cair durante um intervalo, **aquela
+execução não acontece e nada a retoma** — e dois processos ativos no mesmo banco
+podem executar o mesmo intervalo. O modo durável troca o "disparar um timer" por
+"gravar a intenção e reivindicá-la".
+
+Ligue assim (além das duas variáveis acima):
+
+```bash
+EXT07_SCHEDULER_MODE=durable
+EXT07_SCHEDULER_LEASE_SECONDS=120      # opcional; 5..3600, padrão 120
+EXT07_SCHEDULER_BACKOFF_SECONDS=60     # opcional; base do retry, padrão 60
+EXT07_SCHEDULER_BACKOFF_MAX_SECONDS=3600  # opcional; teto do retry, >= lease
+EXT07_SCHEDULER_BATCH_SIZE=1           # opcional; 1 para o EXT-07 (um único job)
+```
+
+Pré-condição: a migração **182** aplicada (`durable_jobs`). Sem a tabela o worker
+recusa ligar com `durable_jobs_schema_missing` no log — ele **não** cai em
+silêncio para o modo antigo, porque "achar que está protegido e não estar" é
+pior que não ligar. Configuração incompatível (backoff máximo menor que o lease,
+lease fora de 5..3600, batch fora de 1..50) também é recusada no boot.
+
+O que muda no comportamento:
+
+- O boot grava/atualiza a linha do job em `durable_jobs` **antes** de executar
+  qualquer coisa. Uma queda no meio do caminho deixa a intenção no banco.
+- Cada execução é reivindicada com `FOR UPDATE SKIP LOCKED` + lease +
+  `claim_token`. Concorrente que chega depois não bloqueia e não divide o mesmo
+  intervalo; dono com lease vencido é retomado por outro processo.
+- O efeito e a conclusão do intervalo commitem **na mesma transação**. Se o
+  processo morre depois do efeito, o efeito rolou back junto; se morre antes do
+  COMMIT, nada existe. Retomar é refazer trabalho idempotente (evento do dia,
+  tarefa por documento/vigência/regra), nunca duplicar.
+- Intervalo já concluído não repete: `last_completed_slot IS DISTINCT FROM slot`
+  decide no banco. O `due_at` do próximo intervalo é armado pela conclusão — um
+  restart a mais no meio do intervalo não adianta execução.
+- Falha vira `status='falha'` com retry em backoff exponencial (base 60s, teto
+  3600s; falha permanente — identidade inválida, schema ausente — já vai para o
+  teto). Um intervalo vencido durante uma queda é executado no próximo tick.
+
+Consultas de acompanhamento (mesmo psql da Etapa 3):
+
+```sql
+SELECT status, slot, last_completed_slot, due_at, lease_until, attempts,
+       consecutive_failures, last_error
+  FROM durable_jobs
+ WHERE job_key = 'ext07:expiry-evaluation';
+
+-- O que a fila vai pegar no próximo tick (vazio = nada vencido; 'executando'
+-- com lease no futuro = outro processo é o dono):
+SELECT job_key, status, due_at, lease_until
+  FROM durable_jobs
+ WHERE (status IN ('aguardando','falha') AND due_at <= NOW())
+    OR (status = 'executando' AND lease_until < NOW());
+```
+
+Rearmar de propósito (o operador quer rodar AGORA, sem esperar o intervalo):
+atualize o slot e o `due_at` — é exatamente o que a rota interna `enqueue` faz
+com `force`, e é o único caminho que limpa `last_completed_slot`:
+
+```sql
+UPDATE durable_jobs
+   SET slot = 'agendada:manual-2026-11-01T09:00',
+       last_completed_slot = NULL,
+       status = 'aguardando',
+       consecutive_failures = 0,
+       last_error = NULL,
+       due_at = NOW()
+ WHERE job_key = 'ext07:expiry-evaluation' AND status <> 'executando';
+```
+
+Não use isso com o job em `executando`: a cláusula `status <> 'executando'` está
+aí de propósito — reescrever a linha de um dono vivo é como se cria trabalho
+duplicado.
+
+**Limitação declarada (não é pegadinha de teste):** a prova de concorrência
+(`SKIP LOCKED`, retomada de lease, exactly-once sob kill real) roda em
+**PostgreSQL real** (gate `npm run test:durable-scheduler:pg`, cluster
+descartável com `embedded-postgres`). Em **PGlite** isso não é provável nem
+provado: o driver serializa as consultas na mesma sessão, então contenção de
+linha não existe lá. O gate PGlite (`npm run test:pglite-schema`) prova boot e
+resume de schema — nunca exclusão mútua entre processos.
 
 ## Etapa 6 — Acompanhamento inicial do ledger (primeiras horas/dias)
 
