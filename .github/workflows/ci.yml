@@ -53,7 +53,7 @@ jobs:
         run: node --test tests/admin-navigation.test.mjs
       - name: Build (beta noindex)
         run: npm run build
-      - name: RAG integration in isolated CI workspace (PGlite beta only)
+      - name: RAG integration in isolated CI workspace (PGlite, schema real)
         run: npm run test:rag
       - name: Tenant A/B HTTP integration (temporary localhost PostgreSQL, migrations 001-007 + 097-098)
         run: npm run test:tenant:pg
