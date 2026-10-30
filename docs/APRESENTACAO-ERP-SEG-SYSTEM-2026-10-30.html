@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SEG System — o ERP do Grupo SEG | Apresentação ao Marcelo</title>
+<style>
+  :root{
+    --azul:#233f91; --profundo:#172b68; --fundo:#f3f5fb; --sup:#ffffff;
+    --texto:#15243d; --sec:#52627c; --borda:#d1d9e8; --sel:#edf1fc; --foco:#315aca;
+    --ok:#147a4b; --okbg:#e6f3ec; --par:#8a5a06; --parbg:#fbf0dc; --nao:#a4232b; --naobg:#fbe9ea;
+    --cinza:#eef1f7;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#0d1730;font-family:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;color:var(--texto)}
+  #stageWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  #stage{width:1280px;height:720px;position:relative;transform-origin:center center;background:var(--sup);box-shadow:0 30px 80px rgba(0,0,0,.55);border-radius:6px;overflow:hidden}
+  .slide{position:absolute;inset:0;padding:52px 64px 58px;display:none;flex-direction:column;background:var(--sup)}
+  .slide.active{display:flex;animation:fade .28s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .slide.dark{background:linear-gradient(135deg,#172b68 0%,#233f91 58%,#2a4aa6 100%);color:#fff}
+
+  h1{font-size:52px;line-height:1.06;margin:0 0 14px;letter-spacing:-.6px;font-weight:750}
+  h2{font-size:34px;line-height:1.1;margin:0 0 6px;letter-spacing:-.4px;color:var(--profundo)}
+  .dark h2{color:#fff}
+  h3{font-size:16px;margin:0 0 6px;color:var(--profundo)}
+  p{margin:0 0 10px;font-size:16.5px;line-height:1.45;color:var(--texto)}
+  .lead{font-size:20px;color:var(--sec);line-height:1.42}
+  .dark .lead,.dark p{color:#dfe6f7}
+  .kicker{font-size:12.5px;letter-spacing:2.2px;text-transform:uppercase;color:var(--azul);font-weight:700;margin-bottom:10px}
+  .dark .kicker{color:#a9c0f2}
+  .rule{height:4px;width:64px;background:var(--azul);border-radius:2px;margin:0 0 18px}
+  .dark .rule{background:#7ea2f0}
+
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .card{background:var(--fundo);border:1px solid var(--borda);border-radius:10px;padding:14px 16px}
+  .card h3{font-size:15px;margin-bottom:4px}
+  .card p{font-size:13.2px;line-height:1.4;color:var(--sec);margin:0}
+  .dark .card{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.18)}
+  .dark .card h3{color:#fff}
+  .dark .card p{color:#cfd9f2}
+
+  ul{margin:0 0 8px;padding-left:20px}
+  li{font-size:15.5px;line-height:1.5;margin-bottom:7px}
+  li::marker{color:var(--azul)}
+  .dark li::marker{color:#8fb0f4}
+  .tight li{margin-bottom:4px;font-size:14.6px}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:6px}
+  .stat{background:#fff;border:1px solid var(--borda);border-radius:10px;padding:14px 12px;text-align:center}
+  .stat .n{font-size:30px;font-weight:780;color:var(--azul);line-height:1;letter-spacing:-1px}
+  .stat .l{font-size:11.6px;color:var(--sec);margin-top:7px;line-height:1.28;text-transform:uppercase;letter-spacing:.4px}
+  .dark .stat{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.2)}
+  .dark .stat .n{color:#fff}
+  .dark .stat .l{color:#c6d3f0}
+
+  table{width:100%;border-collapse:collapse;font-size:13.4px}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--borda);vertical-align:top}
+  th{font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--sec);font-weight:700;background:var(--fundo)}
+  tr:last-child td{border-bottom:none}
+  td.mid{color:var(--sec)}
+
+  .chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.4px;font-weight:700;white-space:nowrap}
+  .c-ok{background:var(--okbg);color:var(--ok)}
+  .c-par{background:var(--parbg);color:var(--par)}
+  .c-nao{background:var(--naobg);color:var(--nao)}
+
+  .row{display:flex;gap:26px;align-items:flex-start}
+  .col{flex:1;min-width:0}
+
+  .pill{display:inline-flex;align-items:center;gap:8px;background:var(--sel);border:1px solid #cfd9f2;color:var(--profundo);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:600;margin:0 8px 8px 0}
+  .dark .pill{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.24);color:#fff}
+
+  .foot{position:absolute;left:64px;right:64px;bottom:20px;display:flex;justify-content:space-between;align-items:center;font-size:11.4px;color:#8b97ad;letter-spacing:.3px}
+  .dark .foot{color:rgba(255,255,255,.6)}
+  .foot .brandmini{display:flex;align-items:center;gap:8px}
+  .foot img{height:16px;border-radius:3px}
+
+  .logo{height:78px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+  .num{font-size:13px;font-weight:800;color:var(--azul);letter-spacing:1px}
+
+  .quote{border-left:4px solid #7ea2f0;padding:6px 0 6px 16px;font-size:21px;line-height:1.4;color:#fff;max-width:920px}
+
+  .bar{height:9px;border-radius:6px;background:var(--cinza);overflow:hidden;margin-top:5px}
+  .bar > i{display:block;height:100%;border-radius:6px}
+  .b-ok{background:#2f9e68}
+  .b-par{background:#d79a2b}
+  .b-nao{background:#c94a52}
+
+  .small{font-size:12.4px;color:var(--sec);line-height:1.42}
+  .dark .small{color:#c3cfea}
+  .note{background:#fff8e8;border:1px solid #f0dcae;border-radius:8px;padding:10px 13px;font-size:13px;color:#6b4d08;line-height:1.4}
+  .dark .note{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#f2e6c8}
+
+  .kpis{display:flex;gap:12px;flex-wrap:wrap;margin-top:auto}
+  .kpi{flex:1;min-width:180px;background:#fff;border:1px solid var(--borda);border-left:5px solid var(--azul);border-radius:8px;padding:12px 14px}
+  .kpi .t{font-size:11.4px;text-transform:uppercase;letter-spacing:.6px;color:var(--sec);font-weight:700}
+  .kpi .v{font-size:17px;font-weight:700;color:var(--profundo);margin-top:3px;line-height:1.25}
+
+  .phase{display:flex;gap:14px;align-items:flex-start;padding:11px 0;border-bottom:1px dashed var(--borda)}
+  .phase:last-child{border-bottom:none}
+  .phase .tag{flex:0 0 92px;background:var(--profundo);color:#fff;border-radius:7px;text-align:center;padding:7px 4px;font-size:11.4px;font-weight:800;letter-spacing:.5px;line-height:1.2}
+  .phase .body{flex:1}
+  .phase .body b{font-size:15px;color:var(--profundo)}
+  .phase .body p{font-size:13.2px;margin:2px 0 0;color:var(--sec)}
+  .phase.soon .tag{background:#7b8aa8}
+
+  /* chrome */
+  #hud{position:fixed;bottom:14px;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:14px;z-index:5;color:#93a3c4;font-size:12.5px;font-family:inherit}
+  #hud button{background:rgba(255,255,255,.1);color:#dfe7f7;border:1px solid rgba(255,255,255,.18);border-radius:7px;padding:5px 11px;cursor:pointer;font-size:12.5px}
+  #hud button:hover{background:rgba(255,255,255,.2)}
+  #barra{position:fixed;top:0;left:0;height:3px;background:#5b8bf0;width:0;z-index:6;transition:width .25s}
+  #notes{position:fixed;right:0;bottom:0;width:430px;max-height:56vh;overflow:auto;background:#0b1428;color:#dbe4f7;border:1px solid #22304f;border-radius:10px 0 0 0;padding:16px 18px;font-size:13.2px;line-height:1.5;display:none;z-index:7;box-shadow:-10px 0 40px rgba(0,0,0,.5)}
+  #notes.show{display:block}
+  #notes h4{margin:0 0 8px;font-size:12px;letter-spacing:1.4px;text-transform:uppercase;color:#7f9bdc}
+  #notes p{margin:0 0 9px;color:#cfd9f2}
+  #help{position:fixed;top:14px;right:16px;color:#6d7fa3;font-size:11.5px;z-index:5}
+  @media print{
+    html,body{background:#fff}
+    #stageWrap{position:static;display:block;overflow:visible}
+    #stage{transform:none!important;width:auto;height:auto;box-shadow:none;border-radius:0}
+    .slide{display:flex!important;position:relative;inset:auto;width:1280px;height:720px;page-break-after:always;break-after:page;animation:none}
+    #hud,#barra,#notes,#help{display:none!important}
+    @page{size:1280px 720px;margin:0}
+  }
+</style>
+</head>
+<body>
+<div id="barra"></div>
+<div id="help">← → navegar · N notas · F tela cheia · P imprimir/PDF</div>
+<div id="stageWrap"><div id="stage">
+
+<!-- 1 -->
+<section class="slide dark active" data-title="Capa">
+  <div style="display:flex;align-items:center;gap:30px;margin-bottom:36px">
+    <img class="logo" src="data:image/jpeg;base64,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" alt="Grupo SEG System — Segurança Integrada">
+    <div>
+      <div class="kicker" style="margin:0">Grupo SEG System · Segurança Integrada</div>
+      <div style="font-size:14px;color:#c7d4f0">Guarulhos / SP</div>
+    </div>
+  </div>
+  <h1 style="font-size:60px;max-width:1000px">O nosso próprio ERP<br><span style="color:#a9c0f2">está construído.</span> Falta a última milha.</h1>
+  <div class="rule" style="margin:18px 0 20px"></div>
+  <p class="lead" style="max-width:900px">O que o sistema faz hoje, o que a Omie faz que nós ainda não fazemos, e exatamente o que falta para você deixar de pagar <b style="color:#fff">R$ 895 por mês</b>.</p>
+  <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end">
+    <div class="small">Apresentação ao proprietário · 30 de outubro de 2026<br>Estado verificado no código nesta data</div>
+    <div class="small" style="text-align:right">Documento de apoio:<br>docs/LACUNAS-ERP-VS-OMIE-2026-10-30.md</div>
+  </div>
+  <aside class="notes">
+    <p>Abertura em 40 segundos: “Você paga R$ 895/mês de Omie. Nesse período construímos um sistema próprio que já cobre a maior parte do que você usa — e cobre coisas que a Omie não faz, como escala, ponto com geolocalização, portal do cliente e passagem de plantão.”</p>
+    <p>Deixe claro o tom: não vim dizer que está pronto. Vim mostrar o que está pronto, o que falta e quanto falta.</p>
+    <p>Regra da casa, que vou repetir no fim: nenhum item desta apresentação é declarado “entregue” sem teste e aceite. Os números vêm do próprio código.</p>
+  </aside>
+</section>
+
+<!-- 2 -->
+<section class="slide" data-title="O pedido">
+  <div class="kicker">Por que estamos aqui</div>
+  <h2>Você não quer uma cópia da Omie.<br>Quer parar de depender dela.</h2>
+  <div class="rule"></div>
+  <div class="row" style="margin-top:6px">
+    <div class="col">
+      <p class="lead">A Omie é boa no que faz: financeiro, nota fiscal, cobrança e integração com contabilidade. Mas ela não conhece o nosso negócio: posto, escala, plantão, ronda, cliente, contrato e supervisão.</p>
+      <p>Por isso o alvo não é “recriar a Omie”. O alvo é: <b>tudo o que você faz hoje dentro da Omie precisa acontecer aqui dentro</b> — e o resto, que é o nosso core, já acontece.</p>
+      <div class="note" style="margin-top:14px"><b>Meta objetiva:</b> cancelar a assinatura da Omie sem perder nenhuma rotina do dia a dia — nem a nota fiscal, nem o boleto, nem a conversa com o contador.</div>
+    </div>
+    <div class="col" style="flex:0 0 430px">
+      <div class="card" style="background:var(--profundo);border-color:var(--profundo)">
+        <div style="font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:#a9c0f2;font-weight:700">Custo atual</div>
+        <div style="font-size:46px;font-weight:800;color:#fff;letter-spacing:-1.5px;margin:4px 0">R$ 895<span style="font-size:20px;font-weight:600">/mês</span></div>
+        <div style="color:#cbd7f2;font-size:14px">≈ R$ 10.740 por ano</div>
+        <div style="height:1px;background:rgba(255,255,255,.2);margin:14px 0"></div>
+        <div style="color:#cbd7f2;font-size:13.2px;line-height:1.45">Valor informado por você. Planos públicos da Omie partem de R$ 309/mês; o seu valor inclui módulos/usuários adicionais — vale confirmar na fatura quais são, porque é isso que precisamos cobrir.</div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h3>As três perguntas desta apresentação</h3>
+        <p>1. O que já existe e funciona?<br>2. O que falta para igualar a Omie?<br>3. Quanto custa e em que ordem?</p>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>2</span></div>
+  <aside class="notes">
+    <p>Peça a fatura da Omie depois da apresentação: ela lista os módulos contratados. Isso transforma “tudo o que a Omie faz” em uma lista fechada e verificável, em vez de suposição.</p>
+    <p>Se ele usa Omie.Cash (conta digital), isso muda a ordem das fases: cobrança registrada passa a ser prioridade 1.</p>
+  </aside>
+</section>
+
+<!-- 3 -->
+<section class="slide" data-title="O que já existe">
+  <div class="kicker">Estado atual · verificado no código</div>
+  <h2>O sistema não é um protótipo. É um ERP em construção avançada.</h2>
+  <div class="rule"></div>
+  <div class="stats">
+    <div class="stat"><div class="n">101</div><div class="l">telas no sistema</div></div>
+    <div class="stat"><div class="n">134</div><div class="l">módulos de servidor</div></div>
+    <div class="stat"><div class="n">581</div><div class="l">tabelas no PostgreSQL</div></div>
+    <div class="stat"><div class="n">181</div><div class="l">migrações aplicadas</div></div>
+  </div>
+  <div class="stats" style="margin-top:12px">
+    <div class="stat"><div class="n">1.215</div><div class="l">verificações automáticas verdes</div></div>
+    <div class="stat"><div class="n">49</div><div class="l">pipelines de qualidade (CI)</div></div>
+    <div class="stat"><div class="n">23</div><div class="l">abas no console de TI</div></div>
+    <div class="stat"><div class="n">0</div><div class="l">vulnerabilidades conhecidas</div></div>
+  </div>
+  <div class="note" style="margin-top:16px">Todos os números são medidos nesta data no repositório do sistema. Eles provam <b>tamanho e engenharia</b>, não <b>aceite do dono</b>: nenhuma tela foi ainda validada por você em uso real, e o sistema ainda não está publicado em produção.</div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>3</span></div>
+  <aside class="notes">
+    <p>Se perguntarem “1.215 testes de quê?”: são verificações de API, autorização, banco, jornadas e regressão de telas. Servem para o sistema não quebrar quando mexemos — é o que permite evoluir sem apagar o que existe.</p>
+    <p>Não prometer “zero bug”: prometer que erro aparece e é corrigido com prova.</p>
+  </aside>
+</section>
+
+<!-- 4 -->
+<section class="slide" data-title="A base">
+  <div class="kicker">Fundação</div>
+  <h2>Um ERP se sustenta em três coisas: dado certo, permissão certa e rastro.</h2>
+  <div class="rule"></div>
+  <div class="grid g3" style="margin-top:4px">
+    <div class="card"><h3>Dado íntegro</h3><p>Valores em centavos, datas civis separadas de horários, proposta antiga nunca recalculada pelo preço de hoje, cancelamento com motivo em vez de exclusão silenciosa.</p></div>
+    <div class="card"><h3>Permissão de verdade</h3><p>Login individual, senha com MFA, papel por função (Marcelo, RH, comercial, financeiro, operação, TI) e isolamento por conta/contrato decidido no servidor — não escondendo botão.</p></div>
+    <div class="card"><h3>Rastro auditável</h3><p>Toda ação sensível grava autor, objeto, horário e resultado na mesma transação do negócio. Se a auditoria falha, a operação não é gravada.</p></div>
+    <div class="card"><h3>Sem duplicidade</h3><p>Repetir um clique não gera duas cobranças, dois contratos ou dois recebimentos: as operações exigem chave de idempotência.</p></div>
+    <div class="card"><h3>Falha fechada</h3><p>Sem sessão, sem permissão ou com erro técnico, o sistema nega e explica. Nunca “libera porque não conseguiu checar”.</p></div>
+    <div class="card"><h3>Evolução sem perder</h3><p>181 migrações com checksum, 49 pipelines e regra de ouro: nada é removido ou desligado para acomodar uma entrega nova.</p></div>
+  </div>
+  <p class="small" style="margin-top:16px">Stack: Next.js 16 · React 19 · Node 22 · PostgreSQL 17. Servidor próprio, banco próprio, código nosso — sem licença de terceiro por usuário.</p>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>4</span></div>
+  <aside class="notes">
+    <p>Este slide responde à objeção mais comum do dono: “mas é seguro?”. Sim, no desenho e nos testes; falta a camada operacional (backup real, servidor de produção), que está no bloco de lacunas.</p>
+    <p>Comparação honesta: sistemas de prateleira também têm isso. A diferença é que aqui o custo por usuário é zero e o dado é nosso.</p>
+  </aside>
+</section>
+
+<!-- 5 -->
+<section class="slide" data-title="Mapa do sistema">
+  <div class="kicker">Mapa</div>
+  <h2>Doze frentes já implementadas</h2>
+  <div class="rule"></div>
+  <div class="grid g4" style="gap:12px">
+    <div class="card"><h3>1 · Site e captação</h3><p>Páginas, serviços, segmentos, FAQ, SEO, orçamento e simulador</p></div>
+    <div class="card"><h3>2 · Comercial</h3><p>Lead, empresa, oportunidade, funil, tarefa, visita, cadência</p></div>
+    <div class="card"><h3>3 · Proposta</h3><p>Catálogo, custo, cenário, desconto com alçada, aceite por link</p></div>
+    <div class="card"><h3>4 · Contrato</h3><p>Vigência, itens, aditivo, reajuste, alerta, obrigações, encerramento</p></div>
+    <div class="card"><h3>5 · Operação</h3><p>Posto, turno, escala, cobertura, plantão, ronda, ocorrência</p></div>
+    <div class="card"><h3>6 · Pessoas</h3><p>RH, ponto com local, férias, treinamento, holerite, portal do funcionário</p></div>
+    <div class="card"><h3>7 · Cliente</h3><p>Portal: chamado, SLA, visita, relatório, documento, cobrança, renovação</p></div>
+    <div class="card"><h3>8 · Financeiro</h3><p>A pagar/receber, recorrência, baixa, conciliação, fluxo, resultado</p></div>
+    <div class="card"><h3>9 · Patrimônio</h3><p>Ativo serializado, termo, manutenção, CFTV, estoque e compras</p></div>
+    <div class="card"><h3>10 · Gestão</h3><p>Painel do Marcelo: pendência, aprovação, indicador, meta, relatório</p></div>
+    <div class="card"><h3>11 · Governança</h3><p>Acesso, auditoria, LGPD, observabilidade, integração, backup, config</p></div>
+    <div class="card"><h3>12 · Expansões</h3><p>Frota, terceiros, licitações, fornecedores, qualidade, satisfação, IA</p></div>
+  </div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>5</span></div>
+  <aside class="notes"><p>Slide de orientação: “cada um desses doze blocos existe no sistema hoje, com banco, servidor e tela”. Os próximos slides mostram o conteúdo de cada um em uma frase por item.</p></aside>
+</section>
+
+<!-- 6 -->
+<section class="slide" data-title="Comercial">
+  <div class="kicker">1 a 3 · Captação, comercial e proposta</div>
+  <h2>Da rua ao contrato assinado</h2>
+  <div class="rule"></div>
+  <div class="row">
+    <div class="col">
+      <h3 style="margin-top:6px">O que existe</h3>
+      <ul class="tight">
+        <li>Site institucional com 10 layouts, SEO técnico, páginas de serviço e segmento</li>
+        <li>Orçamento e simulador em etapas; lead cai direto no CRM</li>
+        <li>Empresa, contato com papel na compra, unidade atendida e oportunidade</li>
+        <li>Funil com motivo de perda obrigatório e reabertura auditada</li>
+        <li>Tarefas, cadências, visitas e agenda comercial</li>
+        <li>Vistoria com checklist e levantamento de cobertura/turnos</li>
+        <li>Orçamento de mão de obra e técnico com custo, tributo versionado e cenário de margem</li>
+        <li>Desconto com alçada, proposta versionada e aceite por link expirável</li>
+        <li>Proposta aceita cria contrato <b>uma única vez</b>, mesmo com retentativa</li>
+      </ul>
+    </div>
+    <div class="col" style="flex:0 0 400px">
+      <div class="card" style="border-left:5px solid var(--azul)">
+        <h3>Por que importa</h3>
+        <p>A Omie tem CRM básico. Aqui o CRM conhece o serviço de segurança: vistoria, posto, turno e composição de custo de mão de obra — que é onde o lucro do contrato se decide.</p>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h3>Limite declarado</h3>
+        <p>Envio de proposta, e-mail e WhatsApp hoje são <b>registro de fila</b>, não entrega real: falta provedor configurado. Nada é marcado como “enviado” sem prova de envio.</p>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>6</span></div>
+  <aside class="notes"><p>Jornada de demonstração sugerida: criar lead → oportunidade → vistoria → proposta com desconto acima da alçada → aprovação → aceite → contrato. Mostra autorização, histórico e idempotência em 5 minutos.</p></aside>
+</section>
+
+<!-- 7 -->
+<section class="slide" data-title="Contrato">
+  <div class="kicker">4 · Contratos e implantação</div>
+  <h2>O contrato como fonte da verdade</h2>
+  <div class="rule"></div>
+  <div class="grid g2">
+    <div class="card"><h3>Ciclo completo</h3><p>Rascunho → revisão → aguardando assinatura → ativo → suspenso → encerrado, com data de efeito e transição autorizada.</p></div>
+    <div class="card"><h3>Aditivo e reajuste</h3><p>Base, vigência, justificativa e histórico. Mudar um aditivo não altera fatura passada nem duplica cobrança.</p></div>
+    <div class="card"><h3>Alertas de renovação</h3><p>Vencimento com tarefa, responsável e negociação vinculada ao CRM.</p></div>
+    <div class="card"><h3>Obrigações documentais</h3><p>Categoria, periodicidade, responsável, aprovação e comprovante por cliente/contrato.</p></div>
+    <div class="card"><h3>Implantação com checklist</h3><p>Postos, dimensionamento, contratação, exames, treinamento, equipamentos, instrução de posto, faturamento e convite do cliente. Implantação incompleta bloqueia — exceção só autorizada e motivada.</p></div>
+    <div class="card"><h3>Encerramento e dossiê</h3><p>Desmobilização, devolução, pendências, documentos e revogação de acesso. Dossiê de fiscalização e medição de serviço.</p></div>
+  </div>
+  <div class="note" style="margin-top:14px">Comparação: a Omie trata contrato como <b>recorrência de faturamento</b>. Aqui ele também carrega posto, equipe, SLA, obrigação e encerramento — que é o que uma empresa de serviços com mão de obra precisa.</div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>7</span></div>
+  <aside class="notes"><p>Se o Marcelo perguntar “e o reajuste anual com índice?”, responda: existe aditivo com base e vigência; o índice aplicado é decisão dele/contador, o sistema não inventa alíquota.</p></aside>
+</section>
+
+<!-- 8 -->
+<section class="slide" data-title="Operação">
+  <div class="kicker">5 · Operação 24 horas</div>
+  <h2>O que a Omie não faz — e é o nosso negócio</h2>
+  <div class="rule"></div>
+  <div class="grid g3" style="gap:12px">
+    <div class="card"><h3>Estrutura</h3><p>Cliente → unidade atendida → posto físico → necessidade por turno → alocação. Cargo é entidade própria: nunca “posto” como cargo e local ao mesmo tempo.</p></div>
+    <div class="card"><h3>Dimensionamento</h3><p>Contratado × planejado × realizado, cobertura por faixa de tempo e profissional habilitado.</p></div>
+    <div class="card"><h3>Escala</h3><p>Versão em rascunho/publicada/revisada, validade, calendário por posto/equipe/pessoa e ciência do funcionário.</p></div>
+    <div class="card"><h3>Validações</h3><p>Conflito de horário, indisponibilidade, habilitação vencida e regra de jornada — com conflito visível, não escondido.</p></div>
+    <div class="card"><h3>Cobertura</h3><p>Ausência abre pendência de cobertura, sugere substituto por disponibilidade e qualificação, decisão humana e comunicação.</p></div>
+    <div class="card"><h3>Passagem de plantão</h3><p>Origem, destino, pendências, chaves, equipamentos, aceite e escalonamento quando não há aceite.</p></div>
+    <div class="card"><h3>Livro de ocorrências</h3><p>Categoria, severidade, responsável, ação e encerramento com retificação rastreável.</p></div>
+    <div class="card"><h3>Checklist e ronda</h3><p>Checklist por serviço/cliente com versão e frequência; ronda com prevenção de repetição — GPS sozinho não prova execução.</p></div>
+    <div class="card"><h3>Supervisão e limpeza</h3><p>Visita de supervisão, plano de ação com prazo e verificação; rotina de limpeza por ambiente e não conformidade.</p></div>
+  </div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>8</span></div>
+  <aside class="notes"><p>Mensagem-chave: “é aqui que o sistema se paga”. Cobertura descoberta, escala furada e ocorrência sem registro custam multa de contrato — nenhum ERP genérico controla isso.</p></aside>
+</section>
+
+<!-- 9 -->
+<section class="slide" data-title="Pessoas">
+  <div class="kicker">6 · Pessoas e departamento pessoal</div>
+  <h2>Do anúncio da vaga ao holerite na mão do colaborador</h2>
+  <div class="rule"></div>
+  <div class="row">
+    <div class="col">
+      <ul class="tight">
+        <li>Cadastro profissional <b>separado</b> do login; histórico de cargo, lotação e remuneração com data de efeito</li>
+        <li>Recrutamento, banco de talentos, admissão com checklist e dossiê de documentos com validade</li>
+        <li>Férias com período aquisitivo/concessivo, conflito de cobertura e aprovação</li>
+        <li>Afastamentos com substituição — supervisor vê indisponibilidade, não diagnóstico</li>
+        <li>Ponto eletrônico com geolocalização, comprovante, espelho e fluxo de correção que preserva o original</li>
+        <li>Banco de horas, benefícios, treinamento por função com validade e reciclagem</li>
+        <li>Desligamento com checklist, devolução e revogação de acesso</li>
+        <li>Holerite e informe <b>importados da fonte autorizada</b>, com revisão antes de publicar e correção versionada</li>
+        <li>Portal e app do funcionário (PWA): plantão, escala, ponto, documento, solicitação, comunicado, curso e reclamação confidencial</li>
+      </ul>
+    </div>
+    <div class="col" style="flex:0 0 400px">
+      <div class="card" style="border-left:5px solid var(--ok)">
+        <h3>Decisão já tomada (e correta)</h3>
+        <p>A <b>folha não é calculada aqui</b>: o holerite vem do contador e é distribuído com controle de versão. Isso evita assumir responsabilidade trabalhista que é do escritório contábil — e é o mesmo caminho que a Omie usa.</p>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h3>Limite declarado</h3>
+        <p>Não há envio ao eSocial nem integração com relógio homologado. Também não há upload real de documento: o arquivo é referência até existir armazenamento.</p>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>9</span></div>
+  <aside class="notes"><p>Cuidado com promessa de conformidade: Portaria 671/CLT exigem parecer. O sistema registra e prova; a validação legal é externa e está no bloco de pendências.</p></aside>
+</section>
+
+<!-- 10 -->
+<section class="slide" data-title="Portal do cliente">
+  <div class="kicker">7 · Portal do cliente</div>
+  <h2>O cliente resolve sozinho — e enxerga só o que é dele</h2>
+  <div class="rule"></div>
+  <div class="grid g3" style="gap:12px">
+    <div class="card"><h3>Acesso</h3><p>Convite, autocadastro com aprovação, MFA, recuperação, gestão de sessão e múltiplos contatos com papéis por conta/unidade/contrato.</p></div>
+    <div class="card"><h3>Chamados</h3><p>Protocolo, categoria, prioridade, SLA com pausa explícita, mensagem, anexo, histórico e reabertura com motivo.</p></div>
+    <div class="card"><h3>Visitas e relatórios</h3><p>Agenda de visita, confirmação, reagendamento; relatório de execução com ciência/aceite do cliente.</p></div>
+    <div class="card"><h3>Contratos e documentos</h3><p>Detalhe publicado do contrato, escopo, vigência e documentos com download autorizado.</p></div>
+    <div class="card"><h3>Financeiro</h3><p>Cobranças e comprovantes da própria conta — quando o financeiro estiver conciliado.</p></div>
+    <div class="card"><h3>Relação</h3><p>Solicitação de serviço adicional virando oportunidade no CRM, satisfação/CSAT, risco de renovação e reclamação de colaborador em canal restrito.</p></div>
+  </div>
+  <div class="note" style="margin-top:14px">As dez telas de leitura do portal têm isolamento por conta ativa provado em teste A/B: o cliente A não vê contrato, documento, cobrança ou relatório do cliente B — nem por URL direta.</div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>10</span></div>
+  <aside class="notes"><p>Argumento comercial forte: portal do cliente é item que a Omie não entrega e que diferencia a proposta em licitação e em condomínio.</p></aside>
+</section>
+
+<!-- 11 -->
+<section class="slide" data-title="Financeiro">
+  <div class="kicker">8 · Financeiro</div>
+  <h2>Dezesseis frentes — a maior parte sem precisar da Omie</h2>
+  <div class="rule"></div>
+  <div class="grid g4" style="gap:10px">
+    <div class="card"><h3>Contas a receber</h3><p>Contrato, competência, vencimento, recorrência, moeda e situação</p></div>
+    <div class="card"><h3>Contas a pagar</h3><p>Fornecedor, categoria, centro de custo, aprovação</p></div>
+    <div class="card"><h3>Recorrência</h3><p>Geração idempotente por contrato/competência, pró-rata e suspensão</p></div>
+    <div class="card"><h3>Baixa e estorno</h3><p>Recebimento parcial, renegociação e baixa auditada</p></div>
+    <div class="card"><h3>Conciliação</h3><p>Extrato importado, sugestão de vínculo e confirmação com divergência motivada</p></div>
+    <div class="card"><h3>Cobrança</h3><p>Responsável, lembrete, histórico e política aprovada</p></div>
+    <div class="card"><h3>Fluxo de caixa</h3><p>Previsto × realizado, vencidos, próximos pagamentos e aging</p></div>
+    <div class="card"><h3>Custo e rateio</h3><p>Custo por cliente/contrato/posto com rateio documentado</p></div>
+    <div class="card"><h3>Resultado</h3><p>Receita contratada, faturada e recebida × custo; margem marcada “incompleta” quando falta dado</p></div>
+    <div class="card"><h3>Despesas e compras</h3><p>Alçada, comprovante e segregação entre solicitar e aprovar</p></div>
+    <div class="card"><h3>Fiscal</h3><p>Regra por atividade, obrigação, provedor e documento fiscal <b>registrado</b></p></div>
+    <div class="card"><h3>Gateway</h3><p>Boleto/Pix registrados como declaração, sem movimentar dinheiro</p></div>
+    <div class="card"><h3>Orçamento</h3><p>Cenário com premissa explícita, sem prometer resultado</p></div>
+    <div class="card"><h3>Exportação</h3><p>Período com trilha, filtro e total conciliável para o contador</p></div>
+    <div class="card"><h3>Fechamento</h3><p>Competência fechada, reabertura autorizada e versão preservada</p></div>
+    <div class="card"><h3>Comissão</h3><p>Regra, provisão e revisão — sem pagamento automático</p></div>
+  </div>
+  <div class="note" style="margin-top:14px">A estrutura é equivalente à da Omie. A diferença está na <b>execução externa</b>: aqui ainda não saem nota, boleto e extrato bancário. É o bloco 2 das lacunas.</div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>11</span></div>
+  <aside class="notes"><p>Se ele comparar com a Omie, seja direto: “a tela e a regra existem; o que falta é o cano que liga no banco e na prefeitura”.</p></aside>
+</section>
+
+<!-- 12 -->
+<section class="slide" data-title="Patrimônio">
+  <div class="kicker">9 · Patrimônio, estoque e compras</div>
+  <h2>O que é nosso, onde está e quem assinou</h2>
+  <div class="rule"></div>
+  <div class="grid g2" style="gap:12px">
+    <div class="card"><h3>Ativo serializado</h3><p>Equipamento por cliente/posto/colaborador, proprietário, garantia, manutenção e termo de guarda.</p></div>
+    <div class="card"><h3>Entrega e devolução</h3><p>Avaria, perda, foto pertinente e conferência com aceite.</p></div>
+    <div class="card"><h3>Manutenção</h3><p>Preventiva com periodicidade, alerta, próxima visita e histórico por ativo.</p></div>
+    <div class="card"><h3>Ordem de serviço</h3><p>Solicitante, contrato, técnico, agenda, diagnóstico, checklist, peça, execução, aceite, garantia e retorno.</p></div>
+    <div class="card"><h3>Estoque</h3><p>SKU, unidade, custo, local, mínimo; entrada, saída, transferência e ajuste por motivo com saldo derivado de movimento.</p></div>
+    <div class="card"><h3>Compras</h3><p>Requisição → cotação → seleção → aprovação → pedido → recebimento vinculado ao contas a pagar; inventário físico com divergência e ajuste aprovado.</p></div>
+  </div>
+  <p class="small" style="margin-top:14px">Dossiê técnico de CFTV com modelo, localização autorizada, garantia e documentação — senha de equipamento nunca no cadastro comum. Materiais de limpeza com consumo por local e reposição.</p>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>12</span></div>
+  <aside class="notes"><p>Comparação: a Omie cobre estoque e compras de forma genérica (e bem). Aqui o diferencial é o ativo instalado no cliente com termo de guarda e manutenção — controle de patrimônio em comodato.</p></aside>
+</section>
+
+<!-- 13 -->
+<section class="slide" data-title="Painel do Marcelo">
+  <div class="kicker">10 · Gestão</div>
+  <h2>O painel que a Omie não tem: a sua decisão, não o seu relatório</h2>
+  <div class="rule"></div>
+  <div class="grid g2" style="gap:12px">
+    <div class="card"><h3>Pendências reais</h3><p>O que exige decisão no período, com prioridade, responsável e próxima ação — cada item abre o registro de origem.</p></div>
+    <div class="card"><h3>Aprovação unificada</h3><p>Desconto, compra, despesa e exceção no mesmo lugar, com alçada por valor e escopo.</p></div>
+    <div class="card"><h3>Indicador com fonte</h3><p>Conversão, cobertura, SLA, margem, inadimplência, rotatividade. Cada número carrega período e origem; estimativa nunca aparece como realizado.</p></div>
+    <div class="card"><h3>Metas e cenários</h3><p>Previsto × realizado canônico, com o cálculo feito por consulta validada — não por texto de IA.</p></div>
+    <div class="card"><h3>Relatório auditado</h3><p>Geração e envio registrados, com limite de dados por destinatário; repetir a chave não gera segundo relatório.</p></div>
+    <div class="card"><h3>Diário de decisões</h3><p>Toda decisão de gestão fica registrada com motivo e vínculo ao contrato/processo, com busca e acesso restrito.</p></div>
+  </div>
+  <div class="note" style="margin-top:14px">Este é o slide para o dono: a diferença entre “tenho um sistema” e “tenho controle”. A Omie entrega relatório; aqui a pendência chega com nome, prazo e botão de decisão.</div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>13</span></div>
+  <aside class="notes"><p>Se houver tempo, este é o melhor slide para demonstrar ao vivo — abrir /admin/marcelo com dados fictícios e mostrar uma aprovação de desconto real.</p></aside>
+</section>
+
+<!-- 14 -->
+<section class="slide" data-title="Governança">
+  <div class="kicker">11 · Governança e TI</div>
+  <h2>Quem viu, quem mudou e quando</h2>
+  <div class="rule"></div>
+  <div class="grid g3" style="gap:12px">
+    <div class="card"><h3>Acesso</h3><p>Usuário, papel, escopo, convite, suspensão e revisão periódica; privilégio elevado exige concessão separada.</p></div>
+    <div class="card"><h3>Auditoria</h3><p>Consulta por autor, ação, objeto, período e resultado; exportação também é auditada.</p></div>
+    <div class="card"><h3>Integrações</h3><p>Status configurado/não configurado/falha, último processamento e erro sanitizado — sem máscara de sucesso.</p></div>
+    <div class="card"><h3>Saúde do sistema</h3><p>Liveness, readiness e diagnóstico de dependência com degradação explícita.</p></div>
+    <div class="card"><h3>LGPD</h3><p>Inventário de dados, política versionada, pedido de titular com prazo e responsável, retenção por categoria.</p></div>
+    <div class="card"><h3>Continuidade</h3><p>Plano de contingência por posto/cliente, contato de escalonamento e exercício simulado.</p></div>
+    <div class="card"><h3>Qualidade</h3><p>Não conformidade, causa, ação corretiva, verificação e reincidência — encerra só com evidência.</p></div>
+    <div class="card"><h3>Configuração</h3><p>Parâmetro de negócio versionado com motivo, autoria e rollback; separado de infraestrutura.</p></div>
+    <div class="card"><h3>Documentação</h3><p>393 documentos técnicos no repositório: decisão, evidência, limite e próximo passo.</p></div>
+  </div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>14</span></div>
+  <aside class="notes"><p>Aqui entra o único item que hoje devolve erro de propósito: o backup. A API responde 503 porque não existe executor real — preferimos recusar a fingir. Está na fase 1.</p></aside>
+</section>
+
+<!-- 15 -->
+<section class="slide" data-title="Expansões">
+  <div class="kicker">12 · Expansões e inteligência</div>
+  <h2>Quinze módulos além do ERP clássico</h2>
+  <div class="rule"></div>
+  <div class="columns" style="display:grid;grid-template-columns:1fr 1fr;gap:0 28px">
+    <ul class="tight">
+      <li><b>Frota</b> — veículo, abastecimento, manutenção, documento e custo</li>
+      <li><b>Terceiros</b> — contrato, documento, janela de acesso que expira sozinha</li>
+      <li><b>Licitações</b> — edital, prazo com fonte, documento, proposta e resultado</li>
+      <li><b>Fornecedores</b> — cotação, validade, pedido e alerta</li>
+      <li><b>Qualidade</b> — não conformidade, causa, ação e reincidência</li>
+      <li><b>Satisfação</b> — pesquisa, CSAT/NPS e tarefa de recuperação</li>
+      <li><b>Compliance</b> — licença, certidão, seguro e obrigação com validade</li>
+      <li><b>Conhecimento</b> — procedimento versionado, busca e ciência</li>
+    </ul>
+    <ul class="tight">
+      <li><b>Expansão</b> — cenário de filial/contrato com premissa explícita</li>
+      <li><b>Continuidade</b> — contingência por posto, contato e exercício</li>
+      <li><b>Analytics</b> — hipótese, variante aprovada, métrica e privacidade</li>
+      <li><b>Editor visual</b> — token/layout versionado, prévia e rollback</li>
+      <li><b>Relatórios periódicos</b> — consolidação com destinatário autorizado</li>
+      <li><b>Inteligência comercial</b> — indicação e reativação com sugestão explicada</li>
+      <li><b>Apoio emergencial</b> — canal, escalonamento e teste de recebimento</li>
+      <li><b>IA / RAG</b> — 4 escopos privados, curadoria, custo por token e revisão humana</li>
+    </ul>
+  </div>
+  <div class="note" style="margin-top:12px">Cada módulo tem condição de entrada declarada. Nenhum é vendido como ativo antes de provedor e aceite: a API declara a fronteira em vez de simular o ator externo.</div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>15</span></div>
+  <aside class="notes"><p>Não listar tudo de forma triunfal: vários desses dependem de decisão (licitação faz sentido? temos frota própria?). O valor aqui é já existir estrutura e governança, não começar do zero quando decidir.</p></aside>
+</section>
+
+<!-- 16 -->
+<section class="slide" data-title="Comparativo com a Omie">
+  <div class="kicker">Comparação honesta</div>
+  <h2>Omie × SEG System, família por família</h2>
+  <div class="rule"></div>
+  <table>
+    <thead><tr><th style="width:30%">Família</th><th style="width:13%">Omie</th><th style="width:17%">SEG System</th><th>O que falta do nosso lado</th></tr></thead>
+    <tbody>
+      <tr><td>Financeiro (a pagar/receber, fluxo, baixa)</td><td><span class="chip c-ok">tem</span></td><td><span class="chip c-ok">tem</span></td><td class="mid">—</td></tr>
+      <tr><td>Conciliação bancária</td><td><span class="chip c-ok">automática</span></td><td><span class="chip c-par">manual</span></td><td class="mid">Importação real de extrato/OFX e regra automática</td></tr>
+      <tr><td>Boleto, Pix e cobrança registrada</td><td><span class="chip c-ok">tem</span></td><td><span class="chip c-nao">não</span></td><td class="mid">Gateway + conta digital (provedor a escolher)</td></tr>
+      <tr><td>NFS-e / NF-e</td><td><span class="chip c-ok">emite</span></td><td><span class="chip c-nao">registra</span></td><td class="mid">Provedor fiscal + certificado A1 + homologação</td></tr>
+      <tr><td>Integração contábil / SPED</td><td><span class="chip c-ok">tem</span></td><td><span class="chip c-nao">não</span></td><td class="mid">Plano de contas, exportação e parecer do contador</td></tr>
+      <tr><td>CRM, proposta e contrato</td><td><span class="chip c-par">básico</span></td><td><span class="chip c-ok">completo</span></td><td class="mid">—</td></tr>
+      <tr><td>Estoque e compras</td><td><span class="chip c-ok">tem</span></td><td><span class="chip c-par">tem</span></td><td class="mid">Importação de XML da nota de compra, curva ABC</td></tr>
+      <tr><td>Ordem de serviço</td><td><span class="chip c-ok">tem</span></td><td><span class="chip c-ok">tem</span></td><td class="mid">Upload real de evidência (foto/aceite)</td></tr>
+      <tr><td>Escala, ponto, plantão, ronda</td><td><span class="chip c-nao">não</span></td><td><span class="chip c-ok">tem</span></td><td class="mid">—</td></tr>
+      <tr><td>Portal do cliente e do funcionário</td><td><span class="chip c-nao">não</span></td><td><span class="chip c-ok">tem</span></td><td class="mid">—</td></tr>
+      <tr><td>Patrimônio e ativo em comodato</td><td><span class="chip c-nao">não</span></td><td><span class="chip c-ok">tem</span></td><td class="mid">—</td></tr>
+      <tr><td>App mobile, suporte, atualização fiscal</td><td><span class="chip c-ok">maduro</span></td><td><span class="chip c-par">PWA</span></td><td class="mid">App dedicado, suporte e rotina de atualização</td></tr>
+      <tr><td>Backup, produção e alta disponibilidade</td><td><span class="chip c-ok">gerido</span></td><td><span class="chip c-nao">no-go</span></td><td class="mid">Backup real, deploy, monitoramento e SLA</td></tr>
+    </tbody>
+  </table>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>16</span></div>
+  <aside class="notes"><p>Não maquiar: nas linhas vermelhas a Omie ganha e ganha bem. O argumento é que são cinco famílias — não cinquenta. E quatro delas são de integração/fornecedor, não de desenvolvimento de tela.</p>
+  <p>Detalhamento item a item está no documento de lacunas, com ID e critério de aceite.</p>
+  </aside>
+</section>
+
+<!-- 17 -->
+<section class="slide dark" data-title="Onde estamos à frente">
+  <div class="kicker">Nosso diferencial</div>
+  <h2>Onde já somos melhores que a Omie</h2>
+  <div class="rule"></div>
+  <div class="grid g2" style="gap:14px">
+    <div class="card"><h3>1 · O sistema conhece o serviço</h3><p>Posto, turno, escala, cobertura, plantão, ronda e ocorrência. A Omie não tem vocabulário para isso.</p></div>
+    <div class="card"><h3>2 · O cliente tem portal</h3><p>Chamado com SLA, visita, relatório com aceite, contrato publicado e cobrança — isolado por conta, provado em teste A/B.</p></div>
+    <div class="card"><h3>3 · A pessoa tem app</h3><p>Plantão, escala, ponto com comprovante, documento, solicitação e curso no celular, com fila offline.</p></div>
+    <div class="card"><h3>4 · Preço e margem do contrato</h3><p>Composição de custo de mão de obra, tributo versionado e cenário de margem antes de mandar a proposta.</p></div>
+    <div class="card"><h3>5 · Governança de verdade</h3><p>MFA, papel por função, auditoria transacional, idempotência e isolamento por contrato — desenhados para auditoria de cliente grande e órgão público.</p></div>
+    <div class="card"><h3>6 · Custo marginal zero</h3><p>Sem licença por usuário: crescer equipe, cliente e posto não aumenta a mensalidade do software.</p></div>
+  </div>
+  <div style="margin-top:auto" class="quote">“A Omie organiza o dinheiro. Este sistema organiza a operação que gera o dinheiro.”</div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>17</span></div>
+  <aside class="notes"><p>Esse é o slide de venda. Se o dono só puder lembrar de um, é este: o que temos que a Omie nunca terá porque não é o mercado dela.</p></aside>
+</section>
+
+<!-- 18 -->
+<section class="slide" data-title="Onde a Omie ganha">
+  <div class="kicker">O que dói</div>
+  <h2>As cinco lacunas duras — sem eufemismo</h2>
+  <div class="rule"></div>
+  <div class="grid" style="grid-template-columns:repeat(5,1fr);gap:12px;margin-top:6px">
+    <div class="card" style="border-top:4px solid var(--nao)"><h3>1 · Nota fiscal</h3><p>Não emitimos NFS-e/NF-e. Hoje o sistema registra a obrigação e o documento declarado — a nota continua saindo na Omie ou no emissor.</p></div>
+    <div class="card" style="border-top:4px solid var(--nao)"><h3>2 · Cobrança</h3><p>Não geramos boleto nem Pix de cobrança registrada e não baixamos automaticamente. A cobrança é controle, não transação.</p></div>
+    <div class="card" style="border-top:4px solid var(--nao)"><h3>3 · Conciliação</h3><p>O extrato é registrado manualmente; não há leitura de OFX nem casamento automático com o banco.</p></div>
+    <div class="card" style="border-top:4px solid var(--nao)"><h3>4 · Contabilidade</h3><p>Não há plano de contas nem exportação contábil/SPED. O contador recebe relatório, não lançamento.</p></div>
+    <div class="card" style="border-top:4px solid var(--nao)"><h3>5 · Operação de TI</h3><p>Não há produção: backup real, servidor publicado, monitoramento e suporte contínuo ainda não existem.</p></div>
+  </div>
+  <div class="note" style="margin-top:18px"><b>Leitura correta:</b> quatro dessas cinco lacunas são <b>ligação com fornecedor</b> (prefeitura, banco, contador, infraestrutura) — não meses de tela. A quinta é operação. Nenhuma exige reescrever o que já existe.</div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>18</span></div>
+  <aside class="notes"><p>Este slide constrói credibilidade. Ao admitir o que falta sem rodeio, o restante da apresentação passa a ser confiável.</p>
+  <p>Se ele disser “então não dá para cancelar a Omie hoje”: correto. A recomendação é por fases, com data de cancelamento definida no fim da fase 3.</p>
+  </aside>
+</section>
+
+<!-- 19 -->
+<section class="slide" data-title="Lacuna 1 · engenharia">
+  <div class="kicker">O que falta · bloco 1</div>
+  <h2>Engenharia e produção</h2>
+  <div class="rule"></div>
+  <table>
+    <thead><tr><th style="width:26%">Item</th><th>O que falta exatamente</th><th style="width:16%">Trava</th></tr></thead>
+    <tbody>
+      <tr><td><b>Backup e restauração</b></td><td class="mid">Inventário de todos os arquivos privados, snapshot banco+arquivo, storage externo criptografado e imutável, restauração medida (RPO/RTO). Hoje a API responde 503 de propósito.</td><td>Decisão do dono + provedor</td></tr>
+      <tr><td><b>Servidor de produção</b></td><td class="mid">Ambiente publicado com domínio, HTTPS, banco de destino aplicado (181 migrações), segredos por ambiente e monitoramento.</td><td>Dono autoriza</td></tr>
+      <tr><td><b>Upload real de arquivo</b></td><td class="mid">Não existe nenhum recebimento de arquivo. Documento, foto de ronda, evidência de OS e nota são hoje <b>referência declarada</b>.</td><td>Storage + backup</td></tr>
+      <tr><td><b>Executor de rotinas</b></td><td class="mid">Sem agendador durável: alerta de vencimento, cadência e geração recorrente dependem de chamada. Precisa sobreviver a reinício, com retomada.</td><td>Projeto próprio</td></tr>
+      <tr><td><b>Autorização completa</b></td><td class="mid">A matriz conta/unidade/contrato precisa cobrir todos os handlers e downloads, com reteste A/B — hoje os gates amostram.</td><td>Projeto próprio</td></tr>
+      <tr><td><b>Windows e instalação</b></td><td class="mid">Instalação persistente no ambiente do operador, reinício com dados preservados e separação QA × produção.</td><td>Depende da máquina</td></tr>
+    </tbody>
+  </table>
+  <p class="small" style="margin-top:12px">Sem esse bloco, nada vai ao ar — inclusive o que já está pronto. É a fase 1 por obrigação, não por escolha.</p>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>19</span></div>
+  <aside class="notes"><p>Mensagem: “é chato, não é bonito, mas é o que separa demonstração de sistema em uso”. Não negociar essa ordem.</p></aside>
+</section>
+
+<!-- 20 -->
+<section class="slide" data-title="Lacuna 2 · integrações">
+  <div class="kicker">O que falta · bloco 2</div>
+  <h2>Integrações e provedores — cada uma depende de uma decisão sua</h2>
+  <div class="rule"></div>
+  <table>
+    <thead><tr><th style="width:24%">Integração</th><th>Para quê</th><th style="width:30%">Decisão necessária</th></tr></thead>
+    <tbody>
+      <tr><td><b>Provedor fiscal</b></td><td class="mid">Emitir NFS-e (e NF-e se houver venda de equipamento), cancelar, consultar e guardar XML</td><td>Qual provedor, certificado A1, regime e municípios</td></tr>
+      <tr><td><b>Boleto / Pix / conta</b></td><td class="mid">Cobrança registrada, link de pagamento, baixa automática e conciliação</td><td>Banco ou gateway; taxa por boleto; quem opera</td></tr>
+      <tr><td><b>Extrato bancário</b></td><td class="mid">Leitura de OFX/API para conciliar sem digitação</td><td>Quais contas e bancos entram</td></tr>
+      <tr><td><b>Contabilidade</b></td><td class="mid">Plano de contas, exportação e fechamento aceitos pelo contador</td><td>Reunião com o contador: formato e responsabilidade</td></tr>
+      <tr><td><b>E-mail e WhatsApp</b></td><td class="mid">Proposta, cobrança, convite, alerta e comunicado realmente entregues</td><td>Provedor de e-mail, número e política de uso</td></tr>
+      <tr><td><b>Assinatura eletrônica</b></td><td class="mid">Contrato e aceite com validade jurídica definida</td><td>Provedor e parecer sobre valor do clique</td></tr>
+      <tr><td><b>IA e geolocalização</b></td><td class="mid">Assistente privado e endereço do ponto</td><td>Modelo/hardware, custo por uso, consentimento</td></tr>
+    </tbody>
+  </table>
+  <div class="note" style="margin-top:12px">Padrão da casa: integração não configurada aparece como <b>indisponível</b>. Nunca simulamos envio, nota emitida ou dinheiro movimentado.</div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>20</span></div>
+  <aside class="notes"><p>Peça as decisões nesta reunião, não depois: cada linha parada é uma semana de atraso no bloco seguinte.</p></aside>
+</section>
+
+<!-- 21 -->
+<section class="slide" data-title="Lacuna 3 · produto">
+  <div class="kicker">O que falta · bloco 3</div>
+  <h2>Produto — o que a Omie entrega e nós ainda não</h2>
+  <div class="rule"></div>
+  <div class="grid g2" style="gap:12px">
+    <div class="card"><h3>Nota fiscal de serviço</h3><p>Emissão, cancelamento, consulta, XML/PDF, regra por atividade e município, guarda do documento.</p></div>
+    <div class="card"><h3>Cobrança registrada</h3><p>Boleto e Pix com nosso nome, link de pagamento, baixa por webhook e comprovante no portal.</p></div>
+    <div class="card"><h3>Conciliação automática</h3><p>Importação de extrato, sugestão por valor/data/documento e divergência com motivo.</p></div>
+    <div class="card"><h3>Camada contábil</h3><p>Plano de contas, centro de custo contábil, DRE e exportação no formato do contador.</p></div>
+    <div class="card"><h3>Estoque avançado</h3><p>Importação do XML da nota de compra, custo médio, curva ABC e inventário cíclico.</p></div>
+    <div class="card"><h3>App e notificação</h3><p>App dedicado (hoje é PWA), push real e fila durável de notificação com tentativa e reprocessamento.</p></div>
+    <div class="card"><h3>API pública</h3><p>Chave por cliente, webhook assinado e documentação — para integrar contador, banco e parceiro.</p></div>
+    <div class="card"><h3>Multiempresa</h3><p>Hoje é uma organização. Filial/CNPJ novo exige decisão de arquitetura (o módulo de expansão só planeja).</p></div>
+  </div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>21</span></div>
+  <aside class="notes"><p>Se o dono tem outro CNPJ ou filial, isso muda a prioridade — perguntar explicitamente nesta reunião.</p>
+  <p>Curva ABC, custo médio e XML de compra são relevantes só se ele controla estoque de verdade na Omie hoje.</p>
+  </aside>
+</section>
+
+<!-- 22 -->
+<section class="slide" data-title="Lacuna 4 · sustentação">
+  <div class="kicker">O que falta · bloco 4</div>
+  <h2>Sustentação — o que a assinatura paga e o sistema próprio precisa ter</h2>
+  <div class="rule"></div>
+  <div class="grid g3" style="gap:12px">
+    <div class="card"><h3>Suporte</h3><p>Quem atende quando a escala não abre às 6h? Definir responsável, canal e prazo.</p></div>
+    <div class="card"><h3>Atualização fiscal</h3><p>Layout de NFS-e, regra municipal, tabela e obrigação mudam. Precisa de rotina, não de sorte.</p></div>
+    <div class="card"><h3>Monitoramento e alerta</h3><p>Painel de saúde, alerta acionável e registro de incidente com resposta.</p></div>
+    <div class="card"><h3>Treinamento</h3><p>Andreia, comercial, financeiro, supervisão e o próprio dono precisam de trilha curta por papel.</p></div>
+    <div class="card"><h3>Aceite humano</h3><p>Nenhuma das 101 telas tem aceite registrado. Homologar por papel, com roteiro e assinatura, é etapa formal.</p></div>
+    <div class="card"><h3>Documentação de operação</h3><p>Instalação, diagnóstico, recuperação e troca de responsável técnico.</p></div>
+  </div>
+  <div class="note" style="margin-top:16px"><b>Consequência honesta:</b> a Omie cobra R$ 895 e entrega software + suporte + atualização fiscal + disponibilidade. Ao sair dela, essa carga passa a ser nossa — e precisa de dono, tempo e verba, não só de código.</div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>22</span></div>
+  <aside class="notes"><p>Esse slide evita a armadilha clássica: economizar a mensalidade e descobrir depois que faltava suporte na madrugada.</p></aside>
+</section>
+
+<!-- 23 -->
+<section class="slide" data-title="Roteiro">
+  <div class="kicker">Plano</div>
+  <h2>Quatro fases até o cancelamento da Omie</h2>
+  <div class="rule"></div>
+  <div style="margin-top:2px">
+    <div class="phase"><div class="tag">FASE 1<br>4–6 sem</div><div class="body"><b>Produção segura</b><p>Backup real com restauração medida · banco de destino com as 181 migrações · servidor publicado com HTTPS · segredos por ambiente · monitoramento e alerta · upload real de arquivo. <i>Entrega: o sistema pode ser usado de verdade, com dado real.</i></p></div></div>
+    <div class="phase"><div class="tag">FASE 2<br>4–6 sem</div><div class="body"><b>Dinheiro e nota</b><p>Cobrança registrada (boleto/Pix/link) · baixa por webhook · importação de extrato e conciliação · provedor fiscal e NFS-e · fechamento aceito pelo contador. <i>Entrega: financeiro deixa de depender da Omie.</i></p></div></div>
+    <div class="phase"><div class="tag">FASE 3<br>3–4 sem</div><div class="body"><b>Paridade e corte</b><p>Plano de contas e exportação contábil · importação do histórico (clientes, contratos, títulos em aberto) · app dedicado · aceite por papel (Marcelo, Andreia, comercial, financeiro) · migração assistida e cancelamento. <i>Entrega: Omie cancelada sem perda de rotina.</i></p></div></div>
+    <div class="phase soon"><div class="tag">FASE 4<br>contínuo</div><div class="body"><b>Sustentação</b><p>Suporte com prazo, atualização fiscal, treinamento, revisão trimestral de acesso e de backup, evolução por fatia com teste.</p></div></div>
+  </div>
+  <p class="small" style="margin-top:10px">Prazos são estimativas de engenharia para uma frente de trabalho, condicionadas às decisões do bloco 2. A ordem não é negociável; as datas são.</p>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>23</span></div>
+  <aside class="notes"><p>Se ele perguntar “dá para inverter a ordem e emitir nota antes do backup?”: não. Emitir nota sem backup e sem produção é criar obrigação fiscal sem rastro — risco jurídico, não atraso técnico.</p></aside>
+</section>
+
+<!-- 24 -->
+<section class="slide" data-title="A conta">
+  <div class="kicker">Economia</div>
+  <h2>A conta que precisa fechar</h2>
+  <div class="rule"></div>
+  <div class="row">
+    <div class="col">
+      <table>
+        <thead><tr><th>Hoje</th><th style="text-align:right">Mensal</th><th style="text-align:right">Anual</th></tr></thead>
+        <tbody>
+          <tr><td>Omie (assinatura informada)</td><td style="text-align:right">R$ 895</td><td style="text-align:right">R$ 10.740</td></tr>
+          <tr><td>Infraestrutura do sistema próprio (teto previsto no plano)</td><td style="text-align:right">≈ R$ 200</td><td style="text-align:right">≈ R$ 2.400</td></tr>
+          <tr><td>Provedor fiscal, boleto/Pix, e-mail — por uso</td><td style="text-align:right">variável</td><td style="text-align:right">variável</td></tr>
+          <tr><td><b>Economia bruta potencial</b></td><td style="text-align:right"><b>≈ R$ 695</b></td><td style="text-align:right"><b>≈ R$ 8.340</b></td></tr>
+        </tbody>
+      </table>
+      <p class="small" style="margin-top:10px">Infraestrutura de R$ 200/mês é o teto declarado no próprio plano do sistema e depende de dimensionamento real. Provedor fiscal e boleto são cobrados por documento/transação — o valor exato só existe depois de escolher o fornecedor.</p>
+    </div>
+    <div class="col" style="flex:0 0 430px">
+      <div class="card" style="border-left:5px solid var(--par)">
+        <h3>O que a economia não cobre</h3>
+        <p>O custo de <b>concluir</b> (fases 1–3) e o custo de <b>sustentar</b> depois. O ganho não é só a mensalidade: é ter operação, escala, portal e patrimônio no mesmo lugar — coisa que nenhuma assinatura de ERP entrega.</p>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <h3>Ponto de equilíbrio</h3>
+        <p>A economia anual de ≈ R$ 8,3 mil cobre a infraestrutura com folga e começa a pagar o investimento a partir do primeiro ano completo sem Omie.</p>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>24</span></div>
+  <aside class="notes"><p>Não inventar preço de provedor fiscal nem de boleto: dizer que é variável e que a cotação faz parte da fase 2. Se ele insistir em número, propor levantar 3 cotações na primeira semana.</p></aside>
+</section>
+
+<!-- 25 -->
+<section class="slide" data-title="Riscos">
+  <div class="kicker">Transparência</div>
+  <h2>Riscos, limites e o que eu não recomendo fazer</h2>
+  <div class="rule"></div>
+  <div class="grid g2" style="gap:12px">
+    <div class="card"><h3>Risco 1 · dependência de uma pessoa</h3><p>Hoje o conhecimento técnico está concentrado. Mitigação: documentação de operação e revisão por segundo programador.</p></div>
+    <div class="card"><h3>Risco 2 · fiscal muda</h3><p>Regra municipal e layout de NFS-e mudam sem avisar. Mitigação: provedor especializado em vez de emissor próprio.</p></div>
+    <div class="card"><h3>Risco 3 · operação 24h</h3><p>Sistema de escala e ponto não pode cair no domingo. Mitigação: backup, monitoramento e suporte definidos antes do corte.</p></div>
+    <div class="card"><h3>Risco 4 · dado real no ambiente errado</h3><p>Até a fase 1, o sistema roda com dado fictício. Colocar dado real antes de backup testado é o maior risco do projeto.</p></div>
+  </div>
+  <div style="margin-top:14px">
+    <h3 style="margin-bottom:8px">O que não vamos fazer (e por quê)</h3>
+    <div>
+      <span class="pill">Recriar marketplace de apps</span>
+      <span class="pill">PDV / e-commerce / multivarejo</span>
+      <span class="pill">Motor próprio de folha e eSocial</span>
+      <span class="pill">Emissor fiscal caseiro</span>
+      <span class="pill">Central 24h de monitoramento</span>
+    </div>
+    <p class="small" style="margin-top:6px">Cada um desses é um produto inteiro, com risco legal próprio, e nenhum é necessário para cancelar a Omie.</p>
+  </div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>25</span></div>
+  <aside class="notes"><p>Esse slide protege o projeto de escopo infinito. Se ele pedir “e se a gente vendesse o sistema depois?”, responder: possível, mas exige multiempresa, suporte e fiscal — outro projeto, outra conversa.</p></aside>
+</section>
+
+<!-- 26 -->
+<section class="slide" data-title="Decisões">
+  <div class="kicker">Preciso de você</div>
+  <h2>Dez decisões que destravam o caminho</h2>
+  <div class="rule"></div>
+  <div class="columns" style="display:grid;grid-template-columns:1fr 1fr;gap:0 30px">
+    <ol style="margin:0;padding-left:22px">
+      <li>Quais módulos da Omie estão na sua fatura hoje?</li>
+      <li>Quem é o dono da infraestrutura, do backup e do suporte?</li>
+      <li>Você usa conta digital/boleto da Omie ou do banco?</li>
+      <li>Qual provedor fiscal e qual certificado A1?</li>
+      <li>R$ teto mensal de infraestrutura e de provedores?</li>
+    </ol>
+    <ol start="6" style="margin:0;padding-left:22px">
+      <li>O contador aceita exportação em qual formato?</li>
+      <li>Existe filial/segundo CNPJ no horizonte?</li>
+      <li>Licitação e frota entram no escopo real?</li>
+      <li>Quem homologa cada papel (você, Andreia, comercial, financeiro)?</li>
+      <li>Autorização por escrito para publicar em produção.</li>
+    </ol>
+  </div>
+  <div class="note" style="margin-top:18px">As cinco primeiras respostas definem a fase 2. As cinco últimas definem se o corte da Omie acontece neste semestre ou no próximo.</div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>26</span></div>
+  <aside class="notes"><p>Encerrar a reunião pedindo estas respostas por escrito — é o que transforma apresentação em plano.</p></aside>
+</section>
+
+<!-- 27 -->
+<section class="slide dark" data-title="Recomendação">
+  <div class="kicker">Recomendação</div>
+  <h2>Não cancele a Omie hoje.<br>Cancele no fim da fase 3 — com data marcada.</h2>
+  <div class="rule"></div>
+  <p class="lead" style="max-width:980px">O sistema próprio já é maior do que a Omie no que é o nosso negócio. O que falta é a última milha: produção segura, nota, cobrança e conversa com o contador. São quatro fases e uma sequência — não um recomeço.</p>
+  <div class="grid g3" style="margin-top:22px;gap:14px">
+    <div class="card"><h3>Próximos 30 dias</h3><p>Fechar as 10 decisões · escolher provedor fiscal e de cobrança · iniciar backup real e ambiente de produção.</p></div>
+    <div class="card"><h3>Próximos 90 dias</h3><p>Fase 1 concluída e homologada por papel: sistema em uso real, com dado real e restauração provada.</p></div>
+    <div class="card"><h3>Próximos 6 meses</h3><p>Fase 2 e 3: nota, cobrança, conciliação, contábil e migração assistida. Omie cancelada.</p></div>
+  </div>
+  <div style="margin-top:auto" class="quote">O ERP já é nosso. Falta ligar nos canos do mundo real.</div>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>27</span></div>
+  <aside class="notes"><p>Fechamento: repetir o compromisso de honestidade — nada será declarado pronto sem teste e sem aceite dele.</p></aside>
+</section>
+
+<!-- 28 -->
+<section class="slide" data-title="Encerramento">
+  <div style="display:flex;align-items:center;gap:26px;margin-bottom:26px">
+    <img class="logo" src="data:image/jpeg;base64,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" alt="Grupo SEG System">
+    <div>
+      <div class="kicker" style="margin:0">Grupo SEG System · Segurança Integrada</div>
+      <div class="small" style="color:var(--sec)">Proteção · Tecnologia · Confiança</div>
+    </div>
+  </div>
+  <h2 style="font-size:42px;max-width:900px">Obrigado. A próxima conversa é sobre as dez decisões.</h2>
+  <div class="rule" style="margin:16px 0 20px"></div>
+  <div class="grid g2" style="max-width:980px;gap:14px">
+    <div class="card"><h3>Documento de apoio</h3><p><b>docs/LACUNAS-ERP-VS-OMIE-2026-10-30.md</b><br>Lista completa item a item, com família, status, critério de aceite, prioridade e o que trava cada item.</p></div>
+    <div class="card"><h3>Estado do sistema</h3><p><b>docs/STATUS-VIGENTE.md</b><br>Fonte única de estado: números do ledger, o que existe, o que não existe e por que a produção segue NO-GO.</p></div>
+  </div>
+  <p class="small" style="margin-top:18px;max-width:980px">Esta apresentação descreve o estado verificado no código em 30/10/2026. Ela não declara homologação, aceite do proprietário nem liberação de produção.</p>
+  <div class="foot"><span>SEG System · apresentação ao proprietário</span><span>28</span></div>
+  <aside class="notes"><p>Deixar o arquivo de lacunas com ele: é o documento que sustenta a conversa depois, sozinho.</p></aside>
+</section>
+
+</div></div>
+
+<div id="hud">
+  <button id="prev">← anterior</button>
+  <span id="counter">1 / 28</span>
+  <button id="next">próxima →</button>
+  <button id="notesBtn">notas (N)</button>
+  <button id="printBtn">PDF (P)</button>
+</div>
+<div id="notes"><h4>Notas do apresentador</h4><div id="notesBody"></div></div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var i = 0, total = slides.length;
+  var stage = document.getElementById('stage');
+  var counter = document.getElementById('counter');
+  var barra = document.getElementById('barra');
+  var notesBox = document.getElementById('notes');
+  var notesBody = document.getElementById('notesBody');
+
+  function fit(){
+    var s = Math.min(window.innerWidth / 1280, (window.innerHeight - 46) / 720);
+    stage.style.transform = 'scale(' + s + ')';
+  }
+  function render(){
+    slides.forEach(function(s, idx){ s.classList.toggle('active', idx === i); });
+    counter.textContent = (i + 1) + ' / ' + total;
+    barra.style.width = ((i + 1) / total * 100) + '%';
+    var notes = slides[i].querySelector('.notes');
+    notesBody.innerHTML = notes ? notes.innerHTML : '<p>Sem notas para este slide.</p>';
+  }
+  function go(n){ i = Math.max(0, Math.min(total - 1, n)); render(); }
+
+  document.getElementById('prev').onclick = function(){ go(i - 1); };
+  document.getElementById('next').onclick = function(){ go(i + 1); };
+  document.getElementById('notesBtn').onclick = function(){ notesBox.classList.toggle('show'); };
+  document.getElementById('printBtn').onclick = function(){ window.print(); };
+
+  document.addEventListener('keydown', function(e){
+    var k = e.key;
+    if (k === 'ArrowRight' || k === 'PageDown' || k === ' ' || k === 'Enter'){ e.preventDefault(); go(i + 1); }
+    else if (k === 'ArrowLeft' || k === 'PageUp' || k === 'Backspace'){ e.preventDefault(); go(i - 1); }
+    else if (k === 'Home'){ go(0); }
+    else if (k === 'End'){ go(total - 1); }
+    else if (k === 'n' || k === 'N'){ notesBox.classList.toggle('show'); }
+    else if (k === 'f' || k === 'F'){
+      if (document.fullscreenElement) document.exitFullscreen();
+      else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+    }
+    else if (k === 'p' || k === 'P'){ window.print(); }
+  });
+
+  window.addEventListener('resize', fit);
+  fit(); render();
+})();
+</script>
+</body>
+</html>
