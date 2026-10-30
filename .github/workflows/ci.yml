@@ -42,6 +42,11 @@ jobs:
       # nunca skip: um gate de navegador que pula não prova nada.
       - name: PU4 hermetic browser gate (skip is a failure here)
         run: npm run test:ux-pro-09e-pu4:browser
+      # E7: a demo PGlite aplica o schema real (migrações 001–181). O gate sobe
+      # PGlite real em diretório temporário e prova schema, idempotência, falha
+      # explícita em diretório legado e /api/health/ready saudável.
+      - name: E7 PGlite demo schema (real migrations, idempotent, legacy refused)
+        run: npm run test:pglite-schema
       - name: UX-PRO-00 inventory precision (isolated fixtures, no bypass)
         run: node --test tests/ux-pro-00-precision.test.mjs
       - name: Administrative navigation catalogue and role-filtered search

@@ -1,3 +1,17 @@
+-- HISTÓRICO — NÃO É APLICADO PELA DEMO DESDE O E7 (30/10/2026).
+--
+-- Este arquivo criava um schema mínimo (27 tabelas) para a demo 1-clique e foi a
+-- causa do defeito E7: quem abria o sistema pela primeira vez via um banco com
+-- 27 tabelas contra 581 do PostgreSQL. A demo passou a aplicar as MESMAS
+-- migrações 001–181 em `db/migrations` (schema real) e o conteúdo sintético está
+-- em `db/pglite-demo-seed.sql`. Nada em `src/` lê este arquivo.
+--
+-- Preservado por dois motivos: (1) os pacotes ZIP históricos de `downloads/`
+-- ainda o carregam; (2) é a referência do schema que diretórios de demo antigos
+-- têm — e esses diretórios são recusados com mensagem explícita
+-- (`pglite_legacy_beta_schema`) em vez de continuarem "meio funcionando".
+-- Não usar como fonte de schema em código novo.
+
 -- BETA PGlite init — schema mínimo para demonstração 1-clique sem Docker
 -- Cria apenas tabelas essenciais: site_visual, public_leads, auth, RAG 3 separados, bot modes, FAQ assistida
 -- Sem constraints complexas que quebram PGlite, mas preserva lógica RAG + bot modes
