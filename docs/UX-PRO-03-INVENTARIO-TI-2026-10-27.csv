@@ -1,6 +1,6 @@
 "componente","linhas","classificacao","montado_por","aba","apis","apis_sem_dispatch","teste_focal","papel","decisao"
-"AdmAdvancedClient.tsx","222","orfao","","","7","0","","nao_montado","orfao_nao_promovido"
-"AdmClient.tsx","211","orfao","","","6","0","","nao_montado","orfao_nao_promovido"
+"AdmAdvancedClient.tsx","222","orfao","","","7","0","ux-pro-03-ti-adm-painel-ui.test.mjs|ux-pro-03-ti-reaudit.test.mjs","nao_montado","orfao_nao_promovido"
+"AdmClient.tsx","584","console","TiConsole","adm","7","0","ux-pro-03-ti-adm-painel-ui.test.mjs","ti|admin","com_prova"
 "AiRagClient.tsx","279","console","TiConsole","bases","5","0","ux-pro-03-ti-ai-rag-ui.test.mjs","ti|admin","com_prova"
 "AstAdvancedClient.tsx","168","orfao","","","8","0","","nao_montado","orfao_nao_promovido"
 "AstClient.tsx","183","orfao","","","9","0","","nao_montado","orfao_nao_promovido"

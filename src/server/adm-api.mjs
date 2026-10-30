@@ -24,6 +24,24 @@ export function createAdmApi({ pool, auditLog, sameOrigin, requireSession, requi
     let data=''; req.on('data', c=> data+=c); req.on('end', ()=> { try { resolve(data?JSON.parse(data):{}); } catch(e){ reject(e); } });
   });
 
+  // ADM-01..06: as listas abaixo existem porque o enum e as CHECK constraints do
+  // PostgreSQL devolviam 500 e o corpo vazava a mensagem SQL para o navegador
+  // (`invalid input value for enum ...`, `violates check constraint ...`).
+  // Validar antes de escrever mantém exatamente as mesmas escritas e troca a
+  // falha interna por uma recusa explícita, traduzida pela tela.
+  const TASK_STATUSES = new Set(['pendente','em_andamento','concluida','cancelada']);
+  const TASK_PRIORITIES = new Set(['baixa','media','alta','critica']);
+  const SOURCE_MODULES = new Set(['crm','con','hr','ops','fin','cli','plt','adm','outro']);
+  const APPROVAL_TYPES = new Set(['desconto','compra','despesa','excecao','outro']);
+  const APPROVAL_STATUSES = new Set(['pendente','aprovado','rejeitado','cancelado']);
+  const RISK_LEVELS = new Set(['baixo','medio','alto','critico']);
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isIsoDate = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
+  const isCount = (value) => Number.isSafeInteger(value) && value >= 0;
+  const cleanText = (value) => typeof value === 'string' ? value.trim() : '';
+  const textInRange = (value, min, max) => typeof value === 'string' && value.length >= min && value.length <= max;
+  const send400 = (res, error) => { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error})); };
+
   // ADM-01 meu dia
   const handleMyDay = async (req, res) => {
     const sess = await checkAuth(req, res); if (!sess) return;
@@ -63,6 +81,10 @@ export function createAdmApi({ pool, auditLog, sameOrigin, requireSession, requi
       if (!description || description.length<10 || description.length>1000) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'description_10_1000'})); return; }
       if (!responsible_name || responsible_name.length<2 || responsible_name.length>200) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'responsible_name_2_200'})); return; }
       if (!action_type || action_type.length<3 || action_type.length>100) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'action_type_3_100'})); return; }
+      if (priority !== undefined && priority !== null && !TASK_PRIORITIES.has(priority)) return send400(res, 'invalid_priority');
+      if (!SOURCE_MODULES.has(source_module)) return send400(res, 'invalid_source_module');
+      if (body.due_date !== undefined && body.due_date !== null && body.due_date !== '' && !isIsoDate(body.due_date)) return send400(res, 'invalid_due_date');
+      if (body.status !== undefined && body.status !== null && !TASK_STATUSES.has(body.status)) return send400(res, 'invalid_status');
       try {
         const { rows } = await pool.query(
           `INSERT INTO adm_my_day_items (title, description, priority, responsible_name, responsible_identity, action_type, action_ref_id, action_url, due_date, source_module, is_real_pending, created_by_identity)
@@ -80,10 +102,17 @@ export function createAdmApi({ pool, auditLog, sameOrigin, requireSession, requi
       let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
       const id = body.id;
       if (!id) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'id_required'})); return; }
+      // Antes da validação, um valor fora do enum virava 500 com a mensagem SQL
+      // no corpo. A escrita continua exatamente a mesma para valores aceitos.
+      if (body.status !== undefined && body.status !== null && !TASK_STATUSES.has(body.status)) return send400(res, 'invalid_status');
+      if (body.priority !== undefined && body.priority !== null && !TASK_PRIORITIES.has(body.priority)) return send400(res, 'invalid_priority');
+      if (body.responsible_name !== undefined && body.responsible_name !== null && !textInRange(cleanText(body.responsible_name), 2, 200)) return send400(res, 'responsible_name_2_200');
+      if (body.description !== undefined && body.description !== null && !textInRange(cleanText(body.description), 10, 1000)) return send400(res, 'description_10_1000');
+      if (body.due_date !== undefined && body.due_date !== null && body.due_date !== '' && !isIsoDate(body.due_date)) return send400(res, 'invalid_due_date');
       try {
         const { rows } = await pool.query(
-          `UPDATE adm_my_day_items SET status=COALESCE($1,status), priority=COALESCE($2,priority), responsible_name=COALESCE($3,responsible_name), description=COALESCE($4,description), due_date=COALESCE($5,due_date), updated_at=NOW() WHERE id=$6 RETURNING *`,
-          [body.status||null, body.priority||null, body.responsible_name||null, body.description||null, body.due_date||null, id]
+          `UPDATE adm_my_day_items SET status=COALESCE($1::adm_task_status,status), priority=COALESCE($2::adm_priority,priority), responsible_name=COALESCE($3,responsible_name), description=COALESCE($4,description), due_date=COALESCE($5::date,due_date), updated_at=NOW() WHERE id=$6 RETURNING *`,
+          [body.status||null, body.priority||null, cleanText(body.responsible_name)||null, cleanText(body.description)||null, body.due_date||null, id]
         );
         if (!rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
         try { await auditLog({ action:'adm_my_day_update', actor: sess.identityId, target: id, meta:{ status: body.status, priority: body.priority } }); } catch {}
@@ -260,8 +289,13 @@ export function createAdmApi({ pool, auditLog, sameOrigin, requireSession, requi
       const is_justified = body.is_justified === true;
       const facts_json = body.facts_json || {};
       if (!renewal_date) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'renewal_date_required'})); return; }
+      if (!isIsoDate(renewal_date)) return send400(res, 'invalid_renewal_date');
       if (!justification || justification.length<10 || justification.length>1000) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'justification_10_1000_required_risco_perda_justificado'})); return; }
+      if (!RISK_LEVELS.has(risk_level)) return send400(res, 'invalid_risk_level');
       if (risk_score <0 || risk_score>100) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'risk_score_0_100'})); return; }
+      if (!isCount(reincidence_count)) return send400(res, 'invalid_reincidence_count');
+      if (contract_id !== null && contract_id !== undefined && !UUID_RE.test(contract_id)) return send400(res, 'invalid_contract_id');
+      if (client_account_id !== null && client_account_id !== undefined && !UUID_RE.test(client_account_id)) return send400(res, 'invalid_client_account_id');
       if (is_justified && justification.length<10) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'justification_required_when_justified'})); return; }
       try {
         const { rows } = await pool.query(
@@ -272,7 +306,7 @@ export function createAdmApi({ pool, auditLog, sameOrigin, requireSession, requi
         try { await auditLog({ action:'adm_renewal_risk_create', actor: sess.identityId, target: rows[0].id, meta:{ contract_id, renewal_date, risk_level, risk_score, is_justified, facts_json } }); } catch {}
         res.writeHead(201, {'Content-Type':'application/json'});
         res.end(JSON.stringify({ risk: rows[0], note:'contratos_proximos_renovar_reclamacoes_reincidentes_risco_perda_justificado_facts_json' }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
+      } catch(e){ if (e.code==='23503') { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_reference'})); return; } res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
       return;
     }
     if (req.method === 'PATCH') {
@@ -280,16 +314,23 @@ export function createAdmApi({ pool, auditLog, sameOrigin, requireSession, requi
       let body; try { body = await readJson(req); } catch { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_json'})); return; }
       const id = body.id;
       if (!id) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'id_required'})); return; }
+      // Idem ao meu dia: sem validação o PostgreSQL devolvia 500 com a mensagem
+      // SQL no corpo (`invalid input value for enum adm_renewal_risk_level`,
+      // `violates check constraint adm_renewal_risks_risk_score_check`).
+      if (body.risk_level !== undefined && body.risk_level !== null && !RISK_LEVELS.has(body.risk_level)) return send400(res, 'invalid_risk_level');
+      if (body.risk_score !== undefined && body.risk_score !== null && !(typeof body.risk_score === 'number' && body.risk_score >= 0 && body.risk_score <= 100)) return send400(res, 'risk_score_0_100');
+      if (body.justification !== undefined && body.justification !== null && !textInRange(cleanText(body.justification), 10, 1000)) return send400(res, 'justification_10_1000_required_risco_perda_justificado');
+      if (body.reincidence_count !== undefined && body.reincidence_count !== null && !isCount(body.reincidence_count)) return send400(res, 'invalid_reincidence_count');
       try {
         const { rows } = await pool.query(
-          `UPDATE adm_renewal_risks SET risk_level=COALESCE($1,risk_level), risk_score=COALESCE($2,risk_score), justification=COALESCE($3,justification), reincidence_count=COALESCE($4,reincidence_count), is_justified=COALESCE($5,is_justified), facts_json=COALESCE($6,facts_json), updated_at=NOW() WHERE id=$7 RETURNING *`,
-          [body.risk_level||null, body.risk_score??null, body.justification||null, body.reincidence_count??null, body.is_justified!=null?body.is_justified:null, body.facts_json?JSON.stringify(body.facts_json):null, id]
+          `UPDATE adm_renewal_risks SET risk_level=COALESCE($1::adm_renewal_risk_level,risk_level), risk_score=COALESCE($2,risk_score), justification=COALESCE($3,justification), reincidence_count=COALESCE($4,reincidence_count), is_justified=COALESCE($5,is_justified), facts_json=COALESCE($6,facts_json), updated_at=NOW() WHERE id=$7 RETURNING *`,
+          [body.risk_level||null, body.risk_score??null, cleanText(body.justification)||null, body.reincidence_count??null, body.is_justified!=null?body.is_justified:null, body.facts_json?JSON.stringify(body.facts_json):null, id]
         );
         if (!rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
         try { await auditLog({ action:'adm_renewal_risk_update', actor: sess.identityId, target: id, meta:{ risk_level: body.risk_level, risk_score: body.risk_score, is_justified: body.is_justified } }); } catch {}
         res.writeHead(200, {'Content-Type':'application/json'});
         res.end(JSON.stringify({ risk: rows[0] }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
+      } catch(e){ if (e.code==='23503') { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_reference'})); return; } res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
       return;
     }
     res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
@@ -328,6 +369,16 @@ export function createAdmApi({ pool, auditLog, sameOrigin, requireSession, requi
       if (!requester_name || requester_name.length<2 || requester_name.length>200) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'requester_name_2_200'})); return; }
       if (reason && (reason.length<10 || reason.length>1000)) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'reason_10_1000'})); return; }
       if (scope && (scope.length<3 || scope.length>200)) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'scope_3_200'})); return; }
+      if (!APPROVAL_TYPES.has(approval_type)) return send400(res, 'invalid_approval_type');
+      if (amount_cents !== null && amount_cents !== undefined && !(Number.isSafeInteger(amount_cents) && amount_cents >= 0)) return send400(res, 'amount_cents_gte_0');
+      if (threshold_cents !== null && threshold_cents !== undefined && !(Number.isSafeInteger(threshold_cents) && threshold_cents >= 0)) return send400(res, 'threshold_cents_gte_0');
+      // A criação não recebe aprovador: a constraint `adm_approval_scope_check`
+      // exige `approver_identity` quando o valor passa da alçada. Sem esta
+      // recusa, o INSERT devolvia 500 com a mensagem SQL no corpo. O aprovador é
+      // registrado na decisão (PATCH), que já aplica a mesma regra.
+      if (amount_cents && threshold_cents && amount_cents > threshold_cents) return send400(res, 'approver_required_above_threshold_alcada');
+      if (reference_id !== null && reference_id !== undefined && !UUID_RE.test(reference_id)) return send400(res, 'invalid_reference_id');
+      if (reference_type !== null && reference_type !== undefined && !textInRange(String(reference_type).trim(), 3, 100)) return send400(res, 'invalid_reference_type');
       const protocol = generateProtocol('APR-ADM');
       try {
         const { rows } = await pool.query(
@@ -358,6 +409,11 @@ export function createAdmApi({ pool, auditLog, sameOrigin, requireSession, requi
       if (!id) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'id_required'})); return; }
       if (!reason || reason.length<10 || reason.length>1000) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'reason_10_1000_required'})); return; }
       if (!status) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'status_required'})); return; }
+      // Sem esta validação o valor ia direto para o enum e o PostgreSQL
+      // devolvia 500 (`invalid input value for enum adm_approval_status`).
+      if (!APPROVAL_STATUSES.has(status)) return send400(res, 'invalid_status');
+      if (body.approver_name !== undefined && body.approver_name !== null && !textInRange(cleanText(body.approver_name), 2, 200)) return send400(res, 'approver_name_2_200');
+      if (body.approver_identity !== undefined && body.approver_identity !== null && !UUID_RE.test(body.approver_identity)) return send400(res, 'invalid_approver_identity');
       try {
         const existing = await pool.query(`SELECT * FROM adm_approvals WHERE id=$1`, [id]);
         if (!existing.rows.length) { res.writeHead(404, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
@@ -365,19 +421,22 @@ export function createAdmApi({ pool, auditLog, sameOrigin, requireSession, requi
         if (prev.requester_identity && body.approver_identity && prev.requester_identity===body.approver_identity) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'requester_approver_must_differ_segregacao'})); return; }
         if (prev.amount_cents && prev.threshold_cents && prev.amount_cents > prev.threshold_cents && status==='aprovado' && !body.approver_identity && !prev.approver_identity) { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'approver_required_above_threshold_alcada'})); return; }
 
+        // `$1` precisa do molde explícito do enum: sem ele o PostgreSQL não
+        // deduzia o tipo do parâmetro (usado em `status=$1` e no `CASE WHEN`)
+        // e toda decisão de aprovação devolvia 500 — nenhuma transição saía.
         const { rows } = await pool.query(
-          `UPDATE adm_approvals SET status=$1, approver_name=COALESCE($2,approver_name), approver_identity=COALESCE($3,approver_identity), approved_at=CASE WHEN $1='aprovado' THEN NOW() ELSE approved_at END, approved_by_identity=CASE WHEN $1='aprovado' THEN $4 ELSE approved_by_identity END, rejection_reason=CASE WHEN $1='rejeitado' THEN $5 ELSE rejection_reason END, reason=COALESCE($6,reason), updated_at=NOW() WHERE id=$7 RETURNING *`,
-          [status, body.approver_name||null, body.approver_identity||null, sess.identityId||null, status==='rejeitado'?reason:null, reason, id]
+          `UPDATE adm_approvals SET status=$1::adm_approval_status, approver_name=COALESCE($2,approver_name), approver_identity=COALESCE($3::uuid,approver_identity), approved_at=CASE WHEN $1::adm_approval_status='aprovado' THEN NOW() ELSE approved_at END, approved_by_identity=CASE WHEN $1::adm_approval_status='aprovado' THEN $4::uuid ELSE approved_by_identity END, rejection_reason=CASE WHEN $1::adm_approval_status='rejeitado' THEN $5::text ELSE rejection_reason END, reason=COALESCE($6::text,reason), updated_at=NOW() WHERE id=$7 RETURNING *`,
+          [status, cleanText(body.approver_name)||null, body.approver_identity||null, sess.identityId||null, status==='rejeitado'?reason:null, reason, id]
         );
         await pool.query(
           `INSERT INTO adm_approval_history (approval_id, previous_status, next_status, previous_amount, next_amount, changed_by_identity, reason)
-           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+           VALUES ($1,$2,$3::adm_approval_status,$4,$5,$6,$7)`,
           [id, prev.status, status, prev.amount_cents, rows[0].amount_cents, sess.identityId||null, reason]
         );
         try { await auditLog({ action: status==='aprovado'?'adm_approval_approve':'adm_approval_status', actor: sess.identityId, target: id, meta:{ status, reason, approval_type: prev.approval_type } }); } catch {}
         res.writeHead(200, {'Content-Type':'application/json'});
         res.end(JSON.stringify({ approval: rows[0] }));
-      } catch(e){ res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
+      } catch(e){ if (e.code==='23503') { res.writeHead(400, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_approver_or_reference'})); return; } res.writeHead(500, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'internal', details:e.message})); }
       return;
     }
     res.writeHead(405, {'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));

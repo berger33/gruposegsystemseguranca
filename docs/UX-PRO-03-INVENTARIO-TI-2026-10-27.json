@@ -3,25 +3,25 @@
   "resumo": "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
   "data": "2026-10-27",
   "criterio": "promover por area somente com prova (decisao de 02/10); prova estatica nao substitui gate de navegador nem aceite humano",
-  "tiConsoleSha256": "937257e4e7ed9b5f60e396af8778a26c54bd38a750bce27e4c1f3a7fa3053b4c",
+  "tiConsoleSha256": "985ca1ee41963eed8e87e5ef76a65aab930352910c027d49b5b623e2532ab20b",
   "pageSha256": "360bf2564469679a4cc7c0b6b9274f05557188f701a3f3b89649ce4d70d56313",
   "total": 84,
-  "abas": 23,
-  "importsDinamicos": 23,
+  "abas": 24,
+  "importsDinamicos": 24,
   "console": {
-    "total": 23,
-    "comProva": 23,
+    "total": 24,
+    "comProva": 24,
     "lacunas": []
   },
   "workspace": {
     "total": 25
   },
   "orfos": {
-    "total": 36,
+    "total": 35,
     "promovidosSemSairDaClassificacao": 0
   },
   "promocoesComProva": {
-    "total": 10,
+    "total": 11,
     "todasMontadas": true,
     "detalhes": [
       {
@@ -83,11 +83,17 @@
         "aba": "reclamacoes_colaboradores",
         "familia": "reclamações de colaboradores em canal administrativo restrito e compartilhamento mínimo com RH",
         "relatorio": "docs/UX-PRO-03-PROMOCAO-RECLAMACOES-COLABORADORES-2026-10-29.md"
+      },
+      {
+        "componente": "AdmClient.tsx",
+        "aba": "adm",
+        "familia": "ADM-01..06 pauta do dia, retratos comercial/operacional/financeiro, risco de renovação e aprovação unificada com alçada (ADM-07..12 descartado: /api/adm/panel/* já escreve as mesmas tabelas em /admin/marcelo)",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-PAINEL-ADM-2026-10-30.md"
       }
     ]
   },
   "apis": {
-    "literais": 402,
+    "literais": 403,
     "semDispatch": 0
   }
 }
