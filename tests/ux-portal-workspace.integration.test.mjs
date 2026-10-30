@@ -8076,3 +8076,222 @@ test('browser UX-PRO-03 RH: reclamações compartilhadas, projeção mínima, at
     await browser.close();
   }
 });
+
+// ---------------------------------------------------------------------------
+// UX-PRO-03 — ADM-01..06 no console de TI: pauta do dia, retratos comercial,
+// operacional e financeiro, risco de renovação e aprovação unificada.
+// Dados e identidades sintéticos; o banco inteiro é descartado pelo runner.
+// A tela é mais estreita que a API: `marcelo` e `financeiro` recebem 200 no
+// servidor mas não entram em /admin/ti; `comercial` é negado nos dois.
+// ---------------------------------------------------------------------------
+test('browser UX-PRO-03: ADM-01..06 pauta, retratos e aprovações (papéis, escritas, decisão, falhas e quatro larguras)', { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: 'ti' });
+  const comercial = await provisionStaff(pool, { role: 'comercial' });
+  const marcelo = await provisionStaff(pool, { role: 'marcelo' });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const comercialCookie = await loginStaffHttp(comercial.email);
+  const marceloCookie = await loginStaffHttp(marcelo.email);
+  const suffix = randomUUID().slice(0, 8);
+  const myDay = '/api/adm/my-day';
+  const approvals = '/api/adm/approvals';
+  const risks = '/api/adm/renewal-risks';
+  const financial = '/api/adm/financial-snapshots';
+
+  // --- servidor: papéis nomeados, e as escritas que a tela expõe -----------
+  assert.equal((await api(myDay, { cookie: tiCookie })).status, 200);
+  const comercialRead = await api(myDay, { cookie: comercialCookie });
+  assert.equal(comercialRead.status, 403);
+  assert.equal(comercialRead.body.error, 'forbidden');
+  const comercialWrite = await api(myDay, { method: 'POST', cookie: comercialCookie,
+    body: { title: 'Pauta sintética negada', description: 'Descrição sintética suficientemente longa.', responsible_name: 'QA', action_type: 'revisao' } });
+  assert.equal(comercialWrite.status, 403);
+  // A UI é mais estreita que a API: marcelo/financeiro lêem, mas não veem a aba.
+  assert.equal((await api(myDay, { cookie: marceloCookie })).status, 200);
+  assert.equal((await api(myDay, { method: 'POST', cookie: undefined })).status, 401);
+
+  const taskTitle = `QA-ADM01-${suffix}`;
+  const createdTask = await api(myDay, { method: 'POST', cookie: tiCookie,
+    body: { title: taskTitle, description: `Descrição sintética da pauta ${suffix}.`, priority: 'alta', responsible_name: 'QA sintético', action_type: 'revisao', source_module: 'adm' } });
+  assert.equal(createdTask.status, 201);
+  const taskId = createdTask.body.item.id;
+  // Antes desta fatia esta transição devolvia 500 com a mensagem SQL no corpo.
+  const transition = await api(myDay, { method: 'PATCH', cookie: tiCookie, body: { id: taskId, status: 'concluida' } });
+  assert.equal(transition.status, 200);
+  assert.equal(transition.body.item.status, 'concluida');
+  const badTransition = await api(myDay, { method: 'PATCH', cookie: tiCookie, body: { id: taskId, status: 'concluido' } });
+  assert.equal(badTransition.status, 400);
+  assert.equal(badTransition.body.error, 'invalid_status');
+  assert.ok(!('details' in badTransition.body), 'a resposta não pode vazar a mensagem SQL');
+
+  // Acima da alçada a criação é recusada; dentro dela, sai com protocolo.
+  const above = await api(approvals, { method: 'POST', cookie: tiCookie,
+    body: { approval_type: 'despesa', amount_cents: 90000, threshold_cents: 10000, requester_name: 'Solicitante sintético', scope: 'Compras', reason: `Motivo sintético ${suffix}.` } });
+  assert.equal(above.status, 400);
+  assert.equal(above.body.error, 'approver_required_above_threshold_alcada');
+  const createdApproval = await api(approvals, { method: 'POST', cookie: tiCookie,
+    body: { approval_type: 'desconto', amount_cents: 5000, threshold_cents: 20000, requester_name: 'Solicitante sintético', scope: 'Comercial', reason: `Motivo sintético ${suffix}.` } });
+  assert.equal(createdApproval.status, 201);
+  const approvalId = createdApproval.body.approval.id;
+  assert.match(createdApproval.body.approval.protocol, /^APR-ADM-\d{8}-[A-Z0-9]{4}$/);
+
+  // Risco de renovação e retrato financeiro.
+  const createdRisk = await api(risks, { method: 'POST', cookie: tiCookie,
+    body: { renewal_date: '2026-12-01', risk_level: 'alto', risk_score: 70, justification: `Justificativa sintética de risco ${suffix}.`, reincidence_count: 2, is_justified: true, facts_json: { origem: 'gate' } } });
+  assert.equal(createdRisk.status, 201);
+  const riskId = createdRisk.body.risk.id;
+  const reviewed = await api(risks, { method: 'PATCH', cookie: tiCookie, body: { id: riskId, risk_level: 'critico' } });
+  assert.equal(reviewed.status, 200);
+  assert.equal(reviewed.body.risk.risk_level, 'critico');
+  const badRisk = await api(risks, { method: 'PATCH', cookie: tiCookie, body: { id: riskId, risk_level: 'enorme' } });
+  assert.equal(badRisk.status, 400);
+  assert.equal(badRisk.body.error, 'invalid_risk_level');
+  const snapshot = await api(financial, { method: 'POST', cookie: tiCookie,
+    body: { competence_date: '2026-09-01', source: 'geral', total_receivables_cents: 100000, total_payables_cents: 40000, overdue_cents: 5000, upcoming_cents: 8000, margin_by_contract: {} } });
+  assert.equal(snapshot.status, 201);
+  const duplicated = await api(financial, { method: 'POST', cookie: tiCookie, body: { competence_date: '2026-09-01', source: 'geral' } });
+  assert.equal(duplicated.status, 409);
+  assert.equal(duplicated.body.error, 'duplicate_competence_source');
+
+  // --- navegador: papéis que não veem a aba --------------------------------
+  for (const cookie of [comercialCookie, marceloCookie]) {
+    const browser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(browser, '/admin/ti', cookie);
+      await page.locator('[data-admin-gate="forbidden"]').waitFor();
+      assert.equal(await page.getByRole('button', { name: 'Pauta, retratos e aprovações', exact: true }).count(), 0);
+      await context.close();
+    } finally { await browser.close(); }
+  }
+
+  // --- navegador: quatro larguras com os seis painéis e os formulários ------
+  for (const width of [320, 390, 768, 1440]) {
+    const browser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(browser, '/admin/ti', tiCookie, { width, height: 900 });
+      const tab = page.getByRole('button', { name: 'Pauta, retratos e aprovações', exact: true });
+      await tab.waitFor(); await tab.focus(); await page.keyboard.press('Enter');
+      const area = page.locator('section[aria-labelledby="adm-title"]');
+      await area.getByRole('heading', { name: 'Pauta, retratos e aprovações' }).waitFor();
+      for (const title of ['ADM-01 Pauta do dia', 'ADM-02 Retrato comercial', 'ADM-05 Risco de renovação', 'ADM-06 Aprovação unificada']) {
+        await area.getByRole('heading', { name: title }).waitFor();
+      }
+      for (const summary of ['Nova pendência da pauta (ADM-01)', 'Nova aprovação unificada (ADM-06)']) {
+        await area.locator('summary').filter({ hasText: summary }).click();
+      }
+      const missingLabels = await area.locator('input,select,textarea').evaluateAll(controls => controls.filter(control => !control.labels || control.labels.length === 0).map(control => control.outerHTML));
+      assert.deepEqual(missingLabels, [], `todos os campos precisam de rótulo em ${width}px`);
+      const body = await area.innerText();
+      assert.match(body, /Fonte:/); assert.match(body, /Data-base:/);
+      assert.match(body, /não envia e-mail/i); assert.match(body, /NO-GO/);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.ok(overflow <= 1, `o painel ADM transborda ${overflow}px em ${width}px`);
+      await context.close();
+    } finally { await browser.close(); }
+  }
+
+  // --- navegador: escritas reais pela interface -----------------------------
+  const browser = await launchBrowser();
+  let context;
+  try {
+    let page;
+    ({ context, page } = await openPage(browser, '/admin/ti', tiCookie, { width: 1440, height: 900 }));
+    await page.getByRole('button', { name: 'Pauta, retratos e aprovações', exact: true }).click();
+    const area = page.locator('section[aria-labelledby="adm-title"]');
+    const pautaPanel = page.locator('section[aria-labelledby="adm-myDay-title"]');
+    const riskPanel = page.locator('section[aria-labelledby="adm-risks-title"]');
+    const approvalPanel = page.locator('section[aria-labelledby="adm-approvals-title"]');
+    const historyPanel = page.locator('section[aria-labelledby="adm-history-title"]');
+    const responseFor = (pathname, method) => page.waitForResponse(response => new URL(response.url()).pathname === pathname && response.request().method() === method);
+
+    await pautaPanel.getByText(taskTitle, { exact: false }).waitFor();
+
+    // 1) POST inválido mede status/corpo e mostra a tradução, sem código cru.
+    await area.locator('summary').filter({ hasText: 'Nova pendência da pauta (ADM-01)' }).click();
+    await area.getByLabel('Título da pendência').fill('x');
+    await area.getByLabel('Descrição da pendência').fill('curta');
+    let pending = responseFor(myDay, 'POST');
+    await area.getByRole('button', { name: 'Registrar pendência da pauta' }).click();
+    let httpResponse = await pending;
+    assert.equal(httpResponse.status(), 400);
+    assert.equal((await httpResponse.json()).error, 'title_5_200');
+    await area.getByRole('alert').getByText('O título precisa ter entre 5 e 200 caracteres.').waitFor();
+    assert.doesNotMatch(await area.innerText(), /title_5_200/);
+
+    // 2) POST real pela tela, com releitura da lista pelo próprio componente.
+    const uiTitle = `QA-ADM01-UI-${suffix}`;
+    await area.getByLabel('Título da pendência').fill(uiTitle);
+    await area.getByLabel('Descrição da pendência').fill(`Descrição sintética criada pela interface ${suffix}.`);
+    await area.getByLabel('Pessoa responsável').fill('QA sintético');
+    await area.getByLabel('Tipo de ação').fill('revisao');
+    pending = responseFor(myDay, 'POST');
+    await area.getByRole('button', { name: 'Registrar pendência da pauta' }).click();
+    httpResponse = await pending;
+    assert.equal(httpResponse.status(), 201);
+    await area.getByRole('status').getByText('Pendência da pauta registrada.').waitFor();
+    const uiRow = pautaPanel.locator('li').filter({ hasText: uiTitle });
+    await uiRow.waitFor();
+
+    // 3) A transição que antes devolvia 500 agora sai pela interface.
+    pending = responseFor(myDay, 'PATCH');
+    await uiRow.getByRole('button', { name: 'Em andamento' }).click();
+    httpResponse = await pending;
+    assert.equal(httpResponse.status(), 200);
+    assert.equal((await httpResponse.json()).item.status, 'em_andamento');
+    await uiRow.getByText(/Situação: em_andamento/).waitFor();
+
+    // 4) Revisão do risco pela lista.
+    const riskRow = riskPanel.locator('li').filter({ hasText: '2026' });
+    pending = responseFor(risks, 'PATCH');
+    await riskRow.first().getByRole('button', { name: 'Marcar baixo' }).click();
+    httpResponse = await pending;
+    assert.equal(httpResponse.status(), 200);
+    assert.equal((await httpResponse.json()).risk.risk_level, 'baixo');
+
+    // 5) Decisão da aprovação pela tela: 200, histórico e corpo conferidos.
+    const approvalRow = approvalPanel.locator('li').filter({ hasText: createdApproval.body.approval.protocol });
+    await approvalRow.getByRole('button', { name: 'Ver histórico' }).click();
+    await historyPanel.getByText('início → pendente', { exact: false }).waitFor();
+    await area.getByLabel('Situação de destino').selectOption('rejeitado');
+    await area.getByLabel('Motivo da decisão').fill(`Motivo sintético da decisão pela tela ${suffix}.`);
+    pending = responseFor(approvals, 'PATCH');
+    await area.getByRole('button', { name: 'Registrar decisão da aprovação' }).click();
+    httpResponse = await pending;
+    assert.equal(httpResponse.status(), 200, 'a decisão precisa sair pela interface');
+    const decided = await httpResponse.json();
+    assert.equal(decided.approval.status, 'rejeitado');
+    await area.getByRole('status').getByText('Aprovação marcada como rejeitado.').waitFor();
+    await historyPanel.getByText('pendente → rejeitado', { exact: false }).waitFor();
+    const historyRows = await pool.query('SELECT previous_status::text, next_status::text, reason FROM adm_approval_history WHERE approval_id=$1 ORDER BY created_at ASC', [approvalId]);
+    assert.deepEqual(historyRows.rows.map(row => row.next_status), ['pendente', 'rejeitado']);
+    assert.equal(historyRows.rows[1].reason, `Motivo sintético da decisão pela tela ${suffix}.`);
+
+    // 6) 503 de transporte no navegador: estado de erro e retry que recupera.
+    await page.evaluate(() => {
+      const original = window.fetch.bind(window);
+      window.__admOriginalFetch = original;
+      window.__failAdmPauta = true;
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (new URL(url, location.origin).pathname === '/api/adm/my-day' && (!init?.method || init.method === 'GET') && window.__failAdmPauta) {
+          window.__failAdmPauta = false;
+          return new Response(JSON.stringify({ error: 'service_unavailable' }), { status: 503, headers: { 'content-type': 'application/json' } });
+        }
+        return original(input, init);
+      };
+    });
+    await area.getByRole('button', { name: 'Atualizar painel' }).click();
+    await pautaPanel.getByText('O serviço está indisponível. Tente novamente em instantes.', { exact: true }).waitFor();
+    assert.equal(await pautaPanel.getByText(taskTitle, { exact: false }).count(), 0, 'o erro não pode conviver com a lista anterior');
+    await pautaPanel.getByRole('button', { name: 'Tentar novamente' }).click();
+    await pautaPanel.getByText(taskTitle, { exact: false }).waitFor();
+    await page.evaluate(() => { window.fetch = window.__admOriginalFetch; });
+
+    // 7) Ausência honesta: centavos e datas nunca viram zero nem 01/01/1970.
+    const text = await approvalPanel.innerText();
+    assert.doesNotMatch(text, /01\/01\/1970/);
+    assert.match(await page.locator('section[aria-labelledby="adm-financial-title"]').innerText(), /R\$/);
+  } finally {
+    await context?.close();
+    await browser.close();
+  }
+});

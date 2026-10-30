@@ -100,6 +100,12 @@ const PROMOCOES_COM_PROVA = [
     familia: 'reclamações de colaboradores em canal administrativo restrito e compartilhamento mínimo com RH',
     relatorio: 'docs/UX-PRO-03-PROMOCAO-RECLAMACOES-COLABORADORES-2026-10-29.md',
   },
+  {
+    componente: 'AdmClient.tsx',
+    aba: 'adm',
+    familia: 'ADM-01..06 pauta do dia, retratos comercial/operacional/financeiro, risco de renovação e aprovação unificada com alçada (ADM-07..12 descartado: /api/adm/panel/* já escreve as mesmas tabelas em /admin/marcelo)',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-PAINEL-ADM-2026-10-30.md',
+  },
 ];
 
 const sha256 = value => createHash('sha256').update(value).digest('hex');
