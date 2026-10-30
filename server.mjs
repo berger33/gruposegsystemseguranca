@@ -123,7 +123,7 @@ import { createExtVisualApi } from "./src/server/ext-visual-api.mjs";
 import { createExtReportsApi } from "./src/server/ext-reports-api.mjs";
 import { createExtIntelApi } from "./src/server/ext-intel-api.mjs";
 import { createExtEmergencyApi } from "./src/server/ext-emergency-api.mjs";
-import { parseSchedulerConfig, startExtComplianceScheduler } from "./src/server/ext-compliance-scheduler.mjs";
+import { parseSchedulerConfig, startExt07DurableWorker, startExtComplianceScheduler } from "./src/server/ext-compliance-scheduler.mjs";
 import { createExtReportingApi } from "./src/server/ext-reporting-api.mjs";
 import { createCommercialHistoryApi } from "./src/server/commercial-history-api.mjs";
 import { createPortfolioApi } from "./src/server/portfolio-api.mjs";
@@ -6195,16 +6195,54 @@ server.listen(port, hostname, () => {
 
 // EXT-07: execução agendada da avaliação temporal — opt-in por ambiente
 // (EXT07_EVALUATE_INTERVAL_SECONDS + EXT07_EVALUATE_IDENTITY). Exige
-// PostgreSQL real (PGlite beta não possui o schema EXT-07) e uma identidade
-// staff declarada em cujo nome a automação age; cada execução registra uma
-// linha em ext_compliance_evaluation_runs (migração 156). O primeiro tick é
-// imediato e nenhuma rejeição escapa para o timer (dispatchGuarded).
+// PostgreSQL real (DATABASE_URL) e uma identidade staff declarada em cujo nome
+// a automação age; cada execução registra uma linha em
+// ext_compliance_evaluation_runs (migração 156). O primeiro tick é imediato e
+// nenhuma rejeição escapa para o timer (dispatchGuarded).
+//
+// E16 — `EXT07_SCHEDULER_MODE=durable` troca o timer "executa-e-esquece" por
+// um worker com fila persistida (migração 182): a intenção é gravada antes de
+// executar, a execução é reivindicada com lease e concluída na mesma
+// transação do efeito; queda no meio do lease é RETOMADA, e falha ganha retry
+// com backoff. O motivo de o modo durável também exigir `DATABASE_URL` não é o
+// schema — depois do E7 a demo PGlite tem as migrações 001–182 — e sim o
+// executor: o PGlite é um banco embutido de escritor único por diretório, sem
+// segundo processo para reivindicar o lease e sem supervisor para religar o
+// worker. Ligar fila durável ali seria teatro de disponibilidade.
 const ext07SchedulerConfig = parseSchedulerConfig(process.env);
 if (ext07SchedulerConfig.intervalSeconds) {
+  const durableMode = ext07SchedulerConfig.mode === "durable";
   if (!process.env.DATABASE_URL) {
-    console.error("[ext07-scheduler] desativado: requer DATABASE_URL (o modo PGlite beta não possui o schema EXT-07)");
+    console.error(
+      "[ext07-scheduler] desativado: requer DATABASE_URL (o modo PGlite da demo tem o schema EXT-07 desde o E7, " +
+      "mas não tem executor durável — banco embutido de escritor único, sem segundo processo para reivindicar o lease)",
+    );
   } else if (!ext07SchedulerConfig.actorIdentity) {
     console.error("[ext07-scheduler] desativado: EXT07_EVALUATE_IDENTITY deve ser o UUID de uma identidade staff ativa (admin/ti)");
+  } else if (durableMode && ext07SchedulerConfig.durable.configError) {
+    console.error(
+      `[ext07-scheduler] desativado: configuração da fila inválida (${ext07SchedulerConfig.durable.configError}) — ` +
+        "regras: lease 5..3600s, batch 1..50 e EXT07_SCHEDULER_BACKOFF_MAX_SECONDS >= EXT07_SCHEDULER_LEASE_SECONDS " +
+        "(atrasar o retry menos que o prazo do lease faria outro processo retomar o mesmo intervalo antes do retry)",
+    );
+  } else if (durableMode) {
+    try {
+      extComplianceSchedulerHandle = startExt07DurableWorker({
+        getPool,
+        intervalSeconds: ext07SchedulerConfig.intervalSeconds,
+        actorIdentity: ext07SchedulerConfig.actorIdentity,
+        durable: ext07SchedulerConfig.durable,
+        logger: console,
+      });
+      console.log(
+        `[ext07-scheduler] ativado (durable): fila ext07:expiry-evaluation em durable_jobs; cadência ${ext07SchedulerConfig.intervalSeconds}s; ` +
+          `lease ${ext07SchedulerConfig.durable.leaseSeconds}s; backoff ${ext07SchedulerConfig.durable.backoffSeconds}s → ${ext07SchedulerConfig.durable.backoffMaxSeconds}s; ` +
+          "execuções registradas em ext_compliance_evaluation_runs",
+      );
+    } catch (error) {
+      extComplianceSchedulerHandle = null;
+      console.error(`[ext07-scheduler] modo durable recusado: ${error.message}`);
+    }
   } else {
     extComplianceSchedulerHandle = startExtComplianceScheduler({
       getPool,

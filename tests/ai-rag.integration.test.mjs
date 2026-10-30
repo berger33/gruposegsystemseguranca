@@ -37,7 +37,7 @@ async function run() {
     // FECH-01: nenhum documento público está publicado, então o escopo está
     // VAZIO. "Sem conteúdo publicado" e "sem trecho relacionado" são estados
     // distintos e o modelo não é chamado em nenhum dos dois.
-    // E7: a demo usa o schema real (migrações 001–181); nele os índices RAG
+    // E7: a demo usa o schema real (migrações 001–182); nele os índices RAG
     // nascem em `rascunho` (095) — publicar é ato de curadoria, não default de
     // banco. O teste faz esse passo como o operador faria.
     const empty = await post('/api/ai/answer', { rag_key: 'publico', query: 'zxqvkj oculto inexistente?' });

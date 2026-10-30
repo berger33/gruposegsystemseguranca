@@ -6,7 +6,7 @@ import { listMigrationFiles } from '../src/server/pglite-pool.mjs';
 
 // E7 — a demo padrão (PGlite, sem DATABASE_URL) usava `db/beta-pglite-init.sql`
 // com 27 tabelas contra 581 do PostgreSQL. O schema passou a vir das MESMAS
-// migrações 001–181: esta guarda impede que a demo volte a ter lista de
+// migrações 001–182: esta guarda impede que a demo volte a ter lista de
 // migrações escrita à mão, dicionário de schema paralelo ou falha silenciosa.
 // A prova de execução fica no gate `npm run test:pglite-schema` (PGlite real).
 const root = path.resolve(import.meta.dirname, '..');

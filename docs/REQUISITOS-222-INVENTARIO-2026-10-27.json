@@ -65,7 +65,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1628,
+    "arquivosVarridos": 1632,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -6434,12 +6434,12 @@
       "arquivos_gate": [
         ".github/workflows/ext07-delivery.yml",
         ".github/workflows/ux-compliance-delivery.yml",
+        "tests/e16-durable-scheduler.test.mjs",
         "tests/ext-compliance-scheduler.test.mjs",
         "tests/ext07-compliance.integration.test.mjs",
         "tests/ext07-compliance.test.mjs",
         "tests/qa-evidence-report.test.mjs",
-        "tests/ux-analytics-vocabulary.test.mjs",
-        "tests/ux-compliance-vocabulary.test.mjs"
+        "tests/ux-analytics-vocabulary.test.mjs"
       ],
       "arquivos_documento": [
         "docs/APLICACAO-BANCO-DESTINO.md",
@@ -6452,18 +6452,18 @@
         "docs/ENTREGA-RELATORIO-2026-10-03-EXT07-COMPLIANCE-HARDENING-MIGRACAO-155.md"
       ],
       "arquivos_codigo": [
+        "scripts/qa-durable-scheduler-postgres.mjs",
         "scripts/qa-evidence-report.mjs",
         "scripts/qa-ext07-compliance-postgres.mjs",
         "scripts/qa-ux-compliance-postgres.mjs",
         "scripts/ux-evidence-capture.mjs",
         "src/app/admin/compliance/ComplianceWorkspace.tsx",
         "src/app/admin/ti/ExtAdvancedClient.tsx",
-        "src/lib/analytics-vocabulary.mjs",
-        "src/lib/compliance-request.ts"
+        "src/lib/analytics-vocabulary.mjs"
       ],
-      "ocorrencias_gate": 111,
+      "ocorrencias_gate": 119,
       "ocorrencias_documento": 246,
-      "ocorrencias_codigo": 27,
+      "ocorrencias_codigo": 34,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
