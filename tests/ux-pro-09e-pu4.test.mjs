@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { chromium as playwrightChromium } from 'playwright';
-import packagedChromium from '@sparticuz/chromium';
+// E22: o lançamento do navegador vem do helper hermético. Importar `playwright`
+// e `@sparticuz/chromium` aqui direto devolveria a dependência do ambiente
+// (`AWS_EXECUTION_ENV`) que deixava a suíte vermelha sem motivo de código.
+import { launchBrowser } from './helpers/browser-runtime.mjs';
 import { measureTextContrast } from '../scripts/ux-evidence-text-contrast.mjs';
 
 const script = await readFile(new URL('../scripts/ux-evidence-capture.mjs', import.meta.url), 'utf8');
@@ -35,13 +36,13 @@ test('UX-PRO-09E PU4: etapas não 09E não ativam as amostras ampliadas', () => 
     'a limitação do navegador/plataforma precisa descrever o ambiente executado');
 });
 
-test('UX-PRO-09E PU4: Chromium mede tags/classes omitidas e explicita fundo indeterminado', async () => {
-  const browser = await playwrightChromium.launch({
-    ...(process.platform === 'win32' && existsSync('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe')
-      ? { executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' }
-      : { args: packagedChromium.args, executablePath: await packagedChromium.executablePath() }),
-    headless: true,
-  });
+test('UX-PRO-09E PU4: Chromium mede tags/classes omitidas e explicita fundo indeterminado', async (t) => {
+  const launched = await launchBrowser();
+  if (launched.status !== 'run') {
+    t.skip(`navegador indisponível: ${launched.reason}`);
+    return;
+  }
+  const browser = launched.browser;
   try {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     await page.setContent(`<!doctype html><html><body style="background:#fff;color:#222">
@@ -67,13 +68,13 @@ test('UX-PRO-09E PU4: Chromium mede tags/classes omitidas e explicita fundo inde
   }
 });
 
-test('UX-PRO-09E PU4: ausência de texto renderizado é "not-measured"', async () => {
-  const browser = await playwrightChromium.launch({
-    ...(process.platform === 'win32' && existsSync('C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe')
-      ? { executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' }
-      : { args: packagedChromium.args, executablePath: await packagedChromium.executablePath() }),
-    headless: true,
-  });
+test('UX-PRO-09E PU4: ausência de texto renderizado é "not-measured"', async (t) => {
+  const launched = await launchBrowser();
+  if (launched.status !== 'run') {
+    t.skip(`navegador indisponível: ${launched.reason}`);
+    return;
+  }
+  const browser = launched.browser;
   try {
     const page = await browser.newPage();
     await page.setContent('<!doctype html><html><body><p style="display:none">Somente oculto</p></body></html>');
