@@ -45,103 +45,103 @@
 ## Evidências encontradas
 
 ### SEC-01 — Inventariar rotas, APIs, tabelas, jobs, permissões e documentação
-- ✅ `scripts/ux-pro-00-inventory.mjs:515` — inventário de rotas com modo de verificação
+- ✅ `scripts/ux-pro-00-inventory.mjs` — inventário de rotas com modo de verificação
   `if (process.argv.includes('--check')) {`
-- ✅ `scripts/requisitos-222-inventory.mjs:207` — inventário de 222 requisitos com classe de evidência
+- ✅ `scripts/requisitos-222-inventory.mjs` — inventário de 222 requisitos com classe de evidência
   `porClasseEvidencia: countBy('classe_evidencia_atual'),`
 
 ### SEC-02 — Corrigir verificações de escopo para negar por padrão em qualquer erro
-- ✅ `tests/staff-auth.integration.test.mjs:260` — amostra ampla de endpoints nega sem sessão
+- ✅ `tests/staff-auth.integration.test.mjs` — amostra ampla de endpoints nega sem sessão
   `test('SEC-02: endpoints administrativos negam sem sessão (amostra ampla)', { skip: !RUN }, async () => {`
-- ✅ `tests/client-space-fail-closed.test.mjs:55` — fail-closed de escopo do espaço do cliente
+- ✅ `tests/client-space-fail-closed.test.mjs` — fail-closed de escopo do espaço do cliente
   `protectedReads() { return calls.filter(c => /FROM client_(contracts|documents|tickets) WHERE/.test(c.sql)); },`
 
 ### SEC-03 — Associar documentos a conta/unidade/contrato/classificação e autorização uniforme
-- ✅ `tests/cli-v2.integration.test.mjs:49` — escopo legado de cliente auditado em PostgreSQL
+- ✅ `tests/cli-v2.integration.test.mjs` — escopo legado de cliente auditado em PostgreSQL
   `test('TENANT-SEG-003 / PLT-AUD-003: HTTP CLI v2 docs staff-only, legacy client scope and audit on PG 001–098', testOptions, async t => {`
-- ✅ `tests/cli13-portal-access-modes.test.mjs:63` — vínculo conta/documento verificado no servidor
+- ✅ `tests/cli13-portal-access-modes.test.mjs` — vínculo conta/documento verificado no servidor
   `test('CLI-13: vínculo conta/documento é verificado no servidor; recusa é auditada sem pedido', async()=>{`
 
 ### SEC-04 — Login individual de staff, papéis, convites e revogação
-- ✅ `tests/staff-auth.integration.test.mjs:160` — papel vem do banco, não do cookie
+- ✅ `tests/staff-auth.integration.test.mjs` — papel vem do banco, não do cookie
   `test('SEC-04: staff válido recebe sessão com o papel do banco e identidade auditável', { skip: !RUN }, async () => {`
-- ✅ `tests/staff-auth.integration.test.mjs:180` — revogação imediata de sessão emitida
+- ✅ `tests/staff-auth.integration.test.mjs` — revogação imediata de sessão emitida
   `test('SEC-04: suspender a identidade invalida IMEDIATAMENTE a sessão já emitida', { skip: !RUN }, async () => {`
-- ✅ `tests/admin-entry.integration.test.mjs:142` — navegação por papel em browser real
+- ✅ `tests/admin-entry.integration.test.mjs` — navegação por papel em browser real
   `test('login por papel: marcelo, rh e supervisor entram com papéis distintos', { skip: !RUN }, async () => {`
 
 ### SEC-05 — Substituir tokens compartilhados por autenticação individual com migração controlada
-- ✅ `tests/staff-auth.integration.test.mjs:234` — token compartilhado recusado mesmo configurado
+- ✅ `tests/staff-auth.integration.test.mjs` — token compartilhado recusado mesmo configurado
   `test('SEC-05: token compartilhado é recusado por padrão, mesmo configurado', { skip: !RUN }, async () => {`
-- ✅ `tests/staff-auth.integration.test.mjs:241` — cookie forjado não concede sessão
+- ✅ `tests/staff-auth.integration.test.mjs` — cookie forjado não concede sessão
   `test('SEC-02: cookie forjado/adulterado não concede sessão', { skip: !RUN }, async () => {`
 
 ### SEC-06 — MFA padrão por biblioteca mantida, desafio no login, recuperação e rate limit
-- ✅ `tests/staff-auth.integration.test.mjs:276` — senha isolada não emite sessão com MFA
+- ✅ `tests/staff-auth.integration.test.mjs` — senha isolada não emite sessão com MFA
   `test('SEC-06: com MFA ativo, a senha sozinha NÃO emite sessão', { skip: !RUN }, async () => {`
-- ✅ `tests/staff-auth.integration.test.mjs:319` — TOTP não reutilizável
+- ✅ `tests/staff-auth.integration.test.mjs` — TOTP não reutilizável
   `test('SEC-06: TOTP correto emite sessão; o MESMO código não vale duas vezes', { skip: !RUN }, async () => {`
-- ✅ `tests/staff-auth.integration.test.mjs:390` — expiração e limite de tentativas
+- ✅ `tests/staff-auth.integration.test.mjs` — expiração e limite de tentativas
   `test('SEC-06: desafio MFA expira e limita tentativas', { skip: !RUN }, async () => {`
 
 ### SEC-07 — Corrigir troca de e-mail e handlers HTTP
-- ✅ `tests/staff-auth.integration.test.mjs:138` — identidade com e-mail pendente não autentica
+- ✅ `tests/staff-auth.integration.test.mjs` — identidade com e-mail pendente não autentica
   `test('SEC-04: identidade pending_email não autentica', { skip: !RUN }, async () => {`
-- ✅ `tests/client-auth-core.test.mjs:27` — núcleo de autenticação do cliente
+- ✅ `tests/client-auth-core.test.mjs` — núcleo de autenticação do cliente
   `test("password policy requires at least 12 characters without artificial composition rules", () => {`
 
 ### SEC-08 — Migrações rastreadas e executáveis
-- ✅ `tests/site-appearance.focal.test.mjs:7` — guarda lê o ledger real de migrações do disco
+- ✅ `tests/site-appearance.focal.test.mjs` — guarda lê o ledger real de migrações do disco
   `test('o manifesto oficial declara exatamente as migrações presentes em db/migrations',async()=>{`
-- ✅ `scripts/qa-wave0-static.mjs:69` — varredura estática de migrações ausentes
+- ✅ `scripts/qa-wave0-static.mjs` — varredura estática de migrações ausentes
   `console.log(`RESUMO: ${report.filter(x => x.ok).length}/${report.length} verificações estáticas OK; ${missingImports.length} imports ausentes; ${missingMigratio`
 
 ### SEC-09 — Reparar suíte e testar APIs reais
-- ✅ `scripts/qa-wave0-static.mjs:69` — bateria estática de imports e migrações
+- ✅ `scripts/qa-wave0-static.mjs` — bateria estática de imports e migrações
   `console.log(`RESUMO: ${report.filter(x => x.ok).length}/${report.length} verificações estáticas OK; ${missingImports.length} imports ausentes; ${missingMigratio`
-- ✅ `tests/cli-v2.integration.test.mjs:49` — teste de API real em HTTP + PostgreSQL
+- ✅ `tests/cli-v2.integration.test.mjs` — teste de API real em HTTP + PostgreSQL
   `test('TENANT-SEG-003 / PLT-AUD-003: HTTP CLI v2 docs staff-only, legacy client scope and audit on PG 001–098', testOptions, async t => {`
 
 ### SEC-10 — Consolidar orçamento/simulador e catálogo
-- ✅ `tests/ux-public-routes.integration.test.mjs:463` — jornada pública de orçamento em browser real
+- ✅ `tests/ux-public-routes.integration.test.mjs` — jornada pública de orçamento em browser real
   `test('browser E6 grupo 2: /orcamento anuncia falha com foco e mantém o formulário', { skip: !RUN }, async () => {`
-- ✅ `scripts/ux-pro-00-inventory.mjs:33` — matriz de cobertura das rotas públicas
+- ✅ `scripts/ux-pro-00-inventory.mjs` — matriz de cobertura das rotas públicas
   `const MATRIX_CSV = 'docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv';`
 
 ### SEC-11 — Separar prévias e recursos reais
-- ✅ `tests/ux-public-routes.integration.test.mjs:653` — aviso de prévia separado de recurso real
+- ✅ `tests/ux-public-routes.integration.test.mjs` — aviso de prévia separado de recurso real
   `await page.locator('[data-testid="site-preview-notice"]').waitFor();`
-- ✅ `tests/ux-pro-10b-previas-medicoes.test.mjs:32` — baseline de prévias sem aprovação implícita
+- ✅ `tests/ux-pro-10b-previas-medicoes.test.mjs` — baseline de prévias sem aprovação implícita
   `const BASELINE_UNDER_45 = Object.fromEntries([`
 
 ### SEC-12 — Privacidade e declarações de aprovação verificáveis
-- ✅ `tests/cli13-portal-access-modes.test.mjs:120` — aprovação cria convite com decisão/histórico/auditoria
+- ✅ `tests/cli13-portal-access-modes.test.mjs` — aprovação cria convite com decisão/histórico/auditoria
   `test('CLI-13: aprovação cria convite canônico, decisão/histórico/auditoria, mas nenhum grant ou contrato', async()=>{`
-- ✅ `tests/client-manual-approval-guards.test.mjs:20` — guardas de aprovação manual do cliente
+- ✅ `tests/client-manual-approval-guards.test.mjs` — guardas de aprovação manual do cliente
   `test('QA-HOM-007: manual approval requires method/origin and individual current TI identity', async () => {`
 
 ### SEC-13 — Segurança de sessão, CSRF, origem e erros
-- ✅ `tests/staff-auth.integration.test.mjs:310` — CSRF: mutação sem Origin é recusada
+- ✅ `tests/staff-auth.integration.test.mjs` — CSRF: mutação sem Origin é recusada
   `test('mutação sem Origin correto é recusada (CSRF)', { skip: !RUN }, async () => {`
-- ✅ `tests/admin-entry.integration.test.mjs:286` — redirecionamento externo recusado
+- ✅ `tests/admin-entry.integration.test.mjs` — redirecionamento externo recusado
   `test('browser: next externo/domínio alheio é recusado no redireciono pós-login', { skip: !RUN }, async () => {`
-- ✅ `tests/client-security-routes-fail-closed.test.mjs:25` — rotas de segurança do cliente fail-closed
+- ✅ `tests/client-security-routes-fail-closed.test.mjs` — rotas de segurança do cliente fail-closed
   `test(`SEC-06/07 ${handler}: rejects method, origin, anonymous`, async () => {`
 
 ### SEC-14 — Auditoria durável e operacional
-- ✅ `tests/cli-v2.integration.test.mjs:207` — criação de documento persiste em audit_log
+- ✅ `tests/cli-v2.integration.test.mjs` — criação de documento persiste em audit_log
   `await t.test('admin/ti can list metadata and a document creation is persisted in operational audit_log', async () => {`
-- ✅ `tests/cli-v2.integration.test.mjs:244` — falha de auditoria reverte a transação
+- ✅ `tests/cli-v2.integration.test.mjs` — falha de auditoria reverte a transação
   `await t.test('PLT-AUD-004: injected operational audit failure rolls back v2 document and version', async () => {`
-- ✅ `tests/cli13-portal-access-modes.test.mjs:144` — falha de auditoria devolve 503 e reverte pedido
+- ✅ `tests/cli13-portal-access-modes.test.mjs` — falha de auditoria devolve 503 e reverte pedido
   `test('CLI-13: falha da auditoria devolve 503 e reverte pedido e histórico', async()=>{`
 
 ### SEC-15 — Proteção de abuso e identidade
-- ✅ `tests/staff-auth.integration.test.mjs:421` — rate limiting com 429 e Retry-After
+- ✅ `tests/staff-auth.integration.test.mjs` — rate limiting com 429 e Retry-After
   `test('rate limiting: excesso de tentativas de login devolve 429 com Retry-After', { skip: !RUN }, async () => {`
-- ✅ `tests/staff-auth.integration.test.mjs:304` — desafio MFA inválido recusado
+- ✅ `tests/staff-auth.integration.test.mjs` — desafio MFA inválido recusado
   `test('SEC-06: desafio MFA inválido/inexistente é recusado', { skip: !RUN }, async () => {`
-- ✅ `tests/cli14-account-security.test.mjs:42` — escritas sensíveis são transacionais
+- ✅ `tests/cli14-account-security.test.mjs` — escritas sensíveis são transacionais
   `test('CLI-14 all sensitive writes are transaction-scoped and audit failure is explicit', () => {`
 
 

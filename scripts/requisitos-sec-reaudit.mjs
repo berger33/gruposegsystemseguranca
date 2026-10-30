@@ -166,7 +166,11 @@ for (const req of REQUISITOS) {
       padrao: String(ancora.padrao),
       prova: ancora.prova,
       encontrado: idx >= 0,
-      linha: idx >= 0 ? idx + 1 : null,
+      // E25: a ÂNCORA é o conteúdo (`padrao` + `trecho`), não a posição. A linha
+      // é metadado derivado no momento da geração: informa onde olhar hoje e
+      // NUNCA identifica a evidência — ela muda a cada edição do arquivo.
+      ancora: 'conteudo',
+      linha_atual: idx >= 0 ? idx + 1 : null,
       trecho: idx >= 0 ? linhasDoArquivo[idx].trim().slice(0, 160) : null,
     });
   }
@@ -205,7 +209,7 @@ const resumo = {
 
 const saida = {
   stage: 'requisitos-sec-reaudit', data: '2026-10-28',
-  metodo: 'âncoras de asserção executável em testes/gates + existência do gate; NÃO conta menção literal de ID',
+  metodo: 'âncoras de asserção executável em testes/gates (identificadas por CONTEÚDO: padrão + trecho) + existência do gate; NÃO conta menção literal de ID',
   fonteEstado: 'docs/REQUISITOS-222-INVENTARIO-2026-10-27.json',
   resumo, requisitos: linhas,
   limite: 'mapa de evidência TÉCNICA; nenhum aceite humano, UAT, Windows ou leitor de tela foi executado',
@@ -247,7 +251,7 @@ ${linhas.map(r => `| ${r.id} | ${r.requisito} | ${r.estado_confirmado_0410} | ${
 ## Evidências encontradas
 
 ${linhas.map(r => `### ${r.id} — ${r.requisito}\n${r.evidencias.map(e => e.encontrado
-    ? `- ✅ \`${e.arquivo}:${e.linha}\` — ${e.prova}\n  \`${e.trecho}\``
+    ? `- ✅ \`${e.arquivo}\` — ${e.prova}\n  \`${e.trecho}\``
     : `- ❌ **AUSENTE:** \`${e.arquivo}\` — ${e.prova} (padrão \`${e.padrao}\`)`).join('\n')}\n`).join('\n')}
 
 ## O que isto NÃO é
