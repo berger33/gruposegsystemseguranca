@@ -29,8 +29,8 @@ test('SEC: o mapa cobre os 15 IDs com 35 âncoras de asserção executável', as
   }
   for (const r of data.requisitos) {
     assert.ok(r.gate_existe, `${r.id}: gate ${r.gate} precisa existir`);
-    assert.ok(r.evidencias.every(e => e.encontrado && e.linha > 0),
-      `${r.id}: toda evidência precisa apontar arquivo:linha`);
+    assert.ok(r.evidencias.every(e => e.encontrado && e.ancora === 'conteudo' && e.trecho),
+      `${r.id}: toda evidência precisa de âncora por CONTEÚDO (padrão + trecho)`);
     assert.ok(r.evidencias.every(e => e.trecho && !/^\s*(\/\/|\*|#)/.test(e.trecho)),
       `${r.id}: a âncora precisa ser uma linha de código executável, não comentário`);
   }
@@ -104,3 +104,36 @@ test('SEC: a matriz de 222 reconhece o mapa como evidência de gate', async () =
     assert.equal(r.aceite_humano, 'nao_registrado', `${r.id}: aceite humano não pode ser inventado`);
   }
 });
+
+// E25 — as âncoras eram publicadas como `arquivo:linha`. A posição muda a cada
+// edição (import novo, comentário, formatação) e o mapa envelhece em silêncio.
+// A identidade da âncora passou a ser o CONTEÚDO: o padrão que casa e o trecho
+// citado, conferidos contra o arquivo atual.
+test('E25: as âncoras do mapa SEC valem por conteúdo, não por arquivo:linha', async () => {
+  const data = JSON.parse(await read(MAPA));
+  const md = await read('docs/REQUISITOS-SEC-REAUDITORIA-2026-10-28.md');
+  assert.doesNotMatch(md, /\.(?:mjs|ts|tsx|yml|json|md):\d+/,
+    'o mapa publicado não pode citar arquivo:linha: a posição não é âncora');
+
+  const gerador = await read('scripts/requisitos-sec-reaudit.mjs');
+  assert.match(gerador, /ancora: 'conteudo'/, 'o gerador precisa declarar a âncora como conteúdo');
+
+  const cache = new Map();
+  for (const r of data.requisitos) {
+    for (const e of r.evidencias) {
+      if (!cache.has(e.arquivo)) cache.set(e.arquivo, await read(e.arquivo));
+      const conteudo = cache.get(e.arquivo);
+      assert.ok(conteudo.includes(e.trecho),
+        `${r.id}: o trecho ancorado não existe mais em ${e.arquivo}`);
+      assert.ok(paraRegex(e.padrao).test(conteudo),
+        `${r.id}: o padrão ${e.padrao} não casa mais com ${e.arquivo}`);
+      assert.equal(typeof e.linha_atual, 'number',
+        `${r.id}: linha_atual é metadado derivado da geração, nunca a âncora`);
+    }
+  }
+});
+
+/** Converte `/regex/` (forma serializada no JSON) de volta em RegExp. */
+function paraRegex(padrao) {
+  return new RegExp(padrao.replace(/^\//, '').replace(/\/$/, ''));
+}
