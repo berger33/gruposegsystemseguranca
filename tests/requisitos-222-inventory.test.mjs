@@ -125,9 +125,66 @@ test('reauditoria 222: a guarda roda no test:unit e o relatório declara o limit
   const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
   assert.match(pkg.scripts['test:unit'], /tests\/requisitos-222-inventory\.test\.mjs/);
   const report = await readFile(path.join(root, REPORT), 'utf8');
-  assert.match(report, /27/, 'o relatório precisa registrar os 27 a_revalidar sem gate após mapa SEC');
   assert.match(report, /mapa de reauditoria técnica com 35 âncoras/i,
     'o relatório deve explicar por que a classe dos SEC mudou');
   assert.match(report, /não é aceite|nao e aceite|NÃO É ACEITE/i);
   assert.match(report, /0\/222/, 'o relatório precisa declarar 0/222 com aceite humano');
 });
+
+// E23 — o §3 do relatório era escrito à mão e derivou do artefato (27 → 20 sem
+// gate depois das promoções de UI). Esta guarda recontá-lo a partir do JSON:
+// o texto não pode afirmar número ou núcleo diferentes do artefato gerado.
+test('E23: o §3 do relatório confere com o JSON vigente (contagens e núcleo duro)', async () => {
+  const data = JSON.parse(await readFile(path.join(root, JSON_FILE), 'utf8'));
+  const report = await readFile(path.join(root, REPORT), 'utf8');
+
+  for (const [classe, esperado] of Object.entries(data.resumo.porClasseEvidencia)) {
+    const linha = new RegExp('\\| `' + classe + '` \\|[^\\n]*\\| \\*\\*(\\d+)\\*\\* \\|').exec(report);
+    assert.ok(linha, `o §2 precisa declarar a classe ${classe}`);
+    assert.equal(Number(linha[1]), esperado, `${classe} divergiu do JSON (${esperado})`);
+  }
+
+  const semGate = /`a_revalidar` sem nenhuma menção em gate\*\* \| \*\*(\d+)\*\*/.exec(report);
+  assert.ok(semGate, 'o §3 precisa declarar o a_revalidar sem gate');
+  assert.equal(Number(semGate[1]), data.resumo.aRevalidarSemGate,
+    'o §3 precisa repetir o aRevalidarSemGate do JSON');
+
+  const nucleo = /### O núcleo duro \((\d+) IDs\)\n\n([\s\S]*?)\n\n/.exec(report);
+  assert.ok(nucleo, 'o §3 precisa manter a seção do núcleo duro');
+  const declarados = expandirFaixas(nucleo[2]);
+  assert.equal(Number(nucleo[1]), data.resumo.idsARevalidarSemGate.length,
+    'o título do núcleo precisa contar os IDs do JSON');
+  assert.deepEqual(declarados, [...data.resumo.idsARevalidarSemGate].sort(),
+    'a lista do núcleo duro precisa ser exatamente a do JSON, sem item a mais nem a menos');
+
+  assert.ok(report.includes(data.resumo.arquivosVarridos.toLocaleString('pt-BR')),
+    `o §2 precisa citar os ${data.resumo.arquivosVarridos} arquivos varridos`);
+});
+
+/**
+ * Expande notação de intervalo do tipo "`AI-01`…`AI-10`" e devolve IDs únicos
+ * ordenados. Só entende a forma usada no relatório; qualquer outra coisa seria
+ * adivinhação.
+ */
+function expandirFaixas(trecho) {
+  const ids = new Set();
+  const tokens = [...trecho.matchAll(/`([A-Z]{2,3})-(\d{2})`|…/g)];
+  let anterior = null;
+  let intervalo = false;
+  for (const token of tokens) {
+    if (token[0] === '…') {
+      intervalo = Boolean(anterior);
+      continue;
+    }
+    const [, prefixo, numero] = token;
+    if (intervalo && anterior && anterior.prefixo === prefixo) {
+      for (let n = Number(anterior.numero) + 1; n < Number(numero); n += 1) {
+        ids.add(`${prefixo}-${String(n).padStart(2, '0')}`);
+      }
+    }
+    ids.add(`${prefixo}-${numero}`);
+    anterior = { prefixo, numero };
+    intervalo = false;
+  }
+  return [...ids].sort();
+}
