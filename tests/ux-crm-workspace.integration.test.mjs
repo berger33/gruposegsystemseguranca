@@ -1985,3 +1985,398 @@ test('browser: evidência própria de /admin/comercial em 320/390/768/1440 px, d
   await writeComercialEvidence('resumo.json', resumo);
   assert.equal(falhas.length, 0, `transbordo de documento: ${JSON.stringify(falhas)}`);
 });
+
+// ---------------------------------------------------------------------------
+// UX-PRO-06 — Vistoria: leitura honesta da PRIMEIRA etapa de /admin/comercial
+// (`src/app/admin/ti/InspectionClient.tsx`). A superfície é viva (GET/POST
+// /api/crm/inspections e GET /api/crm/inspection-templates) e, até esta fatia,
+// só era medida pela casca: falha de checklist era engolida (a tela dizia
+// "Templates (0)"), falha de leitura virava mensagem com o código técnico do
+// servidor, primeira leitura pendente aparecia como lista vazia e resposta
+// fora de ordem podia sobrescrever a leitura mais recente.
+// ---------------------------------------------------------------------------
+
+function secaoVistoria(page) {
+  return page.locator('section[aria-labelledby="vistoria-titulo"]');
+}
+
+async function abrirVistoria(page) {
+  await page.goto('/admin/comercial', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+  const secao = secaoVistoria(page);
+  await secao.waitFor({ timeout: 30_000 });
+  return secao;
+}
+
+/** Força, SÓ na aba, uma resposta de erro para a leitura das vistorias. */
+async function forceVistoriaStatus(context, status, code) {
+  await context.addInitScript(({ status, code }) => {
+    window.__uxForcarFalhaVistoria = true;
+    const original = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (window.__uxForcarFalhaVistoria && url.includes('/api/crm/inspections?')) {
+        return Promise.resolve(new Response(JSON.stringify({ error: code }), {
+          status, headers: { 'content-type': 'application/json' },
+        }));
+      }
+      return original(input, init);
+    };
+  }, { status, code });
+}
+
+/** Força, SÓ na aba, leitura concluída com zero vistorias e zero checklists. */
+async function forceVistoriaVazia(context) {
+  await context.addInitScript(() => {
+    const original = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (url.includes('/api/crm/inspections?')) {
+        return Promise.resolve(new Response(JSON.stringify({ inspections: [], total: 0, limit: 50, offset: 0 }), {
+          status: 200, headers: { 'content-type': 'application/json' },
+        }));
+      }
+      if (url.includes('/api/crm/inspection-templates')) {
+        return Promise.resolve(new Response(JSON.stringify({ templates: [], total: 0 }), {
+          status: 200, headers: { 'content-type': 'application/json' },
+        }));
+      }
+      return original(input, init);
+    };
+  });
+}
+
+/**
+ * SEGURA as leituras de vistorias enquanto `window.__uxSegurarLeituraVistoria`
+ * estiver ligada (ligada por padrão). A primeira resposta devolvida com
+ * `rotulo` recebe esse título: se a tela publicar uma resposta atrasada depois
+ * da nova, o texto antigo aparece e o teste falha.
+ */
+async function segurarLeituraVistoria(context, { ms = 2500, rotulo = null } = {}) {
+  await context.addInitScript(({ ms, rotulo }) => {
+    window.__uxSegurarLeituraVistoria = true;
+    let primeira = true;
+    const original = window.fetch.bind(window);
+    window.fetch = async (input, init) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (window.__uxSegurarLeituraVistoria && url.includes('/api/crm/inspections?')) {
+        const ehAPrimeira = primeira;
+        primeira = false;
+        await new Promise(resolve => setTimeout(resolve, ms));
+        const resposta = await original(input, init);
+        const corpo = await resposta.clone().json().catch(() => ({}));
+        if (ehAPrimeira && rotulo && Array.isArray(corpo?.inspections) && corpo.inspections.length > 0) {
+          corpo.inspections = corpo.inspections.map(item => ({ ...item, title: rotulo }));
+        }
+        return new Response(JSON.stringify(corpo), {
+          status: resposta.status, headers: { 'content-type': 'application/json' },
+        });
+      }
+      return original(input, init);
+    };
+  }, { ms, rotulo });
+}
+
+/** Atrasa a releitura das vistorias para observar o estado de atualização. */
+async function delayReleituraVistoria(context, ms = 3000) {
+  await context.addInitScript(({ ms }) => {
+    window.__uxAtrasarReleituraVistoria = false;
+    const original = window.fetch.bind(window);
+    window.fetch = async (input, init) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (window.__uxAtrasarReleituraVistoria && url.includes('/api/crm/inspections?')) {
+        await new Promise(resolve => setTimeout(resolve, ms));
+      }
+      return original(input, init);
+    };
+  }, { ms });
+}
+
+async function criarEmpresaEVistoriaSinteticas(cookie, rotulo) {
+  const empresa = await api('/api/crm/companies', {
+    method: 'POST', cookie,
+    body: { displayName: `Condomínio Fictício ${rotulo}`, city: 'Barueri', type: 'prospect', segment: 'Condomínio' },
+  });
+  assert.equal(empresa.status, 201, `criação de empresa: ${empresa.status} ${JSON.stringify(empresa.body)}`);
+  const empresaId = empresa.body?.company?.id || empresa.body?.id;
+  assert.ok(empresaId, `a API precisa devolver o id da empresa: ${JSON.stringify(empresa.body)}`);
+  const titulo = `Vistoria sintética ${rotulo} ${randomUUID().slice(0, 8)}`;
+  const vistoria = await api('/api/crm/inspections', {
+    method: 'POST', cookie,
+    body: { company_id: empresaId, title: titulo, service_id: 'cftv' },
+  });
+  assert.equal(vistoria.status, 201, `criação de vistoria: ${vistoria.status} ${JSON.stringify(vistoria.body)}`);
+  assert.equal(vistoria.body?.inspection?.title, titulo, 'a API devolve o registro criado com o título');
+  return { empresaId, titulo };
+}
+
+test('browser: a vistoria lê o registro criado pela própria tela e a escrita real responde 201 com o registro', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(staff.email);
+  const empresa = await api('/api/crm/companies', {
+    method: 'POST', cookie,
+    body: { displayName: `Condomínio Fictício Vistoria ${randomUUID().slice(0, 6)}`, city: 'Barueri', type: 'prospect', segment: 'Condomínio' },
+  });
+  assert.equal(empresa.status, 201, `criação de empresa: ${empresa.status} ${JSON.stringify(empresa.body)}`);
+  const empresaId = empresa.body?.company?.id || empresa.body?.id;
+  const titulo = `Vistoria criada na tela ${randomUUID().slice(0, 8)}`;
+
+  const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  // As leituras iniciais ficam retidas de propósito: sem isso, o estado
+  // "carregando" já teria concluído quando o teste olhasse, e a prova viraria corrida.
+  await segurarLeituraVistoria(context, { ms: 2500 });
+  try {
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    const secao = await abrirVistoria(page);
+
+    // O primeiro estado é declarado: a leitura em curso tem anúncio próprio e a
+    // tela nunca começa dizendo "nenhuma vistoria registrada".
+    await page.waitForSelector('[data-testid="vistoria-carregando"]', { timeout: 15_000 });
+    assert.equal(await secao.locator('[data-testid="vistoria-vazio"]').count(), 0,
+      'antes de qualquer leitura concluída a tela não pode afirmar que não há vistoria');
+    await page.evaluate(() => { window.__uxSegurarLeituraVistoria = false; });
+
+    await page.getByLabel('Código da empresa (UUID)').fill(empresaId);
+    await page.getByLabel('Título da vistoria').fill(titulo);
+    const esperaResposta = page.waitForResponse(
+      resposta => resposta.url().includes('/api/crm/inspections') && resposta.request().method() === 'POST',
+      { timeout: 30_000 },
+    );
+    await page.getByRole('button', { name: 'Criar vistoria' }).click();
+    const resposta = await esperaResposta;
+    assert.equal(resposta.status(), 201, 'a escrita real precisa responder 201');
+    const corpo = await resposta.json();
+    assert.equal(corpo?.inspection?.title, titulo, 'o corpo devolve o registro criado');
+    assert.equal(corpo?.inspection?.company_id, empresaId, 'o corpo preserva a empresa informada');
+    assert.equal(corpo?.inspection?.status, 'rascunho', 'o status inicial continua rascunho');
+
+    // A releitura depois da escrita publica o registro na tabela.
+    const tabela = secao.locator('[data-testid="vistoria-tabela"]');
+    await tabela.waitFor({ timeout: 30_000 });
+    await page.waitForFunction(
+      texto => (document.querySelector('[data-testid="vistoria-tabela"]')?.textContent || '').includes(texto),
+      titulo, { timeout: 30_000 },
+    );
+    assert.equal(await secao.locator('[data-testid="vistoria-erro"]').count(), 0, 'escrita boa não pode deixar erro na tela');
+    assert.equal(await secao.locator('[data-testid="vistoria-escrita-erro"]').count(), 0, 'escrita boa não pode deixar erro de escrita');
+
+    // Conferência independente da tela, pela mesma API.
+    const conferencia = await api('/api/crm/inspections?limit=50', { cookie });
+    assert.equal(conferencia.status, 200);
+    assert.ok(conferencia.body.inspections.some(item => item.title === titulo),
+      'a vistoria criada precisa existir na leitura por HTTP');
+
+    // A leitura continua exigindo sessão: o anônimo não recebe lista.
+    const anonimo = await api('/api/crm/inspections');
+    assert.equal(anonimo.status, 401);
+    assert.equal(anonimo.body?.error, 'admin_session_required');
+    await captureComercial(page, 'desktop-comercial-vistoria-escrita');
+  } finally {
+    await context.close();
+  }
+});
+
+test('browser: falha na leitura da vistoria é erro explícito com repetição, nunca "nenhuma vistoria"', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(staff.email);
+  await criarEmpresaEVistoriaSinteticas(cookie, 'Falha');
+
+  const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  await forceVistoriaStatus(context, 503, 'inspection_unavailable');
+  try {
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    const secao = await abrirVistoria(page);
+
+    const erro = secao.locator('[data-testid="vistoria-erro"]');
+    await erro.waitFor({ timeout: 30_000 });
+    const texto = await erro.innerText();
+    assert.ok(!texto.includes('inspection_unavailable'), `não expor o código técnico do servidor: "${texto}"`);
+    assert.ok(/não significa/i.test(texto), `a falha precisa negar que seja ausência de dados: "${texto}"`);
+    assert.equal(await secao.locator('[data-testid="vistoria-vazio"]').count(), 0, 'falha não pode ser apresentada como vazio');
+    assert.equal(await secao.locator('[data-testid="vistoria-tabela"]').count(), 0, 'sem leitura concluída não há tabela para mostrar');
+    const repetir = secao.getByRole('button', { name: 'Tentar novamente' });
+    assert.equal(await repetir.count(), 1, 'a falha recuperável oferece exatamente uma repetição');
+
+    // A repetição relê de verdade: com o servidor de volta, a lista aparece.
+    await page.evaluate(() => { window.__uxForcarFalhaVistoria = false; });
+    await repetir.click();
+    await page.waitForSelector('[data-testid="vistoria-erro"]', { state: 'detached', timeout: 30_000 });
+    await secao.locator('[data-testid="vistoria-tabela"]').waitFor({ timeout: 30_000 });
+    assert.ok((await secao.locator('[data-testid="vistoria-tabela"]').innerText()).length > 0,
+      'a repetição bem-sucedida publica a leitura real');
+    await captureComercial(page, 'desktop-comercial-vistoria-repeticao');
+  } finally {
+    await context.close();
+  }
+});
+
+test('browser: resposta fora de ordem não sobrescreve a vistoria mais recente e a releitura mantém a tabela visível', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(staff.email);
+  const { titulo } = await criarEmpresaEVistoriaSinteticas(cookie, 'Ordem');
+
+  const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  await segurarLeituraVistoria(context, { ms: 2500, rotulo: 'VISTORIA-ANTIGA' });
+  await delayReleituraVistoria(context, 3000);
+  try {
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    const secao = await abrirVistoria(page);
+
+    // As leituras iniciais estão retidas quando a releitura é pedida: liberar a
+    // trava aqui faz a releitura responder primeiro, e as respostas antigas
+    // chegarem depois — exatamente o caso que não pode sobrescrever a tela.
+    await page.evaluate(() => { window.__uxSegurarLeituraVistoria = false; });
+    await secao.getByRole('button', { name: 'Recarregar' }).click();
+    await secao.locator('[data-testid="vistoria-tabela"]').waitFor({ timeout: 30_000 });
+    await page.waitForFunction(
+      alvo => (document.querySelector('[data-testid="vistoria-tabela"]')?.textContent || '').includes(alvo),
+      titulo, { timeout: 30_000 },
+    );
+
+    // Quando a resposta antiga chega, ela precisa ser descartada.
+    await page.waitForTimeout(3500);
+    const conteudo = await secao.locator('[data-testid="vistoria-tabela"]').innerText();
+    assert.ok(conteudo.includes(titulo), 'a leitura mais recente precisa continuar publicada');
+    assert.ok(!conteudo.includes('VISTORIA-ANTIGA'), `resposta fora de ordem não pode sobrescrever a tela: "${conteudo.slice(0, 200)}"`);
+    assert.equal(await secao.locator('[data-testid="vistoria-carregando"]').count(), 0,
+      'estado de carregamento não pode ficar preso depois da resposta mais recente');
+    assert.equal(await secao.locator('[data-testid="vistoria-atualizando"]').count(), 0, 'releitura concluída não deixa "atualizando" na tela');
+
+    // Releitura em curso mantém o conteúdo visível com anúncio próprio.
+    await page.evaluate(() => { window.__uxAtrasarReleituraVistoria = true; });
+    await secao.getByRole('button', { name: 'Recarregar' }).click();
+    await secao.locator('[data-testid="vistoria-atualizando"]').waitFor({ timeout: 3_000 });
+    assert.ok(await secao.locator('[data-testid="vistoria-tabela"]').isVisible(),
+      'a releitura não pode esconder o que já foi lido');
+    await page.evaluate(() => { window.__uxAtrasarReleituraVistoria = false; });
+    await page.waitForSelector('[data-testid="vistoria-atualizando"]', { state: 'detached', timeout: 30_000 });
+    assert.ok((await secao.locator('[data-testid="vistoria-tabela"]').innerText()).includes(titulo));
+    await captureComercial(page, 'desktop-comercial-vistoria-releitura');
+  } finally {
+    await context.close();
+  }
+});
+
+test('browser: vazio é diferente de falha e a vistoria não transborda em 320/390/768/1440 px', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  await loginHttp(staff.email);
+
+  const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  await forceVistoriaVazia(context);
+  const medicoes = [];
+  try {
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    const secao = await abrirVistoria(page);
+
+    const vazio = secao.locator('[data-testid="vistoria-vazio"]');
+    await vazio.waitFor({ timeout: 30_000 });
+    assert.equal(await secao.locator('[data-testid="vistoria-erro"]').count(), 0, 'vazio não é falha');
+    assert.equal(await secao.locator('[data-testid="vistoria-desatualizada"]').count(), 0, 'vazio não é dado desatualizado');
+    await secao.locator('[data-testid="vistoria-templates-vazio"]').waitFor({ timeout: 30_000 });
+    assert.equal(await secao.locator('[data-testid="vistoria-templates-erro"]').count(), 0, 'checklist vazio não é falha de checklist');
+    assert.equal(await secao.locator('[data-testid="vistoria-tabela"]').count(), 0, 'sem registro não há tabela');
+    const textoVazio = await vazio.innerText();
+    assert.ok(/nenhuma vistoria/i.test(textoVazio), `o vazio precisa ser dito como vazio: "${textoVazio}"`);
+
+    for (const [largura, altura] of [[320, 844], [390, 844], [768, 1024], [1440, 900]]) {
+      await page.setViewportSize({ width: largura, height: altura });
+      await page.waitForTimeout(250);
+      let medida = await medirTransbordoComercial(page);
+      if (medida.sobra > 1) { await page.waitForTimeout(400); medida = await medirTransbordoComercial(page); }
+      medicoes.push({ largura, estado: 'vazio', sobra: medida.sobra, culpados: medida.culpados });
+    }
+
+    // Tema noturno: o texto do estado vazio precisa manter contraste legível.
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await ajustarTemaAdmin(page, 'night');
+    const contraste = await page.evaluate(() => {
+      const alvo = document.querySelector('[data-testid="vistoria-vazio"]');
+      if (!alvo) return null;
+      const canais = cor => (cor.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+      const fundoEfetivo = elemento => {
+        for (let atual = elemento; atual; atual = atual.parentElement) {
+          const cor = getComputedStyle(atual).backgroundColor;
+          const v = (cor.match(/[\d.]+/g) || []).map(Number);
+          if (v.length >= 3 && (v.length < 4 || v[3] > 0.5)) return v.slice(0, 3);
+        }
+        return [255, 255, 255];
+      };
+      const lum = ([r, g, b]) => {
+        const f = x => { const s = x / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4; };
+        return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+      };
+      const [l1, l2] = [lum(canais(getComputedStyle(alvo).color)), lum(fundoEfetivo(alvo))].sort((x, y) => y - x);
+      return Math.round(((l1 + 0.05) / (l2 + 0.05)) * 100) / 100;
+    });
+    assert.ok(contraste !== null && contraste >= 4.5, `contraste do vazio no tema noturno precisa ser ≥ 4.5:1 (medido ${contraste}:1)`);
+    await ajustarTemaAdmin(page, 'day');
+  } finally {
+    await context.close();
+  }
+
+  // A faixa de falha também não pode empurrar a página para o lado.
+  const contextoFalha = await browser.newContext({ baseURL: baseUrl, viewport: { width: 320, height: 844 } });
+  await forceVistoriaStatus(contextoFalha, 503, 'inspection_unavailable');
+  try {
+    const page = await contextoFalha.newPage();
+    await loginBrowser(page, staff.email);
+    const secao = await abrirVistoria(page);
+    await secao.locator('[data-testid="vistoria-erro"]').waitFor({ timeout: 30_000 });
+    for (const [largura, altura] of [[320, 844], [390, 844], [768, 1024], [1440, 900]]) {
+      await page.setViewportSize({ width: largura, height: altura });
+      await page.waitForTimeout(250);
+      let medida = await medirTransbordoComercial(page);
+      if (medida.sobra > 1) { await page.waitForTimeout(400); medida = await medirTransbordoComercial(page); }
+      medicoes.push({ largura, estado: 'falha', sobra: medida.sobra, culpados: medida.culpados });
+    }
+  } finally {
+    await contextoFalha.close();
+  }
+
+  const falhas = medicoes.filter(item => item.sobra > 1);
+  assert.equal(falhas.length, 0, `a vistoria não pode transbordar: ${falhas.map(f => `${f.largura}px ${f.estado} (+${f.sobra}px ${f.culpados.join(' | ')})`).join(' ;; ')}`);
+});
+
+test('browser: a negativa de leitura da vistoria falha fechada, sem dado preservado e sem repetição', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(staff.email);
+  await criarEmpresaEVistoriaSinteticas(cookie, 'Negado');
+
+  const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  await forceVistoriaStatus(context, 401, 'admin_session_required');
+  try {
+    const page = await context.newPage();
+    await loginBrowser(page, staff.email);
+    const secao = await abrirVistoria(page);
+
+    const negado = secao.locator('[data-testid="vistoria-negado"]');
+    await negado.waitFor({ timeout: 30_000 });
+    const texto = await negado.innerText();
+    assert.ok(!texto.includes('admin_session_required'), `não expor o código técnico da negativa: "${texto}"`);
+    assert.ok(/permiss|acesso|sess/i.test(texto), `a negativa precisa dizer o que aconteceu: "${texto}"`);
+    assert.equal(await negado.getByRole('button', { name: 'Tentar novamente' }).count(), 0,
+      'repetir a mesma chamada negada não é oferecido');
+    assert.equal(await secao.locator('[data-testid="vistoria-tabela"]').count(), 0,
+      'negativa não preserva dado de leitura anterior');
+    assert.equal(await secao.locator('[data-testid="vistoria-vazio"]').count(), 0, 'negativa não é vazio');
+  } finally {
+    await context.close();
+  }
+
+  // Papel fora da lista da tela continua barrado pelo gate administrativo.
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  await loginHttp(rh.email);
+  const contextoRh = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  try {
+    const page = await contextoRh.newPage();
+    await loginBrowser(page, rh.email);
+    await page.goto('/admin/comercial', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.waitForSelector('[data-admin-gate="forbidden"]', { timeout: 90_000 });
+    assert.equal(await secaoVistoria(page).count(), 0, 'papel sem acesso não vê a vistoria');
+  } finally {
+    await contextoRh.close();
+  }
+});
