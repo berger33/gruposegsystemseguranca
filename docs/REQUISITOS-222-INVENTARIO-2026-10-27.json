@@ -65,7 +65,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1629,
+    "arquivosVarridos": 1633,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -991,7 +991,8 @@
       "classe_evidencia_atual": "mencionado_em_gate",
       "arquivos_gate_nomeados": [],
       "arquivos_gate": [
-        "tests/l04-delivery.integration.test.mjs"
+        "tests/l04-delivery.integration.test.mjs",
+        "tests/ux-crm-workspace.integration.test.mjs"
       ],
       "arquivos_documento": [
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
@@ -1008,7 +1009,7 @@
         "src/app/admin/leads/page.tsx",
         "src/server/crm-api.mjs"
       ],
-      "ocorrencias_gate": 2,
+      "ocorrencias_gate": 3,
       "ocorrencias_documento": 20,
       "ocorrencias_codigo": 4,
       "aceite_humano": "nao_registrado",

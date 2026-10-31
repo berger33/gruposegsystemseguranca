@@ -6,30 +6,9 @@ import { ArrowLeft, Check, LogOut, Mail, MessageCircle, RefreshCw, Shield, UserR
 import AdminGate from "../AdminGate";
 import OriginMetricsPanel from "./OriginMetricsPanel";
 import styles from "./LeadAdmin.module.css";
+import { describeLeadError, parseLeadQueue, type AdminRole, type Lead, type LeadError, type LeadStatus } from "./lead-queue-state";
 
-type AdminRole = "marcelo" | "ti" | "comercial" | "admin";
-type LeadStatus = "solicitada" | "em_agendamento" | "confirmada" | "realizada" | "cancelada" | "new" | "contacted" | "closed";
-type Lead = {
-  id: string;
-  request_kind: "quote" | "visit";
-  name: string;
-  phone: string;
-  city: string;
-  property_type: string;
-  services: string[];
-  visit_preference: string | null;
-  details: string | null;
-  status: LeadStatus;
-  email_status: "not_configured" | "sent" | "failed";
-  created_at: string;
-  // Campos que GET /api/admin/leads já devolvia e que a tela ainda não
-  // apresentava. Nenhum contrato mudou: apenas leitura do que já existe.
-  origin?: string | null;
-  campaign?: string | null;
-  channel?: string | null;
-  responsible?: string | null;
-  updated_at?: string | null;
-};
+// Tipos e validação do contrato vivem no módulo local lead-queue-state.
 
 const roleNames: Record<AdminRole, string> = { marcelo: "Marcelo · administração", ti: "TI · sistema", comercial: "Comercial", admin: "Administração" };
 const statusLabels: Record<LeadStatus, string> = {
@@ -122,12 +101,6 @@ function formatUpdatedAt(value: string | null | undefined) {
   return new Date(parsed).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
 
-function explainApiError(code: string) {
-  if (code === "database_not_configured") return "O PostgreSQL ainda não está configurado no servidor.";
-  if (code === "migration_required") return "A estrutura do banco ainda não foi migrada. Execute npm run db:migrate no servidor.";
-  if (code === "admin_session_required") return "Sua sessão expirou. Entre novamente.";
-  return "Não foi possível carregar os pedidos. Tente novamente mais tarde.";
-}
 
 function LeadAdminContent() {
   const [role, setRole] = useState<AdminRole | null>(null);
@@ -139,6 +112,8 @@ function LeadAdminContent() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [readError, setReadError] = useState<LeadError | null>(null);
+  const [readFilter, setReadFilter] = useState<"all" | LeadStatus>("all");
   const [notice, setNotice] = useState("");
   // Instante da última leitura concluída com sucesso. É o que permite dizer
   // "atualizado em" e separar dado antigo de falha de leitura.
@@ -152,46 +127,80 @@ function LeadAdminContent() {
   const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
   const [order, setOrder] = useState<"recentes" | "espera">("recentes");
   const hasLoadedRef = useRef(false);
-  const pendingIdsRef = useRef<Set<string>>(new Set());
+  const pendingWritesRef = useRef<Map<string, number>>(new Map());
+  const writeCounter = useRef(0);
+  const readSequence = useRef(0);
+  // Leituras não invalidam escritas: dois pedidos podem gravar em paralelo.
+  // Só troca de filtro/sessão invalida o contexto de uma escrita em voo.
+  const writeSequence = useRef(0);
 
-  function setLeadPending(leadId: string, pending: boolean) {
-    const next = new Set(pendingIdsRef.current);
-    if (pending) next.add(leadId);
-    else next.delete(leadId);
-    pendingIdsRef.current = next;
-    setPendingIds(next);
+  function clearRead() {
+    setLeads([]);
+    setTotal(0);
+    setLoadedAt(null);
+    setStale(false);
+    hasLoadedRef.current = false;
+  }
+
+  function beginLeadPending(leadId: string) {
+    if (pendingWritesRef.current.has(leadId)) return null;
+    const token = ++writeCounter.current;
+    pendingWritesRef.current.set(leadId, token);
+    setPendingIds(new Set(pendingWritesRef.current.keys()));
+    return token;
+  }
+
+  function finishLeadPending(leadId: string, token: number) {
+    if (pendingWritesRef.current.get(leadId) !== token) return;
+    pendingWritesRef.current.delete(leadId);
+    setPendingIds(new Set(pendingWritesRef.current.keys()));
   }
 
   const loadLeads = useCallback(async (selectedFilter: "all" | LeadStatus = filter) => {
+    const sequence = ++readSequence.current;
     setLoading(true);
-    setError("");
+    setReadError(null);
     try {
       const [sessionResponse, leadsResponse] = await Promise.all([
         fetch("/api/admin/session", { cache: "no-store" }),
         fetch(`/api/admin/leads?limit=100${selectedFilter === "all" ? "" : `&status=${selectedFilter}`}`, { cache: "no-store" }),
       ]);
       const sessionData = await sessionResponse.json().catch(() => ({}));
+      const data = await leadsResponse.json().catch(() => ({}));
+      if (sequence !== readSequence.current) return;
       if (!sessionResponse.ok || !["marcelo", "ti", "comercial", "admin"].includes(sessionData.role)) {
         setRole(null);
-        setLeads([]);
-        setLoading(false);
+        clearRead();
+        setReadError(describeLeadError(sessionResponse.status, sessionData.error));
         return;
       }
       setRole(sessionData.role);
-      const data = await leadsResponse.json().catch(() => ({}));
-      if (!leadsResponse.ok) throw new Error(explainApiError(data.error));
-      setLeads(Array.isArray(data.leads) ? data.leads : []);
-      setTotal(Number(data.total) || 0);
+      if (!leadsResponse.ok) {
+        const failure = describeLeadError(leadsResponse.status, data.error);
+        setReadError(failure);
+        if (failure.kind === "auth" || failure.kind === "denied") clearRead();
+        else setStale(hasLoadedRef.current);
+        return;
+      }
+      const valid = parseLeadQueue(data);
+      setLeads(valid.leads);
+      setTotal(valid.total);
+      setReadFilter(selectedFilter);
       hasLoadedRef.current = true;
       setLoadedAt(Date.now());
       setStale(false);
+      setReadError(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Falha ao carregar os pedidos.");
-      // Só marca desatualização se já havia uma leitura anterior bem-sucedida:
-      // sem dados na tela o estado correto é "nunca carregou", não "antigo".
-      setStale(hasLoadedRef.current);
+      if (sequence !== readSequence.current) return;
+      const failure = cause instanceof Error && cause.message === "invalid_response"
+        ? describeLeadError(200, "invalid_response") : describeLeadError(0, undefined);
+      setReadError(failure);
+      // Resposta inválida não é dado aproveitável: não a transforma em zero,
+      // nem mantém uma lista antiga sob um envelope que não pude validar.
+      if (failure.kind === "invalid") clearRead();
+      else setStale(hasLoadedRef.current);
     } finally {
-      setLoading(false);
+      if (sequence === readSequence.current) setLoading(false);
     }
   }, [filter]);
 
@@ -199,6 +208,10 @@ function LeadAdminContent() {
 
   async function login(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    readSequence.current += 1;
+    writeSequence.current += 1;
+    clearRead();
+    setReadError(null);
     setBusy(true);
     setError("");
     setNotice("");
@@ -230,8 +243,9 @@ function LeadAdminContent() {
   }
 
   async function updateStatus(lead: Lead, status: LeadStatus) {
-    if (pendingIdsRef.current.has(lead.id)) return;
-    setLeadPending(lead.id, true);
+    const writeToken = beginLeadPending(lead.id);
+    if (writeToken === null) return;
+    const sequence = writeSequence.current;
     setError("");
     setNotice("");
     try {
@@ -241,19 +255,23 @@ function LeadAdminContent() {
         body: JSON.stringify({ status }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(explainApiError(data.error));
+      if (sequence !== writeSequence.current) return;
+      if (!response.ok) throw new Error(describeLeadError(response.status, data.error, "update").detail);
+      if (data.leadId !== lead.id || data.status !== status) throw new Error(describeLeadError(200, "invalid_response", "update").detail);
       setNotice(`Pedido de ${lead.name}: status alterado para “${statusLabels[status]}”.`);
       await loadLeads(filter);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Não foi possível atualizar o pedido.");
+      if (sequence !== writeSequence.current) return;
+      setError(cause instanceof Error ? cause.message : describeLeadError(0, undefined, "update").detail);
     } finally {
-      setLeadPending(lead.id, false);
+      finishLeadPending(lead.id, writeToken);
     }
   }
 
   async function convertLead(lead: Lead) {
-    if (pendingIdsRef.current.has(lead.id)) return;
-    setLeadPending(lead.id, true);
+    const writeToken = beginLeadPending(lead.id);
+    if (writeToken === null) return;
+    const sequence = writeSequence.current;
     setError("");
     setNotice("");
     try {
@@ -263,25 +281,41 @@ function LeadAdminContent() {
         body: JSON.stringify({ create_company: true, company_name: lead.name }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(explainApiError(data.error));
+      if (sequence !== writeSequence.current) return;
+      if (!response.ok) throw new Error(describeLeadError(response.status, data.error, "convert").detail);
+      if (typeof data.opportunityId !== "string" || !data.opportunityId) throw new Error(describeLeadError(200, "invalid_response", "convert").detail);
       setNotice(
         data.dedup
           ? `Lead de ${lead.name} já tinha sido convertido — oportunidade ${String(data.opportunityId).slice(0, 8)} reaproveitada (sem duplicar).`
           : `Lead de ${lead.name} convertido em oportunidade ${String(data.opportunityId).slice(0, 8)}. Continue em Empresas & funil (CRM).`,
       );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Não foi possível converter o lead.");
+      if (sequence !== writeSequence.current) return;
+      setError(cause instanceof Error ? cause.message : describeLeadError(0, undefined, "convert").detail);
     } finally {
-      setLeadPending(lead.id, false);
+      finishLeadPending(lead.id, writeToken);
     }
   }
 
   async function logout() {
+    readSequence.current += 1;
+    writeSequence.current += 1;
     setBusy(true);
+    setRole(null);
+    clearRead();
+    setReadError(null);
+    setEmail("");
+    setPassword("");
+    setNotice("");
+    setError("");
+    setFilter("all");
+    setReadFilter("all");
+    setOrder("recentes");
+    setLoading(false);
+    pendingWritesRef.current.clear();
+    setPendingIds(new Set());
     try {
       await fetch("/api/admin/session", { method: "DELETE" });
-      setRole(null);
-      setLeads([]);
       setNotice("Sessão encerrada.");
     } finally {
       setBusy(false);
@@ -289,6 +323,7 @@ function LeadAdminContent() {
   }
 
   function setSelectedFilter(value: "all" | LeadStatus) {
+    writeSequence.current += 1;
     setFilter(value);
     void loadLeads(value);
   }
@@ -352,7 +387,7 @@ function LeadAdminContent() {
         ) : (
           <>
             <div className={styles.toolbar}>
-              <div className={styles.summary}><strong>{total}</strong><span>{total === 1 ? "pedido" : "pedidos"}{filter === "all" ? " no total" : ` · ${statusLabels[filter].toLowerCase()}`}</span></div>
+              <div className={styles.summary}><strong>{loadedAt === null ? "—" : total}</strong><span>{loadedAt === null ? "aguardando uma leitura concluída" : `${total === 1 ? "pedido" : "pedidos"}${readFilter === "all" ? " no total" : ` · ${statusLabels[readFilter].toLowerCase()}`}`}</span></div>
               <div className={styles.controls}>
                 <label htmlFor="lead-filter">Filtrar</label>
                 <select id="lead-filter" value={filter} onChange={event => setSelectedFilter(event.target.value as "all" | LeadStatus)}>
@@ -375,7 +410,8 @@ function LeadAdminContent() {
               {loading && <span className={styles.updating} role="status">Atualizando a fila…</span>}
             </div>
 
-            <section className={styles.queueSummary} aria-labelledby="lead-queue-summary-title" data-testid="lead-queue-summary">
+            {loadedAt !== null && (
+            <section className={styles.queueSummary} aria-labelledby="lead-queue-summary-title" data-testid="lead-queue-summary" data-read-filter={readFilter}>
               <h2 id="lead-queue-summary-title" className={styles.queueSummaryTitle}>Resumo da fila</h2>
               <dl className={styles.queueSummaryGrid}>
                 <div>
@@ -400,27 +436,35 @@ function LeadAdminContent() {
                 máximo 100 por vez); nenhum campo novo é gravado e nenhum valor é estimado.
               </p>
             </section>
-
-            {stale && (
-              <p className={styles.stale} role="alert" data-testid="lead-queue-stale">
-                A última atualização falhou. Os pedidos abaixo são os da leitura de {loadedAtLabel} e podem
-                estar desatualizados — isto não significa que a fila esteja vazia.
-              </p>
             )}
 
-            {loading && loadedAt === null ? (
+            {stale && readError && (
+              <div className={styles.stale} role="alert" data-testid="lead-queue-stale">
+                <p>A última atualização falhou. {readError.detail} Os pedidos abaixo são os da leitura de {loadedAtLabel}, filtro {readFilter === "all" ? "Todos" : statusLabels[readFilter]}, e podem
+                estar desatualizados — isto não significa que a fila esteja vazia. O seletor pode mostrar um filtro ainda não concluído.</p>
+                {readError.canRetry && <button type="button" className={styles.retry} data-testid="lead-queue-retry" disabled={loading} onClick={() => void loadLeads(filter)}>Tentar novamente</button>}
+              </div>
+            )}
+            {!stale && readError && (
+              <div className={styles.readFailure} role="alert" data-testid={readError.kind === "denied" || readError.kind === "auth" ? "lead-queue-denied" : "lead-queue-read-error"}>
+                <strong>{readError.title}</strong><p>{readError.detail}</p>
+                {readError.canRetry && <button type="button" className={styles.retry} data-testid="lead-queue-retry" disabled={loading} onClick={() => void loadLeads(filter)}>Tentar novamente</button>}
+              </div>
+            )}
+
+            {readError && !stale ? null : loading && loadedAt === null ? (
               <div className={styles.empty} role="status" aria-busy="true" data-testid="lead-queue-loading"><strong>Carregando pedidos…</strong><span>Ainda não há dados desta leitura.</span></div>
             ) : loadedAt === null ? (
               <div className={styles.empty} data-testid="lead-queue-never-loaded"><Mail size={24} /><strong>A fila ainda não foi carregada</strong><span>Não há pedidos para mostrar nem informação de ausência: a leitura não foi concluída. Use o botão de atualizar para tentar de novo.</span></div>
             ) : leads.length === 0 ? (
               <div className={styles.empty} data-testid="lead-queue-empty"><Mail size={24} />
-                <strong>{filter === "all" ? "Nenhum pedido recebido até agora" : `Nenhum pedido com o status “${statusLabels[filter]}”`}</strong>
+                <strong>{readFilter === "all" ? "Nenhum pedido recebido até agora" : `Nenhum pedido com o status “${statusLabels[readFilter]}”`}</strong>
                 <span>
-                  {filter === "all"
+                  {readFilter === "all"
                     ? "Isto é ausência de dados, não falha de leitura: quando alguém enviar o formulário público, o pedido aparece aqui."
                     : "O filtro está ativo e não há pedidos neste estado. Os demais pedidos continuam no sistema."}
                 </span>
-                {filter !== "all" && (
+                {readFilter !== "all" && (
                   <button type="button" className={styles.clearFilter} onClick={() => setSelectedFilter("all")}>Ver todos os pedidos</button>
                 )}
               </div>
