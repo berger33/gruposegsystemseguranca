@@ -8068,6 +8068,45 @@ test('browser UX-PRO-03 RH: reclamações compartilhadas, projeção mínima, at
     const missingLabels = await area.locator('input,select,textarea').evaluateAll(controls => controls.filter(control => !control.labels || control.labels.length === 0).map(control => control.outerHTML));
     assert.deepEqual(missingLabels, [], 'campos do fluxo precisam de rótulo associado');
     assert.ok(await area.locator(':focus-visible').count() >= 0);
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    // Escrita lenta + troca de relato: a resposta do PATCH chega depois de o RH
+    // abrir outro relato. Ela não pode nem sobrescrever o detalhe novo, nem
+    // deixar o formulário preso em "Salvando situação…" até recarregar a página.
+    await page.evaluate(target => {
+      const original = window.fetch.bind(window); window.__hrWriteFetch = original;
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : input.url;
+        const pathname = new URL(url, location.origin).pathname;
+        if (init?.method === 'PATCH' && pathname === target) {
+          const response = await original(input, init);
+          await new Promise(resolve => { window.__releaseHrWrite = resolve; });
+          window.__hrWriteHeld = true;
+          return response;
+        }
+        return original(input, init);
+      };
+    }, `${hrBase}/${idB}`);
+    await buttonForProtocol(createdB.body.protocol).click();
+    await detailPanel.getByText(createdB.body.protocol, { exact: true }).waitFor();
+    await detailPanel.getByLabel('Nova situação').selectOption('resolvida');
+    await detailPanel.getByLabel('Motivo da atualização').fill(`Escrita lenta sintética ${suffix}.`);
+    const slowSubmit = detailPanel.locator('form button[type="submit"]');
+    await slowSubmit.click();
+    await page.waitForFunction(() => typeof window.__releaseHrWrite === 'function');
+    await buttonForProtocol(createdA.body.protocol).click();
+    await detailPanel.getByText(createdA.body.protocol, { exact: true }).waitFor();
+    await page.evaluate(() => window.__releaseHrWrite());
+    await page.waitForFunction(() => window.__hrWriteHeld === true);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await page.evaluate(() => { window.fetch = window.__hrWriteFetch; });
+    assert.equal((await pool.query('SELECT status FROM cli_employee_complaints WHERE id=$1', [idB])).rows[0].status, 'resolvida',
+      'a escrita lenta é real no servidor; só a resposta chegou fora de ordem');
+    assert.equal(await detailPanel.locator('dd').filter({ hasText: 'Pendente' }).count(), 1, 'o detalhe novo continua sendo o de A');
+    assert.equal(await detailPanel.locator('dd').filter({ hasText: 'Resolvida' }).count(), 0, 'resposta fora de ordem não altera o detalhe aberto');
+    await detailPanel.getByLabel('Motivo da atualização').fill(`Retomada sintética ${suffix}.`);
+    assert.equal(await slowSubmit.innerText(), 'Salvar situação', 'o formulário não pode ficar preso em "Salvando situação…"');
+    assert.equal(await slowSubmit.isDisabled(), false, 'o RH precisa voltar a salvar sem recarregar a página');
     if (process.env.UX_PORTAL_EVIDENCE_DIR) {
       await writeFile(path.join(process.env.UX_PORTAL_EVIDENCE_DIR, `ux-pro-03-rh-reclamacoes-${suffix}-viewport.json`), JSON.stringify(viewportEvidence, null, 2));
     }
