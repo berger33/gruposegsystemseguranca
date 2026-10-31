@@ -325,7 +325,7 @@ test('o isolamento por conta do cliente continua decidido no servidor', { skip: 
 });
 
 test('browser: falha de leitura NÃO devolve a tela de login do funcionário', { skip: !RUN }, async () => {
-  const browser = await launchBrowser();
+  console.log('SONDA_FASE 5 browser'); const browser = await launchBrowser();
   try {
     // A pessoa entra de verdade (o POST de sessão não é tocado) e, em seguida,
     // a LEITURA do portal falha. É o cenário que o defeito antigo confundia
@@ -8333,4 +8333,397 @@ test('browser UX-PRO-03: ADM-01..06 pauta, retratos e aprovações (papéis, esc
     await context?.close();
     await browser.close();
   }
+});
+
+// ============================================================================
+// UX-PRO-06 (CLI-13) — fila de acesso do portal com estado honesto.
+//
+// Antes desta fatia (medido nesta mesma base em PostgreSQL 17 + Chromium):
+//  - `GET` da fila respondia 403 para `ti`/`admin` nos três aliases de RH
+//    (`authorizeLegacyHrRequest` exige `employees.read`) e 405 em `/api/cli/`;
+//  - o alias público `/api/public/portal-access-requests` devolvia 404;
+//  - a tela dizia "Não foi possível carregar" E "Nenhum pedido registrado";
+//  - a negativa mantinha os pedidos na tela, `{}` virava fila vazia e um item
+//    sem UUID era publicado como pedido;
+//  - a escrita morria em silêncio com corpo não-JSON e publicava o código cru.
+//
+// Este cenário prova papéis (autorizado, negado e anônimo), escrita real com
+// status e corpo, 503 + retry, payload inválido, negativa na releitura, A/B sem
+// resíduo, quatro larguras, tema noturno e teclado — com evidência por estado.
+// ============================================================================
+function cli13Injecao(estadoInicial) {
+  const original = window.fetch.bind(window);
+  window.__cli13 = { ...estadoInicial, leituras: 0, escritas: [] };
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : (input?.url || "");
+    const metodo = (init?.method || "GET").toUpperCase();
+    const caminho = new URL(url, location.origin).pathname;
+    const fila = caminho.endsWith("portal-access-requests");
+    const json = (status, corpo, tipo = "application/json") => new Response(corpo, { status, headers: { "content-type": tipo } });
+    if (fila && metodo === "GET") {
+      window.__cli13.leituras += 1;
+      if (window.__cli13.atraso) await new Promise(resolve => setTimeout(resolve, window.__cli13.atraso));
+      const modo = window.__cli13.fila;
+      if (modo === "503") return json(503, JSON.stringify({ error: "audit_unavailable" }));
+      if (modo === "403") return json(403, JSON.stringify({ error: "forbidden" }));
+      if (modo === "invalido") return json(200, JSON.stringify({ requests: [{ id: "nao-e-uuid" }] }));
+      if (modo === "sem-campo") return json(200, "{}");
+      if (modo === "vazia") return json(200, JSON.stringify({ requests: [] }));
+    }
+    if (fila && metodo === "PATCH" && window.__cli13.escrita === "html503") {
+      return json(503, "<html><body>503</body></html>", "text/html");
+    }
+    return original(input, init);
+  };
+}
+
+test("browser UX-PRO-06 CLI-13: fila de acesso do portal (papéis, escrita real, falhas, retry, A/B, larguras, noite e teclado)", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const rh = await provisionStaff(pool, { role: "rh" });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const sufixo = randomUUID().slice(0, 8);
+  const ROTA_FILA = "/api/admin/portal-access-requests";
+  const ROTA_MODOS = "/api/cli/portal-mode-configs";
+  const MOTIVO = `Motivo sintético da decisão pela interface ${sufixo}.`;
+  const evidence = process.env.UX_PORTAL_EVIDENCE_DIR || "";
+  const entries = [];
+  const sombraDocumento = page => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+
+  // --- servidor: papéis e compatibilidade dos aliases ----------------------
+  assert.equal((await api(ROTA_FILA)).status, 401, "anônimo recebe 401");
+  assert.equal((await api(ROTA_MODOS)).status, 401, "anônimo recebe 401 nos modos");
+  assert.equal((await api(ROTA_FILA, { cookie: rhCookie })).status, 403, "papel sem acesso recebe 403");
+  assert.equal((await api(ROTA_MODOS, { cookie: rhCookie })).status, 403, "papel sem acesso recebe 403 nos modos");
+  // A borda legada de RH continua de pé: o alias antigo segue negando `ti`.
+  // (Se algum dia alguém "resolver" a fila afrouxando a borda, isto cai.)
+  assert.equal((await api("/api/hr/cli-portal-access-requests", { cookie: tiCookie })).status, 403);
+  // O alias público documentado existe de novo (antes: 404).
+  const publico = await api("/api/public/portal-access-requests", { method: "POST", headers: { "idempotency-key": `qa-cli13-${sufixo}-a` },
+    body: { mode: "solicitacao_aprovacao", client_account_id: "00000000-0000-4000-8000-000000000000",
+      requested_email: "caminho-publico@exemplo.invalid", requested_name: "Caminho público", document_ref: "12.345.0001/99" } });
+  assert.notEqual(publico.status, 404, "o alias público não pode voltar a cair no Next");
+
+  // --- dois pedidos pendentes reais (contas A e B) -------------------------
+  const contaA = randomUUID();
+  const contaB = randomUUID();
+  await pool.query(
+    `INSERT INTO client_accounts (id, display_name, document_ref, created_by) VALUES
+      ($1::uuid,'QA CLI13 Conta A Sintetica','11122233344','ti'),
+      ($2::uuid,'QA CLI13 Conta B Sintetica','55566677788','ti')`,
+    [contaA, contaB],
+  );
+  const pedidoA = await api("/api/public/portal-access-requests", { method: "POST", headers: { "idempotency-key": `qa-cli13-${sufixo}-aa` },
+    body: { mode: "solicitacao_aprovacao", client_account_id: contaA, requested_email: `qa-cli13-a-${sufixo}@exemplo.invalid`,
+      requested_name: "Pessoa QA A", document_ref: "11.122.2333/44" } });
+  assert.equal(pedidoA.status, 201, "o caminho público real precisa criar o pedido A");
+  const pedidoB = await api("/api/client/portal-access-requests", { method: "POST", headers: { "idempotency-key": `qa-cli13-${sufixo}-bb` },
+    body: { mode: "solicitacao_aprovacao", client_account_id: contaB, requested_email: `qa-cli13-b-${sufixo}@exemplo.invalid`,
+      requested_name: "Pessoa QA B", document_ref: "55.566.6777/88" } });
+  assert.equal(pedidoB.status, 201, "o alias de cliente continua criando pedido");
+  const idA = pedidoA.body.request.id;
+  const idB = pedidoB.body.request.id;
+  const protocoloA = pedidoA.body.request.protocol;
+  const protocoloB = pedidoB.body.request.protocol;
+  // O corpo do POST público devolve id/protocol/mode/status/created_at (não
+  // `verified_link`): o vínculo é conferido no banco, que é quem decide.
+  const vinculoA = await pool.query("SELECT verified_link FROM cli_portal_access_requests WHERE id = $1::uuid", [pedidoA.body.request.id]);
+  assert.equal(vinculoA.rows[0].verified_link, true, "o vínculo é decidido no servidor");
+
+  const filaTi = await api(ROTA_FILA, { cookie: tiCookie });
+  assert.equal(filaTi.status, 200, "ti precisa ler a fila (antes: 403 em todos os aliases)");
+  assert.ok(filaTi.body.requests.some(item => item.id === idA) && filaTi.body.requests.some(item => item.id === idB));
+
+  // --- utilitários de navegador -------------------------------------------
+  const comPagina = async (opcoes, acoes) => {
+    const browser = await launchBrowser();
+    try {
+      const context = await browser.newContext({ viewport: { width: opcoes.width ?? 1440, height: opcoes.height ?? 900 }, locale: "pt-BR" });
+      const cookie = opcoes.cookie ?? tiCookie;
+      await context.addCookies(cookie.split("; ").filter(Boolean).map(item => {
+        const separador = item.indexOf("=");
+        return { name: item.slice(0, separador), value: item.slice(separador + 1), url: baseUrl };
+      }));
+      const page = await context.newPage();
+      page.setDefaultTimeout(45_000);
+      page.setDefaultNavigationTimeout(90_000);
+      page.on("dialog", dialog => dialog.accept(opcoes.motivo ?? MOTIVO));
+      // A injeção é sempre instalada (com padrão "passar direto"): as fases
+      // precisam poder trocar o comportamento DEPOIS da primeira leitura.
+      await page.addInitScript(cli13Injecao, Object.assign({ fila: "pass", escrita: "pass" }, opcoes.injecao || {}));
+      await page.goto(`${baseUrl}/admin/portal/solicitacoes`, { waitUntil: "domcontentloaded" });
+      const resultado = await acoes(page, context);
+      await context.close();
+      return resultado;
+    } finally { await browser.close(); }
+  };
+  const evidenciar = async (page, { estado, nome, width, theme }) => {
+    await capture(page, nome);
+    const sobra = await sombraDocumento(page);
+    entries.push({ viewport: width, theme, estado, screenshot: evidence ? `${nome}.png` : null, sobraDocumentoPx: sobra, problems: [] });
+    return sobra;
+  };
+  const texto = page => page.evaluate(() => document.body.innerText.replace(/\s+/g, " ").trim());
+
+  // --- 1) papel NEGADO: o gate não entrega a área --------------------------
+  await comPagina({ cookie: rhCookie, width: 1440 }, async (page) => {
+    await page.locator('[data-admin-gate="forbidden"]').waitFor();
+    const corpo = await texto(page);
+    assert.doesNotMatch(corpo, /Solicitações/, "papel negado não vê a fila");
+    assert.doesNotMatch(corpo, new RegExp(protocoloA), "papel negado não vê protocolo");
+    await evidenciar(page, { estado: "negado", nome: "cli13-1440-day-negado", width: 1440, theme: "day" });
+  });
+
+  // --- 2) leitura AUTORIZADA em quatro larguras e noite --------------------
+  for (const width of [320, 390, 768, 1440]) {
+    await comPagina({ width }, async (page) => {
+      await page.getByTestId("cli13-fila-lista").getByText(protocoloA).waitFor();
+      await page.getByTestId("cli13-fila-lista").getByText(protocoloB).waitFor();
+      assert.ok(await page.getByTestId("cli13-fila-hora").isVisible(), "a tela declara a hora da leitura concluída");
+      assert.equal(await page.getByTestId("cli13-fila-vazia").count(), 0, "com pedidos na fila, nada de 'vazio'");
+      const sobra = await evidenciar(page, { estado: "autorizado", nome: `cli13-${width}-day`, width, theme: "day" });
+      assert.ok(sobra <= 1, `a fila transborda ${sobra}px em ${width}px`);
+    });
+  }
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId("cli13-fila-lista").getByText(protocoloA).waitFor();
+    await page.locator('[data-admin-theme-toggle="true"]').click();
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === "night");
+    await page.getByTestId("cli13-fila-lista").getByText(protocoloB).waitFor();
+    const sobra = await evidenciar(page, { estado: "autorizado", nome: "cli13-1440-night", width: 1440, theme: "night" });
+    assert.ok(sobra <= 1, `a fila transborda ${sobra}px no tema noturno`);
+    const fundo = await page.getByTestId("cli13-fila").evaluate(node => getComputedStyle(node).backgroundColor);
+    assert.notEqual(fundo, "rgb(255, 255, 255)", "o painel da fila acompanha o tema noturno");
+  });
+
+  // --- 3) 503 transitório: preserva, declara a hora e recupera no retry ----
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId("cli13-fila-lista").getByText(protocoloA).waitFor();
+    const respostaReal = page.waitForResponse(r => new URL(r.url()).pathname === ROTA_FILA && r.request().method() === "GET");
+    await page.getByRole("button", { name: "Atualizar" }).click();
+    assert.equal((await respostaReal).status(), 200, "a releitura autorizada fala com o servidor real");
+    await page.evaluate(() => { window.__cli13.fila = "503"; });
+    await page.getByRole("button", { name: "Atualizar" }).click();
+    const banda = page.getByTestId("cli13-fila-desatualizada");
+    await banda.waitFor();
+    assert.match(await banda.innerText(), /desatualizados/i);
+    assert.match(await banda.innerText(), /\d{2}:\d{2}/, "a banda diz a hora da última leitura concluída");
+    assert.ok(await page.getByTestId("cli13-fila-lista").getByText(protocoloA).isVisible(), "o pedido lido não pode desaparecer");
+    assert.equal(await page.getByTestId("cli13-fila-erro").count(), 0, "falha transitória não é falha sem leitura");
+    assert.equal(await page.getByTestId("cli13-fila-vazia").count(), 0);
+    await evidenciar(page, { estado: "falha-transitoria", nome: "cli13-1440-day-transitoria", width: 1440, theme: "day" });
+    // Retry de verdade: volta a falar com o servidor e a banda sai.
+    await page.evaluate(() => { window.__cli13.fila = "pass"; });
+    await banda.getByRole("button", { name: "Tentar novamente" }).click();
+    await banda.waitFor({ state: "detached" });
+    await page.getByTestId("cli13-fila-lista").getByText(protocoloA).waitFor();
+  });
+
+  // --- 4) payload inválido NÃO é fila vazia --------------------------------
+  await comPagina({ injecao: { fila: "sem-campo" }, width: 1440 }, async (page) => {
+    const banda = page.getByTestId("cli13-fila-erro");
+    await banda.waitFor();
+    assert.equal(await banda.getAttribute("data-falha"), "invalid");
+    assert.match(await banda.innerText(), /resposta inválida/i);
+    assert.equal(await page.getByTestId("cli13-fila-vazia").count(), 0, "payload inválido nunca vira 'nenhum pedido registrado'");
+    await evidenciar(page, { estado: "payload-invalido", nome: "cli13-1440-day-invalido", width: 1440, theme: "day" });
+  });
+  await comPagina({ injecao: { fila: "vazia" }, width: 1440 }, async (page) => {
+    await page.getByTestId("cli13-fila-vazia").waitFor();
+    assert.equal(await page.getByTestId("cli13-fila-erro").count(), 0, "fila vazia não é falha");
+    await evidenciar(page, { estado: "vazio", nome: "cli13-1440-day-vazio", width: 1440, theme: "day" });
+  });
+
+  // --- 5) negativa na RELEITURA descarta o que estava na tela --------------
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId("cli13-fila-lista").getByText(protocoloA).waitFor();
+    await page.evaluate(() => { window.__cli13.fila = "403"; });
+    await page.getByRole("button", { name: "Atualizar" }).click();
+    const negado = page.getByTestId("cli13-fila-negado");
+    await negado.waitFor();
+    assert.equal(await page.getByTestId("cli13-fila-lista").count(), 0, "negativa descarta a lista");
+    assert.doesNotMatch(await texto(page), new RegExp(protocoloA), "negativa não pode manter protocolo na tela");
+    assert.equal(await negado.getByRole("button", { name: "Tentar novamente" }).count(), 0, "negativa não oferece repetir a mesma chamada");
+    await evidenciar(page, { estado: "negado-na-releitura", nome: "cli13-1440-day-negado-releitura", width: 1440, theme: "day" });
+  });
+
+  // --- 6) escrita real pela interface: aprovação A, rejeição B -------------
+  const escrita = await comPagina({ width: 1440 }, async (page) => {
+    const linhaA = page.getByTestId("cli13-pedido").filter({ hasText: protocoloA });
+    const linhaB = page.getByTestId("cli13-pedido").filter({ hasText: protocoloB });
+    await linhaA.waitFor();
+    await linhaB.waitFor();
+    const respostaA = page.waitForResponse(r => new URL(r.url()).pathname === ROTA_FILA && r.request().method() === "PATCH");
+    await linhaA.getByRole("button", { name: "Aprovar e emitir convite" }).click();
+    const httpA = await respostaA;
+    const corpoA = await httpA.json();
+    assert.equal(httpA.status(), 200, "a aprovação precisa sair pela interface");
+    assert.equal(corpoA.request.status, "aprovada");
+    assert.match(String(corpoA.inviteUrl), /^\/cliente\/convite\?token=/);
+    await page.getByTestId("cli13-acao-ok").getByText(/Convite canônico criado/).waitFor();
+    // A/B sem resíduo: a linha B continua pendente e decidível.
+    await page.getByTestId("cli13-pedido").filter({ hasText: protocoloA }).getByText("Aprovada").waitFor();
+    assert.match(await linhaB.innerText(), /Pendente/);
+    assert.equal(await linhaB.getByRole("button", { name: "Rejeitar com motivo" }).count(), 1);
+    assert.equal(await page.getByTestId("cli13-pedido").filter({ hasText: protocoloA }).getByRole("button", { name: "Rejeitar com motivo" }).count(), 0,
+      "pedido já decidido não oferece nova decisão");
+    const respostaB = page.waitForResponse(r => new URL(r.url()).pathname === ROTA_FILA && r.request().method() === "PATCH");
+    await linhaB.getByRole("button", { name: "Rejeitar com motivo" }).click();
+    const httpB = await respostaB;
+    const corpoB = await httpB.json();
+    assert.equal(httpB.status(), 200);
+    assert.equal(corpoB.request.status, "rejeitada");
+    await page.getByTestId("cli13-acao-ok").getByText("Rejeição registrada.").waitFor();
+    await evidenciar(page, { estado: "escrita-real", nome: "cli13-1440-day-escrita", width: 1440, theme: "day" });
+    return { corpoA, corpoB };
+  });
+  assert.equal(escrita.corpoA.request.id, idA);
+  assert.equal(escrita.corpoB.request.id, idB);
+
+  // Banco: as decisões ficaram registradas com autor, motivo e histórico.
+  const linhas = await pool.query(
+    "SELECT id, status, decision_reason, approved_by_identity, invite_id FROM cli_portal_access_requests WHERE id = ANY($1::uuid[]) ORDER BY protocol",
+    [[idA, idB]],
+  );
+  assert.equal(linhas.rows.length, 2);
+  const aprovado = linhas.rows.find(row => row.id === idA);
+  const rejeitado = linhas.rows.find(row => row.id === idB);
+  assert.equal(aprovado.status, "aprovada");
+  assert.equal(aprovado.approved_by_identity, ti.id);
+  assert.equal(aprovado.decision_reason, MOTIVO);
+  assert.ok(aprovado.invite_id, "a aprovação precisa emitir o convite canônico");
+  assert.equal(rejeitado.status, "rejeitada");
+  assert.equal(rejeitado.decision_reason, MOTIVO);
+  const historico = await pool.query(
+    "SELECT next_status FROM cli_portal_access_request_history WHERE request_id = ANY($1::uuid[]) ORDER BY created_at ASC",
+    [[idA, idB]],
+  );
+  assert.deepEqual(historico.rows.map(row => row.next_status).sort(), ["aprovada", "pendente", "pendente", "rejeitada"]);
+  const auditoria = await pool.query(
+    "SELECT count(*)::int AS total FROM auth_access_audit WHERE action = 'portal_access_request_review' AND target = ANY($1::text[])",
+    [[idA, idB]],
+  );
+  assert.ok(auditoria.rows[0].total >= 2, "cada decisão precisa de trilha de auditoria");
+  const convite = await pool.query("SELECT kind, email FROM auth_invites WHERE id = $1::uuid", [aprovado.invite_id]);
+  assert.equal(convite.rows[0].kind, "client");
+  assert.equal(convite.rows[0].email, `qa-cli13-a-${sufixo}@exemplo.invalid`);
+
+  // --- 7) escrita com corpo não-JSON: falha DITA, nunca silêncio -----------
+  await comPagina({ injecao: { escrita: "html503" }, width: 1440 }, async (page) => {
+    const pendente = await pool.query(
+      `INSERT INTO cli_portal_access_requests (id, protocol, mode, client_account_id, requested_email, requested_name, document_ref, status, verified_link)
+       VALUES (gen_random_uuid(), $1, 'solicitacao_aprovacao', $2::uuid, $3, 'Pessoa QA C', '99887766554', 'pendente', true) RETURNING protocol`,
+      [`ACC-CLI-20261031-${sufixo.slice(0, 4).toUpperCase()}`, contaA, `qa-cli13-c-${sufixo}@exemplo.invalid`],
+    );
+    const protocoloC = pendente.rows[0].protocol;
+    const linha = page.getByTestId("cli13-pedido").filter({ hasText: protocoloC });
+    await linha.waitFor();
+    const antes = await texto(page);
+    await linha.getByRole("button", { name: "Rejeitar com motivo" }).click();
+    const erro = page.getByTestId("cli13-acao-erro");
+    await erro.waitFor();
+    assert.match(await erro.innerText(), /indisponível/i, "corpo não-JSON precisa de frase própria");
+    assert.notEqual(antes, await texto(page), "a tela não pode ficar em silêncio");
+    const doBanco = await pool.query("SELECT status FROM cli_portal_access_requests WHERE protocol = $1", [protocoloC]);
+    assert.equal(doBanco.rows[0].status, "pendente", "a escrita recusada não pode mudar o estado no banco");
+    await evidenciar(page, { estado: "escrita-recusada", nome: "cli13-1440-day-escrita-recusada", width: 1440, theme: "day" });
+  });
+
+  // --- 8) teclado: primeiro foco do conteúdo, percurso real e contorno -----
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId("cli13-fila-lista").getByText(protocoloA).waitFor();
+    // O primeiro controle do CONTEÚDO da página (a navegação do shell também
+    // tem um link para /admin/portal — o foco aqui é o retorno da própria tela).
+    const retorno = page.getByRole("link", { name: "Configuração do portal", exact: true });
+    assert.equal(await retorno.count(), 1, "a tela declara o próprio retorno");
+    await retorno.focus();
+    const percurso = [];
+    for (let passo = 0; passo < 8; passo += 1) {
+      percurso.push(await page.evaluate(() => {
+        const ativo = document.activeElement;
+        const estilo = ativo ? getComputedStyle(ativo) : null;
+        return {
+          tag: ativo?.tagName ?? null,
+          rotulo: (ativo?.textContent || ativo?.getAttribute("aria-label") || "").trim().slice(0, 32),
+          href: ativo?.getAttribute("href") ?? null,
+          contorno: estilo ? `${estilo.outlineStyle} ${estilo.outlineWidth}` : null,
+        };
+      }));
+      await page.keyboard.press("Tab");
+    }
+    assert.ok(percurso.length === 8);
+    assert.equal(percurso[0].href, "/admin/portal", "o primeiro foco do conteúdo é o retorno da própria tela");
+    const interativos = percurso.filter(item => item.tag === "BUTTON" || item.tag === "INPUT");
+    assert.ok(interativos.length >= 3, "o percurso precisa alcançar os controles da fila");
+    for (const item of interativos) {
+      assert.match(String(item.contorno), /solid 3px/, `contorno visível obrigatório em ${item.rotulo}`);
+    }
+    // Foco na falha: só quando a falha veio de uma ação da pessoa.
+    await page.evaluate(() => { window.__cli13.fila = "invalido"; });
+    await page.getByRole("button", { name: "Atualizar" }).click();
+    await page.getByTestId("cli13-fila-erro").waitFor();
+    const focado = await page.evaluate(() => ({
+      role: document.activeElement?.getAttribute("role"),
+      testId: document.activeElement?.getAttribute("data-testid"),
+    }));
+    assert.equal(focado.role, "alert");
+    assert.equal(focado.testId, "cli13-fila-erro");
+    await evidenciar(page, { estado: "teclado-falha", nome: "cli13-1440-day-teclado", width: 1440, theme: "day" });
+  });
+
+  // --- 9) out-of-order NÃO é alcançável pela UI ----------------------------
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId("cli13-fila-lista").getByText(protocoloA).waitFor();
+    await page.evaluate(() => { window.__cli13.leituras = 0; window.__cli13.atraso = 800; });
+    const medir = () => {
+      const secao = document.querySelector('[data-testid="cli13-fila"]');
+      if (!secao) return { existe: false };
+      const botao = [...secao.querySelectorAll("button")].find(item => /Atualiz/.test(item.textContent || ""));
+      return {
+        existe: true,
+        ariaBusy: secao.getAttribute("aria-busy"),
+        desabilitado: Boolean(botao?.disabled),
+        rotulo: (botao?.textContent || "").trim(),
+        leituras: window.__cli13.leituras,
+      };
+    };
+    await page.getByRole("button", { name: "Atualizar" }).click();
+    // Leitura única: enquanto a leitura está em curso, o mesmo botão fica
+    // travado e a região se declara ocupada.
+    await page.waitForFunction(() => {
+      const secao = document.querySelector('[data-testid="cli13-fila"]');
+      const botao = secao && [...secao.querySelectorAll("button")].find(item => /Atualiz/.test(item.textContent || ""));
+      return secao?.getAttribute("aria-busy") === "true" && Boolean(botao?.disabled);
+    }, null, { timeout: 15_000 }).catch(async () => {
+      throw new Error(`estado de leitura única não foi observado: ${JSON.stringify(await page.evaluate(medir))}`);
+    });
+    const durante = await page.evaluate(medir);
+    assert.equal(durante.desabilitado, true, "durante a leitura o atualizar fica travado (leitura única)");
+    assert.equal(durante.rotulo, "Atualizando…");
+    await page.waitForFunction(() => document.querySelector('[data-testid="cli13-fila"]')?.getAttribute("aria-busy") === "false");
+    assert.equal(await page.getByRole("button", { name: "Atualizar" }).isEnabled(), true);
+    // Com o botão travado durante a leitura, dois GET simultâneos pela tela não
+    // são alcançáveis: a resposta fora de ordem fica provada no teste focal.
+    assert.ok(await page.evaluate(() => window.__cli13.leituras) <= 1);
+  });
+
+  // --- resumo das evidências ----------------------------------------------
+  if (evidence) {
+    await mkdir(evidence, { recursive: true });
+    await writeFile(path.join(evidence, "resumo.json"), JSON.stringify({
+      stage: "UX-PRO-06 · CLI-13 · fila de acesso do portal (/admin/portal/solicitacoes)",
+      generatedBy: "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+      route: "/admin/portal/solicitacoes",
+      fatia: "UX-PRO-06 — estado honesto da fila de acesso do portal",
+      entries,
+      limites: [
+        "Sem SMTP real: a aprovação emite o convite canônico, não envia e-mail.",
+        "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+        "Sem leitor de tela e sem Windows: teclado e contraste medidos só no Chromium empacotado.",
+        "A fila é global do módulo (não escopada por conta): A/B prova que a decisão de um pedido não contamina o outro.",
+        "Resposta fora de ordem não é alcançável pela tela (atualizar travado durante a leitura); fica provada no teste focal.",
+      ],
+    }, null, 2));
+  }
+  for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
 });

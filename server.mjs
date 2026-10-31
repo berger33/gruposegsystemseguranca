@@ -3835,7 +3835,7 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/cli-portal-mode-configs" || url.pathname === "/api/crm/hr/cli-portal-mode-configs" || url.pathname === "/api/hr/cli-portal-mode-configs" || url.pathname === "/api/cli/portal-mode-configs") {
     return cliFinanceApi.handlePortalModeConfigs(req, res);
   }
-  if (url.pathname === "/api/admin/hr/cli-portal-access-requests" || url.pathname === "/api/crm/hr/cli-portal-access-requests" || url.pathname === "/api/hr/cli-portal-access-requests" || url.pathname === "/api/cli/portal-access-requests" || url.pathname === "/api/client/portal-access-requests" || url.pathname === "/api/public/portal-access-requests") {
+  if (url.pathname === "/api/admin/hr/cli-portal-access-requests" || url.pathname === "/api/crm/hr/cli-portal-access-requests" || url.pathname === "/api/hr/cli-portal-access-requests" || url.pathname === "/api/cli/portal-access-requests" || url.pathname === "/api/client/portal-access-requests" || url.pathname === "/api/public/portal-access-requests" || url.pathname === "/api/admin/portal-access-requests") {
     return cliFinanceApi.handlePortalAccessRequests(req, res);
   }
   // CLI-14 segurança conta MFA opcional gestão sessões troca e-mail concluída fluxos backend real
@@ -5567,6 +5567,20 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/hr/cli-portal-access-requests"
   || pathname === "/api/cli/portal-access-requests"
   || pathname === "/api/client/portal-access-requests"
+  // Faltava aqui: o alias público estava despachado em `routeApi` e é o que a
+  // tela `/cliente/acesso` usa, mas nunca entrou na lista de caminhos de API —
+  // toda requisição caía no Next e voltava 404.
+  || pathname === "/api/public/portal-access-requests"
+  // Alias canônico de ADMINISTRAÇÃO da jornada CLI-13. Os aliases
+  // `/api/{admin/,crm/}*hr/cli-portal-access-requests` continuam existindo, mas
+  // passam antes pela borda legada de RH (`authorizeLegacyHrRequest`), que exige
+  // a permissão `employees.read` e devolve 403 justamente para `ti`/`admin` —
+  // os papéis que o próprio handler autoriza via `ensureAuth`. Medido no gate:
+  // `ti` recebia 403 nos três aliases de RH. Este caminho não é público
+  // (`handlePortalAccessRequests` só trata como público `/api/client/`,
+  // `/api/public/` e `/api/cli/`), então chega em `ensureAuth(["admin","ti"])`
+  // com sessão individual e origem conferida no servidor.
+  || pathname === "/api/admin/portal-access-requests"
   || pathname === "/api/admin/hr/cli-security-events"
   || pathname === "/api/crm/hr/cli-security-events"
   || pathname === "/api/hr/cli-security-events"

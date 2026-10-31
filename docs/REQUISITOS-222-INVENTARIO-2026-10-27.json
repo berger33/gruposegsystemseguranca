@@ -65,7 +65,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1637,
+    "arquivosVarridos": 1641,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -4157,11 +4157,14 @@
       "pendencia_0410": "`test:l08-delivery:pg`, cascata L03..L08 e aplicação da migração 144 adiados; sem aceite humano novo; Windows pendente.",
       "classe_evidencia_atual": "gate_nomeado",
       "arquivos_gate_nomeados": [
-        "tests/cli13-portal-access-modes.test.mjs"
+        "tests/cli13-portal-access-modes.test.mjs",
+        "tests/ux-pro-06-cli13-fila-acesso-estados.test.mjs"
       ],
       "arquivos_gate": [
         "docs/REQUISITOS-SEC-REAUDITORIA-2026-10-28.json",
-        "tests/cli13-portal-access-modes.test.mjs"
+        "tests/cli13-portal-access-modes.test.mjs",
+        "tests/ux-portal-workspace.integration.test.mjs",
+        "tests/ux-pro-06-cli13-fila-acesso-estados.test.mjs"
       ],
       "arquivos_documento": [
         "docs/AUDITORIA-TERRENO-L08.md",
@@ -4174,14 +4177,16 @@
         "docs/ENTREGA-L08.md"
       ],
       "arquivos_codigo": [
+        "src/app/admin/portal/solicitacoes/AccessRequests.module.css",
+        "src/app/admin/portal/solicitacoes/access-queue-state.ts",
         "src/app/admin/portal/solicitacoes/page.tsx",
         "src/app/admin/ti/CliFinanceClient.tsx",
         "src/server/cli-finance-api.mjs",
         "src/server/client-access-api.mjs"
       ],
-      "ocorrencias_gate": 14,
-      "ocorrencias_documento": 39,
-      "ocorrencias_codigo": 6,
+      "ocorrencias_gate": 29,
+      "ocorrencias_documento": 47,
+      "ocorrencias_codigo": 12,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
