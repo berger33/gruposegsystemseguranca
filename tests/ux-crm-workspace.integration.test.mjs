@@ -1389,6 +1389,261 @@ test('browser: os controles novos da fila são alcançáveis pelo teclado e most
   } finally { /* o navegador é compartilhado e fechado no after() */ }
 });
 
+
+// UX-PRO-06 (31/10): a fila já existia. Estes cenários fecham lacunas de
+// leitura/escrita reais, sem mudar o servidor ou simular isolamento por conta.
+async function installLeadReadProbe(context, initialMode = 'pass', holdWriteId = null) {
+  await context.addInitScript(({ initialMode, holdWriteId }) => {
+    window.__leadReadProbe = { mode: initialMode, held: [], released: [], calls: [] };
+    window.__heldLeadWrite = null;
+    window.__leadWriteResults = [];
+    const original = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      const method = String(init?.method || input?.method || 'GET').toUpperCase();
+      if (holdWriteId && url.endsWith(`/api/admin/leads/${holdWriteId}`) && method === 'PATCH' && window.__leadReadProbe.mode === 'hold-write') {
+        // A escrita chega ao servidor ANTES do logout. Só a resposta fica
+        // retida, para provar que ela não reabre a sessão nem publica aviso.
+        return original(input, init).then(response => new Promise(resolve => { window.__heldLeadWrite = () => resolve(response); }));
+      }
+      if (url.includes('/api/crm/leads/') || (url.includes('/api/admin/leads/') && method === 'PATCH')) {
+        return original(input, init).then(async response => {
+          const text = await response.text();
+          window.__leadWriteResults.push({ url, status: response.status, body: JSON.parse(text) });
+          return new Response(text, { status: response.status, headers: response.headers });
+        });
+      }
+      if (!url.includes('/api/admin/leads?') || method !== 'GET') return original(input, init);
+      const probe = window.__leadReadProbe;
+      probe.calls.push(url);
+      if (probe.mode === 'hold') {
+        return new Promise((resolve, reject) => probe.held.push({ url,
+          release: () => { const promise = original(input, init).then(resolve, reject); probe.released.push(promise); return promise; },
+        }));
+      }
+      if (probe.mode === 'pass') return original(input, init);
+      const status = probe.mode === 'denied' ? 403 : probe.mode === 'invalid' ? 200 : 503;
+      const body = probe.mode === 'invalid' ? { leads: {}, total: 0 }
+        : { error: probe.mode === 'denied' ? 'forbidden' : 'leads_unavailable' };
+      return Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
+    };
+  }, { initialMode, holdWriteId });
+}
+async function releaseLeadRead(page, index) {
+  await page.waitForFunction(i => window.__leadReadProbe.held.length > i, index);
+  await page.evaluate(async i => {
+    const request = window.__leadReadProbe.held[i];
+    await request.release();
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  }, index);
+}
+async function waitLeadReadIdle(page) {
+  await page.waitForFunction(() => document.querySelector('button[aria-label="Atualizar pedidos"]')?.disabled === false, null, { timeout: 30_000 });
+}
+
+test('UX-PRO-06 fila: papéis e escritas reais preservam contrato, transação e auditoria', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(staff.email);
+  const leadId = await seedLead({ label: 'Contrato escrito real', phone: '(11) 90000-0101', cookie });
+  assert.equal((await api('/api/admin/leads')).status, 401);
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const rhCookie = await loginHttp(rh.email);
+  for (const result of [
+    await api('/api/admin/leads', { cookie: rhCookie }),
+    await api(`/api/admin/leads/${leadId}`, { method: 'PATCH', body: { status: 'cancelada' }, cookie: rhCookie }),
+  ]) assert.equal(result.status, 403);
+  assert.equal((await pool.query('SELECT status FROM public_leads WHERE id=$1', [leadId])).rows[0].status, 'solicitada');
+  // A conversão CRM já aceita qualquer sessão staff individual. Esta fatia
+  // mede e preserva essa borda; não a transforma em uma nova restrição.
+  const conversionLead = await seedLead({ label: 'Borda conversão existente', phone: '(11) 90000-0106', cookie });
+  const rhConversion = await api(`/api/crm/leads/${conversionLead}/convert`, { method: 'POST', body: { create_company: true, company_name: 'Conversão staff sintética' }, cookie: rhCookie });
+  assert.equal(rhConversion.status, 201);
+  for (const role of ['comercial', 'marcelo', 'admin', 'ti']) {
+    const person = role === 'comercial' ? staff : await provisionStaff(pool, { role });
+    const sessionCookie = role === 'comercial' ? cookie : await loginHttp(person.email);
+    assert.equal((await api('/api/admin/leads?limit=100', { cookie: sessionCookie })).status, 200);
+  }
+  const changed = await api(`/api/admin/leads/${leadId}`, { method: 'PATCH', cookie, body: { status: 'em_agendamento' } });
+  assert.equal(changed.status, 200);
+  assert.equal(changed.body.leadId, leadId);
+  assert.equal(changed.body.previousStatus, 'solicitada');
+  assert.equal(changed.body.status, 'em_agendamento');
+  assert.equal(changed.body.statusChanged, true);
+  assert.equal((await pool.query('SELECT status FROM public_leads WHERE id=$1', [leadId])).rows[0].status, 'em_agendamento');
+  assert.equal((await pool.query('SELECT next_status FROM public_lead_status_audit WHERE lead_id=$1', [leadId])).rows[0].next_status, 'em_agendamento');
+  assert.ok((await pool.query('SELECT id FROM auth_access_audit WHERE target=$1', [`${leadId}:solicitada->em_agendamento`])).rowCount > 0);
+  const body = { create_company: true, company_name: 'Empresa sintética da fila 31 outubro' };
+  const converted = await api(`/api/crm/leads/${leadId}/convert`, { method: 'POST', cookie, body });
+  assert.equal(converted.status, 201);
+  assert.ok(converted.body.opportunityId);
+  const repeated = await api(`/api/crm/leads/${leadId}/convert`, { method: 'POST', cookie, body });
+  assert.equal(repeated.status, 200);
+  assert.equal(repeated.body.dedup, true);
+  assert.equal(repeated.body.opportunityId, converted.body.opportunityId);
+  assert.equal((await pool.query('SELECT count(*)::int AS n FROM crm_opportunities WHERE public_lead_id=$1', [leadId])).rows[0].n, 1);
+  assert.ok((await pool.query('SELECT id FROM auth_access_audit WHERE action=$1 AND target=$2', ['crm_lead_convert', `${leadId}->${converted.body.opportunityId}`])).rowCount > 0);
+  const context = await browser.newContext({ baseURL: baseUrl });
+  try {
+    const page = await context.newPage();
+    await loginBrowser(page, rh.email);
+    await page.goto('/admin/leads', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('[data-admin-gate="forbidden"]');
+    assert.equal(await page.locator('[data-testid="lead-queue-list"]').count(), 0);
+  } finally { await context.close(); }
+});
+
+test('UX-PRO-06 fila: leitura fora de ordem, 503 com retry, payload inválido e negativa fechada', { skip: !RUN }, async () => {
+  const staff = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(staff.email);
+  const a = await seedLead({ label: 'Sequência A', phone: '(11) 90000-0102', cookie });
+  const b = await seedLead({ label: 'Sequência B', phone: '(11) 90000-0103', status: 'cancelada', cookie });
+  const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  try {
+    await installLeadReadProbe(context);
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', error => errors.push(String(error)));
+    await loginBrowser(page, staff.email);
+    await page.goto('/admin/leads', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector(`[data-testid="${cardTestId(a)}"]`);
+    await page.evaluate(() => { window.__leadReadProbe.mode = 'hold'; });
+    await page.selectOption('#lead-filter', 'cancelada');
+    await page.waitForFunction(() => window.__leadReadProbe.held.length === 1);
+    await page.selectOption('#lead-filter', 'solicitada');
+    await releaseLeadRead(page, 1);
+    await waitLeadReadIdle(page);
+    await page.waitForSelector(`[data-testid="${cardTestId(a)}"]`);
+    assert.equal(await page.locator(`[data-testid="${cardTestId(b)}"]`).count(), 0);
+    await releaseLeadRead(page, 0);
+    await waitLeadReadIdle(page);
+    assert.equal(await page.locator(`[data-testid="${cardTestId(a)}"]`).count(), 1, 'resposta antiga não pode substituir o filtro novo');
+    assert.equal(await page.locator(`[data-testid="${cardTestId(b)}"]`).count(), 0);
+    assert.equal(await page.locator('#lead-filter').inputValue(), 'solicitada');
+
+    await page.evaluate(() => { window.__leadReadProbe.mode = 'unavailable'; });
+    await page.click('button[aria-label="Atualizar pedidos"]');
+    await page.waitForSelector('[data-testid="lead-queue-stale"]');
+    assert.match(await page.textContent('[data-testid="lead-queue-stale"]'), /indisponível|Não foi possível/);
+    assert.equal(await page.locator(`[data-testid="${cardTestId(a)}"]`).count(), 1);
+    const c = await seedLead({ label: 'Chegou durante falha', phone: '(11) 90000-0104', cookie });
+    await page.evaluate(() => { window.__leadReadProbe.mode = 'pass'; });
+    await page.click('[data-testid="lead-queue-retry"]');
+    await page.waitForSelector(`[data-testid="${cardTestId(c)}"]`);
+    assert.equal(await page.locator('[data-testid="lead-queue-stale"]').count(), 0);
+
+    // Nova página: o probe é instalado antes do boot, sem depender de ordem
+    // de scripts em reload (o Chromium empacotado não garantiu essa ordem).
+    const invalidContext = await browser.newContext({ baseURL: baseUrl, storageState: await context.storageState() });
+    try {
+      await installLeadReadProbe(invalidContext, 'invalid');
+      const invalidPage = await invalidContext.newPage();
+      await invalidPage.goto('/admin/leads', { waitUntil: 'domcontentloaded' });
+      await invalidPage.waitForSelector('[data-testid="lead-queue-read-error"]');
+      assert.match(await invalidPage.textContent('[data-testid="lead-queue-read-error"]'), /resposta inválida/i);
+      assert.equal(await invalidPage.locator('[data-testid="lead-queue-empty"]').count(), 0);
+      assert.equal(await invalidPage.locator('[data-testid="lead-queue-loading"]').count(), 0);
+      assert.equal(await invalidPage.locator('[data-testid="lead-queue-summary"]').count(), 0);
+      await invalidPage.evaluate(() => { window.__leadReadProbe.mode = 'pass'; });
+      await invalidPage.click('[data-testid="lead-queue-retry"]');
+      await invalidPage.waitForSelector(`[data-testid="${cardTestId(a)}"]`);
+    } finally { await invalidContext.close(); }
+
+    await page.evaluate(() => { window.__leadReadProbe.mode = 'denied'; });
+    await page.click('button[aria-label="Atualizar pedidos"]');
+    await page.waitForSelector('[data-testid="lead-queue-denied"]');
+    assert.equal(await page.locator('[data-lead-id]').count(), 0, 'negativa precisa descartar dados anteriores');
+    assert.equal(await page.locator('[data-testid="lead-queue-summary"]').count(), 0);
+    assert.equal(await page.locator('[data-testid="lead-queue-denied"] button').count(), 0, 'não repetir automaticamente a chamada negada');
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+});
+
+test('UX-PRO-06 fila: A/B sem resíduos, resposta atrasada e quatro larguras com evidência', { skip: !RUN }, async () => {
+  const a = await provisionStaff(pool, { role: 'comercial' });
+  const b = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(a.email);
+  const leadId = await seedLead({ label: 'Sem resíduo entre sessões', phone: '(11) 90000-0105', cookie });
+  const context = await browser.newContext({ baseURL: baseUrl, viewport: { width: 390, height: 844 } });
+  try {
+    await installLeadReadProbe(context, 'pass', leadId);
+    const page = await context.newPage();
+    await loginBrowser(page, a.email);
+    await page.goto('/admin/leads', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector(`[data-testid="${cardTestId(leadId)}"]`);
+    await page.selectOption(`[data-testid="${cardTestId(leadId)}"] select[aria-label^="Alterar status"]`, 'em_agendamento');
+    await page.waitForFunction(() => window.__leadWriteResults.some(result => result.url.includes('/api/admin/leads/') && result.body?.status));
+    const patch = await page.evaluate(() => window.__leadWriteResults.find(result => result.url.includes('/api/admin/leads/') && result.body?.status));
+    assert.equal(patch.status, 200);
+    assert.equal(patch.body.status, 'em_agendamento');
+    await page.waitForFunction(id => document.querySelector(`[data-testid="lead-card-${id.slice(0,8)}"] select`)?.value === 'em_agendamento', leadId);
+
+    await page.locator(`[data-testid="${cardTestId(leadId)}"]`).getByRole('button', { name: 'Converter em oportunidade (CRM-04)' }).click();
+    await page.waitForFunction(() => window.__leadWriteResults.some(result => result.url.includes('/convert')));
+    const conversion = await page.evaluate(() => window.__leadWriteResults.find(result => result.url.includes('/convert')));
+    assert.equal(conversion.status, 201);
+    assert.ok(conversion.body.opportunityId);
+    await page.waitForFunction(() => document.body.innerText.includes('convertido em oportunidade'));
+    await page.evaluate(() => { window.__leadReadProbe.mode = 'hold-write'; });
+    await page.selectOption(`[data-testid="${cardTestId(leadId)}"] select[aria-label^="Alterar status"]`, 'confirmada');
+    await page.waitForFunction(() => typeof window.__heldLeadWrite === 'function');
+    await page.evaluate(() => { window.__leadReadProbe.mode = 'hold'; });
+    await page.selectOption('#lead-filter', 'cancelada');
+    await page.waitForFunction(() => window.__leadReadProbe.held.length === 1);
+    await page.click('button[aria-label="Encerrar sessão"]');
+    // Exercita o logout local existente (contingência de sessão expirada).
+    // O botão Sair do envelope central tem outra jornada e não foi alterado.
+    await page.waitForSelector('#leads-email');
+    assert.equal((await pool.query('SELECT status FROM public_leads WHERE id=$1', [leadId])).rows[0].status, 'confirmada');
+    await page.evaluate(() => { window.__heldLeadWrite(); });
+    await releaseLeadRead(page, 0);
+    assert.equal(await page.locator('[data-lead-id]').count(), 0);
+    assert.equal(await page.locator('#leads-email').inputValue(), '');
+    assert.equal(await page.locator('#leads-password').inputValue(), '');
+    await page.evaluate(() => { window.__leadReadProbe.mode = 'pass'; });
+    await page.fill('#leads-email', b.email);
+    await page.fill('#leads-password', STAFF_TEST_PASSWORD);
+    await page.click('button[type="submit"]');
+    await page.waitForSelector('[data-testid="lead-queue-list"]');
+    await waitLeadReadIdle(page);
+    assert.equal(await page.locator('#lead-filter').inputValue(), 'all');
+    assert.equal(await page.locator('#leads-password').count(), 0);
+    const notices = await page.locator('p[role="status"]').allTextContents();
+    assert.ok(notices.some(text => text.includes('Acesso autenticado.')), 'B precisa confirmar a nova sessão');
+    assert.ok(notices.every(text => !/status alterado para|convertido em oportunidade|Sessão encerrada/.test(text)), 'sucesso e aviso de A não podem sobreviver em B');
+    assert.equal((await pool.query('SELECT status FROM public_leads WHERE id=$1', [leadId])).rows[0].status, 'confirmada', 'a escrita adiada foi real, embora sua resposta não pudesse reabrir A');
+    assert.equal(await page.locator('select[disabled]').count(), 0);
+    // A API administrativa é global: B pode ler o mesmo registro. O que se
+    // prova aqui é a limpeza da sessão/interface, não isolamento por conta.
+    const directory = process.env.UX_LEADS_STATE_EVIDENCE_DIR || '';
+    const entries = [];
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: width === 768 ? 1024 : width === 1440 ? 900 : 844 });
+      await page.waitForFunction(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1, null, { timeout: 10_000 });
+      const viewport = `${width}x${page.viewportSize().height}`;
+      const file = `fila-${width}.png`;
+      if (directory) { await mkdir(directory, { recursive: true }); await page.screenshot({ path: path.join(directory, file), fullPage: true }); }
+      entries.push({ stage: 'ux-pro-06-fila-estados', route: '/admin/leads', role: 'comercial', viewport, theme: 'day', screenshot: directory ? `${directory.replace(/^.*?docs\//, 'docs/')}/${file}` : file, problems: [] });
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.focus('#lead-filter');
+    const traversal = ['lead-filter'];
+    await page.keyboard.press('Tab');
+    traversal.push(await page.evaluate(() => document.activeElement?.getAttribute('aria-label') || ''));
+    await page.keyboard.press('Tab');
+    traversal.push(await page.evaluate(() => document.activeElement?.id || ''));
+    assert.deepEqual(traversal, ['lead-filter', 'Atualizar pedidos', 'lead-order']);
+    const firstFocus = await page.evaluate(() => getComputedStyle(document.activeElement).outlineStyle !== 'none' && parseFloat(getComputedStyle(document.activeElement).outlineWidth) > 0);
+    assert.equal(firstFocus, true);
+    await page.click('[data-admin-theme-toggle="true"]');
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night');
+    if (directory) {
+      await page.screenshot({ path: path.join(directory, 'fila-390-noite.png'), fullPage: true });
+      entries.push({ stage: 'ux-pro-06-fila-estados', route: '/admin/leads', role: 'comercial', viewport: '390x844', theme: 'night', screenshot: `${directory.replace(/^.*?docs\//, 'docs/')}/fila-390-noite.png`, problems: [], firstFocus, percursoTeclado: traversal });
+      await writeFile(path.join(directory, 'resumo.json'), JSON.stringify({ stage: 'ux-pro-06-fila-estados', generatedBy: 'npm run test:ux-crm:pg; UX_LEADS_STATE_EVIDENCE_DIR; massa sintética; sem aceite humano', entries }, null, 2) + '\n');
+    }
+  } finally { await context.close(); }
+});
+
 // ---------------------------------------------------------------------------
 // UX-PRO-06 — /admin/comercial: casca em etapas e histórico de versões
 // (fatia própria; provas HTTP e de navegador contra PostgreSQL descartável)
