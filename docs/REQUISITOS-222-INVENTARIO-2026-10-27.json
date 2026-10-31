@@ -65,7 +65,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1628,
+    "arquivosVarridos": 1629,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -5206,7 +5206,7 @@
         "src/server/adm-api.mjs"
       ],
       "ocorrencias_gate": 22,
-      "ocorrencias_documento": 127,
+      "ocorrencias_documento": 128,
       "ocorrencias_codigo": 16,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"

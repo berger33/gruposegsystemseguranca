@@ -176,3 +176,21 @@ test('RH: mesma origem e sessão válidas são exigidas; papel comercial é nega
   assert.ok(failing.events.some(event => event.sql === 'ROLLBACK'));
   assert.equal(failing.state.committed, false);
 });
+
+// Defeito real encontrado ao conferir a sequência de escrita: a resposta de um
+// PATCH que chega depois de o RH abrir outro relato era descartada (correto),
+// mas o estado `busy` nunca era liberado, deixando o formulário preso em
+// "Salvando situação…" até recarregar a página inteira. Estes são os guardas
+// estáticos; o cenário de navegador do gate do portal prova o comportamento.
+test('RH: escrita lenta não deixa o formulário preso ao trocar de relato ou reler a lista', async () => {
+  const component = await readFile(new URL('../src/app/admin/funcionarios/SharedEmployeeComplaints.tsx', import.meta.url), 'utf8');
+  const openDetail = component.slice(component.indexOf('const openDetail = useCallback'), component.indexOf('async function updateStatus'));
+  const loadList = component.slice(component.indexOf('const loadList = useCallback'), component.indexOf('useEffect('));
+  const updateStatus = component.slice(component.indexOf('async function updateStatus'), component.indexOf('<section className={styles.workspace}'));
+  assert.match(openDetail, /setBusy\(false\)/, 'abrir outro relato precisa liberar o formulário de escrita');
+  assert.match(loadList, /setBusy\(false\)/, 'reler a lista precisa liberar o formulário de escrita');
+  assert.match(component, /const writeSequence = useRef\(0\)/, 'a escrita precisa de sequência própria, independente da leitura');
+  assert.match(updateStatus, /const write = \+\+writeSequence\.current/, 'cada envio precisa reivindicar a sequência de escrita');
+  assert.match(updateStatus, /if \(write === writeSequence\.current\) setBusy\(false\)/, 'só o envio mais recente pode liberar o formulário');
+  assert.match(updateStatus, /if \(requestSequence !== detailSequence\.current\) return;/, 'resposta de outro relato continua descartada');
+});
