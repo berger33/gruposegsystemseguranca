@@ -4,6 +4,8 @@
 
 **Natureza:** entrega local, com prova em PostgreSQL 17 descartável + HTTP real + Chromium. Não é aceite humano, UAT, homologação nem autorização de produção. Produção permanece **NO-GO** (`docs/PRODUCAO-GATE.md`).
 
+**Entrega:** **PR #319 MERGED** em 31/10/2026 no merge `2976c708c6082ab4f723e0e1e7a232d97845d4a5`, com **11/11 checks verdes** no runner do GitHub (`focal`, `static-and-smoke`, `ux-portal-postgres-browser`, `ux-hr-postgres-browser`, `admin-entry`, `backup-restore`, `client-portal`, `contracts`, `crm`, `finance`, `operations`). Mergear não altera o estado do produto: continua sem aceite humano (**0/222**) e produção **NO-GO**.
+
 ## 1. Sincronização, leitura e reconciliação do pedido
 
 `git fetch origin` e `git status` foram executados antes de qualquer edição. A árvore estava **limpa** e `HEAD` era **idêntico** a `origin/main` (`6303213…`), portanto **nenhum reset foi necessário** e nenhum trabalho foi descartado. A `main` real já estava **avançada** em relação ao SHA citado no pedido (`d9d011c…`, merge da PR #307): entre eles entraram as PRs #311–#317 (11ª aba ADM, E22, E23, E25, E27, E7 e a promoção anterior do console).
