@@ -65,7 +65,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1633,
+    "arquivosVarridos": 1637,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -857,7 +857,9 @@
       "classe_evidencia_atual": "mencionado_em_gate",
       "arquivos_gate_nomeados": [],
       "arquivos_gate": [
-        "tests/l04-delivery.integration.test.mjs"
+        "tests/l04-delivery.integration.test.mjs",
+        "tests/ux-crm-workspace.integration.test.mjs",
+        "tests/ux-pro-06-metricas-origem-estados.test.mjs"
       ],
       "arquivos_documento": [
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
@@ -871,13 +873,14 @@
       ],
       "arquivos_codigo": [
         "src/app/admin/leads/OriginMetricsPanel.tsx",
+        "src/app/admin/leads/origin-metrics-state.ts",
         "src/app/admin/ti/OriginMetricsClient.tsx",
         "src/lib/public-lead-validation.mjs",
         "src/server/crm-api.mjs"
       ],
-      "ocorrencias_gate": 3,
-      "ocorrencias_documento": 45,
-      "ocorrencias_codigo": 5,
+      "ocorrencias_gate": 9,
+      "ocorrencias_documento": 53,
+      "ocorrencias_codigo": 6,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -1113,7 +1116,7 @@
         "src/server/crm-task-api.mjs"
       ],
       "ocorrencias_gate": 13,
-      "ocorrencias_documento": 70,
+      "ocorrencias_documento": 72,
       "ocorrencias_codigo": 8,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"

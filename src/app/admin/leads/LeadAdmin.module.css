@@ -18,6 +18,13 @@
 .metricsTable tbody th{font-weight:700;overflow-wrap:anywhere;white-space:normal}
 .metricsFootnote{margin:14px 0 0;color:#8593a5;font-size:11px;line-height:1.6}
 @media(max-width:650px){.metricsPanel{padding:18px 16px}.metricsHead{align-items:flex-start;flex-direction:column}.metricsControls{flex-wrap:wrap}}
+/* UX-PRO-06: período, hora da leitura e faixa de desatualização da mensuração. */
+.metricsUpdated{margin:14px 0 0;color:#6b7b90;font-size:12px;line-height:1.6}
+.metricsStale{margin:16px 0 0;padding:12px 14px;border:1px solid #f0d9b5;border-radius:8px;background:#fff5e8;color:#8a5310;font-size:13px;line-height:1.55}
+.metricsStale p{margin:0 0 10px}
+@media(max-width:650px){.metricsStale{padding:10px 12px}}
+:global(html[data-admin-theme="night"]) .metricsUpdated{color:#adbdcf}
+:global(html[data-admin-theme="night"]) .metricsStale{background:#42341c;border-color:#5d4a26;color:#f0cf8b}
 
 /* UX-PRO-02: legacy lead cards, filters and metrics follow the staff theme. */
 :global(html[data-admin-theme="night"]) .page { background:#111b2b; color:#e5edf7; }

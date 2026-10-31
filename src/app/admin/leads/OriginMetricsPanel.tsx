@@ -6,30 +6,22 @@
 // aqui nenhum campo para digitar métrica: um número de conversão escrito à
 // mão não é mensuração. Política em
 // docs/PROMPT-CONTINUACAO-PUB10-METRICAS-ORIGEM.md.
+//
+// UX-PRO-06 — estado de leitura honesto: a leitura anterior é preservada
+// quando a releitura falha (com hora e período declarados), a negativa e o
+// payload inválido falham fechados, e há retry explícito. A validação do
+// contrato e o redutor sequenciado vivem em `origin-metrics-state`.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BarChart3, RefreshCw } from "lucide-react";
 import styles from "./LeadAdmin.module.css";
-
-type MetricsRow = {
-  origin: string;
-  campaign: string;
-  channel: string;
-  leads: number;
-  visitsConfirmed: number;
-  converted: number;
-  won: number;
-  conversionRate: number | null;
-  winRate: number | null;
-};
-
-type MetricsResponse = {
-  from: string;
-  to: string;
-  windowDays: number;
-  rows: MetricsRow[];
-  totals: { leads: number; visitsConfirmed: number; converted: number; won: number; conversionRate: number | null; winRate: number | null };
-};
+import {
+  ORIGIN_METRICS_INITIAL,
+  describeOriginMetricsError,
+  parseOriginMetrics,
+  reduceOriginMetrics,
+  type OriginMetricsError,
+} from "./origin-metrics-state";
 
 function isoDaysAgo(days: number) {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -40,43 +32,79 @@ function formatRate(rate: number | null) {
   return rate === null ? "—" : `${rate.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
 }
 
-function explainMetricsError(code: string) {
-  if (code === "invalid_period") return "Período inválido. Verifique as datas (a inicial não pode ser posterior à final).";
-  if (code === "period_too_long") return "Período longo demais. O limite é de 366 dias por consulta.";
-  if (code === "database_not_configured") return "O PostgreSQL ainda não está configurado no servidor.";
-  if (code === "migration_required") return "A estrutura do banco ainda não foi migrada.";
-  if (code === "admin_session_required") return "Sua sessão expirou. Entre novamente.";
-  if (code === "forbidden") return "Sua conta não tem acesso à mensuração de origem.";
-  return "Não foi possível calcular a mensuração de origem.";
+function formatReadAt(at: number | null) {
+  return at === null ? "—" : new Date(at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
 
 export default function OriginMetricsPanel() {
   const [from, setFrom] = useState(() => isoDaysAgo(89));
   const [to, setTo] = useState(() => isoDaysAgo(0));
-  const [data, setData] = useState<MetricsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [view, setView] = useState(ORIGIN_METRICS_INITIAL);
+  // Sequência de leitura: só a mais recente publica dados ou encerra o
+  // carregamento. Hoje os controles ficam desabilitados durante a leitura,
+  // então a sobreposição não é alcançável pela tela — a guarda é a defesa que
+  // impede uma resposta antiga de mentir caso um gatilho novo apareça.
+  const readSequence = useRef(0);
+  // Foco no alerta só quando a falha vem de uma ação da pessoa: a carga inicial
+  // nunca move o foco sozinha.
+  const focusOnFailure = useRef(false);
+  const failureRef = useRef<HTMLDivElement | null>(null);
 
-  const load = useCallback(async (start: string, end: string) => {
-    setLoading(true);
-    setError("");
+  const load = useCallback(async (start: string, end: string, userInitiated = false) => {
+    const sequence = ++readSequence.current;
+    focusOnFailure.current = userInitiated;
+    setView(current => reduceOriginMetrics(current, { type: "begin" }));
     try {
       const response = await fetch(`/api/admin/leads/metrics?from=${encodeURIComponent(start)}&to=${encodeURIComponent(end)}`, { cache: "no-store" });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(explainMetricsError(payload.error));
-      setData(payload as MetricsResponse);
-    } catch (cause) {
-      setData(null);
-      setError(cause instanceof Error ? cause.message : "Não foi possível calcular a mensuração de origem.");
-    } finally {
-      setLoading(false);
+      if (sequence !== readSequence.current) return;
+      if (!response.ok) {
+        setView(current => reduceOriginMetrics(current, {
+          type: "failure", sequence, current: readSequence.current,
+          failure: describeOriginMetricsError(response.status, (payload as { error?: unknown } | null)?.error),
+        }));
+        return;
+      }
+      let data;
+      try {
+        data = parseOriginMetrics(payload, { from: start, to: end });
+      } catch {
+        setView(current => reduceOriginMetrics(current, {
+          type: "failure", sequence, current: readSequence.current,
+          failure: describeOriginMetricsError(200, "invalid_response"),
+        }));
+        return;
+      }
+      setView(current => reduceOriginMetrics(current, {
+        type: "success", sequence, current: readSequence.current, data, at: Date.now(),
+      }));
+    } catch {
+      if (sequence !== readSequence.current) return;
+      setView(current => reduceOriginMetrics(current, {
+        type: "failure", sequence, current: readSequence.current,
+        failure: describeOriginMetricsError(0),
+      }));
     }
   }, []);
 
   useEffect(() => { void load(from, to); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (!view.failure || !focusOnFailure.current) return;
+    focusOnFailure.current = false;
+    failureRef.current?.focus();
+  }, [view.failure]);
+
+  const readAtLabel = formatReadAt(view.readAt);
+  const failure: OriginMetricsError | null = view.failure;
+  const failureTestId = failure === null
+    ? undefined
+    : failure.kind === "auth" || failure.kind === "denied" ? "origin-metrics-denied"
+      : failure.kind === "invalid" ? "origin-metrics-invalid"
+        : "origin-metrics-read-error";
+
   return (
-    <section className={styles.metricsPanel} aria-labelledby="origin-metrics-title" data-testid="origin-metrics-panel">
+    <section className={styles.metricsPanel} aria-labelledby="origin-metrics-title" aria-busy={view.loading || undefined} data-testid="origin-metrics-panel">
       <div className={styles.metricsHead}>
         <div>
           <span className={styles.eyebrow}><BarChart3 size={14} /> PUB-10 · ORIGEM E CONVERSÃO</span>
@@ -91,34 +119,74 @@ export default function OriginMetricsPanel() {
           <input id="metrics-from" type="date" value={from} max={to} onChange={event => setFrom(event.target.value)} />
           <label htmlFor="metrics-to">Até</label>
           <input id="metrics-to" type="date" value={to} min={from} onChange={event => setTo(event.target.value)} />
-          <button className={styles.refresh} type="button" onClick={() => void load(from, to)} disabled={loading} aria-label="Recalcular mensuração de origem" data-testid="origin-metrics-refresh">
+          <button className={styles.refresh} type="button" onClick={() => void load(from, to, true)} disabled={view.loading} aria-label="Recalcular mensuração de origem" data-testid="origin-metrics-refresh">
             <RefreshCw size={16} />
           </button>
         </div>
       </div>
 
-      {error && <p className={styles.error} role="alert" data-testid="origin-metrics-error">{error}</p>}
+      {view.loading && view.data !== null && (
+        <p className={styles.metricsUpdated} role="status" data-testid="origin-metrics-updating">Atualizando a mensuração… Os números da leitura anterior continuam abaixo até a nova leitura concluir.</p>
+      )}
 
-      {loading ? (
-        <div className={styles.empty}>Calculando mensuração…</div>
-      ) : !data ? null : data.rows.length === 0 ? (
+      {view.stale && failure !== null && (
+        <div className={styles.metricsStale} role="alert" data-testid="origin-metrics-stale">
+          <p>
+            A última atualização falhou. {failure.detail} Os números abaixo são os da última leitura concluída em {readAtLabel},
+            período de {view.readWindow?.from} a {view.readWindow?.to} — isto não significa que não haja pedidos no período.
+            O período nos campos pode ainda não ter sido consultado.
+          </p>
+          {failure.canRetry && (
+            <button type="button" className={styles.retry} data-testid="origin-metrics-retry" disabled={view.loading} onClick={() => void load(from, to, true)}>
+              Tentar novamente
+            </button>
+          )}
+        </div>
+      )}
+
+      {!view.stale && failure !== null && (
+        <div className={styles.readFailure} role="alert" tabIndex={-1} ref={failureRef} data-testid={failureTestId}>
+          <strong>{failure.title}</strong>
+          <p data-testid="origin-metrics-error">{failure.detail}</p>
+          {failure.canRetry && (
+            <button type="button" className={styles.retry} data-testid="origin-metrics-retry" disabled={view.loading} onClick={() => void load(from, to, true)}>
+              Tentar novamente
+            </button>
+          )}
+        </div>
+      )}
+
+      {view.data === null ? (
+        view.loading ? (
+          <div className={styles.empty} role="status" aria-busy="true" data-testid="origin-metrics-loading">
+            <strong>Calculando mensuração…</strong>
+            <span>Ainda não há números desta leitura.</span>
+          </div>
+        ) : null
+      ) : view.data.rows.length === 0 ? (
         <div className={styles.empty} data-testid="origin-metrics-empty">
           <strong>Nenhum pedido neste período</strong>
           <span>Sem base para calcular taxa de conversão — o painel não inventa zero.</span>
         </div>
       ) : (
         <>
+          <p className={styles.metricsUpdated} data-testid="origin-metrics-updated">
+            Última leitura concluída em {readAtLabel}
+          </p>
+          <p className={styles.metricsUpdated} data-testid="origin-metrics-period">
+            Período dos números: de {view.data.from} a {view.data.to} ({view.data.windowDays} dias).
+          </p>
           <div className={styles.metricsTotals} data-testid="origin-metrics-totals">
-            <div><small>PEDIDOS</small><strong data-testid="metrics-total-leads">{data.totals.leads}</strong></div>
-            <div><small>VISITAS CONFIRMADAS</small><strong data-testid="metrics-total-visits">{data.totals.visitsConfirmed}</strong></div>
-            <div><small>CONVERTIDOS EM OPORTUNIDADE</small><strong data-testid="metrics-total-converted">{data.totals.converted}</strong></div>
-            <div><small>GANHOS NO FUNIL</small><strong data-testid="metrics-total-won">{data.totals.won}</strong></div>
-            <div><small>TAXA DE CONVERSÃO</small><strong data-testid="metrics-total-rate">{formatRate(data.totals.conversionRate)}</strong></div>
+            <div><small>PEDIDOS</small><strong data-testid="metrics-total-leads">{view.data.totals.leads}</strong></div>
+            <div><small>VISITAS CONFIRMADAS</small><strong data-testid="metrics-total-visits">{view.data.totals.visitsConfirmed}</strong></div>
+            <div><small>CONVERTIDOS EM OPORTUNIDADE</small><strong data-testid="metrics-total-converted">{view.data.totals.converted}</strong></div>
+            <div><small>GANHOS NO FUNIL</small><strong data-testid="metrics-total-won">{view.data.totals.won}</strong></div>
+            <div><small>TAXA DE CONVERSÃO</small><strong data-testid="metrics-total-rate">{formatRate(view.data.totals.conversionRate)}</strong></div>
           </div>
           <div className={styles.metricsTableWrap}>
             <table className={styles.metricsTable} data-testid="origin-metrics-table">
               <caption>
-                Período de {data.from} a {data.to} ({data.windowDays} dias), pela data do pedido.
+                Período de {view.data.from} a {view.data.to} ({view.data.windowDays} dias), pela data do pedido.
                 “Ganho no funil” é decisão comercial registrada — não significa dinheiro recebido.
               </caption>
               <thead>
@@ -135,7 +203,7 @@ export default function OriginMetricsPanel() {
                 </tr>
               </thead>
               <tbody>
-                {data.rows.map(row => (
+                {view.data.rows.map(row => (
                   <tr key={`${row.origin}|${row.campaign}|${row.channel}`} data-testid={`origin-metrics-row-${row.origin}`}>
                     <th scope="row">{row.origin}</th>
                     <td>{row.campaign}</td>

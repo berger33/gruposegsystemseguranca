@@ -2240,3 +2240,436 @@ test('browser: evidência própria de /admin/comercial em 320/390/768/1440 px, d
   await writeComercialEvidence('resumo.json', resumo);
   assert.equal(falhas.length, 0, `transbordo de documento: ${JSON.stringify(falhas)}`);
 });
+
+// ---------------------------------------------------------------------------
+// UX-PRO-06 — mensuração de origem no domínio de atendimento (/admin/leads)
+//
+// O painel PUB-10 já existia e já tinha prova de contrato no gate L04. O que
+// faltava era ESTADO DE LEITURA honesto: qualquer falha apagava a última
+// leitura, um payload malformado derrubava o painel e não havia período/hora
+// do dado publicado nem retry. Estes cenários provam o estado novo sem
+// reimplementar o agregado do servidor (que seguirá provado pelo L04).
+//
+// Premissa corrigida na sonda (registrada sem maquiar RED): "resposta fora de
+// ordem" NÃO é alcançável pelos controles atuais — o botão de recalcular fica
+// desabilitado enquanto a leitura está em voo, e essa proteção foi PRESERVADA.
+// A guarda de sequência é defesa em profundidade e é provada no teste focal do
+// módulo de estado; o navegador prova, abaixo, o que é alcançável de verdade.
+// ---------------------------------------------------------------------------
+
+const metricsEvidenceDir = process.env.UX_METRICS_EVIDENCE_DIR || '';
+
+/**
+ * Sonda de leitura da mensuração. Segura a RESPOSTA (nunca a requisição, para
+ * não desautenticar a página), força falha por status/código e devolve um
+ * payload 200 malformado quando pedido. Nada disso toca o servidor.
+ */
+async function installMetricsProbe(context, initialMode = 'pass') {
+  await context.addInitScript(({ initialMode }) => {
+    window.__metricsProbe = { mode: initialMode, held: [], released: [], calls: [] };
+    const original = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      const method = String(init?.method || input?.method || 'GET').toUpperCase();
+      if (!url.includes('/api/admin/leads/metrics') || method !== 'GET') return original(input, init);
+      const probe = window.__metricsProbe;
+      probe.calls.push(url);
+      if (probe.mode === 'pass') return original(input, init);
+      if (probe.mode === 'hold') {
+        return new Promise((resolve, reject) => probe.held.push({
+          url,
+          release: () => {
+            const promise = original(input, init).then(resolve, reject);
+            probe.released.push(promise);
+            return promise;
+          },
+        }));
+      }
+      const status = probe.mode === 'invalid' ? 200 : probe.mode === 'denied' ? 403 : 503;
+      const body = probe.mode === 'invalid'
+        ? { from: '2026-01-01', to: '2026-01-31', windowDays: 31, rows: { origin: 'site' }, totals: null, minimized: true }
+        : { error: probe.mode === 'denied' ? 'forbidden' : 'lead_metrics_unavailable' };
+      return Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
+    };
+  }, { initialMode });
+}
+
+async function setMetricsMode(page, mode) {
+  await page.evaluate(value => { window.__metricsProbe.mode = value; }, mode);
+}
+
+async function releaseMetricsRead(page, index) {
+  await page.waitForFunction(i => window.__metricsProbe.held.length > i, index);
+  await page.evaluate(async i => {
+    const request = window.__metricsProbe.held[i];
+    await request.release();
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  }, index);
+}
+
+async function metricsPanelIdle(page) {
+  await page.waitForFunction(() => {
+    const botao = document.querySelector('[data-testid="origin-metrics-refresh"]');
+    return botao instanceof HTMLButtonElement && botao.disabled === false;
+  }, null, { timeout: 60_000 });
+}
+
+async function documentOverflow(page) {
+  return page.evaluate(() => {
+    const raiz = document.documentElement;
+    const sobra = raiz.scrollWidth - raiz.clientWidth;
+    if (sobra <= 1) return { sobra, culpados: [] };
+    const culpados = [...document.querySelectorAll('body *')]
+      .filter(node => node.getBoundingClientRect().right > raiz.clientWidth + 1)
+      .slice(0, 6)
+      .map(node => `${node.tagName}.${String(node.className).slice(0, 40)}`);
+    return { sobra, culpados };
+  });
+}
+
+test('UX-PRO-06 métricas: contrato, papéis e escrita real alimentam o agregado', { skip: !RUN, timeout: 180_000 }, async () => {
+  const tag = randomUUID().slice(0, 8);
+  const origin = `gate-metricas-${tag}`;
+  const comercial = await provisionStaff(pool, { role: 'comercial' });
+  const cookie = await loginHttp(comercial.email);
+  const rh = await provisionStaff(pool, { role: 'rh' });
+  const rhCookie = await loginHttp(rh.email);
+  const vinteDias = new Date(Date.now() - 20 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const hoje = new Date().toISOString().slice(0, 10);
+  const janela = `?from=${vinteDias}&to=${hoje}`;
+
+  // Massa pela MESMA API pública, com origem/campanha/canal canônicos.
+  const recente = await seedLead({ label: `Métrica recente ${tag}`, phone: '(11) 90000-0211', daysAgo: 4, origin: { origin, campaign: 'site', channel: 'site' }, cookie });
+  const confirmado = await seedLead({ label: `Métrica confirmada ${tag}`, phone: '(11) 90000-0212', daysAgo: 3, origin: { origin, campaign: 'site', channel: 'site' }, cookie });
+  // Fora da janela de 20 dias: não pode entrar em nenhuma contagem.
+  await seedLead({ label: `Métrica antiga ${tag}`, phone: '(11) 90000-0213', daysAgo: 40, origin: { origin, campaign: 'site', channel: 'site' }, cookie });
+
+  // --- Fail-closed preservado: sem sessão, papel não autorizado, método errado.
+  const anonimo = await api(`/api/admin/leads/metrics${janela}`);
+  assert.equal(anonimo.status, 401);
+  assert.equal(anonimo.body.error, 'admin_session_required');
+  const negado = await api(`/api/admin/leads/metrics${janela}`, { cookie: rhCookie });
+  assert.equal(negado.status, 403);
+  assert.equal(negado.body.error, 'forbidden');
+  const metodoBruto = await fetch(`${baseUrl}/api/admin/leads/metrics`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', origin: baseUrl, cookie },
+    body: JSON.stringify({ origin: 'inventada', leads: 999 }),
+  });
+  assert.equal(metodoBruto.status, 405);
+  assert.equal(metodoBruto.headers.get('allow'), 'GET');
+  for (const janelaInvalida of [`?from=ontem&to=${hoje}`, `?from=${hoje}&to=2000-01-01`, `?from=2026-02-31&to=${hoje}`]) {
+    const invalida = await api(`/api/admin/leads/metrics${janelaInvalida}`, { cookie });
+    assert.equal(invalida.status, 400, janelaInvalida);
+    assert.equal(invalida.body.error, 'invalid_period');
+  }
+  assert.equal((await api(`/api/admin/leads/metrics?from=2020-01-01&to=${hoje}`, { cookie })).body.error, 'period_too_long');
+
+  // --- Agregado derivado do registro real.
+  const antes = await api(`/api/admin/leads/metrics${janela}`, { cookie });
+  assert.equal(antes.status, 200, JSON.stringify(antes.body));
+  assert.equal(antes.body.minimized, true);
+  assert.equal(antes.body.from, vinteDias);
+  assert.equal(antes.body.to, hoje);
+  const linhaAntes = antes.body.rows.find(item => item.origin === origin);
+  assert.ok(linhaAntes, 'a origem sintética precisa aparecer no agregado');
+  assert.equal(linhaAntes.leads, 2, 'o pedido de 40 dias atrás está fora da janela');
+  assert.equal(linhaAntes.visitsConfirmed, 0);
+  assert.equal(linhaAntes.converted, 0);
+  const serializado = JSON.stringify(antes.body);
+  assert.equal(serializado.includes(`Pedido Ficticio Métrica recente ${tag}`), false, 'nome do solicitante não pode vazar');
+  assert.equal(serializado.includes('90000-0211'), false, 'telefone não pode vazar');
+  assert.equal(serializado.includes(recente), false, 'id de pedido não pode vazar');
+
+  // --- ESCRITA REAL: a situação muda de verdade e o agregado acompanha.
+  const escrita = await api(`/api/admin/leads/${confirmado}`, { method: 'PATCH', cookie, body: { status: 'confirmada' } });
+  assert.equal(escrita.status, 200, JSON.stringify(escrita.body));
+  assert.equal(escrita.body.leadId, confirmado);
+  assert.equal(escrita.body.status, 'confirmada');
+  assert.equal(escrita.body.previousStatus, 'solicitada');
+  assert.equal((await pool.query('SELECT status FROM public_leads WHERE id=$1', [confirmado])).rows[0].status, 'confirmada');
+  assert.equal((await pool.query('SELECT next_status FROM public_lead_status_audit WHERE lead_id=$1', [confirmado])).rows[0].next_status, 'confirmada');
+
+  const depois = await api(`/api/admin/leads/metrics${janela}`, { cookie });
+  assert.equal(depois.status, 200);
+  const linhaDepois = depois.body.rows.find(item => item.origin === origin);
+  assert.equal(linhaDepois.leads, 2, 'a escrita não cria nem remove pedido');
+  assert.equal(linhaDepois.visitsConfirmed, 1, 'a visita confirmada vem da escrita real acima');
+
+  // --- Papel autorizado de verdade: os quatro papéis do contrato leem 200.
+  for (const role of ['comercial', 'admin', 'ti', 'marcelo']) {
+    const pessoa = role === 'comercial' ? comercial : await provisionStaff(pool, { role });
+    const sessao = role === 'comercial' ? cookie : await loginHttp(pessoa.email);
+    const leitura = await api(`/api/admin/leads/metrics${janela}`, { cookie: sessao });
+    assert.equal(leitura.status, 200, `${role} deveria ler a mensuração`);
+  }
+});
+
+test('UX-PRO-06 métricas: falha preserva a leitura, retry, inválido, A/B, larguras, tema e teclado', { skip: !RUN, timeout: 300_000 }, async () => {
+  const tag = randomUUID().slice(0, 8);
+  const origin = `gate-metricas-${tag}`;
+  const comercial = await provisionStaff(pool, { role: 'comercial' });
+  const admin = await provisionStaff(pool, { role: 'admin' });
+  const cookie = await loginHttp(comercial.email);
+  await seedLead({ label: `Métrica painel ${tag}`, phone: '(11) 90000-0221', daysAgo: 2, origin: { origin, campaign: 'site', channel: 'site' }, cookie });
+
+  // --- 1. Leitura bem-sucedida, falha transitória preservando, retry e inválido.
+  const contexto = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  const capturas = [];
+  try {
+    await installMetricsProbe(contexto);
+    const page = await contexto.newPage();
+    const erros = [];
+    page.on('pageerror', erro => erros.push(String(erro)));
+    await loginBrowser(page, comercial.email);
+    await page.goto('/admin/leads', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    const painel = page.getByTestId('origin-metrics-panel');
+    await painel.getByTestId('origin-metrics-table').waitFor({ timeout: 90_000 });
+    assert.equal(await painel.getByTestId(`metrics-leads-${origin}`).innerText(), '1');
+    // A tela nunca rouba o foco na carga inicial: quem navega por teclado chega
+    // ao painel pelo Tab, e o primeiro controle do painel é o campo "De".
+    assert.equal(await page.evaluate(() => document.activeElement?.tagName || ''), 'BODY', 'a carga inicial não pode mover o foco sozinha');
+    const primeiroFocoPainel = await painel.evaluate(raiz => {
+      const focaveis = [...raiz.querySelectorAll('input,select,button,a[href]')];
+      return focaveis[0]?.id || focaveis[0]?.getAttribute('aria-label') || null;
+    });
+    assert.equal(primeiroFocoPainel, 'metrics-from');
+    // Números da leitura concluída, medidos ANTES de induzir a falha: é a
+    // referência para provar que a releitura malsucedida não os apaga.
+    const leadsAntes = await painel.getByTestId(`metrics-leads-${origin}`).innerText();
+
+    // 2a. 503 na releitura: a leitura anterior continua publicada e marcada.
+    await setMetricsMode(page, 'fail');
+    await painel.getByTestId('origin-metrics-refresh').click();
+    // A tela precisa ASSENTAR a falha antes da medição (o botão reabilita).
+    await metricsPanelIdle(page);
+    assert.equal(await painel.getByTestId('origin-metrics-table').count(), 1, 'a leitura anterior precisa continuar visível');
+    assert.equal(await painel.getByTestId(`metrics-leads-${origin}`).count(), 1, 'os números da leitura concluída não podem desaparecer');
+    assert.equal(await painel.getByTestId(`metrics-leads-${origin}`).innerText(), leadsAntes, 'os números preservados são os da leitura concluída');
+    await painel.getByTestId('origin-metrics-stale').waitFor({ timeout: 60_000 });
+    // O período e a hora publicados são parte do estado honesto (e continuam
+    // declarados mesmo sob falha, porque descrevem o dado preservado).
+    assert.match(await painel.getByTestId('origin-metrics-period').innerText(), /\d{4}-\d{2}-\d{2}/, 'o painel precisa declarar o período do dado publicado');
+    assert.match(await painel.getByTestId('origin-metrics-updated').innerText(), /\d{1,2}:\d{2}/, 'o painel precisa declarar a hora da última leitura concluída');
+    assert.equal(await painel.getByTestId(`metrics-leads-${origin}`).innerText(), '1', 'os números preservados são os da leitura concluída');
+    assert.equal(await painel.getByTestId('origin-metrics-empty').count(), 0);
+    const textoStale = await painel.getByTestId('origin-metrics-stale').innerText();
+    assert.match(textoStale, /[úu]ltima leitura/i);
+    assert.match(textoStale, /n[ãa]o significa que n[ãa]o haja pedidos/i);
+    assert.match(textoStale, /\d{4}-\d{2}-\d{2}/, 'a faixa diz a que período pertence o dado preservado');
+    assert.match(await painel.getByTestId('origin-metrics-updated').innerText(), /\d{1,2}:\d{2}/, 'a hora preservada é a da leitura que continua na tela');
+    if (metricsEvidenceDir) {
+      await mkdir(metricsEvidenceDir, { recursive: true });
+      await page.screenshot({ path: path.join(metricsEvidenceDir, 'metricas-1440-desatualizada.png'), fullPage: true });
+      capturas.push({ viewport: '1440x900', theme: 'dia', estado: 'releitura-503-preservada', arquivo: 'metricas-1440-desatualizada.png', sobraDocumentoPx: (await documentOverflow(page)).sobra });
+    }
+
+    // 2b. Retry real recupera sem recarregar a página.
+    await setMetricsMode(page, 'pass');
+    await painel.getByTestId('origin-metrics-retry').click();
+    await painel.getByTestId('origin-metrics-stale').waitFor({ state: 'detached', timeout: 60_000 });
+    assert.equal(await painel.getByTestId('origin-metrics-table').count(), 1);
+
+    // 2c. Payload 200 inválido: estado próprio, não "sem pedidos", e o foco vai
+    // para o alerta porque a falha foi provocada por uma ação da pessoa.
+    await setMetricsMode(page, 'invalid');
+    await painel.getByTestId('origin-metrics-refresh').click();
+    await painel.getByTestId('origin-metrics-invalid').waitFor({ timeout: 60_000 });
+    assert.equal(await painel.getByTestId('origin-metrics-empty').count(), 0, 'payload inválido não é vazio');
+    assert.equal(await painel.getByTestId('origin-metrics-table').count(), 0, 'payload inválido não é dado aproveitável');
+    assert.match(await painel.getByTestId('origin-metrics-invalid').innerText(), /formato esperado|resposta inv[áa]lida/i);
+    assert.equal(
+      await page.evaluate(() => document.activeElement?.getAttribute('data-testid') || ''),
+      'origin-metrics-invalid',
+      'a falha provocada por ação precisa levar o foco ao alerta',
+    );
+    assert.deepEqual(erros, [], 'payload inválido não pode derrubar o painel');
+
+    // 2d. Recuperação pelo retry do próprio alerta.
+    await setMetricsMode(page, 'pass');
+    await painel.getByTestId('origin-metrics-retry').click();
+    await painel.getByTestId('origin-metrics-invalid').waitFor({ state: 'detached', timeout: 60_000 });
+    await painel.getByTestId('origin-metrics-table').waitFor({ timeout: 60_000 });
+
+    // 2e. Negativa explícita: distinta de erro transitório e sem retry.
+    await setMetricsMode(page, 'denied');
+    await painel.getByTestId('origin-metrics-refresh').click();
+    await painel.getByTestId('origin-metrics-denied').waitFor({ timeout: 60_000 });
+    assert.equal(await painel.getByTestId('origin-metrics-stale').count(), 0, 'negativa não é dado desatualizado');
+    assert.equal(await painel.getByTestId('origin-metrics-retry').count(), 0, 'negativa não oferece repetir a mesma chamada');
+
+    // 2f. A/B: A encerra a sessão; B faz a própria leitura, sem resíduo de A.
+    await setMetricsMode(page, 'pass');
+    await page.locator('button[aria-label="Encerrar sessão"]').click();
+    await page.waitForSelector('#leads-email', { timeout: 60_000 });
+    assert.equal(await page.locator('[data-testid="origin-metrics-panel"]').count(), 0, 'o painel não pode sobreviver ao encerramento da sessão');
+    const chamadasA = await page.evaluate(() => window.__metricsProbe.calls.length);
+    await page.fill('#leads-email', admin.email);
+    await page.fill('#leads-password', STAFF_TEST_PASSWORD);
+    await page.click('button[type="submit"]');
+    await page.getByTestId('origin-metrics-table').waitFor({ timeout: 90_000 });
+    assert.equal(await page.locator('[data-testid="origin-metrics-stale"]').count(), 0, 'B não herda a faixa desatualizada de A');
+    assert.equal(await page.locator('[data-testid="origin-metrics-invalid"]').count(), 0);
+    assert.equal(await page.locator('[data-testid="origin-metrics-denied"]').count(), 0);
+    const chamadasB = await page.evaluate(() => window.__metricsProbe.calls.length);
+    assert.ok(chamadasB > chamadasA, 'B precisa ter a própria leitura de mensuração');
+    // O que está na tela é a leitura de B: mesma janela, mesmo agregado do servidor.
+    const inicio = new Date(Date.now() - 89 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+    const fim = new Date().toISOString().slice(0, 10);
+    const esperado = await api(`/api/admin/leads/metrics?from=${inicio}&to=${fim}`, { cookie: await loginHttp(admin.email) });
+    assert.equal(esperado.status, 200);
+    assert.equal(await page.getByTestId('metrics-total-leads').innerText(), String(esperado.body.totals.leads), 'B exibe a própria leitura, não a de A');
+
+    // --- 3. Larguras, tema noturno e teclado (com a sessão de B).
+    for (const largura of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width: largura, height: largura === 768 ? 1024 : largura === 1440 ? 900 : 844 });
+      await page.waitForTimeout(120);
+      const overflow = await documentOverflow(page);
+      assert.ok(overflow.sobra <= 1, `a mensuração não pode transbordar em ${largura}px (sobra ${overflow.sobra}px): ${overflow.culpados.join(' | ')}`);
+      if (metricsEvidenceDir && largura !== 1440) {
+        const arquivo = `metricas-${largura}.png`;
+        await mkdir(metricsEvidenceDir, { recursive: true });
+        await page.screenshot({ path: path.join(metricsEvidenceDir, arquivo), fullPage: true });
+        capturas.push({ viewport: `${largura}x${page.viewportSize().height}`, theme: 'dia', estado: 'leitura-concluida', arquivo, sobraDocumentoPx: overflow.sobra });
+      }
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.waitForTimeout(120);
+    await capturas.push({ viewport: '1440x900', theme: 'dia', estado: 'leitura-concluida', arquivo: 'metricas-1440.png', sobraDocumentoPx: (await documentOverflow(page)).sobra });
+    if (metricsEvidenceDir) {
+      await page.screenshot({ path: path.join(metricsEvidenceDir, 'metricas-1440.png'), fullPage: true });
+    }
+
+    await page.click('[data-admin-theme-toggle="true"]');
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === 'night', null, { timeout: 30_000 });
+    const cores = await page.evaluate(() => {
+      const painel = document.querySelector('[data-testid="origin-metrics-panel"]');
+      const hora = document.querySelector('[data-testid="origin-metrics-updated"]');
+      const ler = elemento => {
+        if (!elemento) return null;
+        const estilo = getComputedStyle(elemento);
+        return { fundo: estilo.backgroundColor, texto: estilo.color };
+      };
+      return { painel: ler(painel), hora: ler(hora) };
+    });
+    const canais = cor => (String(cor).match(/\d+/g) || []).slice(0, 3).map(Number);
+    assert.ok(canais(cores.painel.fundo).reduce((a, b) => a + b, 0) < 240, `o painel precisa escurecer no tema noturno: ${cores.painel.fundo}`);
+    assert.ok(canais(cores.hora.texto).reduce((a, b) => a + b, 0) > 420, `a hora da leitura precisa clarear no tema noturno: ${cores.hora.texto}`);
+    if (metricsEvidenceDir) {
+      await page.screenshot({ path: path.join(metricsEvidenceDir, 'metricas-1440-noite.png'), fullPage: true });
+      capturas.push({ viewport: '1440x900', theme: 'noite', estado: 'leitura-concluida', arquivo: 'metricas-1440-noite.png', sobraDocumentoPx: (await documentOverflow(page)).sobra });
+    }
+    await page.click('[data-admin-theme-toggle="true"]');
+    await page.waitForFunction(() => !document.documentElement.dataset.adminTheme, null, { timeout: 30_000 });
+
+    // Teclado: primeiro foco do painel, percurso até o botão e foco visível.
+    // Premissa corrigida na sonda: `<input type="date">` é composto de
+    // segmentos nativos (dia/mês/ano), então um único Tab NÃO vai de "De" para
+    // "Até" no Chromium. O teste registra o percurso real em vez de supor.
+    await page.focus('#metrics-from');
+    const focoNoPrimeiro = await page.evaluate(() => ({
+      id: document.activeElement?.id || '',
+      dentroDoPainel: Boolean(document.activeElement?.closest('[data-testid="origin-metrics-panel"]')),
+    }));
+    assert.deepEqual(focoNoPrimeiro, { id: 'metrics-from', dentroDoPainel: true }, 'o primeiro controle do painel é o campo "De"');
+    await page.focus('#metrics-to');
+    const percurso = ['metrics-to'];
+    let chegouAoBotao = false;
+    for (let tentativa = 0; tentativa < 4 && !chegouAoBotao; tentativa += 1) {
+      await page.keyboard.press('Tab');
+      const passo = await page.evaluate(() => ({
+        id: document.activeElement?.id || '',
+        rotulo: document.activeElement?.getAttribute('aria-label') || '',
+        dentroDoPainel: Boolean(document.activeElement?.closest('[data-testid="origin-metrics-panel"]')),
+      }));
+      percurso.push(passo.rotulo || passo.id || 'sem-identificacao');
+      assert.equal(passo.dentroDoPainel, true, `o Tab não pode escapar do painel antes do botão de recalcular: ${percurso.join(' > ')}`);
+      chegouAoBotao = passo.rotulo === 'Recalcular mensuração de origem';
+    }
+    assert.equal(chegouAoBotao, true, `o percurso de teclado precisa alcançar o botão de recalcular: ${percurso.join(' > ')}`);
+    const contorno = await page.evaluate(() => {
+      const estilo = getComputedStyle(document.activeElement);
+      return { estilo: estilo.outlineStyle, largura: Number.parseFloat(estilo.outlineWidth) };
+    });
+    assert.notEqual(contorno.estilo, 'none', 'o controle focado precisa ter contorno visível');
+    assert.ok(contorno.largura > 0, `o contorno de foco precisa ter espessura: ${contorno.largura}`);
+
+    // Teclado + falha: o Tab seguinte alcança o botão de retry, com contorno.
+    await setMetricsMode(page, 'fail');
+    await page.keyboard.press('Enter');
+    await painel.getByTestId('origin-metrics-stale').waitFor({ timeout: 60_000 });
+    await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('data-testid') || ''), 'origin-metrics-retry');
+    const contornoRetry = await page.evaluate(() => {
+      const estilo = getComputedStyle(document.activeElement);
+      return { estilo: estilo.outlineStyle, largura: Number.parseFloat(estilo.outlineWidth) };
+    });
+    assert.notEqual(contornoRetry.estilo, 'none');
+    assert.ok(contornoRetry.largura > 0);
+
+    if (metricsEvidenceDir) {
+      await mkdir(metricsEvidenceDir, { recursive: true });
+      const entradas = capturas.map(item => ({
+        stage: 'ux-pro-06-metricas-origem',
+        route: '/admin/leads',
+        role: 'comercial/admin (sintéticos)',
+        viewport: item.viewport,
+        theme: item.theme,
+        estado: item.estado,
+        screenshot: `${metricsEvidenceDir.replace(/^.*?docs\//, 'docs/')}/${item.arquivo}`,
+        sobraDocumentoPx: item.sobraDocumentoPx,
+        problems: [],
+      }));
+      entradas.push({
+        stage: 'ux-pro-06-metricas-origem',
+        route: '/admin/leads',
+        role: 'admin (sintético)',
+        viewport: '1440x900',
+        theme: 'dia',
+        estado: 'teclado',
+        screenshot: null,
+        problems: [],
+        firstFocus: true,
+        percursoTeclado: ['metrics-from', ...percurso, 'origin-metrics-retry'],
+      });
+      await writeFile(path.join(metricsEvidenceDir, 'resumo.json'), JSON.stringify({
+        stage: 'ux-pro-06-metricas-origem',
+        generatedBy: 'npm run test:ux-crm:pg; UX_METRICS_EVIDENCE_DIR; massa sintética; sem aceite humano',
+        route: '/admin/leads',
+        fatia: 'UX-PRO-06 — mensuração de origem (PUB-10)',
+        entries: entradas,
+        limites: [
+          'Medição automatizada por Chromium em cluster descartável; não é aceite humano, UAT nem homologação.',
+          'O agregado do servidor continua provado pelo gate L04 (PUB-10); esta fatia prova o estado de leitura da tela.',
+        ],
+      }, null, 2) + '\n');
+    }
+
+    assert.deepEqual(erros, [], 'nenhum erro de página durante os estados do painel');
+  } finally { await contexto.close(); }
+
+  // --- 5. Falha na PRIMEIRA leitura: falha explícita, nunca "sem pedidos".
+  const contextoCedo = await browser.newContext({ baseURL: baseUrl, viewport: { width: 1440, height: 900 } });
+  try {
+    await installMetricsProbe(contextoCedo, 'fail');
+    const page = await contextoCedo.newPage();
+    const errosCedo = [];
+    page.on('pageerror', erro => errosCedo.push(String(erro)));
+    await loginBrowser(page, comercial.email);
+    await page.goto('/admin/leads', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    const painelCedo = page.getByTestId('origin-metrics-panel');
+    await painelCedo.getByTestId('origin-metrics-read-error').waitFor({ timeout: 90_000 });
+    assert.equal(await painelCedo.getByTestId('origin-metrics-empty').count(), 0, 'falha de leitura nunca é ausência de pedidos');
+    assert.equal(await painelCedo.getByTestId('origin-metrics-table').count(), 0, 'sem leitura concluída não há tabela');
+    assert.equal(await painelCedo.getByTestId('origin-metrics-stale').count(), 0, 'sem leitura anterior não existe "desatualizada"');
+    const textoCedo = await painelCedo.getByTestId('origin-metrics-read-error').innerText();
+    assert.match(textoCedo, /n[ãa]o foi possível concluir a leitura/i);
+    await setMetricsMode(page, 'pass');
+    await painelCedo.getByTestId('origin-metrics-retry').click();
+    await painelCedo.getByTestId('origin-metrics-table').waitFor({ timeout: 60_000 });
+    assert.equal(await painelCedo.getByTestId('origin-metrics-read-error').count(), 0);
+    assert.equal(await painelCedo.getByTestId(`metrics-leads-${origin}`).innerText(), '1');
+    assert.deepEqual(errosCedo, [], 'o painel não pode quebrar a página');
+  } finally { await contextoCedo.close(); }
+
+});
