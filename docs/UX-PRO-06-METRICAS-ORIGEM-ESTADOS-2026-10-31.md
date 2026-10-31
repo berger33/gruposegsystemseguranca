@@ -1,8 +1,10 @@
 # UX-PRO-06 — Mensuração de origem (`/admin/leads`): estado de leitura honesto
 
-**Data:** 31/10/2026 · **Base:** `666ffd7652a245afe2b59ab2c60df339d0733a58` (`origin/main`, merge da PR #322) · **Branch da sessão:** `arena/4e952467-gruposegsystemseguranca`.
+**Data:** 31/10/2026 · **Base da fatia:** `666ffd7652a245afe2b59ab2c60df339d0733a58` (`origin/main`, merge da PR #322) · **Branch da sessão:** `arena/4e952467-gruposegsystemseguranca`.
 
 **Natureza:** entrega local e incremental, com prova em PostgreSQL 17 descartável (001–181) + HTTP real + Chromium real. Não é aceite humano, UAT, homologação, revisão jurídica nem autorização de produção. Produção permanece **NO-GO** (`docs/PRODUCAO-GATE.md`).
+
+**Entrega:** branch `arena/4e952467-gruposegsystemseguranca` — fatia em `8c3048f…` (+ `8e1a354…`, que registra o número real da PR) — **mergeada na PR #323** em 31/10/2026, merge commit `3ebdef50df83be6991d7929c82713fd6b24df4c5`, **45/45 checks verdes** no runner do GitHub. Este relatório descreve a árvore medida em `8c3048f…`; a única alteração posterior foi documental (número da PR no ledger).
 
 **Escopo:** o painel **`OriginMetricsPanel` (PUB-10)** dentro de `/admin/leads` — superfície já viva, com ciclo de leitura próprio, que a PR #322 **não tocou** de propósito. Nenhuma tela nova foi criada, nenhum endpoint, papel, permissão, migração ou contrato foi alterado.
 
