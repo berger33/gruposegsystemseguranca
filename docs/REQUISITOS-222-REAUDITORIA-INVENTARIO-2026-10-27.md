@@ -30,7 +30,7 @@ prova rota alguma. Workflows seguem **49**.
 
 ### Método
 
-Uma única passada por **1.671 arquivos** de `tests/`, `.github/workflows/`,
+Uma única passada por **1.676 arquivos** de `tests/`, `.github/workflows/`,
 `docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, a auditoria de 26/10, a
 fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
 meta-estado, não prova de requisito, e evitam auto-referência. De cada arquivo o gerador extrai todos os IDs com
@@ -43,8 +43,8 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 | Classe | Significado | IDs |
 |---|---|---|
 | `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **23** |
-| `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **118** |
-| `somente_documento` | só há citação em documentos | **81** |
+| `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **120** |
+| `somente_documento` | só há citação em documentos | **79** |
 | `somente_codigo` / `sem_evidencia_legivel` | — | **0** |
 
 > **Recontagem E23 (30/10/2026):** a tabela acima já não é a fotografia de 27/10
@@ -63,6 +63,14 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 > permanece **0/222**. Este texto **não** é ajustado à mão:
 > `tests/requisitos-222-inventory.test.mjs` compara as contagens, o núcleo duro e
 > o número de arquivos varridos com o JSON e falha na primeira divergência.
+>
+> **Recontagem E23 (01/11/2026, 18ª promoção):** 23/120/79 depois da promoção
+> de `PubFaqAssistedClient` (PUB-02/PUB-05, FAQ assistida e segmentos no
+> console de TI). `PUB-02` e `PUB-05` passam de `somente_documento` para
+> `mencionado_em_gate` porque o relatório e o cenário `browser UX-PRO-03
+> PUB-02/05` citam os dois IDs. Continua sendo **evidência textual**: os dois
+> requisitos seguem `pronto_local`, com `aceite_humano=nao_registrado` e
+> `reauditoria_integral=nao_executada`; 0/222 aceito.
 
 > **Aviso central:** "mencionado em gate" **não é prova de jornada**. Um ID pode
 > ser citado num assert de vocabulário e ainda assim não ter jornada, RBAC,

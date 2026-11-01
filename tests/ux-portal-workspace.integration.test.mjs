@@ -10276,3 +10276,417 @@ test("browser UX-PRO-03 EMP-18/19: app do funcionário (PWA e FAQ) com caminho c
     await pool.query("DELETE FROM emp_faq_internal WHERE question LIKE $1", [`%${sufixo}%`]).catch(() => {});
   }
 });
+
+// UX-PRO-03 (18ª promoção) — "FAQ assistida, transferência humana e segmentos":
+// PUB-02 e PUB-05 deixam de ser órfãos. O protótipo tinha quatro listas que só
+// apareciam se o operador clicasse, um `catch{}` que transformava negação em
+// "nada aqui", motivo de mudança e resposta ao visitante fixos no código, as
+// três situações oferecidas em qualquer linha e `is_approved`/`is_published`
+// calculados na tela. No servidor, o PATCH de situação respondia 500
+// (`inconsistent types deduced for parameter $2`), o token de sessão vinha de
+// `Math.random` com ~11 caracteres (CHECK de 20 no banco → 500 ao criar sessão)
+// e publicar não exigia aprovação nem validação de segmento.
+function pubInjecao(cfg) {
+  const original = window.fetch.bind(window);
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    const caminho = url.replace(location.origin, "").split("?")[0];
+    const metodo = ((init && init.method) || "GET").toUpperCase();
+    if (metodo === "GET" && caminho === "/api/admin/faq-assisted-rules" && cfg.regras === "negado") {
+      return new Response(JSON.stringify({ error: "role_required" }), { status: 403, headers: { "Content-Type": "application/json" } });
+    }
+    return original(input, init);
+  };
+}
+
+// Mesmo slug de `chaveRegra`/`chaveSegmento`/`chaveHandoff` no módulo puro.
+const slugGate = valor =>
+  String(valor).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+
+test("browser UX-PRO-03 PUB-02/05: FAQ assistida, transferência humana e segmentos (ciclo real, motivo e resposta do operador, negado, larguras e noite)", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const rh = await provisionStaff(pool, { role: "rh" });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const sufixo = randomUUID().slice(0, 8);
+  const chaveRegra = `qa-pub-${sufixo}`;
+  const perguntaRegra = `qual o valor do posto ${sufixo}`;
+  const respostaRegra = "O valor depende de vistoria técnica presencial; fale com um atendente humano antes de qualquer número.";
+  const motivoCriacao = "Preço exige qualificação humana antes de qualquer número.";
+  const motivoTransicao = `Motivo digitado pelo operador no gate ${sufixo}.`;
+  const respostaVisitante = `Atendimento concluído por telefone com o visitante do gate ${sufixo}.`;
+  const evidence = process.env.UX_PORTAL_EVIDENCE_DIR || "";
+  const entries = [];
+  const criados = { regras: [], sessoes: [], handoffs: [], segmentos: [] };
+
+  try {
+    // --- servidor: leitura própria x papel negado -------------------------
+    assert.equal((await api("/api/admin/faq-assisted-rules")).status, 401, "anônimo recebe 401 nas regras");
+    assert.equal((await api("/api/admin/pub-faq-sessions")).status, 401, "anônimo recebe 401 nas sessões");
+    assert.equal((await api("/api/admin/faq-handoff")).status, 401, "anônimo recebe 401 nas transferências");
+    assert.equal((await api("/api/admin/pub-segments")).status, 401, "anônimo recebe 401 nos segmentos");
+    for (const rota of ["/api/admin/faq-assisted-rules", "/api/admin/pub-faq-sessions", "/api/admin/faq-handoff", "/api/admin/pub-segments"]) {
+      assert.equal((await api(rota, { cookie: tiCookie })).status, 200, `ti precisa ler ${rota}`);
+    }
+    const regrasRh = await api("/api/admin/faq-assisted-rules", { cookie: rhCookie });
+    assert.equal(regrasRh.status, 403, "rh não administra a FAQ assistida");
+    assert.equal(regrasRh.body.error, "role_required");
+    assert.equal((await api("/api/admin/pub-segments", { cookie: rhCookie })).status, 401, "rh não lê segmentos no caminho de administração");
+    // A borda pública continua fechada: sessão de visitante exige equipe.
+    assert.equal((await api("/api/admin/pub-faq-sessions", {
+      method: "POST", body: { question: "Pergunta anônima que precisa ser recusada pelo roteador." },
+    })).status, 401, "o atendimento público continua exigindo sessão de equipe");
+
+    // --- servidor: regra nasce rascunho; guardrails recusam antes do banco --
+    const baseRegra = {
+      question_pattern: `pergunta sintética de validação ${sufixo}`,
+      answer_template: respostaRegra,
+      category: "preco", keywords: ["preço", "valor"],
+      is_price_sensitive: true, is_human_handoff_required: true, handoff_reason: motivoCriacao,
+    };
+    const criadaApi = await api("/api/admin/faq-assisted-rules", { method: "POST", cookie: tiCookie,
+      body: { ...baseRegra, rule_key: `qa-pub-val-${sufixo}` } });
+    assert.equal(criadaApi.status, 201);
+    assert.equal(criadaApi.body.status, "rascunho", "criar não publica por padrão");
+    assert.equal(criadaApi.body.is_approved, false);
+    assert.equal(criadaApi.body.is_published, false);
+    criados.regras.push(criadaApi.body.id);
+
+    const semMotivo = await api("/api/admin/faq-assisted-rules", { method: "POST", cookie: tiCookie,
+      body: { ...baseRegra, rule_key: `qa-pub-sm-${sufixo}`, handoff_reason: null } });
+    assert.equal(semMotivo.status, 400);
+    assert.equal(semMotivo.body.error, "handoff_reason_required", "handoff sem motivo era aceito no protótipo");
+    const semHandoff = await api("/api/admin/faq-assisted-rules", { method: "POST", cookie: tiCookie,
+      body: { ...baseRegra, rule_key: `qa-pub-sh-${sufixo}`, is_human_handoff_required: false } });
+    assert.equal(semHandoff.status, 400);
+    assert.equal(semHandoff.body.error, "sensitive_requires_handoff");
+    const precoSemFlag = await api("/api/admin/faq-assisted-rules", { method: "POST", cookie: tiCookie,
+      body: { ...baseRegra, rule_key: `qa-pub-pr-${sufixo}`, is_price_sensitive: false,
+        is_human_handoff_required: false, handoff_reason: null,
+        answer_template: "O posto custa R$ 3500 por mês, sem visita técnica nenhuma e sem contrato." } });
+    assert.equal(precoSemFlag.status, 400);
+    assert.equal(precoSemFlag.body.error, "price_invention_detected");
+    // CHECK `no_invented_price`: preço sensível com R$ no texto virava 500 no banco.
+    const precoComFlag = await api("/api/admin/faq-assisted-rules", { method: "POST", cookie: tiCookie,
+      body: { ...baseRegra, rule_key: `qa-pub-pf-${sufixo}`,
+        answer_template: "O posto custa R$ 3500 por mês, com visita técnica inclusa e contrato anual." } });
+    assert.equal(precoComFlag.status, 400, "preço sensível com R$ precisa ser 400, não 500");
+    assert.equal(precoComFlag.body.error, "sensitive_template_states_price");
+    const palavrasTortas = await api("/api/admin/faq-assisted-rules", { method: "POST", cookie: tiCookie,
+      body: { ...baseRegra, rule_key: `qa-pub-kw-${sufixo}`, keywords: Array.from({ length: 21 }, (_, i) => `k${i}`) } });
+    assert.equal(palavrasTortas.status, 400);
+    assert.equal(palavrasTortas.body.error, "invalid_keywords");
+
+    // --- servidor: publicar exige aprovação (o protótipo publicava sem) ----
+    const idRegra = criadaApi.body.id;
+    const publicarSemAprovar = await api("/api/admin/faq-assisted-rules", { method: "PATCH", cookie: tiCookie,
+      body: { id: idRegra, status: "publicado", reason: motivoTransicao } });
+    assert.equal(publicarSemAprovar.status, 409);
+    assert.equal(publicarSemAprovar.body.error, "must_be_approved_before_publish");
+    const aprovada = await api("/api/admin/faq-assisted-rules", { method: "PATCH", cookie: tiCookie,
+      body: { id: idRegra, status: "aprovado", is_approved: true, reason: motivoTransicao } });
+    assert.equal(aprovada.status, 200, "aprovar precisa gravar (antes respondia 500)");
+    assert.equal(aprovada.body.is_approved, true);
+    const publicaDesaprovando = await api("/api/admin/faq-assisted-rules", { method: "PATCH", cookie: tiCookie,
+      body: { id: idRegra, status: "publicado", is_approved: false, reason: motivoTransicao } });
+    assert.equal(publicaDesaprovando.status, 409, "publicar desaprovando no mesmo pedido era aceito");
+    const publicada = await api("/api/admin/faq-assisted-rules", { method: "PATCH", cookie: tiCookie,
+      body: { id: idRegra, status: "publicado", reason: motivoTransicao } });
+    assert.equal(publicada.status, 200);
+    assert.equal(publicada.body.is_published, true);
+    const arquivada = await api("/api/admin/faq-assisted-rules", { method: "PATCH", cookie: tiCookie,
+      body: { id: idRegra, status: "arquivado", reason: motivoTransicao } });
+    assert.equal(arquivada.status, 200);
+    assert.equal(arquivada.body.is_published, false, "arquivar desliga a publicação");
+    const historical = (await pool.query(
+      "SELECT previous_status, next_status, reason FROM pub_faq_assisted_history WHERE rule_id=$1 ORDER BY created_at ASC", [idRegra])).rows;
+    assert.ok(historical.length >= 4, "cada transição precisa deixar histórico");
+    assert.equal(historical.at(-1).reason, motivoTransicao, "o motivo gravado é o digitado, não um texto fixo");
+    assert.equal((await api("/api/admin/faq-assisted-rules", { method: "PATCH", cookie: tiCookie,
+      body: { id: "nao-e-uuid", status: "rascunho", reason: motivoTransicao } })).body.error, "invalid_id");
+    assert.equal((await api("/api/admin/faq-assisted-rules", { method: "PATCH", cookie: tiCookie,
+      body: { id: idRegra, reason: motivoTransicao } })).body.error, "no_fields");
+
+    // --- servidor: token de sessão de verdade e borda pública fechada ------
+    const sessao = await api("/api/admin/pub-faq-sessions", { method: "POST", cookie: tiCookie,
+      body: { question: `Como funciona a vistoria técnica ${sufixo}?`, visitor_name: "Visitante QA",
+        visitor_contact: "(11) 98765-4321", origin: "site" } });
+    assert.equal(sessao.status, 201, "criar sessão respondia 500 com o token de Math.random");
+    assert.match(sessao.body.session_token, /^[0-9a-f]{32}$/, "o token vem do randomBytes importado, com 32 hex");
+    const idSessao = sessao.body.session.id;
+    criados.sessoes.push(idSessao);
+    assert.equal((await api("/api/admin/pub-faq-sessions", { method: "PATCH", cookie: tiCookie,
+      body: { id: idSessao, status: "encerrada" } })).status, 200);
+
+    // --- servidor: transferência humana exige resposta escrita ------------
+    const handoff = await api("/api/admin/faq-handoff", { method: "POST", cookie: tiCookie,
+      body: { session_id: idSessao, reason: `Visitante pediu atendimento humano no gate ${sufixo}` } });
+    assert.equal(handoff.status, 201);
+    criados.handoffs.push(handoff.body.id);
+    const concluirSemResposta = await api("/api/admin/faq-handoff", { method: "PATCH", cookie: tiCookie,
+      body: { id: handoff.body.id, status: "concluido" } });
+    assert.equal(concluirSemResposta.status, 400);
+    assert.equal(concluirSemResposta.body.error, "response_required", "concluir sem resposta era aceito no protótipo");
+
+    // --- servidor: segmento só publica depois de validado ----------------
+    const segmento = await api("/api/admin/pub-segments", { method: "POST", cookie: tiCookie, body: {
+      segment_key: `qa-seg-${sufixo}`, name: `Segmento QA ${sufixo}`,
+      description: "Segmento sintético criado pelo gate para provar validação e publicação.",
+      segment_type: "empresa", services: ["Portaria"], audience: "Gestores de facilities do gate",
+      benefits: "Controle de acesso e portaria durante todo o expediente",
+    } });
+    assert.equal(segmento.status, 201);
+    const idSegmento = segmento.body.id;
+    criados.segmentos.push(idSegmento);
+    const publicarSemValidar = await api("/api/admin/pub-segments", { method: "PATCH", cookie: tiCookie,
+      body: { id: idSegmento, is_published: true } });
+    assert.equal(publicarSemValidar.status, 409);
+    assert.equal(publicarSemValidar.body.error, "segment_must_be_validated_before_publish");
+    assert.equal((await api("/api/admin/pub-segments", { method: "PATCH", cookie: tiCookie,
+      body: { id: idSegmento, is_validated: true } })).status, 200);
+    assert.equal((await api("/api/admin/pub-segments", { method: "PATCH", cookie: tiCookie,
+      body: { id: idSegmento, is_published: true } })).status, 200);
+    const publico = await fetch(`${baseUrl}/api/segments?type=empresa`);
+    assert.equal(publico.status, 200);
+    assert.match(await publico.text(), new RegExp(`qa-seg-${sufixo}`), "o segmento publicado aparece na leitura pública");
+
+    const comPagina = async (opcoes, acoes) => {
+      const browser = await launchBrowser();
+      try {
+        const context = await browser.newContext({ viewport: { width: opcoes.width ?? 1440, height: opcoes.height ?? 900 }, locale: "pt-BR" });
+        const cookie = opcoes.cookie ?? tiCookie;
+        await context.addCookies(cookie.split("; ").filter(Boolean).map(item => {
+          const separador = item.indexOf("=");
+          return { name: item.slice(0, separador), value: item.slice(separador + 1), url: baseUrl };
+        }));
+        const page = await context.newPage();
+        page.setDefaultTimeout(45_000);
+        page.setDefaultNavigationTimeout(90_000);
+        await page.addInitScript(pubInjecao, Object.assign({ regras: "pass" }, opcoes.injecao || {}));
+        await page.goto(`${baseUrl}/admin/ti`, { waitUntil: "domcontentloaded" });
+        if (cookie === tiCookie) {
+          await page.getByRole("button", { name: "FAQ assistida e segmentos" }).click();
+          await page.getByTestId("pub-faq").waitFor();
+          await page.waitForFunction(() => /Lido às/.test(document.querySelector('[data-testid="pub-hora"]')?.textContent || ""), null, { timeout: 45_000 });
+        }
+        const resultado = await acoes(page, context);
+        await context.close();
+        return resultado;
+      } finally { await browser.close(); }
+    };
+    const evidenciar = async (page, { estado, nome, width, theme }) => {
+      await capture(page, nome);
+      const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      entries.push({ viewport: width, theme, estado, screenshot: evidence ? `${nome}.png` : null, sobraDocumentoPx: sobra, problems: [] });
+      return sobra;
+    };
+
+    // --- 1) leitura nas três larguras e à noite --------------------------
+    for (const width of [320, 390, 1440]) {
+      await comPagina({ width }, async (page) => {
+        await page.getByTestId("pub-card-regras").waitFor();
+        await page.getByTestId("pub-card-sessoes").waitFor();
+        await page.getByTestId("pub-card-segmentos").waitFor();
+        assert.match(await page.getByTestId("pub-aviso-publico").innerText(), /continua fechado/i);
+        assert.match(await page.getByTestId("pub-aviso-historico").innerText(), /10 a 1\.000/);
+        assert.match(await page.getByTestId("pub-aviso-minimizacao").innerText(), /mascarado/i);
+        assert.match(await page.getByTestId("pub-aviso-sensivel").innerText(), /409/);
+        assert.equal(await page.getByTestId("pub-estado-regras").count(), 0, "as regras leram com registros");
+        assert.ok(await page.getByTestId("pub-lista-regras").locator("li").count() >= 1, "há regra na lista");
+        assert.ok(await page.getByTestId("pub-lista-segmentos").locator("li").count() >= 1, "há segmento na lista");
+        const sobra = await evidenciar(page, { estado: "autorizado", nome: `pub-faq-${width}-day`, width, theme: "day" });
+        assert.ok(sobra <= 1, `a FAQ assistida transborda ${sobra}px em ${width}px`);
+      });
+    }
+    await comPagina({ width: 1440 }, async (page) => {
+      await page.getByTestId("pub-card-fora").waitFor();
+      await page.locator('[data-admin-theme-toggle="true"]').click();
+      await page.waitForFunction(() => document.documentElement.dataset.adminTheme === "night");
+      const sobra = await evidenciar(page, { estado: "autorizado", nome: "pub-faq-1440-night", width: 1440, theme: "night" });
+      assert.ok(sobra <= 1, `a FAQ assistida transborda ${sobra}px à noite`);
+    });
+
+    // --- 2) criar regra pela tela: nasce rascunho e só oferece o próximo passo
+    await comPagina({ width: 1440 }, async (page) => {
+      const card = page.getByTestId("pub-card-regras");
+      await card.getByLabel("chave da regra", { exact: true }).fill(chaveRegra);
+      await card.getByLabel("padrão da pergunta").fill(perguntaRegra);
+      await card.getByLabel("resposta aprovada").fill(respostaRegra);
+      await card.getByLabel("categoria da regra").fill("preco");
+      await card.getByLabel("palavras-chave da regra").fill("preço, valor");
+      await card.getByLabel("preço sensível").check();
+      await card.getByLabel("requer transferência humana").check();
+      await card.getByLabel("motivo da transferência").fill(motivoCriacao);
+      await card.getByRole("button", { name: /Criar regra da FAQ assistida/ }).click();
+      await page.getByTestId("pub-ok").waitFor();
+      assert.match(await page.getByTestId("pub-ok").innerText(), /rascunho.*nada foi publicado/i);
+      const chave = slugGate(chaveRegra);
+      const linha = page.getByTestId(`pub-regra-${chave}`);
+      await linha.waitFor();
+      assert.equal(await linha.getAttribute("data-situacao"), "rascunho");
+      assert.equal(await page.getByTestId(`pub-mover-${chave}-publicado`).count(), 0, "rascunho não publica direto");
+      assert.equal(await page.getByTestId(`pub-mover-${chave}-aprovado`).count(), 0, "rascunho não aprova direto");
+      assert.equal(await page.getByTestId(`pub-mover-${chave}-em_revisao`).count(), 1);
+      const banco = await pool.query("SELECT id, status, is_approved, is_published FROM pub_faq_assisted_rules WHERE rule_key=$1", [chaveRegra]);
+      assert.equal(banco.rowCount, 1);
+      criados.regras.push(banco.rows[0].id);
+      assert.equal(banco.rows[0].status, "rascunho");
+      assert.equal(banco.rows[0].is_approved, false);
+      assert.equal(banco.rows[0].is_published, false);
+      await evidenciar(page, { estado: "regra-criada", nome: "pub-faq-1440-day-regra", width: 1440, theme: "day" });
+    });
+
+    // --- 3) guardrails recusam na tela antes do servidor -----------------
+    await comPagina({ width: 1440 }, async (page) => {
+      const card = page.getByTestId("pub-card-regras");
+      const antes = (await pool.query("SELECT count(*)::int AS n FROM pub_faq_assisted_rules")).rows[0].n;
+      await card.getByLabel("chave da regra", { exact: true }).fill(`qa-pub-inv-${sufixo}`);
+      await card.getByLabel("padrão da pergunta").fill(`quanto custa o posto ${sufixo}`);
+      await card.getByLabel("resposta aprovada").fill("O posto custa R$ 3500 por mês, com tudo incluso no contrato anual.");
+      await card.getByRole("button", { name: /Criar regra da FAQ assistida/ }).click();
+      await page.getByTestId("pub-erro-resposta").waitFor();
+      assert.match(await page.getByTestId("pub-erro-resposta").innerText(), /R\$/);
+      // Depois da recusa do valor, o sensível sem handoff tem erro próprio.
+      await card.getByLabel("resposta aprovada").fill(respostaRegra);
+      await card.getByLabel("preço sensível").check();
+      await card.getByRole("button", { name: /Criar regra da FAQ assistida/ }).click();
+      await page.getByTestId("pub-erro-handoff").waitFor();
+      assert.match(await page.getByTestId("pub-erro-handoff").innerText(), /transfer[êe]ncia humana/);
+      const depois = (await pool.query("SELECT count(*)::int AS n FROM pub_faq_assisted_rules")).rows[0].n;
+      assert.equal(depois, antes, "nenhuma regra inválida chega ao servidor");
+      await evidenciar(page, { estado: "regra-recusada", nome: "pub-faq-1440-day-regra-recusada", width: 1440, theme: "day" });
+    });
+
+    // --- 4) ciclo real com o motivo digitado no histórico ----------------
+    await comPagina({ width: 1440 }, async (page) => {
+      const chave = slugGate(chaveRegra);
+      // A tela limpa o motivo depois de gravar (o motivo vale para uma mudança,
+      // não para todas): o cenário preenche de novo a cada passo.
+      const moverPara = async destino => {
+        await page.getByLabel("motivo da mudança").fill(motivoTransicao);
+        await page.getByTestId(`pub-mover-${chave}-${destino}`).click();
+        await page.waitForFunction(
+          ([key, alvo]) => document.querySelector(`[data-testid="pub-regra-${key}"]`)?.getAttribute("data-situacao") === alvo,
+          [chave, destino], { timeout: 45_000 },
+        );
+      };
+      // Sem motivo no campo, a tela recusa antes do servidor.
+      await page.getByTestId(`pub-mover-${chave}-em_revisao`).click();
+      await page.getByTestId("pub-erro-motivo-transicao").waitFor();
+      assert.match(await page.getByTestId("pub-erro-motivo-transicao").innerText(), /10 a 1\.000/);
+      await moverPara("em_revisao");
+      await moverPara("aprovado");
+      await moverPara("publicado");
+      const publicado = (await pool.query("SELECT status, is_approved, is_published FROM pub_faq_assisted_rules WHERE rule_key=$1", [chaveRegra])).rows[0];
+      assert.equal(publicado.status, "publicado");
+      assert.equal(publicado.is_approved, true, "publicar exige aprovação e a linha fica aprovada");
+      assert.equal(publicado.is_published, true, "publicar liga is_published");
+      const motivoGravado = (await pool.query("SELECT reason FROM pub_faq_assisted_history WHERE rule_id=(SELECT id FROM pub_faq_assisted_rules WHERE rule_key=$1) ORDER BY created_at DESC LIMIT 1", [chaveRegra])).rows[0].reason;
+      assert.equal(motivoGravado, motivoTransicao, "o histórico recebe o texto do operador");
+      await evidenciar(page, { estado: "regra-publicada", nome: "pub-faq-1440-day-regra-publicada", width: 1440, theme: "day" });
+      await page.getByLabel("motivo da mudança").fill(`${motivoTransicao} Arquivamento programado.`);
+      await page.getByTestId(`pub-mover-${chave}-arquivado`).click();
+      await page.waitForFunction(key => document.querySelector(`[data-testid="pub-regra-${key}"]`)?.getAttribute("data-situacao") === "arquivado", chave, { timeout: 45_000 });
+      const arquivado = (await pool.query("SELECT status, is_published FROM pub_faq_assisted_rules WHERE rule_key=$1", [chaveRegra])).rows[0];
+      assert.equal(arquivado.status, "arquivado");
+      assert.equal(arquivado.is_published, false, "arquivar desliga a publicação");
+    });
+
+    // --- 5) transferência humana: a resposta é a do operador -------------
+    const protocoloHandoff = handoff.body.protocol;
+    await comPagina({ width: 1440 }, async (page) => {
+      const chave = slugGate(protocoloHandoff);
+      const linha = page.getByTestId(`pub-handoff-${chave}`);
+      await linha.waitFor();
+      await page.getByLabel("resposta ao visitante").fill(respostaVisitante);
+      // A resposta também é limpa depois de gravar: preenche de novo ao concluir.
+      await page.getByLabel("resposta ao visitante").fill(respostaVisitante);
+      await page.getByTestId(`pub-handoff-${chave}-em_atendimento`).click();
+      await page.getByTestId("pub-ok").waitFor();
+      await page.waitForFunction(key => document.querySelector(`[data-testid="pub-handoff-${key}"]`)?.getAttribute("data-situacao") === "em_atendimento", chave, { timeout: 45_000 });
+      await page.getByLabel("resposta ao visitante").fill(respostaVisitante);
+      await page.getByTestId(`pub-handoff-${chave}-concluido`).click();
+      await page.waitForFunction(key => document.querySelector(`[data-testid="pub-handoff-${key}"]`)?.getAttribute("data-situacao") === "concluido", chave, { timeout: 45_000 });
+      const concluido = (await pool.query("SELECT status, response FROM pub_human_handoff_requests WHERE protocol=$1", [protocoloHandoff])).rows[0];
+      assert.equal(concluido.status, "concluido");
+      assert.equal(concluido.response, respostaVisitante, "a resposta gravada é a digitada, não um texto fixo");
+      await evidenciar(page, { estado: "handoff-concluido", nome: "pub-faq-1440-day-handoff", width: 1440, theme: "day" });
+    });
+
+    // --- 6) segmento: validar e publicar pela tela -----------------------
+    await comPagina({ width: 1440 }, async (page) => {
+      const chave = slugGate(`qa-seg-${sufixo}`);
+      const linha = page.getByTestId(`pub-segmento-${chave}`);
+      await linha.waitFor();
+      assert.equal(await page.getByTestId(`pub-publicar-${chave}`).count(), 0, "sem validar não há botão de publicar");
+      await page.getByTestId(`pub-despublicar-${chave}`).click();
+      await page.getByTestId("pub-ok").waitFor();
+      const despublicado = (await pool.query("SELECT is_published, is_validated FROM pub_segments WHERE id=$1", [idSegmento])).rows[0];
+      assert.equal(despublicado.is_published, false, "despublicar volta a esconder do site");
+      assert.equal(despublicado.is_validated, true, "despublicar não desvalida");
+      await page.getByTestId(`pub-publicar-${chave}`).click();
+      await page.getByTestId("pub-ok").waitFor();
+      const republicado = (await pool.query("SELECT is_published FROM pub_segments WHERE id=$1", [idSegmento])).rows[0];
+      assert.equal(republicado.is_published, true);
+      await evidenciar(page, { estado: "segmento-publicado", nome: "pub-faq-1440-day-segmento", width: 1440, theme: "day" });
+    });
+
+    // --- 7) sessão do visitante com contato mascarado --------------------
+    await comPagina({ width: 1440 }, async (page) => {
+      const chave = slugGate(sessao.body.session.protocol);
+      const contato = page.getByTestId(`pub-contato-${chave}`);
+      await contato.waitFor();
+      const texto = await contato.innerText();
+      assert.ok(!texto.includes("98765"), "o contato não aparece inteiro");
+      assert.match(texto, /21$/, "os dois últimos caracteres seguem legíveis");
+      await evidenciar(page, { estado: "sessao-mascarada", nome: "pub-faq-1440-day-sessao", width: 1440, theme: "day" });
+    });
+
+    // --- 8) negação não vira lista vazia --------------------------------
+    await comPagina({ width: 1440, injecao: { regras: "negado" } }, async (page) => {
+      const estadoLista = page.getByTestId("pub-estado-regras");
+      await estadoLista.waitFor();
+      assert.equal(await estadoLista.getAttribute("data-situacao"), "negado");
+      assert.doesNotMatch(await page.getByTestId("pub-card-regras").innerText(), /Nenhum registro/i, "negado não é vazio");
+      await evidenciar(page, { estado: "negado", nome: "pub-faq-1440-day-negado", width: 1440, theme: "day" });
+    });
+
+    // --- 9) papel negado no gate ----------------------------------------
+    await comPagina({ cookie: rhCookie, width: 1440 }, async (page) => {
+      await page.locator('[data-admin-gate="forbidden"]').waitFor();
+      assert.equal(await page.getByTestId("pub-faq").count(), 0, "rh não monta a FAQ assistida no console de TI");
+      await evidenciar(page, { estado: "papel-negado", nome: "pub-faq-1440-day-rh", width: 1440, theme: "day" });
+    });
+
+    if (evidence) {
+      await mkdir(evidence, { recursive: true });
+      await writeFile(path.join(evidence, "resumo.json"), JSON.stringify({
+        stage: "UX-PRO-03 · PUB-02/PUB-05 · FAQ assistida, transferência humana e segmentos na aba do TiConsole (/admin/ti)",
+        generatedBy: "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+        route: "/admin/ti",
+        fatia: "18ª promoção com prova — PubFaqAssistedClient deixa de ser órfão",
+        entries,
+        limites: [
+          "O atendimento público da FAQ assistida continua fechado: /api/faq-assisted* exige sessão de equipe porque sessão e mensagem de visitante são dado pessoal.",
+          "Mensagem de sessão, desempenho e acessibilidade ficam fora da tela e são declarados com rota e tabela.",
+          "O servidor confere valor e coerência de status/aprovação/publicação; a ordem do ciclo é política desta tela.",
+          "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+          "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado.",
+        ],
+      }, null, 2));
+    }
+    for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
+  } finally {
+    const regras = criados.regras.filter(Boolean);
+    const sessoes = criados.sessoes.filter(Boolean);
+    const handoffs = criados.handoffs.filter(Boolean);
+    const segmentos = criados.segmentos.filter(Boolean);
+    if (handoffs.length) await pool.query("DELETE FROM pub_human_handoff_requests WHERE id = ANY($1::uuid[])", [handoffs]).catch(() => {});
+    if (sessoes.length) await pool.query("DELETE FROM pub_faq_sessions WHERE id = ANY($1::uuid[])", [sessoes]).catch(() => {});
+    if (regras.length) await pool.query("DELETE FROM pub_faq_assisted_rules WHERE id = ANY($1::uuid[])", [regras]).catch(() => {});
+    if (segmentos.length) await pool.query("DELETE FROM pub_segments WHERE id = ANY($1::uuid[])", [segmentos]).catch(() => {});
+    await pool.query("DELETE FROM pub_faq_assisted_rules WHERE rule_key LIKE $1", [`qa-pub-%${sufixo}%`]).catch(() => {});
+    await pool.query("DELETE FROM pub_segments WHERE segment_key LIKE $1", [`qa-seg-${sufixo}`]).catch(() => {});
+  }
+});

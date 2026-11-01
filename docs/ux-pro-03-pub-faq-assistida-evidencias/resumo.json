@@ -1,0 +1,111 @@
+{
+  "stage": "UX-PRO-03 · PUB-02/PUB-05 · FAQ assistida, transferência humana e segmentos na aba do TiConsole (/admin/ti)",
+  "generatedBy": "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+  "route": "/admin/ti",
+  "fatia": "18ª promoção com prova — PubFaqAssistedClient deixa de ser órfão",
+  "entries": [
+    {
+      "viewport": 320,
+      "theme": "day",
+      "estado": "autorizado",
+      "screenshot": "pub-faq-320-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 390,
+      "theme": "day",
+      "estado": "autorizado",
+      "screenshot": "pub-faq-390-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "autorizado",
+      "screenshot": "pub-faq-1440-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "night",
+      "estado": "autorizado",
+      "screenshot": "pub-faq-1440-night.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "regra-criada",
+      "screenshot": "pub-faq-1440-day-regra.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "regra-recusada",
+      "screenshot": "pub-faq-1440-day-regra-recusada.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "regra-publicada",
+      "screenshot": "pub-faq-1440-day-regra-publicada.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "handoff-concluido",
+      "screenshot": "pub-faq-1440-day-handoff.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "segmento-publicado",
+      "screenshot": "pub-faq-1440-day-segmento.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "sessao-mascarada",
+      "screenshot": "pub-faq-1440-day-sessao.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "negado",
+      "screenshot": "pub-faq-1440-day-negado.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "papel-negado",
+      "screenshot": "pub-faq-1440-day-rh.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    }
+  ],
+  "limites": [
+    "O atendimento público da FAQ assistida continua fechado: /api/faq-assisted* exige sessão de equipe porque sessão e mensagem de visitante são dado pessoal.",
+    "Mensagem de sessão, desempenho e acessibilidade ficam fora da tela e são declarados com rota e tabela.",
+    "O servidor confere valor e coerência de status/aprovação/publicação; a ordem do ciclo é política desta tela.",
+    "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+    "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado."
+  ]
+}

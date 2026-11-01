@@ -102,9 +102,13 @@ test('reauditoria 222: nenhum ID inventa aceite humano ou reauditoria integral',
   // EMP-18/EMP-19 (17ª promoção, `browser UX-PRO-03 EMP-18/19`): os dois IDs
   // saem de `somente_documento` porque o cenário de gate os cita no conteúdo.
   // Mesma natureza: evidência textual, não aceite (0/222).
+  // 23/118/81 → 23/120/79 em 01/11 com PUB-02/PUB-05 (18ª promoção,
+  // `browser UX-PRO-03 PUB-02/05`): o relatório e o cenário de gate citam os
+  // dois IDs. Continua sendo evidência textual acrescentada — nenhum dos dois
+  // está aceito por humano, e a reauditoria integral segue 0/222.
   assert.equal(data.resumo.porClasseEvidencia.gate_nomeado, 23);
-  assert.equal(data.resumo.porClasseEvidencia.mencionado_em_gate, 118);
-  assert.equal(data.resumo.porClasseEvidencia.somente_documento, 81);
+  assert.equal(data.resumo.porClasseEvidencia.mencionado_em_gate, 120);
+  assert.equal(data.resumo.porClasseEvidencia.somente_documento, 79);
   assert.ok(data.requisitos.filter(row => row.prefixo === 'SEC')
     .every(row => row.classe_evidencia_atual === 'mencionado_em_gate'),
   'os 15 IDs SEC devem apontar para o mapa técnico de âncoras, sem inferir aceite');

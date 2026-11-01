@@ -203,10 +203,10 @@ test("PUB-10: a tela não engole falha, não usa prompt() e não exibe IP cru de
   assert.match(componente, /dataCurta\(item\.period_start\)/, "a lista mostra o dia, não o ISO cru");
 });
 
-test("PUB-10: a aba existe, é dinâmica, está no grupo certo e o console tem 30 abas", () => {
+test("PUB-10: a aba existe, é dinâmica, está no grupo certo e o console tem 31 abas", () => {
   const declaracao = consoleTi.match(/const tabs=(\[[\s\S]*?\]) as const;/)?.[1] ?? "";
   const abas = [...declaracao.matchAll(/\['([a-z0-9_]+)','([^']+)'\]/g)].map(item => item[1]);
-  assert.equal(abas.length, 30, "as promoções levam o console de 27 para 30 abas");
+  assert.equal(abas.length, 31, "as promoções levam o console de 27 para 31 abas");
   assert.ok(abas.includes("pub_metricas"));
   assert.match(consoleTi, /const OriginMetricsClient=dynamic\(\(\)=>import\('\.\/OriginMetricsClient'\)\);/);
   assert.match(consoleTi, /\{active==='pub_metricas'&&<OriginMetricsClient\/>\}/);

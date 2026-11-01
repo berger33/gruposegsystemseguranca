@@ -56,10 +56,14 @@ const tabsDeclaration = consoleSrc.match(/const tabs=(\[[\s\S]*?\]) as const;/)?
 // escreve as mesmas tabelas em `/admin/marcelo`; em 31/10 a 28ª aba promoveu
 // PUB-10 (`OriginMetricsClient`), que não tem superfície equivalente fora de
 // `/admin/ti` — nenhum arquivo de `src/app` fora do console chama aquelas três
-// rotas). Toda nova
+// rotas). Em 01/11 a 30ª aba promoveu EMP-18/19 (`EmpPwaClient`, caminho
+// canônico fora da borda legada de RH) e a 31ª promoveu PUB-02/PUB-05
+// (`PubFaqAssistedClient`: regras da FAQ assistida, transferência humana e
+// segmentos do site — quatro rotas `/api/admin/*` sem nenhum outro consumidor
+// em `src/app`). Toda nova
 // ABA exige atualizar esta constante E o inventário/CSV — é o atrito que a
 // guarda deve impor.
-const EXPECTED_TABS = 30;
+const EXPECTED_TABS = 31;
 const tabKeys = [...tabsDeclaration.matchAll(/\['([a-z0-9_]+)','([^']+)'\]/g)].map(match => match[1]);
 const dynamicNames = [...consoleSrc.matchAll(/const\s+(\w+)\s*=\s*dynamic\(\(\)\s*=>\s*import\(['"]\.\/([^'"]+)['"]\)\)/g)].map(match => match[2]);
 const renders = [...consoleSrc.matchAll(/active==='([a-z0-9_]+)'&&<(\w+)\/>/g)].map(match => ({ key: match[1], component: match[2] }));

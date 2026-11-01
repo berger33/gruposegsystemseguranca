@@ -142,6 +142,12 @@ const PROMOCOES_COM_PROVA = [
     familia: 'EMP-18/EMP-19 app do funcionário: configuração do PWA versionada (nome, cores, exibição e tarefas offline do enum do banco) e FAQ interna com ciclo de revisão e linguagem simples/baixo consumo — depois de DESCARTAR EmpAdvanced2Client, cujas 11 rotas /api/admin/hr/* passam pela borda legada de RH que nega admin/ti; os aliases /api/hr/pwa-configs e /api/hr/faq-internal continuam 403 de propósito e a tela usa o caminho canônico de administração; o PATCH passou a validar fila 1..200, tentativas 1..20, cores #rrggbb, display/categoria/nível de leitura do enum, devolvendo 400 em vez de 500',
     relatorio: 'docs/UX-PRO-03-PROMOCAO-APP-FUNCIONARIO-PWA-FAQ-2026-11-01.md',
   },
+  {
+    componente: 'PubFaqAssistedClient.tsx',
+    aba: 'pub_faq',
+    familia: 'PUB-02/PUB-05 segmentos do site e FAQ assistida com transferência humana — depois de DESCARTAR os órfãos de dado de funcionário presos na borda legada de RH (EmpOpsClient, EmpPortalClient, EmpSelfClient, EmpProfileClient, EmpAdvanced2Client) e os que já têm superfície viva (/admin/operacao, /admin/financeiro, /admin/patrimonio, /admin/contratos/[id], /admin/publicacao); aqui nenhuma das quatro rotas /api/admin/{faq-assisted-rules,pub-faq-sessions,faq-handoff,pub-segments} tem outro consumidor em src/app. O servidor passou a gerar token de sessão com randomBytes importado (eram ~11 caracteres de Math.random e a criação de sessão respondia 500), a recusar publicação sem aprovação (409), situação publicado sem is_published (400), segmento publicado sem validação (409), transferência concluída sem resposta escrita (400) e id que não é UUID (400)',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-PUB-FAQ-ASSISTIDA-2026-11-01.md',
+  },
 ];
 
 const sha256 = value => createHash('sha256').update(value).digest('hex');

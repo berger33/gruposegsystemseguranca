@@ -1,8 +1,22 @@
+import { randomBytes } from 'node:crypto';
+
+// Um `id` que não é UUID chegava ao Postgres (`22P02`) e o `catch` genérico do
+// roteador devolvia 500 — erro do operador apresentado como falha do servidor.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ehUuid = (valor) => typeof valor === 'string' && UUID.test(valor);
+const texto = (valor) => (valor === undefined || valor === null ? '' : String(valor).trim());
+
 export function createPubFaqAssistedApi({ pool, auditLog, sameOrigin, requireSession, requireRole }) {
   const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
   const readJson = async (req) => { const chunks=[]; for await (const c of req) chunks.push(c); const raw=Buffer.concat(chunks).toString('utf8'); if(!raw) return {}; try{ return JSON.parse(raw);} catch{ return {}; } };
   const generateProtocol = (prefix) => { const d=new Date(); const y=d.getFullYear().toString(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); const rand=Math.random().toString(36).substring(2,6).toUpperCase(); return `${prefix}-${y}${m}${day}-${rand}`; };
-  const generateToken = (len=32) => { try{ const crypto=require('node:crypto'); return crypto.randomBytes(len).toString('hex').slice(0,len); } catch{ return Math.random().toString(36).substring(2, 2+len); } };
+  // `require('node:crypto')` não existe neste módulo ESM: a chamada lançava
+  // `ReferenceError`, o `catch` caía em `Math.random().toString(36)`, e o
+  // `substring` devolvia ~11 caracteres — abaixo do CHECK `char_length BETWEEN
+  // 20 AND 200` de `pub_faq_sessions.session_token`. Resultado medido: criar
+  // sessão respondia **500** e nunca gravava nada. Agora o token é hexadecimal
+  // de verdade, do `randomBytes` importado.
+  const generateToken = (len = 32) => randomBytes(Math.ceil(len / 2)).toString('hex').slice(0, len);
 
   const handleSegments = async (req,res) => {
     const url=new URL(req.url,'http://localhost');
@@ -50,10 +64,18 @@ export function createPubFaqAssistedApi({ pool, auditLog, sameOrigin, requireSes
       const is_published=b.is_published!==undefined?!!b.is_published:null;
       const is_validated=b.is_validated!==undefined?!!b.is_validated:null;
       if(!id) return json(res,400,{error:'missing_id'});
+      if(!ehUuid(id)) return json(res,400,{error:'invalid_id'});
+      if(is_published===null && is_validated===null) return json(res,400,{error:'no_fields'});
       const { rows: existing } = await pool.query(`SELECT * FROM pub_segments WHERE id=$1`, [id]);
       if(!existing.length) return json(res,404,{error:'not_found'});
+      const atual=existing[0];
+      const validadoFinal = is_validated===null ? atual.is_validated : is_validated;
+      // A leitura pública exige `is_published AND is_validated`: publicar um
+      // segmento não validado deixava a tela dizendo "publicado" e a página
+      // /segmentos/[key] fora do ar, sem nenhum aviso ao operador.
+      if(is_published===true && !validadoFinal) return json(res,409,{error:'segment_must_be_validated_before_publish'});
       const { rows } = await pool.query(`UPDATE pub_segments SET is_published=COALESCE($2,is_published), is_validated=COALESCE($3,is_validated), version=version+1, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, is_published, is_validated]);
-      await auditLog({ action:is_published?'pub_segment_publish':'pub_segment_update', actor:sess.identityId||'system', target:id, meta:{ is_published, is_validated } });
+      await auditLog({ action: is_published===true?'pub_segment_publish': is_published===false?'pub_segment_unpublish':'pub_segment_update', actor:sess.identityId||'system', target:id, meta:{ is_published, is_validated } });
       return json(res,200,rows[0]);
     }
     return json(res,405,{error:'method_not_allowed'});
@@ -90,6 +112,9 @@ export function createPubFaqAssistedApi({ pool, auditLog, sameOrigin, requireSes
       if(question_pattern.length<5||question_pattern.length>500) return json(res,400,{error:'invalid_question_pattern'});
       if(answer_template.length<20||answer_template.length>5000) return json(res,400,{error:'invalid_answer_template'});
       if(category.length<3||category.length>100) return json(res,400,{error:'invalid_category'});
+      if(!Array.isArray(keywords)) return json(res,400,{error:'invalid_keywords'});
+      if(keywords.length>20) return json(res,400,{error:'invalid_keywords'});
+      if(keywords.some(k=>typeof k!=='string'||k.trim().length<1||k.length>50)) return json(res,400,{error:'invalid_keywords'});
       if(handoff_reason && (handoff_reason.length<10||handoff_reason.length>1000)) return json(res,400,{error:'invalid_handoff_reason'});
       // guardrails: não inventar preço/cobertura/licença/prazo
       if(answer_template.match(/R\$\s*\d+/) && !is_price_sensitive){
@@ -104,9 +129,22 @@ export function createPubFaqAssistedApi({ pool, auditLog, sameOrigin, requireSes
       if(answer_template.toLowerCase().includes('prazo garantido') && !is_deadline_sensitive){
         return json(res,400,{error:'deadline_invention_detected', note:'bot não inventa prazo'});
       }
-      if((is_price_sensitive||is_coverage_sensitive||is_license_sensitive||is_deadline_sensitive) && !is_human_handoff_required && !handoff_reason){
-        // exigir handoff quando sensível
+      // Guardrail do PUB-05: preço/cobertura/licença/prazo sensível **exige**
+      // transferência humana marcada. A condição antiga só recusava quando o
+      // handoff estava desmarcado E sem motivo, então marcar o handoff sem
+      // motivo (ou marcar só o motivo) passava — e a sessão que casasse com a
+      // regra abria um handoff com texto genérico no lugar do motivo.
+      if((is_price_sensitive||is_coverage_sensitive||is_license_sensitive||is_deadline_sensitive) && !is_human_handoff_required){
         return json(res,400,{error:'sensitive_requires_handoff', note:'FAQ assistida transferência humana quando preço/cobertura/licença/prazo sensível'});
+      }
+      if(is_human_handoff_required && !handoff_reason){
+        return json(res,400,{error:'handoff_reason_required', note:'marcar transferência humana exige motivo de 10 a 1.000 caracteres'});
+      }
+      // Espelho do CHECK `no_invented_price` da migração 094: regra marcada como
+      // preço sensível NÃO pode trazer valor em R$ no texto. Sem esta validação
+      // o banco recusava a linha e o operador recebia 500 `internal_error`.
+      if(is_price_sensitive && (/R\$/i.test(answer_template) || /pre[çc]o\s+prometido/i.test(answer_template))){
+        return json(res,400,{error:'sensitive_template_states_price', note:'regra de preço sensível não pode trazer valor em R$ nem promessa de preço'});
       }
       try{
         const { rows } = await pool.query(`INSERT INTO pub_faq_assisted_rules (rule_key, question_pattern, answer_template, category, keywords, is_price_sensitive, is_coverage_sensitive, is_license_sensitive, is_deadline_sensitive, is_human_handoff_required, handoff_reason, created_by_identity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
@@ -122,8 +160,12 @@ export function createPubFaqAssistedApi({ pool, auditLog, sameOrigin, requireSes
       const status=b.status?String(b.status).trim():null;
       const is_approved=b.is_approved!==undefined?!!b.is_approved:null;
       const is_published=b.is_published!==undefined?!!b.is_published:null;
-      const reason=String(b.reason||'Atualização FAQ assistida').trim();
+      // Motivo digitado pelo operador. O padrão fixo antigo gravava a mesma
+      // frase em todo o histórico, e o servidor não tinha como recusar.
+      const reason=texto(b.reason);
       if(!id) return json(res,400,{error:'missing_id'});
+      if(!ehUuid(id)) return json(res,400,{error:'invalid_id'});
+      if(!status && is_approved===null && is_published===null) return json(res,400,{error:'no_fields'});
       if(reason.length<10||reason.length>1000) return json(res,400,{error:'invalid_reason'});
       const { rows: existing } = await pool.query(`SELECT * FROM pub_faq_assisted_rules WHERE id=$1`, [id]);
       if(!existing.length) return json(res,404,{error:'not_found'});
@@ -131,11 +173,31 @@ export function createPubFaqAssistedApi({ pool, auditLog, sameOrigin, requireSes
       const nextStatus=status||cur.status;
       const valid=['rascunho','em_revisao','aprovado','publicado','arquivado','rejeitado'];
       if(!valid.includes(nextStatus)) return json(res,400,{error:'invalid_status'});
-      if((nextStatus==='publicado'||is_published) && !cur.is_approved && !is_approved){
-        return json(res,400,{error:'must_be_approved_before_publish', note:'FAQ assistida revisão competente antes de publicar'});
+      // Publicado e is_published andam juntos: antes era possível gravar
+      // `status='publicado'` com `is_published=false` (e o inverso), deixando
+      // linha "publicada" que a FAQ assistida nunca usava.
+      if(is_published===false && nextStatus==='publicado') return json(res,400,{error:'published_status_requires_publish'});
+      if(is_published===true && nextStatus!=='publicado') return json(res,400,{error:'publish_requires_published_status'});
+      if(is_approved===false && nextStatus==='aprovado') return json(res,400,{error:'approval_status_conflict'});
+      const aprovadoFinal = (is_approved===true || nextStatus==='aprovado') ? true : (is_approved===false ? false : cur.is_approved);
+      const publicando = nextStatus==='publicado';
+      // A regra antiga comparava `cur.is_approved` com o pedido e aceitava
+      // `{status:'publicado', is_approved:false}`: a linha era publicada com
+      // `is_approved=false` no mesmo UPDATE. Agora a decisão olha o valor
+      // FINAL da linha.
+      if(publicando && !aprovadoFinal){
+        return json(res,409,{error:'must_be_approved_before_publish', note:'FAQ assistida revisão competente antes de publicar'});
       }
-      const { rows } = await pool.query(`UPDATE pub_faq_assisted_rules SET status=$2, is_approved=COALESCE($3,is_approved), is_published=COALESCE($4,is_published), approved_by_identity=CASE WHEN $3=true OR $2 IN ('aprovado','publicado') THEN $5 ELSE approved_by_identity END, approved_by_name=CASE WHEN $3=true OR $2 IN ('aprovado','publicado') THEN $6 ELSE approved_by_name END, approved_at=CASE WHEN $3=true OR $2 IN ('aprovado','publicado') THEN NOW() ELSE approved_at END, version=version+1, updated_at=NOW() WHERE id=$1 RETURNING *`,
-        [id, nextStatus, is_approved, is_published, sess.identityId||null, sess.role||null]);
+      // Arquivar ou rejeitar desliga a publicação; o resto preserva.
+      const publicadoFinal = publicando ? true
+        : (is_published === false ? false
+          : ((nextStatus==='arquivado'||nextStatus==='rejeitado') ? false : cur.is_published));
+      // Os casts explícitos não são cosméticos: sem eles o Postgres deduz `$2`
+      // como enum (`status=$2`) e como texto (`$2 IN (...)`) no mesmo comando e
+      // responde `inconsistent types deduced for parameter $2` — era por isso
+      // que TODO PATCH de situação respondia 500 e nenhuma transição gravava.
+      const { rows } = await pool.query(`UPDATE pub_faq_assisted_rules SET status=$2::pub_faq_assisted_status, is_approved=$3::boolean, is_published=$4::boolean, approved_by_identity=CASE WHEN $5::boolean=true OR $2::text IN ('aprovado','publicado') THEN $6::uuid ELSE approved_by_identity END, approved_by_name=CASE WHEN $5::boolean=true OR $2::text IN ('aprovado','publicado') THEN $7::text ELSE approved_by_name END, approved_at=CASE WHEN $5::boolean=true OR $2::text IN ('aprovado','publicado') THEN NOW() ELSE approved_at END, version=version+1, updated_at=NOW() WHERE id=$1::uuid RETURNING *`,
+        [id, nextStatus, aprovadoFinal, publicadoFinal, is_approved, sess.identityId||null, sess.role||null]);
       await pool.query(`INSERT INTO pub_faq_assisted_history (rule_id, previous_version, next_version, previous_status, next_status, reason, changed_by_identity, changed_by_name) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [id, cur.version, rows[0].version, cur.status, nextStatus, reason, sess.identityId||null, sess.role||null]);
       await auditLog({ action: nextStatus==='publicado'?'faq_assisted_rule_publish':'faq_assisted_rule_update', actor:sess.identityId||'system', target:id, meta:{ status: nextStatus, is_approved: rows[0].is_approved } });
       return json(res,200,rows[0]);
@@ -217,6 +279,7 @@ export function createPubFaqAssistedApi({ pool, auditLog, sameOrigin, requireSes
       const id=b.id;
       const status=b.status?String(b.status).trim():null;
       if(!id) return json(res,400,{error:'missing_id'});
+      if(!ehUuid(id)) return json(res,400,{error:'invalid_id'});
       const valid=['ativa','em_handoff','encerrada','cancelada','transferida_humano'];
       if(status && !valid.includes(status)) return json(res,400,{error:'invalid_status'});
       const { rows: existing } = await pool.query(`SELECT * FROM pub_faq_sessions WHERE id=$1`, [id]);
@@ -293,9 +356,14 @@ export function createPubFaqAssistedApi({ pool, auditLog, sameOrigin, requireSes
       const status=b.status?String(b.status).trim():null;
       const response=b.response?String(b.response).trim():null;
       if(!id) return json(res,400,{error:'missing_id'});
+      if(!ehUuid(id)) return json(res,400,{error:'invalid_id'});
       const valid=['pendente','em_atendimento','concluido','cancelado','expirado'];
       if(status && !valid.includes(status)) return json(res,400,{error:'invalid_status'});
       if(response && (response.length<10||response.length>2000)) return json(res,400,{error:'invalid_response'});
+      // Concluir sem resposta era aceito: o handoff ficava `concluido` sem
+      // nada dito ao visitante, e o nome do responsável vinha de um texto fixo
+      // na tela ("Responsável comercial"). Agora a resposta é do operador.
+      if(status==='concluido' && !response) return json(res,400,{error:'response_required'});
       const { rows: existing } = await pool.query(`SELECT * FROM pub_human_handoff_requests WHERE id=$1`, [id]);
       if(!existing.length) return json(res,404,{error:'not_found'});
       const { rows } = await pool.query(`UPDATE pub_human_handoff_requests SET status=COALESCE($2,status), response=COALESCE($3,response), responsible_name=COALESCE($4,responsible_name), responsible_identity=COALESCE($5,responsible_identity), responded_at=CASE WHEN $2 IN ('concluido','cancelado') THEN NOW() ELSE responded_at END, updated_at=NOW() WHERE id=$1 RETURNING *`, [id, status||null, response||null, b.responsible_name||null, sess.identityId||null]);
