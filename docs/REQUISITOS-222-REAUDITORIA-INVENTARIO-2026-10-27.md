@@ -30,7 +30,7 @@ prova rota alguma. Workflows seguem **49**.
 
 ### Método
 
-Uma única passada por **1.666 arquivos** de `tests/`, `.github/workflows/`,
+Uma única passada por **1.671 arquivos** de `tests/`, `.github/workflows/`,
 `docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, a auditoria de 26/10, a
 fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
 meta-estado, não prova de requisito, e evitam auto-referência. De cada arquivo o gerador extrai todos os IDs com
@@ -43,8 +43,8 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 | Classe | Significado | IDs |
 |---|---|---|
 | `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **23** |
-| `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **116** |
-| `somente_documento` | só há citação em documentos | **83** |
+| `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **118** |
+| `somente_documento` | só há citação em documentos | **81** |
 | `somente_codigo` / `sem_evidencia_legivel` | — | **0** |
 
 > **Recontagem E23 (30/10/2026):** a tabela acima já não é a fotografia de 27/10
@@ -54,13 +54,15 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 > (28/10) e das fatias de UI do CLI-02/03/05–10 e do PLT-10, cada uma com relatório
 > próprio. `somente_codigo` e `sem_evidencia_legivel` seguem em **0**.
 >
-> **Recontagem E23 (01/11/2026):** 23/116/83 depois da 16ª promoção do console de
-> TI (PLT-05, preferências e modelos de notificação), cujo cenário de gate cita o
-> ID no conteúdo do teste. O PLT-05 passa de `somente_documento` para
-> `mencionado_em_gate` — o que **não** é aceite humano, homologação nem UAT: o
-> requisito continua em `pronto_local`, e o aceite permanece **0/222**. Este texto
-> **não** é ajustado à mão: `tests/requisitos-222-inventory.test.mjs` compara as
-> contagens e o núcleo duro abaixo com o JSON e falha na primeira divergência.
+> **Recontagem E23 (01/11/2026):** 23/118/81 depois de **duas** promoções do
+> console de TI no mesmo dia — a 16ª (PLT-05, preferências e modelos de
+> notificação) e a 17ª (EMP-18/EMP-19, app do funcionário: PWA e FAQ interna),
+> cujos cenários de gate citam os IDs no conteúdo do teste. Os três IDs passam de
+> `somente_documento` para `mencionado_em_gate` — o que **não** é aceite humano,
+> homologação nem UAT: os requisitos continuam em `pronto_local`, e o aceite
+> permanece **0/222**. Este texto **não** é ajustado à mão:
+> `tests/requisitos-222-inventory.test.mjs` compara as contagens, o núcleo duro e
+> o número de arquivos varridos com o JSON e falha na primeira divergência.
 
 > **Aviso central:** "mencionado em gate" **não é prova de jornada**. Um ID pode
 > ser citado num assert de vocabulário e ainda assim não ter jornada, RBAC,

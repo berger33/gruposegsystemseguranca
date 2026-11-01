@@ -154,10 +154,10 @@ test("CLI console: a tela usa o módulo, declara os estados e não engole falha"
   assert.ok(!/setMsg\("Erro[^"]*"\+e\.message\)/.test(componente), "erro cru de exceção não vai para a tela");
 });
 
-test("CLI console: a aba existe, é dinâmica, está no grupo certo e o console tem 29 abas", () => {
+test("CLI console: a aba existe, é dinâmica, está no grupo certo e o console tem 30 abas", () => {
   const declaracaoAbas = console15.match(/const tabs=(\[[\s\S]*?\]) as const;/)?.[1] ?? "";
   const abas = [...declaracaoAbas.matchAll(/\['([a-z0-9_]+)','([^']+)'\]/g)].map(item => item[1]);
-  assert.equal(abas.length, 29, "o console tem 29 abas depois das promoções de 31/10");
+  assert.equal(abas.length, 30, "o console tem 30 abas depois das promoções de 31/10");
   assert.ok(abas.includes("cli_financeiro"), "a chave da aba precisa existir");
   assert.match(console15, /const CliFinanceClient=dynamic\(\(\)=>import\('\.\/CliFinanceClient'\)\);/);
   assert.match(console15, /\{active==='cli_financeiro'&&<CliFinanceClient\/>\}/);

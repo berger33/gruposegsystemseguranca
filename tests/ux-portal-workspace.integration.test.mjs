@@ -9953,3 +9953,326 @@ test("browser UX-PRO-03 PLT-05: preferências e modelos de notificação (leitur
     await pool.query("DELETE FROM crm_notification_templates WHERE template_key LIKE $1", [`qa-plt-${sufixo}%`]).catch(() => {});
   }
 });
+
+// UX-PRO-03 (17ª promoção) — "App do funcionário: PWA e FAQ interna": EMP-18 e
+// EMP-19 deixam de ser órfãos. O protótipo lia tudo por `/api/hr/*` — caminho
+// que passa pela borda legada de RH e exige `employees.read`, permissão que só
+// `rh` e `marcelo` recebem automática —, então `ti`, o papel que monta a tela,
+// recebia 403 nas cinco leituras e via cinco listas vazias (cada `.catch`
+// devolvia `[]`). Além disso o PATCH do servidor não validava nada: fila 0,
+// 21 tentativas, cor fora do padrão, categoria inexistente e nível de leitura
+// inválido respondiam 500 em vez de 400.
+function empInjecao(cfg) {
+  const original = window.fetch.bind(window);
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    const caminho = url.replace(location.origin, "").split("?")[0];
+    const metodo = ((init && init.method) || "GET").toUpperCase();
+    if (metodo === "GET" && caminho === "/api/admin/pwa-configs" && cfg.configs === "negado") {
+      return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } });
+    }
+    return original(input, init);
+  };
+}
+
+// Mesmo slug de `chaveFaq` no módulo puro — o testid da linha é previsível.
+const chaveFaqGate = (categoria, pergunta) =>
+  `${categoria}-${pergunta.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40)}`;
+
+test("browser UX-PRO-03 EMP-18/19: app do funcionário (PWA e FAQ) com caminho canônico, validação antes do banco, ciclo da FAQ, negado, larguras e noite", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const rh = await provisionStaff(pool, { role: "rh" });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const sufixo = randomUUID().slice(0, 8);
+  const nomeApp = `QA PWA ${sufixo}`;
+  const pergunta = `Como pedir troca de escala ${sufixo}?`;
+  const resposta = "Abra o portal do funcionário, escolha Escala e depois Troca de escala para enviar o pedido ao seu supervisor.";
+  const evidence = process.env.UX_PORTAL_EVIDENCE_DIR || "";
+  const entries = [];
+  const criados = [];
+
+  try {
+    // --- servidor: sessão, borda legada x caminho canônico ------------------
+    assert.equal((await api("/api/admin/pwa-configs")).status, 401, "anônimo recebe 401 na configuração do PWA");
+    assert.equal((await api("/api/admin/faq-internal")).status, 401, "anônimo recebe 401 na FAQ interna");
+    assert.equal((await api("/api/admin/pwa-configs", { cookie: tiCookie })).status, 200,
+      "ti lê a configuração pelo caminho canônico de administração");
+    assert.equal((await api("/api/admin/faq-internal?limit=50", { cookie: tiCookie })).status, 200,
+      "ti lê a FAQ interna pelo caminho canônico");
+    // O caminho que o protótipo usava continua negando ti: é a razão da fatia.
+    const legadoTi = await api("/api/hr/pwa-configs", { cookie: tiCookie });
+    assert.equal(legadoTi.status, 403, "a borda legada de RH continua negando ti");
+    assert.equal(legadoTi.body.error, "employee_permission_required");
+    assert.equal(legadoTi.body.permission, "employees.read");
+    assert.equal((await api("/api/admin/hr/faq-internal", { cookie: tiCookie })).status, 403,
+      "o alias de RH da FAQ também segue na borda");
+    // Nada foi afrouxado: os aliases de RH continuam funcionando para quem tem a permissão.
+    assert.equal((await api("/api/hr/pwa-configs", { cookie: rhCookie })).status, 200, "rh continua lendo o alias antigo");
+    // E a escrita continua restrita a admin/ti.
+    const criarRh = await api("/api/admin/pwa-configs", { method: "POST", cookie: rhCookie, body: {
+      name: `QA PWA rh ${sufixo}`, short_name: "QA",
+      description: "Tentativa de escrita por papel sem permissão de administração.",
+      theme_color: "#0f172a", background_color: "#ffffff", display: "standalone",
+      scope: "/", start_url: "/funcionario", approved_offline_tasks: ["occurrence"],
+      max_queue_size: 10, max_retries: 3,
+    } });
+    assert.equal(criarRh.status, 403);
+    assert.equal(criarRh.body.error, "forbidden");
+
+    // --- servidor: o PATCH valida antes do banco (400 em vez de 500) --------
+    const baseConfig = await api("/api/admin/pwa-configs", { method: "POST", cookie: tiCookie, body: {
+      name: `QA PWA base ${sufixo}`, short_name: "QA PWA",
+      description: "Configuração sintética criada pelo gate para provar a validação do PATCH.",
+      theme_color: "#0f172a", background_color: "#ffffff", display: "standalone",
+      scope: "/", start_url: "/funcionario", approved_offline_tasks: ["occurrence", "handover"],
+      max_queue_size: 50, max_retries: 5,
+    } });
+    assert.equal(baseConfig.status, 201);
+    const idConfig = baseConfig.body.config.id;
+    criados.push(["config", idConfig]);
+    const antes = (await pool.query("SELECT max_queue_size, max_retries, display, theme_color, description FROM emp_pwa_configs WHERE id=$1", [idConfig])).rows[0];
+    const invalidos = [
+      [{ max_queue_size: 0 }, "invalid_max_queue_size"],
+      [{ max_queue_size: 201 }, "invalid_max_queue_size"],
+      [{ max_retries: 21 }, "invalid_max_retries"],
+      [{ description: "curta" }, "invalid_description"],
+      [{ display: "janela" }, "invalid_display"],
+      [{ theme_color: "azul" }, "invalid_theme_color"],
+      [{ background_color: "#fff" }, "invalid_background_color"],
+      [{ approved_offline_tasks: ["teleporte"] }, "invalid_approved_offline_tasks"],
+      [{ do_not_cache_patterns: Array.from({ length: 51 }, (_, i) => `/p${i}`) }, "invalid_do_not_cache_patterns"],
+    ];
+    for (const [corpo, codigo] of invalidos) {
+      const resposta = await api("/api/admin/pwa-configs", { method: "PATCH", cookie: tiCookie, body: { id: idConfig, ...corpo } });
+      assert.equal(resposta.status, 400, `${codigo}: erro do operador precisa ser 400`);
+      assert.equal(resposta.body.error, codigo);
+    }
+    const depois = (await pool.query("SELECT max_queue_size, max_retries, display, theme_color, description FROM emp_pwa_configs WHERE id=$1", [idConfig])).rows[0];
+    assert.deepEqual(depois, antes, "nenhuma gravação recusada tocou a linha");
+
+    // Pergunta distinta da que a tela vai criar: o testid da linha é derivado de
+    // categoria + pergunta, e duas linhas iguais violariam o seletor.
+    const perguntaValidacao = `Pergunta sintética de validação ${sufixo}`;
+    const baseFaq = await api("/api/admin/faq-internal", { method: "POST", cookie: tiCookie, body: {
+      question: perguntaValidacao, answer: resposta, category: "escala", status: "rascunho",
+      reading_level: "simples", tags: ["escala", "portal"], is_simple_language: true, is_low_data: true,
+    } });
+    assert.equal(baseFaq.status, 201);
+    const idFaq = baseFaq.body.faq.id;
+    criados.push(["faq", idFaq]);
+    assert.equal(baseFaq.body.faq.is_published, false, "rascunho não nasce publicado");
+    for (const [corpo, codigo] of [
+      [{ category: "inventada" }, "invalid_category"],
+      [{ reading_level: "doutorado" }, "invalid_reading_level"],
+      [{ tags: Array.from({ length: 21 }, (_, i) => `t${i}`) }, "invalid_tags"],
+    ]) {
+      const resposta = await api("/api/admin/faq-internal", { method: "PATCH", cookie: tiCookie, body: { id: idFaq, ...corpo } });
+      assert.equal(resposta.status, 400, `${codigo}: erro do operador precisa ser 400`);
+      assert.equal(resposta.body.error, codigo);
+    }
+    const faqIntacta = (await pool.query("SELECT category, reading_level, tags FROM emp_faq_internal WHERE id=$1", [idFaq])).rows[0];
+    assert.equal(faqIntacta.category, "escala");
+    assert.equal(faqIntacta.reading_level, "simples");
+
+    // O manifest público existe e responde sem sessão (é o alvo real da config).
+    const manifest = await fetch(`${baseUrl}/api/pwa/manifest.json`);
+    assert.equal(manifest.status, 200, "o manifest público continua servido");
+
+    const comPagina = async (opcoes, acoes) => {
+      const browser = await launchBrowser();
+      try {
+        const context = await browser.newContext({ viewport: { width: opcoes.width ?? 1440, height: opcoes.height ?? 900 }, locale: "pt-BR" });
+        const cookie = opcoes.cookie ?? tiCookie;
+        await context.addCookies(cookie.split("; ").filter(Boolean).map(item => {
+          const separador = item.indexOf("=");
+          return { name: item.slice(0, separador), value: item.slice(separador + 1), url: baseUrl };
+        }));
+        const page = await context.newPage();
+        page.setDefaultTimeout(45_000);
+        page.setDefaultNavigationTimeout(90_000);
+        await page.addInitScript(empInjecao, Object.assign({ configs: "pass" }, opcoes.injecao || {}));
+        await page.goto(`${baseUrl}/admin/ti`, { waitUntil: "domcontentloaded" });
+        if (cookie === tiCookie) {
+          await page.getByRole("button", { name: "App do funcionário: PWA e FAQ" }).click();
+          await page.getByTestId("emp-pwa").waitFor();
+          await page.waitForFunction(() => /Lido às/.test(document.querySelector('[data-testid="emp-hora"]')?.textContent || ""), null, { timeout: 45_000 });
+        }
+        const resultado = await acoes(page, context);
+        await context.close();
+        return resultado;
+      } finally { await browser.close(); }
+    };
+    const evidenciar = async (page, { estado, nome, width, theme }) => {
+      await capture(page, nome);
+      const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      entries.push({ viewport: width, theme, estado, screenshot: evidence ? `${nome}.png` : null, sobraDocumentoPx: sobra, problems: [] });
+      return sobra;
+    };
+
+    // --- 1) leitura nas três larguras e à noite ----------------------------
+    for (const width of [320, 390, 1440]) {
+      await comPagina({ width }, async (page) => {
+        await page.getByTestId("emp-card-config").waitFor();
+        await page.getByTestId("emp-card-faq").waitFor();
+        assert.match(await page.getByTestId("emp-aviso-borda").innerText(), /employees\.read/);
+        assert.match(await page.getByTestId("emp-aviso-ativo").innerText(), /padrão embutido/i);
+        assert.match(await page.getByTestId("emp-aviso-faq").innerText(), /20 a 5\.000/);
+        assert.match(await page.getByTestId("emp-aviso-offline").innerText(), /employees\.read/);
+        // As listas vieram do servidor: nada de "negado" disfarçado de vazio.
+        assert.equal(await page.getByTestId("emp-estado-configs").count(), 0, "a configuração leu com registros");
+        assert.ok(await page.getByTestId("emp-lista-configs").locator("li").count() >= 1, "há configuração na lista");
+        const sobra = await evidenciar(page, { estado: "autorizado", nome: `emp-${width}-day`, width, theme: "day" });
+        assert.ok(sobra <= 1, `o app do funcionário transborda ${sobra}px em ${width}px`);
+      });
+    }
+    await comPagina({ width: 1440 }, async (page) => {
+      await page.getByTestId("emp-card-fora").waitFor();
+      await page.locator('[data-admin-theme-toggle="true"]').click();
+      await page.waitForFunction(() => document.documentElement.dataset.adminTheme === "night");
+      const sobra = await evidenciar(page, { estado: "autorizado", nome: "emp-1440-night", width: 1440, theme: "night" });
+      assert.ok(sobra <= 1, `o app do funcionário transborda ${sobra}px à noite`);
+    });
+
+    // --- 2) criar configuração pela tela: versão nova e prova no banco ------
+    const versaoAntes = (await pool.query("SELECT COALESCE(MAX(version),0)::int AS v FROM emp_pwa_configs")).rows[0].v;
+    let versaoCriada = 0;
+    await comPagina({ width: 1440 }, async (page) => {
+      const card = page.getByTestId("emp-card-config");
+      await card.getByLabel("nome do app").fill(nomeApp);
+      await card.getByLabel("nome curto do app").fill("QA PWA");
+      await card.getByLabel("descrição do app").fill("Configuração criada pela tela de TI durante o gate do portal.");
+      await card.getByLabel("tarefa offline shift_swap").check();
+      await card.getByRole("button", { name: /Criar versão da configuração/ }).click();
+      await page.getByTestId("emp-ok").waitFor();
+      assert.match(await page.getByTestId("emp-ok").innerText(), /criada ativa/i);
+      const banco = await pool.query("SELECT id, version, is_active, approved_offline_tasks FROM emp_pwa_configs WHERE name=$1", [nomeApp]);
+      assert.equal(banco.rowCount, 1);
+      versaoCriada = banco.rows[0].version;
+      criados.push(["config", banco.rows[0].id]);
+      assert.equal(banco.rows[0].is_active, true);
+      assert.ok(banco.rows[0].approved_offline_tasks.includes("shift_swap"));
+      assert.equal(versaoCriada, versaoAntes + 1, "a versão vem de MAX(version)+1, não do cliente");
+      await page.getByTestId(`emp-config-v${versaoCriada}-ativa`).waitFor();
+      await evidenciar(page, { estado: "config-criada", nome: "emp-1440-day-config", width: 1440, theme: "day" });
+    });
+
+    // --- 3) fila fora da faixa é recusada ANTES do envio -------------------
+    await comPagina({ width: 1440 }, async (page) => {
+      const card = page.getByTestId("emp-card-config");
+      const antesQtd = (await pool.query("SELECT count(*)::int AS n FROM emp_pwa_configs")).rows[0].n;
+      await card.getByLabel("nome do app").fill(`${nomeApp} fila`);
+      await card.getByLabel("nome curto do app").fill("QA Fila");
+      await card.getByLabel("descrição do app").fill("Configuração com fila inválida criada pela tela durante o gate.");
+      await card.getByLabel("tamanho da fila").fill("0");
+      await card.getByRole("button", { name: /Criar versão da configuração/ }).click();
+      await page.getByTestId("emp-erro-fila").waitFor();
+      assert.match(await page.getByTestId("emp-erro-fila").innerText(), /1 a 200/);
+      const depoisQtd = (await pool.query("SELECT count(*)::int AS n FROM emp_pwa_configs")).rows[0].n;
+      assert.equal(depoisQtd, antesQtd, "fila inválida não chega ao servidor");
+      await evidenciar(page, { estado: "config-recusada", nome: "emp-1440-day-config-recusada", width: 1440, theme: "day" });
+    });
+
+    // --- 4) desativar pela tela e o manifest cair no padrão do código ------
+    await comPagina({ width: 1440 }, async (page) => {
+      await page.getByTestId(`emp-alternar-v${versaoCriada}-ativa`).click();
+      await page.getByTestId("emp-ok").waitFor();
+      assert.match(await page.getByTestId("emp-ok").innerText(), /desativada/);
+      await page.waitForFunction(versao => Boolean(document.querySelector(`[data-testid="emp-config-v${versao}-inativa"]`)), versaoCriada, { timeout: 45_000 });
+      const banco = await pool.query("SELECT is_active FROM emp_pwa_configs WHERE name=$1", [nomeApp]);
+      assert.equal(banco.rows[0].is_active, false);
+      const manifest = await fetch(`${baseUrl}/api/pwa/manifest.json`);
+      assert.equal(manifest.status, 200, "sem configuração ativa o manifest continua respondendo (padrão do código)");
+      await evidenciar(page, { estado: "config-desativada", nome: "emp-1440-day-config-desativada", width: 1440, theme: "day" });
+    });
+
+    // --- 5) FAQ pela tela: nasce rascunho e só o próximo passo é oferecido --
+    await comPagina({ width: 1440 }, async (page) => {
+      const card = page.getByTestId("emp-card-faq");
+      await card.getByLabel("pergunta da FAQ").fill(pergunta);
+      await card.getByLabel("categoria da FAQ").selectOption("escala");
+      await card.getByLabel("nível de leitura").selectOption("simples");
+      await card.getByLabel("situação inicial da FAQ").selectOption("rascunho");
+      await card.getByLabel("etiquetas da FAQ").fill("escala, plantao");
+      await card.getByLabel("resposta da FAQ").fill(resposta);
+      await card.getByRole("button", { name: /Criar pergunta/ }).click();
+      await page.getByTestId("emp-ok").waitFor();
+      assert.match(await page.getByTestId("emp-ok").innerText(), /rascunho.*nada foi publicado/i);
+      const chave = chaveFaqGate("escala", pergunta);
+      const linha = page.getByTestId(`emp-faq-${chave}`);
+      await linha.waitFor();
+      assert.equal(await page.getByTestId(`emp-mover-${chave}-publicado`).count(), 0, "rascunho não publica direto");
+      assert.equal(await page.getByTestId(`emp-mover-${chave}-em_revisao`).count(), 1);
+      const banco = await pool.query("SELECT id, status, is_published FROM emp_faq_internal WHERE question=$1", [pergunta]);
+      assert.equal(banco.rowCount, 1);
+      criados.push(["faq", banco.rows[0].id]);
+      assert.equal(banco.rows[0].status, "rascunho");
+      assert.equal(banco.rows[0].is_published, false);
+      await evidenciar(page, { estado: "faq-criada", nome: "emp-1440-day-faq", width: 1440, theme: "day" });
+    });
+
+    // --- 6) ciclo real: revisão e publicação gravam is_published -----------
+    await comPagina({ width: 1440 }, async (page) => {
+      const chave = chaveFaqGate("escala", pergunta);
+      await page.getByTestId(`emp-mover-${chave}-em_revisao`).click();
+      await page.getByTestId("emp-ok").waitFor();
+      await page.waitForFunction(key => /em_revisao/.test(document.querySelector(`[data-testid="emp-faq-${key}"]`)?.getAttribute("data-situacao") || ""), chave, { timeout: 45_000 });
+      await page.getByTestId(`emp-mover-${chave}-publicado`).click();
+      await page.getByTestId("emp-ok").waitFor();
+      assert.match(await page.getByTestId("emp-ok").innerText(), /publicação ligada pelo servidor/);
+      await page.waitForFunction(key => document.querySelector(`[data-testid="emp-faq-${key}"]`)?.getAttribute("data-situacao") === "publicado", chave, { timeout: 45_000 });
+      const publicado = (await pool.query("SELECT status, is_published, published_by FROM emp_faq_internal WHERE question=$1", [pergunta])).rows[0];
+      assert.equal(publicado.status, "publicado");
+      assert.equal(publicado.is_published, true, "publicar liga is_published");
+      assert.equal(publicado.published_by, "ti", "e grava quem publicou");
+      await evidenciar(page, { estado: "faq-publicada", nome: "emp-1440-day-faq-publicada", width: 1440, theme: "day" });
+      await page.getByTestId(`emp-mover-${chave}-arquivado`).click();
+      await page.waitForFunction(key => document.querySelector(`[data-testid="emp-faq-${key}"]`)?.getAttribute("data-situacao") === "arquivado", chave, { timeout: 45_000 });
+      const arquivado = (await pool.query("SELECT status, is_published FROM emp_faq_internal WHERE question=$1", [pergunta])).rows[0];
+      assert.equal(arquivado.status, "arquivado");
+      assert.equal(arquivado.is_published, false, "arquivar desliga a publicação");
+    });
+
+    // --- 7) negação não vira lista vazia ----------------------------------
+    await comPagina({ width: 1440, injecao: { configs: "negado" } }, async (page) => {
+      const estadoLista = page.getByTestId("emp-estado-configs");
+      await estadoLista.waitFor();
+      assert.equal(await estadoLista.getAttribute("data-situacao"), "negado");
+      assert.doesNotMatch(await page.getByTestId("emp-card-config").innerText(), /Nenhum registro/i, "negado não é vazio");
+      await evidenciar(page, { estado: "negado", nome: "emp-1440-day-negado", width: 1440, theme: "day" });
+    });
+
+    // --- 8) papel negado no gate ------------------------------------------
+    await comPagina({ cookie: rhCookie, width: 1440 }, async (page) => {
+      await page.locator('[data-admin-gate="forbidden"]').waitFor();
+      assert.equal(await page.getByTestId("emp-pwa").count(), 0, "rh não monta o app do funcionário no console de TI");
+      await evidenciar(page, { estado: "papel-negado", nome: "emp-1440-day-rh", width: 1440, theme: "day" });
+    });
+
+    if (evidence) {
+      await mkdir(evidence, { recursive: true });
+      await writeFile(path.join(evidence, "resumo.json"), JSON.stringify({
+        stage: "UX-PRO-03 · EMP-18/19 · App do funcionário (PWA e FAQ interna) na aba do TiConsole (/admin/ti)",
+        generatedBy: "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+        route: "/admin/ti",
+        fatia: "17ª promoção com prova — EmpPwaClient deixa de ser órfão",
+        entries,
+        limites: [
+          "Os aliases /api/hr/pwa-configs e /api/hr/faq-internal continuam negando ti: a tela usa /api/admin/pwa-configs e /api/admin/faq-internal, fora da borda legada de RH.",
+          "Fila offline, conflitos, log de acesso ao FAQ e preferências de acessibilidade são dado de funcionário e seguem atrás de employees.read: a tela declara, não monta.",
+          "O servidor confere o valor da situação da FAQ, não a ordem: a sequência é política desta tela.",
+          "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+          "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado.",
+        ],
+      }, null, 2));
+    }
+    for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
+  } finally {
+    const configIds = criados.filter(([tipo]) => tipo === "config").map(([, id]) => id);
+    const faqIds = criados.filter(([tipo]) => tipo === "faq").map(([, id]) => id);
+    if (configIds.length) await pool.query("DELETE FROM emp_pwa_configs WHERE id = ANY($1::uuid[])", [configIds]).catch(() => {});
+    if (faqIds.length) await pool.query("DELETE FROM emp_faq_internal WHERE id = ANY($1::uuid[])", [faqIds]).catch(() => {});
+    await pool.query("DELETE FROM emp_pwa_configs WHERE name LIKE $1", [`QA PWA %${sufixo}%`]).catch(() => {});
+    await pool.query("DELETE FROM emp_faq_internal WHERE question LIKE $1", [`%${sufixo}%`]).catch(() => {});
+  }
+});

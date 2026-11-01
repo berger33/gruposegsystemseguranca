@@ -59,7 +59,7 @@ const tabsDeclaration = consoleSrc.match(/const tabs=(\[[\s\S]*?\]) as const;/)?
 // rotas). Toda nova
 // ABA exige atualizar esta constante E o inventário/CSV — é o atrito que a
 // guarda deve impor.
-const EXPECTED_TABS = 29;
+const EXPECTED_TABS = 30;
 const tabKeys = [...tabsDeclaration.matchAll(/\['([a-z0-9_]+)','([^']+)'\]/g)].map(match => match[1]);
 const dynamicNames = [...consoleSrc.matchAll(/const\s+(\w+)\s*=\s*dynamic\(\(\)\s*=>\s*import\(['"]\.\/([^'"]+)['"]\)\)/g)].map(match => match[2]);
 const renders = [...consoleSrc.matchAll(/active==='([a-z0-9_]+)'&&<(\w+)\/>/g)].map(match => ({ key: match[1], component: match[2] }));

@@ -136,6 +136,12 @@ const PROMOCOES_COM_PROVA = [
     familia: 'PLT-05 preferências de notificação por destinatário/canal com silêncio em HH:MM e modelos versionados sem informação médica em assunto/push — depois de DESCARTAR FinClient (duplicado por /admin/financeiro e pela aba financeiro_cadastros) e OpsClient (duplicado por /admin/operacao); o servidor passou a atualizar preferência global (NULL não colide no UNIQUE), validar silêncio com 400 e recusar aprovação de modelo inseguro (409)',
     relatorio: 'docs/UX-PRO-03-PROMOCAO-PREFERENCIAS-NOTIFICACAO-2026-11-01.md',
   },
+  {
+    componente: 'EmpPwaClient.tsx',
+    aba: 'emp_pwa',
+    familia: 'EMP-18/EMP-19 app do funcionário: configuração do PWA versionada (nome, cores, exibição e tarefas offline do enum do banco) e FAQ interna com ciclo de revisão e linguagem simples/baixo consumo — depois de DESCARTAR EmpAdvanced2Client, cujas 11 rotas /api/admin/hr/* passam pela borda legada de RH que nega admin/ti; os aliases /api/hr/pwa-configs e /api/hr/faq-internal continuam 403 de propósito e a tela usa o caminho canônico de administração; o PATCH passou a validar fila 1..200, tentativas 1..20, cores #rrggbb, display/categoria/nível de leitura do enum, devolvendo 400 em vez de 500',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-APP-FUNCIONARIO-PWA-FAQ-2026-11-01.md',
+  },
 ];
 
 const sha256 = value => createHash('sha256').update(value).digest('hex');

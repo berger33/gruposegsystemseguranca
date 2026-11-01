@@ -3,25 +3,25 @@
   "resumo": "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
   "data": "2026-10-27",
   "criterio": "promover por area somente com prova (decisao de 02/10); prova estatica nao substitui gate de navegador nem aceite humano",
-  "tiConsoleSha256": "0f780d900f1ac8517b846900ae5a79602e991813ae61e9116c64f4c8b4a0279d",
+  "tiConsoleSha256": "589e269f6d46969cf32128bb27f685edde555b3c319bcb083204821afebb0b8d",
   "pageSha256": "360bf2564469679a4cc7c0b6b9274f05557188f701a3f3b89649ce4d70d56313",
   "total": 84,
-  "abas": 29,
-  "importsDinamicos": 29,
+  "abas": 30,
+  "importsDinamicos": 30,
   "console": {
-    "total": 29,
-    "comProva": 29,
+    "total": 30,
+    "comProva": 30,
     "lacunas": []
   },
   "workspace": {
     "total": 25
   },
   "orfos": {
-    "total": 30,
+    "total": 29,
     "promovidosSemSairDaClassificacao": 0
   },
   "promocoesComProva": {
-    "total": 16,
+    "total": 17,
     "todasMontadas": true,
     "detalhes": [
       {
@@ -119,11 +119,17 @@
         "aba": "plt_notificacoes",
         "familia": "PLT-05 preferências de notificação por destinatário/canal com silêncio em HH:MM e modelos versionados sem informação médica em assunto/push — depois de DESCARTAR FinClient (duplicado por /admin/financeiro e pela aba financeiro_cadastros) e OpsClient (duplicado por /admin/operacao); o servidor passou a atualizar preferência global (NULL não colide no UNIQUE), validar silêncio com 400 e recusar aprovação de modelo inseguro (409)",
         "relatorio": "docs/UX-PRO-03-PROMOCAO-PREFERENCIAS-NOTIFICACAO-2026-11-01.md"
+      },
+      {
+        "componente": "EmpPwaClient.tsx",
+        "aba": "emp_pwa",
+        "familia": "EMP-18/EMP-19 app do funcionário: configuração do PWA versionada (nome, cores, exibição e tarefas offline do enum do banco) e FAQ interna com ciclo de revisão e linguagem simples/baixo consumo — depois de DESCARTAR EmpAdvanced2Client, cujas 11 rotas /api/admin/hr/* passam pela borda legada de RH que nega admin/ti; os aliases /api/hr/pwa-configs e /api/hr/faq-internal continuam 403 de propósito e a tela usa o caminho canônico de administração; o PATCH passou a validar fila 1..200, tentativas 1..20, cores #rrggbb, display/categoria/nível de leitura do enum, devolvendo 400 em vez de 500",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-APP-FUNCIONARIO-PWA-FAQ-2026-11-01.md"
       }
     ]
   },
   "apis": {
-    "literais": 401,
+    "literais": 399,
     "semDispatch": 0
   }
 }

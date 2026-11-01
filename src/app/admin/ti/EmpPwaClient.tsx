@@ -1,341 +1,391 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  AVISO_ATIVO,
+  AVISO_BORDA,
+  AVISO_FAQ,
+  AVISO_OFFLINE,
+  CATEGORIAS_FAQ,
+  DISPLAY,
+  NIVEIS_LEITURA,
+  STATUS_FAQ,
+  TAREFAS_OFFLINE,
+  chaveConfig,
+  chaveFaq,
+  classificarLista,
+  estadoConfig,
+  proximosEstados,
+  simNao,
+  tagsLegiveis,
+  tarefasLegiveis,
+  traduzirErroEmp,
+  validarConfig,
+  validarFaq,
+  validarTransicao,
+  type ResultadoLista,
+} from "./emp-pwa-state";
+import styles from "./EmpPwaClient.module.css";
 
-type PwaConfig = {
-  id: string;
-  name: string;
-  short_name: string;
-  description: string;
-  theme_color: string;
-  background_color: string;
-  display: string;
-  scope: string;
-  start_url: string;
-  icons: any;
-  approved_offline_tasks: string[];
-  max_queue_size: number;
-  max_retries: number;
-  do_not_cache_patterns: string[];
-  is_active: boolean;
-  version: number;
+type Item = Record<string, unknown>;
+
+const FORM_CONFIG = {
+  name: "Grupo SEG System - Portal Funcionário",
+  short_name: "SEG Func",
+  description: "Portal do funcionário com suporte offline limitado às tarefas operacionais aprovadas.",
+  theme_color: "#0f172a",
+  background_color: "#ffffff",
+  display: "standalone",
+  scope: "/",
+  start_url: "/funcionario",
+  max_queue_size: "50",
+  max_retries: "5",
+  tarefas: ["occurrence", "handover"] as string[],
 };
 
-type OfflineQueue = {
-  id: string;
-  employee_id: string;
-  task_type: string;
-  payload: any;
-  idempotency_key: string;
-  device_timestamp: string;
-  device_timezone: string;
-  server_received_at: string | null;
-  status: string;
-  conflict_details: any;
-  retry_count: number;
-  last_error: string | null;
-  synced_at: string | null;
-  created_at: string;
+const FORM_FAQ = {
+  question: "",
+  answer: "",
+  category: "geral",
+  status: "rascunho",
+  reading_level: "simples",
+  tags: "",
+  is_simple_language: true,
+  is_low_data: true,
 };
 
-type Conflict = {
-  id: string;
-  queue_id: string;
-  conflict_type: string;
-  server_data: any;
-  device_data: any;
-  resolution: string;
-  resolved_by: string | null;
-  resolved_at: string | null;
-  notes: string | null;
-};
-
-type Faq = {
-  id: string;
-  category: string;
-  question: string;
-  answer: string;
-  status: string;
-  is_simple_language: boolean;
-  reading_level: string;
-  is_low_data: boolean;
-  has_keyboard_support: boolean;
-  has_screen_reader_support: boolean;
-  tags: string[];
-  view_count: number;
-  is_published: boolean;
-  published_at: string | null;
-};
-
-type Pref = {
-  id: string;
-  employee_id: string;
-  prefers_keyboard: boolean;
-  prefers_screen_reader: boolean;
-  prefers_simple_language: boolean;
-  prefers_low_data: boolean;
-  font_size: string;
-  high_contrast: boolean;
-  reduced_motion: boolean;
-};
+const FORA_DESTA_TELA = [
+  ["Fila offline", "/api/admin/hr/offline-queue", "emp_offline_queue"],
+  ["Conflitos de sincronização", "/api/admin/hr/offline-conflicts", "emp_offline_conflicts"],
+  ["Log de acesso ao FAQ", "/api/admin/hr/faq-access-logs", "emp_faq_access_logs"],
+  ["Preferências de acessibilidade", "/api/admin/hr/accessibility-preferences", "emp_accessibility_preferences"],
+] as const;
 
 export default function EmpPwaClient() {
-  const [configs, setConfigs] = useState<PwaConfig[]>([]);
-  const [queues, setQueues] = useState<OfflineQueue[]>([]);
-  const [conflicts, setConflicts] = useState<Conflict[]>([]);
-  const [faqs, setFaqs] = useState<Faq[]>([]);
-  const [prefs, setPrefs] = useState<Pref[]>([]);
-  const [msg, setMsg] = useState<string>("");
+  const [configs, setConfigs] = useState<ResultadoLista | null>(null);
+  const [faqs, setFaqs] = useState<ResultadoLista | null>(null);
+  const [hora, setHora] = useState("");
+  const [lendo, setLendo] = useState(true);
+  const [gravando, setGravando] = useState("");
+  const [ok, setOk] = useState("");
+  const [erro, setErro] = useState("");
+  const [erros, setErros] = useState<Record<string, string>>({});
+  const [config, setConfig] = useState(FORM_CONFIG);
+  const [faq, setFaq] = useState(FORM_FAQ);
+  const sequencia = useRef(0);
 
-  // forms
-  const [pwaForm, setPwaForm] = useState({ name: "Grupo SEG System - Portal Funcionário", short_name: "SEG Func", description: "Portal do funcionário com suporte offline limitado para tarefas operacionais aprovadas.", theme_color: "#0f172a", background_color: "#ffffff", display: "standalone", scope: "/", start_url: "/funcionario", max_queue_size: 50 });
-  const [queueForm, setQueueForm] = useState({ employee_id: "", task_type: "occurrence", idempotency_key: "", device_timestamp: new Date().toISOString(), payload: '{"title":"Teste offline ocorrência","description":"Descrição teste offline com idempotência"}' });
-  const [faqForm, setFaqForm] = useState({ category: "geral", question: "", answer: "", status: "publicado", is_simple_language: true, is_low_data: true, reading_level: "simples", tags: "geral,offline" });
-  const [prefForm, setPrefForm] = useState({ employee_id: "", prefers_keyboard: true, prefers_screen_reader: false, prefers_simple_language: true, prefers_low_data: false, font_size: "medio", high_contrast: false });
-  const [accessLogForm, setAccessLogForm] = useState({ faq_id: "", employee_id: "", device_type: "mobile", is_keyboard_navigation: true, is_screen_reader: false, data_saver: false });
-
-  async function api(path: string, opts?: any) {
-    const r = await fetch(path, { ...opts, headers: { 'Content-Type': 'application/json', ...(opts?.headers || {}) } });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
-    return j;
-  }
-
-  async function loadAll() {
+  const ler = async (rota: string, chave: "configs" | "faqs", rotulo: string) => {
     try {
-      const [c, q, cf, f, p] = await Promise.all([
-        api('/api/hr/pwa-configs').catch(() => ({ configs: [] })),
-        api('/api/hr/offline-queue?limit=50').catch(() => ({ queues: [] })),
-        api('/api/hr/offline-conflicts').catch(() => ({ conflicts: [] })),
-        api('/api/hr/faq-internal?limit=50').catch(() => ({ faqs: [] })),
-        api('/api/hr/accessibility-preferences').catch(() => ({ preferences: [] })),
-      ]);
-      setConfigs(c.configs || []);
-      setQueues(q.queues || []);
-      setConflicts(cf.conflicts || []);
-      setFaqs(f.faqs || []);
-      setPrefs(p.preferences || []);
-    } catch (e: any) { setMsg(e.message); }
+      const resposta = await fetch(rota, { headers: { Accept: "application/json" } });
+      const corpo = await resposta.json().catch(() => undefined);
+      return classificarLista(resposta.status, corpo, chave, rotulo);
+    } catch {
+      return classificarLista(0, undefined, chave, rotulo);
+    }
+  };
+
+  async function carregar() {
+    const atual = ++sequencia.current;
+    setLendo(true);
+    const [lidasConfigs, lidasFaqs] = await Promise.all([
+      ler("/api/admin/pwa-configs", "configs", "configurações do PWA"),
+      ler("/api/admin/faq-internal?limit=50", "faqs", "perguntas internas"),
+    ]);
+    if (atual !== sequencia.current) return;
+    setConfigs(lidasConfigs);
+    setFaqs(lidasFaqs);
+    const agora = new Date();
+    setHora(`${String(agora.getHours()).padStart(2, "0")}:${String(agora.getMinutes()).padStart(2, "0")}`);
+    setLendo(false);
   }
+  useEffect(() => { void carregar(); }, []);
 
-  useEffect(() => { loadAll(); }, []);
-
-  async function createPwa() {
+  async function gravar(rotulo: string, url: string, method: string, body: unknown, sucesso: string | ((corpo: Record<string, unknown>) => string)) {
+    setGravando(rotulo); setOk(""); setErro("");
     try {
-      setMsg("Criando PWA config...");
-      await api('/api/hr/pwa-configs', { method: 'POST', body: JSON.stringify(pwaForm) });
-      setMsg("PWA config criado - manifest em /api/pwa/manifest.json e SW em /api/pwa/sw.js");
-      loadAll();
-    } catch (e: any) { setMsg(e.message); }
-  }
-
-  async function createQueue() {
-    try {
-      setMsg("Enfileirando offline com idempotência...");
-      // Gera idempotency_key se vazio
-      let key = queueForm.idempotency_key.trim();
-      if (!key) {
-        key = `offline-${queueForm.task_type}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+      const resposta = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const dados = await resposta.json().catch(() => ({}));
+      if (!resposta.ok) {
+        setErro(traduzirErroEmp(resposta.status, typeof dados?.error === "string" ? dados.error : ""));
+        return false;
       }
-      const payloadObj = JSON.parse(queueForm.payload || '{}');
-      await api('/api/hr/offline-queue', {
-        method: 'POST',
-        body: JSON.stringify({
-          employee_id: queueForm.employee_id,
-          task_type: queueForm.task_type,
-          payload: payloadObj,
-          idempotency_key: key,
-          device_timestamp: queueForm.device_timestamp || new Date().toISOString(),
-          device_timezone: 'America/Sao_Paulo',
-        })
-      });
-      setMsg(`Fila offline criada idempotency_key=${key} device_timestamp separado de server_received_at`);
-      loadAll();
-    } catch (e: any) { setMsg(e.message); }
+      setOk(typeof sucesso === "function" ? sucesso(dados ?? {}) : sucesso);
+      await carregar();
+      return true;
+    } catch {
+      setErro("Falha de comunicação: nada foi confirmado. Tente novamente.");
+      return false;
+    } finally {
+      setGravando("");
+    }
   }
 
-  async function syncQueue(id: string) {
-    try {
-      await api('/api/hr/offline-queue', { method: 'PATCH', body: JSON.stringify({ id, status: 'sincronizado' }) });
-      setMsg(`Queue ${id.slice(0,8)} sincronizado - device_timestamp vs server_received_at separados`);
-      loadAll();
-    } catch (e: any) { setMsg(e.message); }
+  function criarConfig() {
+    const validado = validarConfig(config);
+    setErros(validado.erros); setOk(""); setErro("");
+    if (!validado.ok || !validado.payload) return;
+    void gravar("config", "/api/admin/pwa-configs", "POST", validado.payload,
+      corpo => {
+        const criada = (corpo.config as Item | undefined) ?? {};
+        return `Configuração v${String(criada.version)} criada ${criada.is_active === true ? "ativa" : "inativa"}; manifest e service worker passam a ler esta versão quando ativa.`;
+      })
+      .then(criado => { if (criado) setConfig(FORM_CONFIG); });
   }
 
-  async function resolveConflict(id: string, resolution: string) {
-    try {
-      await api('/api/hr/offline-conflicts', { method: 'PATCH', body: JSON.stringify({ id, resolution, notes: `Resolvido ${resolution} em ${new Date().toISOString()}` }) });
-      setMsg(`Conflito ${id.slice(0,8)} resolvido ${resolution} explícito`);
-      loadAll();
-    } catch (e: any) { setMsg(e.message); }
+  function alternarAtivo(item: Item) {
+    const ativo = item.is_active === true;
+    void gravar("ativo", "/api/admin/pwa-configs", "PATCH", { id: String(item.id), is_active: !ativo },
+      `Configuração v${String(item.version)} ${ativo ? "desativada" : "ativada"}.`);
   }
 
-  async function createFaq() {
-    try {
-      setMsg("Criando FAQ interna linguagem simples baixo consumo...");
-      await api('/api/hr/faq-internal', {
-        method: 'POST',
-        body: JSON.stringify({
-          category: faqForm.category,
-          question: faqForm.question,
-          answer: faqForm.answer,
-          status: faqForm.status,
-          is_simple_language: faqForm.is_simple_language,
-          is_low_data: faqForm.is_low_data,
-          reading_level: faqForm.reading_level,
-          tags: faqForm.tags.split(',').map(s=>s.trim()).filter(Boolean),
-          has_keyboard_support: true,
-          has_screen_reader_support: true,
-        })
-      });
-      setMsg("FAQ criada publicada com suporte teclado/leitor linguagem simples baixo consumo");
-      setFaqForm({ ...faqForm, question: "", answer: "" });
-      loadAll();
-    } catch (e: any) { setMsg(e.message); }
+  function criarFaq() {
+    const validado = validarFaq(faq);
+    setErros(validado.erros); setOk(""); setErro("");
+    if (!validado.ok || !validado.payload) return;
+    void gravar("faq", "/api/admin/faq-internal", "POST", validado.payload,
+      corpo => {
+        const criada = (corpo.faq as Item | undefined) ?? {};
+        return `Pergunta ${String(criada.category)} criada em ${String(criada.status)}` +
+          `${criada.is_published === true ? " e já publicada" : "; nada foi publicado ainda"}.`;
+      })
+      .then(criado => { if (criado) setFaq(FORM_FAQ); });
   }
 
-  async function createPref() {
-    try {
-      await api('/api/hr/accessibility-preferences', { method: 'POST', body: JSON.stringify(prefForm) });
-      setMsg(`Preferência acessibilidade salva employee ${prefForm.employee_id.slice(0,8)} teclado=${prefForm.prefers_keyboard} leitor=${prefForm.prefers_screen_reader} simples=${prefForm.prefers_simple_language} low_data=${prefForm.prefers_low_data}`);
-      loadAll();
-    } catch (e: any) { setMsg(e.message); }
+  function moverFaq(item: Item, destino: string) {
+    const validado = validarTransicao(String(item.id ?? ""), destino, item.status);
+    setErros(validado.erros); setOk(""); setErro("");
+    if (!validado.ok || !validado.payload) return;
+    void gravar("transicao", "/api/admin/faq-internal", "PATCH", validado.payload,
+      `Pergunta movida para ${destino}${destino === "publicado" ? " com a publicação ligada pelo servidor" : ""}.`);
   }
 
-  async function logAccess() {
-    try {
-      await api('/api/hr/faq-access-logs', { method: 'POST', body: JSON.stringify(accessLogForm) });
-      setMsg(`Acesso FAQ logado faq ${accessLogForm.faq_id.slice(0,8)} teclado=${accessLogForm.is_keyboard_navigation} leitor=${accessLogForm.is_screen_reader} data_saver=${accessLogForm.data_saver}`);
-      loadAll();
-    } catch (e: any) { setMsg(e.message); }
-  }
+  const bloqueado = gravando !== "";
+  const estado = (resultado: ResultadoLista | null, chave: string) => {
+    if (!resultado || resultado.situacao === "ok") return null;
+    return (
+      <p className={styles.stateNote} data-testid={`emp-estado-${chave}`} data-situacao={resultado.situacao}>
+        {resultado.mensagem}
+      </p>
+    );
+  };
 
   return (
-    <section style={{ marginTop: 32, padding: 16, border: '2px solid #0f172a', borderRadius: 8 }}>
-      <h2>EMP-18/19 — PWA instalável, fila offline limitada e FAQ interna acessível</h2>
-      <p style={{ fontSize: 13, background: '#f0f9ff', padding: 8 }}>
-        EMP-18: PWA manifest <code>/api/pwa/manifest.json</code> + SW <code>/api/pwa/sw.js</code> + offline page <code>/api/pwa/offline</code>. Fila offline limitada (max 50) tarefas aprovadas occurrence/handover/absence_notice/procedure_ack/journey_proof com idempotency_key UNIQUE, conflito explícito duplicate/version_conflict, device_timestamp vs server_received_at separados, não cachear médicos/salariais por padrão DO_NOT_CACHE patterns.
-        <br/>EMP-19: FAQ interna linguagem simples baixo consumo, acessibilidade teclado/leitor, logs acesso com is_keyboard_navigation/is_screen_reader/data_saver, preferências acessibilidade prefers_keyboard/screen_reader/simple_language/low_data font_size high_contrast.
-      </p>
-      {msg && <div style={{ padding: 8, background: '#fef3c7', margin: '8px 0', fontSize: 13 }}>{msg}</div>}
+    <section className={styles.wrap} data-testid="emp-pwa" aria-busy={lendo}>
+      <header className={styles.head}>
+        <div>
+          <h2>App do funcionário: PWA e FAQ interna</h2>
+          <p className={styles.lead}>
+            EMP-18/EMP-19: a instalação do app no celular vem de uma configuração versionada, e a FAQ interna é
+            conteúdo revisado — perguntas simples, baixo consumo e suporte a teclado e leitor de tela.
+          </p>
+        </div>
+        <div className={styles.headActions}>
+          <span className={styles.stamp} data-testid="emp-hora">{lendo ? "Lendo…" : `Lido às ${hora}`}</span>
+          <button type="button" onClick={() => void carregar()} disabled={lendo}>Atualizar</button>
+        </div>
+      </header>
 
-      <h3>PWA Config (instalável)</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-        <input placeholder="name 3-100" value={pwaForm.name} onChange={e=>setPwaForm({...pwaForm,name:e.target.value})} />
-        <input placeholder="short_name 2-20" value={pwaForm.short_name} onChange={e=>setPwaForm({...pwaForm,short_name:e.target.value})} />
-        <input placeholder="description 10-500" value={pwaForm.description} onChange={e=>setPwaForm({...pwaForm,description:e.target.value})} />
-        <input placeholder="theme_color #hex" value={pwaForm.theme_color} onChange={e=>setPwaForm({...pwaForm,theme_color:e.target.value})} />
-        <input placeholder="scope /" value={pwaForm.scope} onChange={e=>setPwaForm({...pwaForm,scope:e.target.value})} />
-        <input placeholder="start_url /funcionario" value={pwaForm.start_url} onChange={e=>setPwaForm({...pwaForm,start_url:e.target.value})} />
-        <input type="number" placeholder="max_queue_size 1-200" value={pwaForm.max_queue_size} onChange={e=>setPwaForm({...pwaForm,max_queue_size:Number(e.target.value)})} />
-      </div>
-      <button onClick={createPwa}>Criar PWA config</button>
-      <div style={{ maxHeight: 150, overflow: 'auto', fontSize: 12, margin: '8px 0', background: '#f8fafc', padding: 8 }}>
-        {configs.map(c=><div key={c.id}>[{c.version}] {c.name} short={c.short_name} display={c.display} maxQueue={c.max_queue_size} approved={c.approved_offline_tasks?.join(',')} active={String(c.is_active)} doNotCache={c.do_not_cache_patterns?.slice(0,3).join(',')}... <a href="/api/pwa/manifest.json" target="_blank">manifest</a> <a href="/api/pwa/sw.js" target="_blank">sw.js</a></div>)}
-      </div>
+      {ok && <p className={styles.ok} role="status" data-testid="emp-ok">{ok}</p>}
+      {erro && <p className={styles.alert} role="alert" data-testid="emp-erro">{erro}</p>}
 
-      <h3>Fila Offline Limitada (idempotência + conflito explícito + horários separados)</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-        <input placeholder="employee_id UUID hr_employees" value={queueForm.employee_id} onChange={e=>setQueueForm({...queueForm,employee_id:e.target.value})} />
-        <select value={queueForm.task_type} onChange={e=>setQueueForm({...queueForm,task_type:e.target.value})}>
-          <option value="occurrence">occurrence</option>
-          <option value="handover">handover</option>
-          <option value="absence_notice">absence_notice</option>
-          <option value="shift_swap">shift_swap</option>
-          <option value="procedure_ack">procedure_ack</option>
-          <option value="journey_proof">journey_proof</option>
-          <option value="absence_followup">absence_followup</option>
-          <option value="occurrence_action">occurrence_action</option>
-        </select>
-        <input placeholder="idempotency_key 10-200 (auto se vazio)" value={queueForm.idempotency_key} onChange={e=>setQueueForm({...queueForm,idempotency_key:e.target.value})} />
-        <input type="datetime-local" value={queueForm.device_timestamp ? new Date(queueForm.device_timestamp).toISOString().slice(0,16) : ''} onChange={e=>setQueueForm({...queueForm,device_timestamp: new Date(e.target.value).toISOString()})} />
-        <textarea placeholder='payload JSON {"title":"..."}' value={queueForm.payload} onChange={e=>setQueueForm({...queueForm,payload:e.target.value})} style={{ gridColumn: 'span 2' }} rows={3} />
-      </div>
-      <button onClick={createQueue}>Enfileirar offline (idempotente)</button>
-      <div style={{ maxHeight: 200, overflow: 'auto', fontSize: 12, margin: '8px 0', background: '#f8fafc', padding: 8 }}>
-        {queues.map(q=><div key={q.id} style={{ borderBottom: '1px solid #e5e7eb', padding: '4px 0' }}>
-          {q.id.slice(0,8)} emp={q.employee_id.slice(0,8)} type={q.task_type} status={q.status} idem={q.idempotency_key.slice(0,20)} device={new Date(q.device_timestamp).toLocaleString("pt-BR")} server_recv={q.server_received_at ? new Date(q.server_received_at).toLocaleString("pt-BR") : 'null'} retry={q.retry_count} synced={q.synced_at ? new Date(q.synced_at).toLocaleString("pt-BR") : '-'} conflict={q.conflict_details ? JSON.stringify(q.conflict_details).slice(0,100) : '-'}
-          <button onClick={()=>syncQueue(q.id)} style={{ marginLeft: 8 }}>Sincronizar (server_received_at separado)</button>
-        </div>)}
-      </div>
+      <p className={styles.hint} data-testid="emp-aviso-borda">{AVISO_BORDA}</p>
 
-      <h4>Conflitos Explícitos</h4>
-      <div style={{ maxHeight: 150, overflow: 'auto', fontSize: 12, margin: '8px 0', background: '#fef2f2', padding: 8 }}>
-        {conflicts.map(c=><div key={c.id}>{c.id.slice(0,8)} queue={c.queue_id.slice(0,8)} type={c.conflict_type} resolution={c.resolution} server={JSON.stringify(c.server_data).slice(0,80)} device={JSON.stringify(c.device_data).slice(0,80)}
-          <button onClick={()=>resolveConflict(c.id,'manual_resolvido')} style={{ marginLeft: 4 }}>Manual resolvido</button>
-          <button onClick={()=>resolveConflict(c.id,'auto_resolvido')} style={{ marginLeft: 4 }}>Auto resolvido</button>
-          <button onClick={()=>resolveConflict(c.id,'ignorado')} style={{ marginLeft: 4 }}>Ignorar</button>
-        </div>)}
-        {conflicts.length===0 && <div>Nenhum conflito - idempotência previne duplicidade, payload diferente gera conflito explícito</div>}
-      </div>
-
-      <h3>FAQ Interna (linguagem simples, baixo consumo, acessibilidade teclado/leitor)</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-        <select value={faqForm.category} onChange={e=>setFaqForm({...faqForm,category:e.target.value})}>
-          <option value="geral">geral</option><option value="escala">escala</option><option value="ponto">ponto</option><option value="beneficios">beneficios</option><option value="uniformes">uniformes</option><option value="seguranca">seguranca</option><option value="procedimentos">procedimentos</option><option value="rh">rh</option><option value="tecnico">tecnico</option><option value="outro">outro</option>
-        </select>
-        <select value={faqForm.status} onChange={e=>setFaqForm({...faqForm,status:e.target.value})}>
-          <option value="rascunho">rascunho</option><option value="em_revisao">em_revisao</option><option value="publicado">publicado</option><option value="arquivado">arquivado</option>
-        </select>
-        <input placeholder="pergunta 10-500 linguagem simples" value={faqForm.question} onChange={e=>setFaqForm({...faqForm,question:e.target.value})} style={{ gridColumn: 'span 2' }} />
-        <textarea placeholder="resposta 20-5000 linguagem simples baixo consumo" value={faqForm.answer} onChange={e=>setFaqForm({...faqForm,answer:e.target.value})} style={{ gridColumn: 'span 2' }} rows={3} />
-        <label><input type="checkbox" checked={faqForm.is_simple_language} onChange={e=>setFaqForm({...faqForm,is_simple_language:e.target.checked})} /> linguagem simples</label>
-        <label><input type="checkbox" checked={faqForm.is_low_data} onChange={e=>setFaqForm({...faqForm,is_low_data:e.target.checked})} /> baixo consumo</label>
-        <input placeholder="tags csv" value={faqForm.tags} onChange={e=>setFaqForm({...faqForm,tags:e.target.value})} />
-        <select value={faqForm.reading_level} onChange={e=>setFaqForm({...faqForm,reading_level:e.target.value})}>
-          <option value="simples">simples</option><option value="medio">medio</option><option value="tecnico">tecnico</option>
-        </select>
-      </div>
-      <button onClick={createFaq}>Criar FAQ interna acessível</button>
-      <div style={{ maxHeight: 200, overflow: 'auto', fontSize: 12, margin: '8px 0', background: '#f0fdf4', padding: 8 }}>
-        {faqs.map(f=><div key={f.id} style={{ borderBottom: '1px solid #e5e7eb', padding: '4px 0' }}>
-          <strong>[{f.category}]</strong> {f.question.slice(0,80)} - {f.answer.slice(0,100)}... status={f.status} simples={String(f.is_simple_language)} low_data={String(f.is_low_data)} leitura={f.reading_level} teclado={String(f.has_keyboard_support)} leitor={String(f.has_screen_reader_support)} views={f.view_count} publicado={String(f.is_published)}
-        </div>)}
-      </div>
-
-      <h4>Log Acesso FAQ (teclado/leitor/baixo consumo)</h4>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
-        <input placeholder="faq_id UUID" value={accessLogForm.faq_id} onChange={e=>setAccessLogForm({...accessLogForm,faq_id:e.target.value})} />
-        <input placeholder="employee_id UUID" value={accessLogForm.employee_id} onChange={e=>setAccessLogForm({...accessLogForm,employee_id:e.target.value})} />
-        <select value={accessLogForm.device_type} onChange={e=>setAccessLogForm({...accessLogForm,device_type:e.target.value})}>
-          <option value="mobile">mobile</option><option value="desktop">desktop</option><option value="tablet">tablet</option><option value="outro">outro</option>
-        </select>
-        <label><input type="checkbox" checked={accessLogForm.is_keyboard_navigation} onChange={e=>setAccessLogForm({...accessLogForm,is_keyboard_navigation:e.target.checked})} /> navegação teclado</label>
-        <label><input type="checkbox" checked={accessLogForm.is_screen_reader} onChange={e=>setAccessLogForm({...accessLogForm,is_screen_reader:e.target.checked})} /> leitor tela</label>
-        <label><input type="checkbox" checked={accessLogForm.data_saver} onChange={e=>setAccessLogForm({...accessLogForm,data_saver:e.target.checked})} /> economia dados</label>
-      </div>
-      <button onClick={logAccess}>Registrar acesso FAQ (acessibilidade)</button>
-
-      <h3>Preferências Acessibilidade (teclado/leitor/linguagem simples/baixo consumo)</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-        <input placeholder="employee_id UUID" value={prefForm.employee_id} onChange={e=>setPrefForm({...prefForm,employee_id:e.target.value})} />
-        <select value={prefForm.font_size} onChange={e=>setPrefForm({...prefForm,font_size:e.target.value})}>
-          <option value="pequeno">pequeno</option><option value="medio">medio</option><option value="grande">grande</option><option value="extra_grande">extra_grande</option>
-        </select>
-        <label><input type="checkbox" checked={prefForm.prefers_keyboard} onChange={e=>setPrefForm({...prefForm,prefers_keyboard:e.target.checked})} /> prefere teclado</label>
-        <label><input type="checkbox" checked={prefForm.prefers_screen_reader} onChange={e=>setPrefForm({...prefForm,prefers_screen_reader:e.target.checked})} /> prefere leitor</label>
-        <label><input type="checkbox" checked={prefForm.prefers_simple_language} onChange={e=>setPrefForm({...prefForm,prefers_simple_language:e.target.checked})} /> prefere linguagem simples</label>
-        <label><input type="checkbox" checked={prefForm.prefers_low_data} onChange={e=>setPrefForm({...prefForm,prefers_low_data:e.target.checked})} /> prefere baixo consumo</label>
-        <label><input type="checkbox" checked={prefForm.high_contrast} onChange={e=>setPrefForm({...prefForm,high_contrast:e.target.checked})} /> alto contraste</label>
-      </div>
-      <button onClick={createPref}>Salvar preferência acessibilidade</button>
-      <div style={{ maxHeight: 120, overflow: 'auto', fontSize: 12, margin: '8px 0', background: '#f8fafc', padding: 8 }}>
-        {prefs.map(p=><div key={p.id}>emp={p.employee_id.slice(0,8)} teclado={String(p.prefers_keyboard)} leitor={String(p.prefers_screen_reader)} simples={String(p.prefers_simple_language)} low_data={String(p.prefers_low_data)} font={p.font_size} contraste={String(p.high_contrast)}</div>)}
-      </div>
-
-      <details style={{ marginTop: 12 }}>
-        <summary>Detalhes técnicos EMP-18/19</summary>
-        <ul style={{ fontSize: 12 }}>
-          <li>PWA manifest em /api/pwa/manifest.json com name/short_name/description/theme_color/background_color/display/scope/start_url/icons/categories/lang</li>
-          <li>Service Worker em /api/pwa/sw.js com DO_NOT_CACHE patterns médicos/salariais, network_first navegação, cache_first assets, offline queue sync tag offline-queue-sync, skipWaiting message</li>
-          <li>Offline page /api/pwa/offline explica idempotência, horários separados, conflito explícito, não cachear médicos/salariais</li>
-          <li>Fila offline: idempotency_key UNIQUE 10-200, device_timestamp obrigatório separado de server_received_at (server set NOW()), payload JSONB, approved_offline_tasks check config, max_queue_size 50 check 429 queue_limit_exceeded, duplicate key com payload diferente gera conflito explícito duplicate + tabela conflicts, idempotente replay retorna 200 dedup true</li>
-          <li>Conflitos: duplicate/version_conflict/stale_data/permission_denied/expired/already_resolved, server_data vs device_data, resolution pendente/manual_resolvido/auto_resolvido/ignorado, resolvido atualiza queue sincronizado</li>
-          <li>FAQ interna: category geral/escala/ponto/beneficios/uniformes/seguranca/procedimentos/rh/tecnico/outro, question 10-500 answer 20-5000 status rascunho/em_revisao/publicado/arquivado, is_simple_language true, reading_level simples/medio/tecnico, is_low_data true baixo consumo, has_keyboard_support true, has_screen_reader_support true, tags, view_count, is_published</li>
-          <li>Access logs: faq_id employee_id device_type mobile/desktop/tablet/outro is_keyboard_navigation is_screen_reader data_saver ip_hash, increment view_count, audit emp_faq_access</li>
-          <li>Preferências: employee_id UNIQUE prefers_keyboard/screen_reader/simple_language/low_data font_size pequeno/medio/grande/extra_grande high_contrast reduced_motion, ON CONFLICT upsert</li>
-          <li>Acessibilidade: teclado Tab/Enter, leitor ARIA, linguagem simples, baixo consumo sem imagens pesadas, font_size ajustável, alto contraste</li>
+      <article className={styles.card} data-testid="emp-card-config">
+        <h3>Configuração do PWA (versão ativa)</h3>
+        <p className={styles.hint} data-testid="emp-aviso-ativo">{AVISO_ATIVO}</p>
+        {estado(configs, "configs")}
+        <div className={styles.form}>
+          <label className={styles.field}>Nome
+            <input aria-label="nome do app" value={config.name} maxLength={100}
+              onChange={e => setConfig({ ...config, name: e.target.value })} />
+            {erros.name && <small className={styles.err} data-testid="emp-erro-nome">{erros.name}</small>}
+          </label>
+          <label className={styles.field}>Nome curto
+            <input aria-label="nome curto do app" value={config.short_name} maxLength={20}
+              onChange={e => setConfig({ ...config, short_name: e.target.value })} />
+            {erros.short_name && <small className={styles.err}>{erros.short_name}</small>}
+          </label>
+          <label className={styles.field}>Descrição
+            <input aria-label="descrição do app" value={config.description} maxLength={500}
+              onChange={e => setConfig({ ...config, description: e.target.value })} />
+            {erros.description && <small className={styles.err}>{erros.description}</small>}
+          </label>
+          <label className={styles.field}>Cor de tema (#rrggbb)
+            <input aria-label="cor de tema" value={config.theme_color} maxLength={7}
+              onChange={e => setConfig({ ...config, theme_color: e.target.value })} />
+            {erros.theme_color && <small className={styles.err} data-testid="emp-erro-cor">{erros.theme_color}</small>}
+          </label>
+          <label className={styles.field}>Cor de fundo (#rrggbb)
+            <input aria-label="cor de fundo" value={config.background_color} maxLength={7}
+              onChange={e => setConfig({ ...config, background_color: e.target.value })} />
+            {erros.background_color && <small className={styles.err}>{erros.background_color}</small>}
+          </label>
+          <label className={styles.field}>Exibição
+            <select aria-label="modo de exibição" value={config.display}
+              onChange={e => setConfig({ ...config, display: e.target.value })}>
+              {DISPLAY.map(modo => <option key={modo} value={modo}>{modo}</option>)}
+            </select>
+            {erros.display && <small className={styles.err}>{erros.display}</small>}
+          </label>
+          <label className={styles.field}>Escopo
+            <input aria-label="escopo do app" value={config.scope} maxLength={200}
+              onChange={e => setConfig({ ...config, scope: e.target.value })} />
+            {erros.scope && <small className={styles.err}>{erros.scope}</small>}
+          </label>
+          <label className={styles.field}>URL inicial
+            <input aria-label="url inicial" value={config.start_url} maxLength={500}
+              onChange={e => setConfig({ ...config, start_url: e.target.value })} />
+            {erros.start_url && <small className={styles.err}>{erros.start_url}</small>}
+          </label>
+          <label className={styles.field}>Tamanho da fila offline (1–200)
+            <input aria-label="tamanho da fila" value={config.max_queue_size}
+              onChange={e => setConfig({ ...config, max_queue_size: e.target.value })} />
+            {erros.max_queue_size && <small className={styles.err} data-testid="emp-erro-fila">{erros.max_queue_size}</small>}
+          </label>
+          <label className={styles.field}>Tentativas (1–20)
+            <input aria-label="tentativas de sincronização" value={config.max_retries}
+              onChange={e => setConfig({ ...config, max_retries: e.target.value })} />
+            {erros.max_retries && <small className={styles.err}>{erros.max_retries}</small>}
+          </label>
+          <div className={styles.toggles}>
+            {TAREFAS_OFFLINE.map(tarefa => (
+              <label key={tarefa} className={styles.check}>
+                <input type="checkbox" aria-label={`tarefa offline ${tarefa}`}
+                  checked={config.tarefas.includes(tarefa)}
+                  onChange={e => setConfig({
+                    ...config,
+                    tarefas: e.target.checked
+                      ? [...config.tarefas, tarefa]
+                      : config.tarefas.filter(item => item !== tarefa),
+                  })} />
+                {tarefa}
+              </label>
+            ))}
+          </div>
+          {erros.tarefas && <small className={styles.err}>{erros.tarefas}</small>}
+          <button type="button" onClick={criarConfig} disabled={bloqueado}>
+            {gravando === "config" ? "Gravando…" : "Criar versão da configuração"}
+          </button>
+        </div>
+        <ul className={styles.list} data-testid="emp-lista-configs">
+          {(configs?.itens ?? []).map((item: Item) => (
+            <li key={String(item.id)} data-testid={`emp-config-${chaveConfig(item)}`} data-situacao={estadoConfig(item)}>
+              <strong>v{String(item.version)}</strong>{" "}
+              <span>{String(item.name)} ({String(item.short_name)})</span>{" "}
+              <span>{estadoConfig(item)}</span>{" "}
+              <span>exibição {String(item.display)}</span>{" "}
+              <span>fila {String(item.max_queue_size)} · tentativas {String(item.max_retries)}</span>{" "}
+              <span>tarefas: {tarefasLegiveis(item)}</span>{" "}
+              <button type="button" disabled={bloqueado}
+                data-testid={`emp-alternar-${chaveConfig(item)}`}
+                onClick={() => alternarAtivo(item)}>
+                {item.is_active === true ? "desativar" : "ativar"}
+              </button>
+            </li>
+          ))}
         </ul>
-      </details>
+      </article>
+
+      <article className={styles.card} data-testid="emp-card-faq">
+        <h3>FAQ interna</h3>
+        <p className={styles.hint} data-testid="emp-aviso-faq">{AVISO_FAQ}</p>
+        {estado(faqs, "faqs")}
+        <div className={styles.form}>
+          <label className={styles.field}>Pergunta (10–500)
+            <input aria-label="pergunta da FAQ" value={faq.question} maxLength={500}
+              onChange={e => setFaq({ ...faq, question: e.target.value })} />
+            {erros.question && <small className={styles.err} data-testid="emp-erro-pergunta">{erros.question}</small>}
+          </label>
+          <label className={styles.field}>Categoria
+            <select aria-label="categoria da FAQ" value={faq.category}
+              onChange={e => setFaq({ ...faq, category: e.target.value })}>
+              {CATEGORIAS_FAQ.map(categoria => <option key={categoria} value={categoria}>{categoria}</option>)}
+            </select>
+            {erros.category && <small className={styles.err}>{erros.category}</small>}
+          </label>
+          <label className={styles.field}>Nível de leitura
+            <select aria-label="nível de leitura" value={faq.reading_level}
+              onChange={e => setFaq({ ...faq, reading_level: e.target.value })}>
+              {NIVEIS_LEITURA.map(nivel => <option key={nivel} value={nivel}>{nivel}</option>)}
+            </select>
+            {erros.reading_level && <small className={styles.err}>{erros.reading_level}</small>}
+          </label>
+          <label className={styles.field}>Situação inicial
+            <select aria-label="situação inicial da FAQ" value={faq.status}
+              onChange={e => setFaq({ ...faq, status: e.target.value })}>
+              {STATUS_FAQ.filter(status => status === "rascunho" || status === "em_revisao").map(status =>
+                <option key={status} value={status}>{status}</option>)}
+            </select>
+            {erros.status && <small className={styles.err}>{erros.status}</small>}
+          </label>
+          <label className={styles.field}>Etiquetas (separadas por vírgula)
+            <input aria-label="etiquetas da FAQ" value={faq.tags} maxLength={400}
+              onChange={e => setFaq({ ...faq, tags: e.target.value })} />
+            {erros.tags && <small className={styles.err}>{erros.tags}</small>}
+          </label>
+          <div className={styles.toggles}>
+            <label className={styles.check}>
+              <input type="checkbox" aria-label="linguagem simples" checked={faq.is_simple_language}
+                onChange={e => setFaq({ ...faq, is_simple_language: e.target.checked })} />
+              linguagem simples
+            </label>
+            <label className={styles.check}>
+              <input type="checkbox" aria-label="baixo consumo de dados" checked={faq.is_low_data}
+                onChange={e => setFaq({ ...faq, is_low_data: e.target.checked })} />
+              baixo consumo de dados
+            </label>
+          </div>
+          <label className={styles.field}>Resposta (20–5.000)
+            <textarea aria-label="resposta da FAQ" value={faq.answer} maxLength={5000} rows={3}
+              onChange={e => setFaq({ ...faq, answer: e.target.value })} />
+            {erros.answer && <small className={styles.err} data-testid="emp-erro-resposta">{erros.answer}</small>}
+          </label>
+          <button type="button" onClick={criarFaq} disabled={bloqueado}>
+            {gravando === "faq" ? "Gravando…" : "Criar pergunta"}
+          </button>
+        </div>
+        <ul className={styles.list} data-testid="emp-lista-faqs">
+          {(faqs?.itens ?? []).map((item: Item) => {
+            const chave = chaveFaq(item);
+            return (
+              <li key={String(item.id)} data-testid={`emp-faq-${chave}`} data-situacao={String(item.status ?? "desconhecida")}>
+                <strong>{String(item.category)}</strong>{" "}
+                <span>{String(item.question)}</span>{" "}
+                <span>situação {String(item.status)}</span>{" "}
+                <span>publicada {simNao(item.is_published)}</span>{" "}
+                <span>leitura {String(item.reading_level)}</span>{" "}
+                <span>etiquetas: {tagsLegiveis(item)}</span>{" "}
+                {proximosEstados(item.status).map(destino => (
+                  <button key={destino} type="button" disabled={bloqueado}
+                    data-testid={`emp-mover-${chave}-${destino}`}
+                    onClick={() => moverFaq(item, destino)}>
+                    {destino}
+                  </button>
+                ))}
+              </li>
+            );
+          })}
+        </ul>
+      </article>
+
+      <article className={styles.card} data-testid="emp-card-fora">
+        <h3>O que esta tela não oferece</h3>
+        <p className={styles.hint} data-testid="emp-aviso-offline">{AVISO_OFFLINE}</p>
+        <ul className={styles.list} data-testid="emp-lista-fora">
+          {FORA_DESTA_TELA.map(([rotulo, caminho, tabela]) => (
+            <li key={caminho}>
+              <strong>{rotulo}</strong>{" "}
+              <span>{caminho}</span>{" "}
+              <span>tabela {tabela}</span>{" "}
+              <span>exige employees.read — não montado aqui</span>
+            </li>
+          ))}
+        </ul>
+      </article>
+
+      <p className={styles.foot}>
+        Situações da FAQ conhecidas pelo banco: {STATUS_FAQ.join(", ")}. Categorias: {CATEGORIAS_FAQ.join(", ")}.
+        O manifest público lê a configuração ativa mais recente; sem configuração ativa, o código serve o padrão embutido.
+      </p>
     </section>
   );
 }

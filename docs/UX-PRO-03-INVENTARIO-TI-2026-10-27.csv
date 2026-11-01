@@ -33,7 +33,7 @@
 "EmpOpsClient.tsx","289","orfao","","","8","0","","nao_montado","orfao_nao_promovido"
 "EmpPortalClient.tsx","284","orfao","","","7","0","","nao_montado","orfao_nao_promovido"
 "EmpProfileClient.tsx","103","orfao","","","2","0","","nao_montado","orfao_nao_promovido"
-"EmpPwaClient.tsx","342","orfao","","","8","0","","nao_montado","orfao_nao_promovido"
+"EmpPwaClient.tsx","392","console","TiConsole","emp_pwa","6","0","ux-portal-workspace.integration.test.mjs|ux-pro-03-ti-emp-pwa-faq-ui.test.mjs","ti|admin","com_prova"
 "EmpSelfClient.tsx","240","orfao","","","7","0","","nao_montado","orfao_nao_promovido"
 "EmployeeComplaintClient.tsx","345","console","TiConsole","reclamacoes_colaboradores","5","0","ux-pro-03-ti-reclamacoes-colaboradores-ui.test.mjs","ti|admin","com_prova"
 "EnvClient.tsx","279","console","TiConsole","ambientes","2","0","ux-pro-03-ti-env-ui.test.mjs","ti|admin","com_prova"
