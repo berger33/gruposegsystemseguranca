@@ -130,6 +130,12 @@ const PROMOCOES_COM_PROVA = [
     familia: 'PUB-10 mensuração de origem, conversão e testes A/B: métricas com minimização e canal do enum do banco, eventos de conversão (ingestão pública, lead com FK e hash que o servidor NÃO produz nesta entrega) e ciclo de A/B com motivo real no histórico — a transição voltou a funcionar depois de corrigir o 42P08 que fazia todo PATCH responder 500',
     relatorio: 'docs/UX-PRO-03-PROMOCAO-MENSURACAO-ORIGEM-AB-2026-10-31.md',
   },
+  {
+    componente: 'NotificationPreferencesClient.tsx',
+    aba: 'plt_notificacoes',
+    familia: 'PLT-05 preferências de notificação por destinatário/canal com silêncio em HH:MM e modelos versionados sem informação médica em assunto/push — depois de DESCARTAR FinClient (duplicado por /admin/financeiro e pela aba financeiro_cadastros) e OpsClient (duplicado por /admin/operacao); o servidor passou a atualizar preferência global (NULL não colide no UNIQUE), validar silêncio com 400 e recusar aprovação de modelo inseguro (409)',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-PREFERENCIAS-NOTIFICACAO-2026-11-01.md',
+  },
 ];
 
 const sha256 = value => createHash('sha256').update(value).digest('hex');

@@ -9638,3 +9638,318 @@ test("browser UX-PRO-03 PUB-10: mensuração de origem e A/B (minimização, ing
   }
   for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
 });
+
+// UX-PRO-03 (16ª promoção) — "Preferências e modelos de notificação": o PLT-05
+// deixa de ser órfão. O protótipo só lia as listas depois de dois cliques,
+// oferecia as quatro situações em qualquer modelo, mandava motivo de rejeição
+// fixo no código e o servidor criava linha nova a cada gravação global de
+// preferência (NULL não colide no UNIQUE), aceitava silêncio inválido como
+// falha de servidor e aprovava modelo marcado como NÃO seguro para informação
+// médica.
+function pltInjecao(cfg) {
+  const original = window.fetch.bind(window);
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    const caminho = url.replace(location.origin, "").split("?")[0];
+    const metodo = ((init && init.method) || "GET").toUpperCase();
+    if (metodo === "GET" && caminho === "/api/crm/notification-preferences" && cfg.preferencias === "negado") {
+      return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } });
+    }
+    return original(input, init);
+  };
+}
+
+test("browser UX-PRO-03 PLT-05: preferências e modelos de notificação (leitura própria, ciclo do modelo, motivo real, negado, larguras e noite)", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const rh = await provisionStaff(pool, { role: "rh" });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const sufixo = randomUUID().slice(0, 8);
+  const chaveModelo = `qa-plt-${sufixo}`;
+  const chaveInsegura = `qa-plt-med-${sufixo}`;
+  const motivoDigitado = `Texto fora do padrão PLT-05 — motivo do gate ${sufixo}.`;
+  const evidence = process.env.UX_PORTAL_EVIDENCE_DIR || "";
+  const entries = [];
+  const criados = [];
+
+  try {
+    // --- servidor: sessão, papéis e as regras que a tela declara ----------
+    assert.equal((await api("/api/crm/notification-preferences")).status, 401, "anônimo recebe 401 na leitura");
+    assert.equal((await api("/api/crm/notification-templates")).status, 401, "anônimo recebe 401 na lista de modelos");
+    assert.equal((await api("/api/crm/notification-preferences", { cookie: rhCookie })).status, 200,
+      "qualquer papel administrativo lê preferências; a escrita é que restringe");
+
+    // Preferência global (sem destinatário): duas gravações, UMA linha. Antes
+    // da correção cada POST criava linha nova, porque NULL não colide no
+    // UNIQUE(recipient_kind, recipient_id, channel).
+    const pref1 = await api("/api/crm/notification-preferences", { method: "POST", cookie: tiCookie,
+      body: { recipient_kind: "staff", channel: "email", is_enabled: true, is_email_enabled: true, quiet_hours_start: "22:00", quiet_hours_end: "07:00" } });
+    assert.equal(pref1.status, 200);
+    criados.push(pref1.body.preference.id);
+    const pref2 = await api("/api/crm/notification-preferences", { method: "POST", cookie: tiCookie,
+      body: { recipient_kind: "staff", channel: "email", is_enabled: false, is_email_enabled: false, quiet_hours_start: "22:00", quiet_hours_end: "07:00" } });
+    assert.equal(pref2.status, 200);
+    assert.equal(pref2.body.preference.id, pref1.body.preference.id, "a segunda gravação atualiza a mesma linha global");
+    const linhasPref = await pool.query("SELECT count(*)::int AS n, min(is_enabled::text) AS enabled FROM crm_notification_preferences WHERE recipient_kind='staff' AND recipient_id IS NULL AND channel='email'");
+    assert.equal(linhasPref.rows[0].n, 1, "preferência global não duplica");
+    assert.equal(linhasPref.rows[0].enabled, "false", "a segunda gravação sobrescreve o valor");
+
+    // Silêncio inválido é erro do operador (400), não falha do servidor (503).
+    const silencioRuim = await api("/api/crm/notification-preferences", { method: "POST", cookie: tiCookie,
+      body: { recipient_kind: "staff", channel: "email", quiet_hours_start: "25:00", quiet_hours_end: "07:00" } });
+    assert.equal(silencioRuim.status, 400);
+    assert.equal(silencioRuim.body.error, "invalid_quiet_hours");
+    const silencioSolo = await api("/api/crm/notification-preferences", { method: "POST", cookie: tiCookie,
+      body: { recipient_kind: "staff", channel: "email", quiet_hours_start: "22:00" } });
+    assert.equal(silencioSolo.status, 400, "silêncio é par");
+    const destinatarioTorto = await api("/api/crm/notification-preferences", { method: "POST", cookie: tiCookie,
+      body: { recipient_kind: "staff", channel: "email", recipient_id: "nao-e-uuid" } });
+    assert.equal(destinatarioTorto.status, 400);
+    assert.equal(destinatarioTorto.body.error, "invalid_recipient_id");
+
+    // PLT-05 no servidor: termo médico no push e no assunto é 400.
+    const pushMedico = await api("/api/crm/notification-templates", { method: "POST", cookie: tiCookie,
+      body: { template_key: chaveInsegura, channel: "push", subject: "Aviso", body: "Seu diagnóstico já está disponível no painel." } });
+    assert.equal(pushMedico.status, 400);
+    assert.equal(pushMedico.body.error, "medical_info_not_allowed_in_subject_push");
+    const assuntoMedico = await api("/api/crm/notification-templates", { method: "POST", cookie: tiCookie,
+      body: { template_key: chaveInsegura, channel: "email", subject: "Resultado do exame médico", body: "Mensagem comercial comum." } });
+    assert.equal(assuntoMedico.status, 400);
+    assert.equal(assuntoMedico.body.error, "medical_info_not_allowed_in_subject_push");
+
+    // E-mail com termo no corpo é aceito, mas nasce marcado como NÃO seguro —
+    // e um modelo não seguro não pode ser aprovado.
+    const inseguro = await api("/api/crm/notification-templates", { method: "POST", cookie: tiCookie,
+      body: { template_key: chaveInsegura, channel: "email", subject: "Retorno do atendimento", body: "Segue o laudo solicitado na consulta." } });
+    assert.equal(inseguro.status, 201);
+    criados.push(inseguro.body.template.id);
+    assert.equal(inseguro.body.template.is_medical_safe, false, "o servidor marca o conteúdo inseguro");
+    const aprovarInseguro = await api(`/api/crm/notification-templates/${inseguro.body.template.id}`, { method: "PATCH", cookie: tiCookie,
+      body: { status: "aprovado" } });
+    assert.equal(aprovarInseguro.status, 409);
+    assert.equal(aprovarInseguro.body.error, "medical_safety_required");
+    assert.equal((await pool.query("SELECT status FROM crm_notification_templates WHERE id=$1", [inseguro.body.template.id])).rows[0].status,
+      "rascunho", "a aprovação recusada não muda a situação");
+
+    // Criar já aprovado exige papel e deixa trilha de aprovação.
+    const criarAprovadoRh = await api("/api/crm/notification-templates", { method: "POST", cookie: rhCookie,
+      body: { template_key: `${chaveModelo}-rh`, channel: "email", subject: "Aviso", body: "Mensagem sem informação médica.", status: "aprovado" } });
+    assert.equal(criarAprovadoRh.status, 403);
+    assert.equal(criarAprovadoRh.body.error, "approval_requires_admin_ti");
+    const criarAprovado = await api("/api/crm/notification-templates", { method: "POST", cookie: tiCookie,
+      body: { template_key: `${chaveModelo}-aprovado`, channel: "email", subject: "Aviso", body: "Mensagem sem informação médica.", status: "aprovado" } });
+    assert.equal(criarAprovado.status, 201);
+    criados.push(criarAprovado.body.template.id);
+    assert.equal(criarAprovado.body.template.approved_by, "ti", "a criação aprovada grava quem aprovou");
+    assert.ok(criarAprovado.body.template.approved_at, "e quando aprovou");
+
+    // Rejeitar sem motivo é 400; com motivo, o texto gravado é o do operador.
+    const semMotivo = await api(`/api/crm/notification-templates/${criarAprovado.body.template.id}`, { method: "PATCH", cookie: tiCookie,
+      body: { status: "rejeitado" } });
+    assert.equal(semMotivo.status, 400);
+    assert.equal(semMotivo.body.error, "rejection_reason_required");
+    const comMotivo = await api(`/api/crm/notification-templates/${criarAprovado.body.template.id}`, { method: "PATCH", cookie: rhCookie,
+      body: { status: "rejeitado", rejection_reason: "Papel sem permissão deveria ser recusado." } });
+    assert.equal(comMotivo.status, 403, "rejeitar também exige admin/ti");
+    assert.equal(comMotivo.body.error, "approval_requires_admin_ti");
+
+    const comPagina = async (opcoes, acoes) => {
+      const browser = await launchBrowser();
+      try {
+        const context = await browser.newContext({ viewport: { width: opcoes.width ?? 1440, height: opcoes.height ?? 900 }, locale: "pt-BR" });
+        const cookie = opcoes.cookie ?? tiCookie;
+        await context.addCookies(cookie.split("; ").filter(Boolean).map(item => {
+          const separador = item.indexOf("=");
+          return { name: item.slice(0, separador), value: item.slice(separador + 1), url: baseUrl };
+        }));
+        const page = await context.newPage();
+        page.setDefaultTimeout(45_000);
+        page.setDefaultNavigationTimeout(90_000);
+        await page.addInitScript(pltInjecao, Object.assign({ preferencias: "pass" }, opcoes.injecao || {}));
+        await page.goto(`${baseUrl}/admin/ti`, { waitUntil: "domcontentloaded" });
+        if (cookie === tiCookie) {
+          await page.getByRole("button", { name: "Preferências e modelos de notificação" }).click();
+          await page.getByTestId("plt-notificacoes").waitFor();
+          await page.waitForFunction(() => /Lido às/.test(document.querySelector('[data-testid="plt-hora"]')?.textContent || ""), null, { timeout: 45_000 });
+        }
+        const resultado = await acoes(page, context);
+        await context.close();
+        return resultado;
+      } finally { await browser.close(); }
+    };
+    const evidenciar = async (page, { estado, nome, width, theme }) => {
+      await capture(page, nome);
+      const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      entries.push({ viewport: width, theme, estado, screenshot: evidence ? `${nome}.png` : null, sobraDocumentoPx: sobra, problems: [] });
+      return sobra;
+    };
+
+    // --- 1) leitura nas três larguras e à noite ---------------------------
+    for (const width of [320, 390, 1440]) {
+      await comPagina({ width }, async (page) => {
+        await page.getByTestId("plt-card-preferencias").waitFor();
+        await page.getByTestId("plt-card-modelos").waitFor();
+        assert.match(await page.getByTestId("plt-aviso-preferencia").innerText(), /global do tipo|atualizada/i);
+        assert.match(await page.getByTestId("plt-aviso-quiet").innerText(), /HH:MM/);
+        assert.match(await page.getByTestId("plt-aviso-medico").innerText(), /PLT-05/);
+        assert.match(await page.getByTestId("plt-aviso-ordem").innerText(), /pol[íi]tica desta tela/i);
+        await page.getByTestId("plt-pref-staff-email-global").waitFor();
+        assert.match(await page.getByTestId("plt-pref-staff-email-global").innerText(), /silêncio 22:00.07:00/);
+        const sobra = await evidenciar(page, { estado: "autorizado", nome: `plt-${width}-day`, width, theme: "day" });
+        assert.ok(sobra <= 1, `preferências transborda ${sobra}px em ${width}px`);
+      });
+    }
+    await comPagina({ width: 1440 }, async (page) => {
+      await page.getByTestId("plt-card-modelos").waitFor();
+      await page.locator('[data-admin-theme-toggle="true"]').click();
+      await page.waitForFunction(() => document.documentElement.dataset.adminTheme === "night");
+      await page.getByTestId("plt-hora").waitFor();
+      const sobra = await evidenciar(page, { estado: "autorizado", nome: "plt-1440-night", width: 1440, theme: "night" });
+      assert.ok(sobra <= 1, `preferências transborda ${sobra}px à noite`);
+    });
+
+    // --- 2) criar modelo pela tela, com só o próximo passo oferecido ------
+    await comPagina({ width: 1440 }, async (page) => {
+      const card = page.getByTestId("plt-card-modelos");
+      await card.getByLabel("chave do modelo").fill(chaveModelo);
+      await card.getByLabel("canal do modelo").selectOption("email");
+      await card.getByLabel("assunto do modelo").fill("Aviso de reunião da equipe");
+      await card.getByLabel("corpo do modelo").fill("Sua reunião de alinhamento foi confirmada para amanhã às 9h.");
+      await card.getByRole("button", { name: /Criar modelo/ }).click();
+      await page.getByTestId("plt-ok").waitFor();
+      assert.match(await page.getByTestId("plt-ok").innerText(), /criado em rascunho|criado em em_revisao/i);
+      const linha = page.getByTestId(`plt-modelo-${chaveModelo}-email-v1`);
+      await linha.waitFor();
+      assert.equal(await page.getByTestId(`plt-avancar-${chaveModelo}-email-v1-aprovado`).count(), 0, "rascunho não aprova direto");
+      assert.equal(await page.getByTestId(`plt-avancar-${chaveModelo}-email-v1-rejeitado`).count(), 0, "rascunho não rejeita");
+      assert.equal(await page.getByTestId(`plt-avancar-${chaveModelo}-email-v1-em_revisao`).count(), 1);
+      const banco = await pool.query("SELECT is_medical_safe, status FROM crm_notification_templates WHERE template_key=$1 AND channel='email'", [chaveModelo]);
+      assert.equal(banco.rowCount, 1);
+      assert.equal(banco.rows[0].is_medical_safe, true);
+      assert.equal(banco.rows[0].status, "rascunho");
+      criados.push(...(await pool.query("SELECT id FROM crm_notification_templates WHERE template_key=$1", [chaveModelo])).rows.map(r => r.id));
+      await evidenciar(page, { estado: "modelo-criado", nome: "plt-1440-day-modelo", width: 1440, theme: "day" });
+    });
+
+    // --- 3) a tela avisa sobre informação médica ANTES do POST ------------
+    await comPagina({ width: 1440 }, async (page) => {
+      const card = page.getByTestId("plt-card-modelos");
+      await card.getByLabel("chave do modelo").fill(`${chaveModelo}-med`);
+      await card.getByLabel("canal do modelo").selectOption("email");
+      await card.getByLabel("assunto do modelo").fill("Seu diagnóstico saiu");
+      await card.getByLabel("corpo do modelo").fill("Mensagem comum de aviso.");
+      await card.getByRole("button", { name: /Criar modelo/ }).click();
+      await page.getByTestId("plt-erro-assunto").waitFor();
+      assert.match(await page.getByTestId("plt-erro-assunto").innerText(), /m[ée]dic/i);
+      assert.equal((await pool.query("SELECT 1 FROM crm_notification_templates WHERE template_key=$1", [`${chaveModelo}-med`])).rowCount, 0,
+        "nada foi enviado ao servidor com termo médico no assunto");
+      await evidenciar(page, { estado: "modelo-recusado", nome: "plt-1440-day-modelo-recusado", width: 1440, theme: "day" });
+    });
+
+    // --- 4) ciclo real: em revisão, rejeição exige motivo digitado --------
+    await comPagina({ width: 1440 }, async (page) => {
+      const chaveItem = `${chaveModelo}-email-v1`;
+      await page.getByTestId(`plt-avancar-${chaveItem}-em_revisao`).click();
+      await page.getByTestId("plt-ok").waitFor();
+      await page.waitForFunction(key => /em_revisao/.test(document.querySelector(`[data-testid="plt-modelo-${key}"]`)?.textContent || ""), chaveItem, { timeout: 45_000 });
+      // Sem motivo, rejeitar não sai da tela.
+      await page.getByTestId(`plt-avancar-${chaveItem}-rejeitado`).click();
+      await page.getByTestId("plt-erro-motivo").waitFor();
+      assert.match(await page.getByTestId("plt-erro-motivo").innerText(), /motivo/i);
+      assert.equal((await pool.query("SELECT status FROM crm_notification_templates WHERE template_key=$1", [chaveModelo])).rows[0].status,
+        "em_revisao", "sem motivo a rejeição não é enviada");
+      await page.getByLabel("motivo da rejeição").fill(motivoDigitado);
+      await page.getByTestId(`plt-avancar-${chaveItem}-rejeitado`).click();
+      await page.getByTestId("plt-ok").waitFor();
+      assert.match(await page.getByTestId("plt-ok").innerText(), /motivo digitado/i);
+      const banco = await pool.query("SELECT status, rejection_reason FROM crm_notification_templates WHERE template_key=$1", [chaveModelo]);
+      assert.equal(banco.rows[0].status, "rejeitado");
+      assert.equal(banco.rows[0].rejection_reason, motivoDigitado, "o motivo gravado é o que o operador digitou");
+      await evidenciar(page, { estado: "modelo-rejeitado", nome: "plt-1440-day-modelo-rejeitado", width: 1440, theme: "day" });
+    });
+
+    // --- 5) preferência global pela tela: atualiza, não duplica -----------
+    await comPagina({ width: 1440 }, async (page) => {
+      const card = page.getByTestId("plt-card-preferencias");
+      const antes = await pool.query("SELECT count(*)::int AS n FROM crm_notification_preferences WHERE recipient_kind='client' AND recipient_id IS NULL AND channel='whatsapp'");
+      // O formulário volta ao padrão depois de gravar: preencher de novo é
+      // parte da prova de que a SEGUNDA gravação atualiza a MESMA linha.
+      const preencherEPreparar = async () => {
+        await card.getByLabel("tipo de destinatário").selectOption("client");
+        await card.getByLabel("canal da preferência").selectOption("whatsapp");
+        await card.getByLabel("início do silêncio").fill("21:30");
+        await card.getByLabel("fim do silêncio").fill("08:00");
+        await card.getByLabel("whatsapp ligado").check();
+        await card.getByRole("button", { name: /Salvar preferência/ }).click();
+      };
+      await preencherEPreparar();
+      await page.getByTestId("plt-ok").waitFor();
+      assert.match(await page.getByTestId("plt-ok").innerText(), /atualizada, n[ãa]o duplicada/i);
+      await preencherEPreparar();
+      await page.waitForFunction(() => /n[ãa]o duplicada/i.test(document.querySelector('[data-testid="plt-ok"]')?.textContent || ""), null, { timeout: 45_000 });
+      const depois = await pool.query("SELECT count(*)::int AS n, min(quiet_hours_start::text) AS inicio FROM crm_notification_preferences WHERE recipient_kind='client' AND recipient_id IS NULL AND channel='whatsapp'");
+      assert.equal(depois.rows[0].n, antes.rows[0].n + 1, "duas gravações, uma linha só");
+      assert.match(depois.rows[0].inicio, /^21:30/);
+      const criada = await pool.query("SELECT id FROM crm_notification_preferences WHERE recipient_kind='client' AND recipient_id IS NULL AND channel='whatsapp'");
+      criados.push(...criada.rows.map(r => r.id));
+      await evidenciar(page, { estado: "preferencia-gravada", nome: "plt-1440-day-preferencia", width: 1440, theme: "day" });
+    });
+
+    // --- 6) silêncio inválido é recusado na tela --------------------------
+    await comPagina({ width: 1440 }, async (page) => {
+      const card = page.getByTestId("plt-card-preferencias");
+      await card.getByLabel("tipo de destinatário").selectOption("lead");
+      await card.getByLabel("canal da preferência").selectOption("sms");
+      await card.getByLabel("início do silêncio").fill("25:00");
+      await card.getByLabel("fim do silêncio").fill("07:00");
+      await card.getByRole("button", { name: /Salvar preferência/ }).click();
+      await page.getByTestId("plt-erro-quiet").waitFor();
+      assert.match(await page.getByTestId("plt-erro-quiet").innerText(), /HH:MM/);
+      assert.equal((await pool.query("SELECT 1 FROM crm_notification_preferences WHERE recipient_kind='lead' AND channel='sms'")).rowCount, 0,
+        "silêncio inválido não chega ao servidor");
+    });
+
+    // --- 7) negação não vira lista vazia ----------------------------------
+    await comPagina({ width: 1440, injecao: { preferencias: "negado" } }, async (page) => {
+      const estadoLista = page.getByTestId("plt-estado-preferencias");
+      await estadoLista.waitFor();
+      assert.equal(await estadoLista.getAttribute("data-situacao"), "negado");
+      assert.doesNotMatch(await page.getByTestId("plt-card-preferencias").innerText(), /Nenhum registro/i, "negado não é vazio");
+      await evidenciar(page, { estado: "negado", nome: "plt-1440-day-negado", width: 1440, theme: "day" });
+    });
+
+    // --- 8) papel negado no gate ------------------------------------------
+    await comPagina({ cookie: rhCookie, width: 1440 }, async (page) => {
+      await page.locator('[data-admin-gate="forbidden"]').waitFor();
+      assert.equal(await page.getByTestId("plt-notificacoes").count(), 0, "rh não monta as preferências");
+      await evidenciar(page, { estado: "papel-negado", nome: "plt-1440-day-rh", width: 1440, theme: "day" });
+    });
+
+    if (evidence) {
+      await mkdir(evidence, { recursive: true });
+      await writeFile(path.join(evidence, "resumo.json"), JSON.stringify({
+        stage: "UX-PRO-03 · PLT-05 · Preferências e modelos de notificação na aba do TiConsole (/admin/ti)",
+        generatedBy: "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+        route: "/admin/ti",
+        fatia: "16ª promoção com prova — NotificationPreferencesClient deixa de ser órfão",
+        entries,
+        limites: [
+          "A aba exige sessão administrativa; papel rh abre o console mas não escreve aprovação — o servidor responde 403 e a tela declara.",
+          "Aprovar modelo com informação médica é recusado com 409: o conteúdo continua gravado, apenas não pode ser aprovado.",
+          "Sem envio real de e-mail, WhatsApp, SMS ou push: esta fatia promove preferências e modelos, não a entrega.",
+          "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+          "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado.",
+        ],
+      }, null, 2));
+    }
+    for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
+  } finally {
+    const ids = criados.filter(Boolean);
+    if (ids.length) {
+      await pool.query("DELETE FROM crm_notification_templates WHERE id = ANY($1::uuid[])", [ids]).catch(() => {});
+      await pool.query("DELETE FROM crm_notification_preferences WHERE id = ANY($1::uuid[])", [ids]).catch(() => {});
+    }
+    await pool.query("DELETE FROM crm_notification_preferences WHERE recipient_kind IN ('staff','client','lead') AND channel IN ('email','whatsapp','sms') AND recipient_id IS NULL AND created_at > NOW() - INTERVAL '10 minutes'").catch(() => {});
+    await pool.query("DELETE FROM crm_notification_templates WHERE template_key LIKE $1", [`qa-plt-${sufixo}%`]).catch(() => {});
+  }
+});

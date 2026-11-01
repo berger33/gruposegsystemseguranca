@@ -30,7 +30,7 @@ prova rota alguma. Workflows seguem **49**.
 
 ### Método
 
-Uma única passada por **1.661 arquivos** de `tests/`, `.github/workflows/`,
+Uma única passada por **1.666 arquivos** de `tests/`, `.github/workflows/`,
 `docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, a auditoria de 26/10, a
 fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
 meta-estado, não prova de requisito, e evitam auto-referência. De cada arquivo o gerador extrai todos os IDs com
@@ -43,8 +43,8 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 | Classe | Significado | IDs |
 |---|---|---|
 | `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **23** |
-| `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **115** |
-| `somente_documento` | só há citação em documentos | **84** |
+| `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **116** |
+| `somente_documento` | só há citação em documentos | **83** |
 | `somente_codigo` / `sem_evidencia_legivel` | — | **0** |
 
 > **Recontagem E23 (30/10/2026):** a tabela acima já não é a fotografia de 27/10
@@ -52,7 +52,13 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 > `docs/REQUISITOS-222-INVENTARIO-2026-10-27.json` e reproduzíveis por
 > `node scripts/requisitos-222-inventory.mjs --check`. A diferença vem do mapa SEC
 > (28/10) e das fatias de UI do CLI-02/03/05–10 e do PLT-10, cada uma com relatório
-> próprio. `somente_codigo` e `sem_evidencia_legivel` seguem em **0**. Este texto
+> próprio. `somente_codigo` e `sem_evidencia_legivel` seguem em **0**.
+>
+> **Recontagem E23 (01/11/2026):** 23/116/83 depois da 16ª promoção do console de
+> TI (PLT-05, preferências e modelos de notificação), cujo cenário de gate cita o
+> ID no conteúdo do teste. O PLT-05 passa de `somente_documento` para
+> `mencionado_em_gate` — o que **não** é aceite humano, homologação nem UAT: o
+> requisito continua em `pronto_local`, e o aceite permanece **0/222**. Este texto
 > **não** é ajustado à mão: `tests/requisitos-222-inventory.test.mjs` compara as
 > contagens e o núcleo duro abaixo com o JSON e falha na primeira divergência.
 

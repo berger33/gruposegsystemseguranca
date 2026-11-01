@@ -61,7 +61,7 @@
 "LaborBudgetClient.tsx","74","workspace","src/app/admin/comercial/ComercialWorkspace.tsx","","2","0","ux-pro-03-commercial-estimates-ui.test.mjs","herdado do workspace","montado_em_workspace"
 "LgpdRequestClient.tsx","519","console","TiConsole","lgpd","3","0","ux-pro-03-ti-lgpd-requests-ui.test.mjs","ti|admin","com_prova"
 "MaintenanceDocClient.tsx","279","console","TiConsole","manutencao","2","0","ux-pro-03-ti-maintenance-docs-ui.test.mjs","ti|admin","com_prova"
-"NotificationPreferencesClient.tsx","125","orfao","","","3","0","","nao_montado","orfao_nao_promovido"
+"NotificationPreferencesClient.tsx","344","console","TiConsole","plt_notificacoes","2","0","ux-portal-workspace.integration.test.mjs|ux-pro-03-ti-preferencias-notificacao-ui.test.mjs","ti|admin","com_prova"
 "NotificationsClient.tsx","268","console","TiConsole","avisos","3","0","ux-pro-03-ti-notifications-ui.test.mjs","ti|admin","com_prova"
 "ObservabilityClient.tsx","176","console","TiConsole","observacao","2","0","ux-pro-03-audit-observability-ui.test.mjs","ti|admin","com_prova"
 "OpsAdvanced2Client.tsx","503","workspace","src/app/admin/operacao/OperacaoWorkspace.tsx","","8","0","ux-ops-workspace.integration.test.mjs|ux-pro-e2-action-dialog.test.mjs|ux-pro-e2-c1-field-labels.test.mjs","herdado do workspace","montado_em_workspace"
