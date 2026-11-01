@@ -3,25 +3,25 @@
   "resumo": "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
   "data": "2026-10-27",
   "criterio": "promover por area somente com prova (decisao de 02/10); prova estatica nao substitui gate de navegador nem aceite humano",
-  "tiConsoleSha256": "5caa7b0a790f21e949c641767c599ab128cac22b7ef744c824fb0b39ae2b8e91",
+  "tiConsoleSha256": "176794ddbd6988d5ba99d8ffb51dd4616affda5ca33a78365c1bc1d1073caa02",
   "pageSha256": "360bf2564469679a4cc7c0b6b9274f05557188f701a3f3b89649ce4d70d56313",
   "total": 84,
-  "abas": 26,
-  "importsDinamicos": 26,
+  "abas": 27,
+  "importsDinamicos": 27,
   "console": {
-    "total": 26,
-    "comProva": 26,
+    "total": 27,
+    "comProva": 27,
     "lacunas": []
   },
   "workspace": {
     "total": 25
   },
   "orfos": {
-    "total": 33,
+    "total": 32,
     "promovidosSemSairDaClassificacao": 0
   },
   "promocoesComProva": {
-    "total": 13,
+    "total": 14,
     "todasMontadas": true,
     "detalhes": [
       {
@@ -101,11 +101,17 @@
         "aba": "cms",
         "familia": "PUB-06 CMS do site: rascunho, revisão, aprovação, publicação, arquivamento, versões por snapshot, histórico imutável e reversão — com as transições migradas para PATCH /api/admin/cms-contents/:id (o protótipo chamava a coleção e recebia 405) e o detalhe lido no formato plano que a API devolve",
         "relatorio": "docs/UX-PRO-03-PROMOCAO-CMS-CONTEUDO-2026-10-31.md"
+      },
+      {
+        "componente": "SeoClient.tsx",
+        "aba": "seo",
+        "familia": "PUB-08 SEO técnico: configurações por caminho com noindex preservado, redirecionamentos, prévia derivada de sitemap (a rota deixou de aceitar POST) e verificação de domínio — declarando que publicar é inalcançável nesta entrega porque o servidor recusa marcar domínio como verificado sem DNS/HTTP real",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-SEO-DOMINIOS-2026-10-31.md"
       }
     ]
   },
   "apis": {
-    "literais": 403,
+    "literais": 402,
     "semDispatch": 0
   }
 }

@@ -9164,3 +9164,213 @@ test("browser UX-PRO-03 CMS: conteúdo do site (criar, transicionar, publicar, r
   }
   for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
 });
+
+// UX-PRO-03 (14ª promoção) — "SEO e domínios": o PUB-08 deixa de ser órfão.
+// O protótipo gravava sitemap numa rota que virou prévia (405) e prometia
+// "publicar após domínio verificado" quando o servidor recusa declarar
+// verificado sem DNS/HTTP real.
+function seoInjecao(cfg) {
+  const original = window.fetch.bind(window);
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    const caminho = url.replace(location.origin, "").split("?")[0];
+    const metodo = ((init && init.method) || "GET").toUpperCase();
+    if (metodo === "GET" && caminho === "/api/admin/seo-configs" && cfg.configs === "negado") {
+      return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } });
+    }
+    return original(input, init);
+  };
+}
+
+test("browser UX-PRO-03 SEO: SEO e domínios (noindex preservado, redirects, prévia de sitemap, domínio pendente, negado, larguras e noite)", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const rh = await provisionStaff(pool, { role: "rh" });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const sufixo = randomUUID().slice(0, 8);
+  const caminho = `/qa-seo-${sufixo}`;
+  const origemRedirect = `/qa-antigo-${sufixo}`;
+  const dominio = `qa-${sufixo}.exemplo.invalid`;
+  const evidence = process.env.UX_PORTAL_EVIDENCE_DIR || "";
+  const entries = [];
+
+  // --- servidor: o que é executável e o que é recusado por desenho ---------
+  assert.equal((await api("/api/admin/seo-configs")).status, 401, "anônimo recebe 401");
+  assert.equal((await api("/api/admin/seo-configs", { cookie: rhCookie })).status, 403, "rh não administra SEO");
+  assert.equal((await api("/api/admin/seo-configs", { cookie: tiCookie })).status, 200, "ti lê SEO");
+  assert.equal((await api("/api/admin/seo-sitemap", { method: "POST", cookie: tiCookie, body: { url: "/" } })).status, 405,
+    "o sitemap virou prévia derivada: POST é 405");
+  const previa = await api("/api/admin/seo-sitemap", { cookie: tiCookie });
+  assert.equal(previa.status, 200);
+  assert.equal(previa.body.derived, true, "a prévia é derivada do catálogo público");
+  const dominioPendente = await api("/api/admin/domain-verifications", { method: "POST", cookie: tiCookie,
+    body: { domain: dominio, verification_method: "dns_txt", verification_token: `token-sintetico-${sufixo}-abcdef` } });
+  assert.equal(dominioPendente.status, 201, "cadastrar domínio pendente funciona");
+  const verificar = await api("/api/admin/domain-verifications", { method: "PATCH", cookie: tiCookie,
+    body: { id: dominioPendente.body.id, status: "verificado" } });
+  assert.equal(verificar.status, 400, "o servidor recusa declarar verificado sem prova real");
+  assert.equal(verificar.body.error, "domain_verification_not_supported");
+  const configCriada = await api("/api/admin/seo-configs", { method: "POST", cookie: tiCookie,
+    body: { path: caminho, title: `Página SEO ${sufixo}`, description: "Descrição sintética com mais de dez caracteres.", robots: "noindex, nofollow", sitemap_priority: 0.5, changefreq: "weekly" } });
+  assert.equal(configCriada.status, 201);
+  assert.equal(configCriada.body.is_noindex, true, "criar nasce noindex");
+  const publicar = await api("/api/admin/seo-configs", { method: "PATCH", cookie: tiCookie,
+    body: { id: configCriada.body.id, is_published: true } });
+  assert.equal(publicar.status, 400, "publicar preservando noindex é recusado pelo servidor");
+  assert.equal(publicar.body.error, "cannot_publish_with_noindex");
+
+  const comPagina = async (opcoes, acoes) => {
+    const browser = await launchBrowser();
+    try {
+      const context = await browser.newContext({ viewport: { width: opcoes.width ?? 1440, height: opcoes.height ?? 900 }, locale: "pt-BR" });
+      const cookie = opcoes.cookie ?? tiCookie;
+      await context.addCookies(cookie.split("; ").filter(Boolean).map(item => {
+        const separador = item.indexOf("=");
+        return { name: item.slice(0, separador), value: item.slice(separador + 1), url: baseUrl };
+      }));
+      const page = await context.newPage();
+      page.setDefaultTimeout(45_000);
+      page.setDefaultNavigationTimeout(90_000);
+      await page.addInitScript(seoInjecao, Object.assign({ configs: "pass" }, opcoes.injecao || {}));
+      await page.goto(`${baseUrl}/admin/ti`, { waitUntil: "domcontentloaded" });
+      if (cookie === tiCookie) {
+        await page.getByRole("button", { name: "SEO e domínios" }).click();
+        await page.getByTestId("seo").waitFor();
+        await page.waitForFunction(() => /Lido às/.test(document.querySelector('[data-testid="seo-hora"]')?.textContent || ""), null, { timeout: 45_000 });
+      }
+      const resultado = await acoes(page, context);
+      await context.close();
+      return resultado;
+    } finally { await browser.close(); }
+  };
+  const evidenciar = async (page, { estado, nome, width, theme }) => {
+    await capture(page, nome);
+    const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    entries.push({ viewport: width, theme, estado, screenshot: evidence ? `${nome}.png` : null, sobraDocumentoPx: sobra, problems: [] });
+    return sobra;
+  };
+
+  // --- 1) leitura: prévia do sitemap e aviso de publicação bloqueada ------
+  for (const width of [320, 390, 1440]) {
+    await comPagina({ width }, async (page) => {
+      await page.getByTestId("seo-sitemap").waitFor();
+      assert.equal(await page.getByTestId("seo-publicacao").getAttribute("data-permitido"), "nao");
+      assert.match(await page.getByTestId("seo-publicacao").innerText(), /bloqueada|n[ãa]o [ée] execut[áa]vel/i);
+      await page.getByTestId(`seo-config-${caminho}`).waitFor();
+      const sobra = await evidenciar(page, { estado: "autorizado", nome: `seo-${width}-day`, width, theme: "day" });
+      assert.ok(sobra <= 1, `SEO transborda ${sobra}px em ${width}px`);
+    });
+  }
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId(`seo-config-${caminho}`).waitFor();
+    await page.locator('[data-admin-theme-toggle="true"]').click();
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === "night");
+    await page.getByTestId("seo-sitemap").waitFor();
+    const sobra = await evidenciar(page, { estado: "autorizado", nome: "seo-1440-night", width: 1440, theme: "night" });
+    assert.ok(sobra <= 1, `SEO transborda ${sobra}px à noite`);
+  });
+
+  // --- 2) criar configuração pela tela (nasce noindex) --------------------
+  const caminhoNovo = `/qa-seo-novo-${sufixo}`;
+  await comPagina({ width: 1440 }, async (page) => {
+    const card = page.getByTestId("seo-card-configs");
+    await card.getByLabel("caminho", { exact: true }).fill(caminhoNovo);
+    await card.getByLabel("título SEO").fill(`Nova página ${sufixo}`);
+    await card.getByLabel("descrição SEO").fill("Descrição sintética criada pela interface do console de SEO.");
+    await card.getByLabel("prioridade").fill("0.7");
+    await card.getByRole("button", { name: /Criar configuração/ }).click();
+    await page.getByTestId("seo-ok").waitFor();
+    assert.match(await page.getByTestId("seo-ok").innerText(), /noindex preservado/i);
+    await page.getByTestId(`seo-config-${caminhoNovo}`).waitFor();
+    const linha = await pool.query("SELECT is_noindex, is_published, sitemap_priority FROM seo_configs WHERE path = $1", [caminhoNovo]);
+    assert.equal(linha.rows[0].is_noindex, true, "a tela nunca cria indexável");
+    assert.equal(linha.rows[0].is_published, false);
+    assert.equal(Number(linha.rows[0].sitemap_priority), 0.7);
+    await evidenciar(page, { estado: "config-criada", nome: "seo-1440-day-criada", width: 1440, theme: "day" });
+  });
+
+  // --- 3) manter noindex (PATCH real) ------------------------------------
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId(`seo-manter-${caminho}`).click();
+    await page.getByTestId("seo-ok").waitFor();
+    assert.match(await page.getByTestId("seo-ok").innerText(), /mantido com noindex/i);
+    const linha = await pool.query("SELECT is_noindex, is_published FROM seo_configs WHERE path = $1", [caminho]);
+    assert.equal(linha.rows[0].is_noindex, true);
+    assert.equal(linha.rows[0].is_published, false);
+  });
+
+  // --- 4) redirecionamento real ------------------------------------------
+  // Destino precisa ser rota pública de verdade: a política recusa 404.
+  const destinoPublico = (previa.body.paths || []).filter(item => typeof item === "string" && item !== "/" && item !== origemRedirect)[0];
+  assert.ok(destinoPublico, "a prévia do sitemap oferece ao menos uma rota pública como destino");
+  await comPagina({ width: 1440 }, async (page) => {
+    const card = page.getByTestId("seo-card-redirects");
+    assert.match(await page.getByTestId("seo-regra-destino").innerText(), /rota pública/i);
+    // Primeiro o caminho errado, para provar que o erro é traduzido e não vira sucesso.
+    await card.getByLabel("origem").fill(origemRedirect);
+    await card.getByLabel("destino").fill(`/nao-existe-${sufixo}`);
+    await card.getByLabel("motivo do redirecionamento").fill(`Motivo sintético do redirect ${sufixo}`);
+    await card.getByRole("button", { name: /Criar redirecionamento/ }).click();
+    await page.getByTestId("seo-erro").waitFor();
+    assert.match(await page.getByTestId("seo-erro").innerText(), /rota pública/i);
+    assert.equal((await pool.query("SELECT 1 FROM seo_redirects WHERE old_path = $1", [origemRedirect])).rowCount, 0, "destino inválido não grava");
+    await card.getByLabel("destino").fill(destinoPublico);
+    await card.getByRole("button", { name: /Criar redirecionamento/ }).click();
+    await page.getByTestId("seo-ok").waitFor();
+    assert.match(await page.getByTestId("seo-ok").innerText(), /registrado/i);
+    const linha = await pool.query("SELECT old_path, new_path, redirect_type, reason FROM seo_redirects WHERE old_path = $1", [origemRedirect]);
+    assert.equal(linha.rows[0].new_path, destinoPublico);
+    assert.equal(linha.rows[0].redirect_type, "301");
+    assert.equal(linha.rows[0].reason, `Motivo sintético do redirect ${sufixo}`);
+    await evidenciar(page, { estado: "redirect-criado", nome: "seo-1440-day-redirect", width: 1440, theme: "day" });
+  });
+
+  // --- 5) domínio pendente pela tela -------------------------------------
+  const dominioNovo = `qa-novo-${sufixo}.exemplo.invalid`;
+  await comPagina({ width: 1440 }, async (page) => {
+    const card = page.getByTestId("seo-card-dominios");
+    await card.getByLabel("domínio").fill(dominioNovo);
+    await card.getByLabel("token de verificação").fill(`token-sintetico-${sufixo}-novo`);
+    await card.getByRole("button", { name: /Registrar domínio pendente/ }).click();
+    await page.getByTestId("seo-ok").waitFor();
+    assert.match(await page.getByTestId("seo-ok").innerText(), /pendente/i);
+    const linha = await pool.query("SELECT status FROM domain_verifications WHERE domain = $1", [dominioNovo]);
+    assert.equal(linha.rows[0].status, "pendente");
+    assert.equal(await page.getByTestId("seo-publicacao").getAttribute("data-permitido"), "nao");
+    await evidenciar(page, { estado: "dominio-pendente", nome: "seo-1440-day-dominio", width: 1440, theme: "day" });
+  });
+
+  // --- 6) negação não vira lista vazia -----------------------------------
+  await comPagina({ width: 1440, injecao: { configs: "negado" } }, async (page) => {
+    const estado = page.getByTestId("seo-estado-configs");
+    await estado.waitFor();
+    assert.equal(await estado.getAttribute("data-situacao"), "negado");
+    assert.doesNotMatch(await page.getByTestId("seo-card-configs").innerText(), /nenhum registro/i, "negado não é vazio");
+    await evidenciar(page, { estado: "negado", nome: "seo-1440-day-negado", width: 1440, theme: "day" });
+  });
+
+  // --- 7) papel negado no gate -------------------------------------------
+  await comPagina({ cookie: rhCookie, width: 1440 }, async (page) => {
+    await page.locator('[data-admin-gate="forbidden"]').waitFor();
+    assert.equal(await page.getByTestId("seo").count(), 0, "rh não monta o console de SEO");
+    await evidenciar(page, { estado: "papel-negado", nome: "seo-1440-day-rh", width: 1440, theme: "day" });
+  });
+
+  if (evidence) {
+    await mkdir(evidence, { recursive: true });
+    await writeFile(path.join(evidence, "resumo.json"), JSON.stringify({
+      stage: "UX-PRO-03 · PUB-08 · SEO e domínios na aba do TiConsole (/admin/ti)",
+      generatedBy: "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+      route: "/admin/ti",
+      fatia: "14ª promoção com prova — SeoClient deixa de ser órfão",
+      entries,
+      limites: [
+        "Publicar é inalcançável nesta entrega: o servidor recusa declarar domínio verificado sem DNS/HTTP real e recusa publicar com noindex.",
+        "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+        "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado.",
+        "O sitemap administrativo é prévia derivada (GET); não há loja de linhas para editar.",
+      ],
+    }, null, 2));
+  }
+  for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
+});

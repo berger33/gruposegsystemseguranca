@@ -118,6 +118,12 @@ const PROMOCOES_COM_PROVA = [
     familia: 'PUB-06 CMS do site: rascunho, revisão, aprovação, publicação, arquivamento, versões por snapshot, histórico imutável e reversão — com as transições migradas para PATCH /api/admin/cms-contents/:id (o protótipo chamava a coleção e recebia 405) e o detalhe lido no formato plano que a API devolve',
     relatorio: 'docs/UX-PRO-03-PROMOCAO-CMS-CONTEUDO-2026-10-31.md',
   },
+  {
+    componente: 'SeoClient.tsx',
+    aba: 'seo',
+    familia: 'PUB-08 SEO técnico: configurações por caminho com noindex preservado, redirecionamentos, prévia derivada de sitemap (a rota deixou de aceitar POST) e verificação de domínio — declarando que publicar é inalcançável nesta entrega porque o servidor recusa marcar domínio como verificado sem DNS/HTTP real',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-SEO-DOMINIOS-2026-10-31.md',
+  },
 ];
 
 const sha256 = value => createHash('sha256').update(value).digest('hex');

@@ -65,7 +65,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1651,
+    "arquivosVarridos": 1656,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -798,7 +798,9 @@
       "arquivos_gate_nomeados": [],
       "arquivos_gate": [
         "tests/l04-delivery.integration.test.mjs",
-        "tests/seo-technical.test.mjs"
+        "tests/seo-technical.test.mjs",
+        "tests/ux-portal-workspace.integration.test.mjs",
+        "tests/ux-pro-03-ti-seo-dominios-ui.test.mjs"
       ],
       "arquivos_documento": [
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
@@ -811,15 +813,18 @@
         "docs/PROMPT-PROXIMA-SESSAO-L04.md"
       ],
       "arquivos_codigo": [
+        "scripts/ux-pro-03-ti-inventory.mjs",
+        "src/app/admin/ti/SeoClient.module.css",
         "src/app/admin/ti/SeoClient.tsx",
+        "src/app/admin/ti/seo-console-state.ts",
         "src/lib/segment-examples.mjs",
         "src/lib/seo-technical.mjs",
         "src/server/seo-api.mjs",
         "src/server/seo-technical-api.mjs"
       ],
-      "ocorrencias_gate": 12,
-      "ocorrencias_documento": 24,
-      "ocorrencias_codigo": 9,
+      "ocorrencias_gate": 15,
+      "ocorrencias_documento": 28,
+      "ocorrencias_codigo": 12,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },

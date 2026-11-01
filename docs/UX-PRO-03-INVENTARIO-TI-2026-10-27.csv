@@ -80,6 +80,6 @@
 "RbacClient.tsx","151","console","TiConsole","acessos","3","0","ux-pro-03-rbac-ui.test.mjs","ti|admin","com_prova"
 "ReportClient.tsx","61","workspace","src/app/admin/comercial/ComercialWorkspace.tsx","","7","0","ux-pro-03-commercial-estimates-ui.test.mjs","herdado do workspace","montado_em_workspace"
 "RetentionClient.tsx","376","console","TiConsole","retencao","4","0","ux-pro-03-ti-retention-ui.test.mjs","ti|admin","com_prova"
-"SeoClient.tsx","98","orfao","","","5","0","","nao_montado","orfao_nao_promovido"
+"SeoClient.tsx","326","console","TiConsole","seo","4","0","ux-portal-workspace.integration.test.mjs|ux-pro-03-ti-seo-dominios-ui.test.mjs","ti|admin","com_prova"
 "TechnicalBudgetClient.tsx","90","workspace","src/app/admin/comercial/ComercialWorkspace.tsx","","2","0","ux-pro-03-commercial-estimates-ui.test.mjs","herdado do workspace","montado_em_workspace"
 "ThemeClient.tsx","4","console","TiConsole","visual","0","0","ux-pro-03-ti-theme-ui.test.mjs","ti|admin","com_prova"
