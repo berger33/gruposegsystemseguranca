@@ -3,25 +3,25 @@
   "resumo": "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
   "data": "2026-10-27",
   "criterio": "promover por area somente com prova (decisao de 02/10); prova estatica nao substitui gate de navegador nem aceite humano",
-  "tiConsoleSha256": "a65800a006cd8b754364a72ed89d3c3fc242755a5c279d1f2c6f7a7905f0c6df",
+  "tiConsoleSha256": "5caa7b0a790f21e949c641767c599ab128cac22b7ef744c824fb0b39ae2b8e91",
   "pageSha256": "360bf2564469679a4cc7c0b6b9274f05557188f701a3f3b89649ce4d70d56313",
   "total": 84,
-  "abas": 25,
-  "importsDinamicos": 25,
+  "abas": 26,
+  "importsDinamicos": 26,
   "console": {
-    "total": 25,
-    "comProva": 25,
+    "total": 26,
+    "comProva": 26,
     "lacunas": []
   },
   "workspace": {
     "total": 25
   },
   "orfos": {
-    "total": 34,
+    "total": 33,
     "promovidosSemSairDaClassificacao": 0
   },
   "promocoesComProva": {
-    "total": 12,
+    "total": 13,
     "todasMontadas": true,
     "detalhes": [
       {
@@ -95,6 +95,12 @@
         "aba": "cli_financeiro",
         "familia": "CLI-09..14 cobranças fiscais, serviço adicional, satisfação, renovação, modos de entrada, pedidos de acesso, segurança da conta e troca de e-mail — migrado de /api/hr/cli-* (403 para ti) para os aliases canônicos /api/cli/* e /api/admin/portal-access-requests, com leitura por bloco que declara negado/falha/inválido em vez de lista vazia",
         "relatorio": "docs/UX-PRO-03-PROMOCAO-CLI-FINANCEIRO-2026-10-31.md"
+      },
+      {
+        "componente": "CmsClient.tsx",
+        "aba": "cms",
+        "familia": "PUB-06 CMS do site: rascunho, revisão, aprovação, publicação, arquivamento, versões por snapshot, histórico imutável e reversão — com as transições migradas para PATCH /api/admin/cms-contents/:id (o protótipo chamava a coleção e recebia 405) e o detalhe lido no formato plano que a API devolve",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-CMS-CONTEUDO-2026-10-31.md"
       }
     ]
   },

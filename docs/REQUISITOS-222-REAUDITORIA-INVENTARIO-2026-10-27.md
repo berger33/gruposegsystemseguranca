@@ -30,7 +30,7 @@ prova rota alguma. Workflows seguem **49**.
 
 ### Método
 
-Uma única passada por **1.646 arquivos** de `tests/`, `.github/workflows/`,
+Uma única passada por **1.651 arquivos** de `tests/`, `.github/workflows/`,
 `docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, a auditoria de 26/10, a
 fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
 meta-estado, não prova de requisito, e evitam auto-referência. De cada arquivo o gerador extrai todos os IDs com
@@ -43,8 +43,8 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 | Classe | Significado | IDs |
 |---|---|---|
 | `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **23** |
-| `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **114** |
-| `somente_documento` | só há citação em documentos | **85** |
+| `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **115** |
+| `somente_documento` | só há citação em documentos | **84** |
 | `somente_codigo` / `sem_evidencia_legivel` | — | **0** |
 
 > **Recontagem E23 (30/10/2026):** a tabela acima já não é a fotografia de 27/10

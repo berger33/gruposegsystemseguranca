@@ -8956,3 +8956,211 @@ test("browser UX-PRO-03 CLI-FIN: console CLI do TI (rotas canônicas, estados ho
   }
   for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
 });
+
+// UX-PRO-03 (13ª promoção) — "Conteúdo do site": o CMS (PUB-06) deixa de ser
+// órfão. O protótipo mandava as transições para PATCH na coleção (405 no
+// servidor) e lia `detail.content` de uma resposta plana.
+function cmsInjecao(cfg) {
+  const original = window.fetch.bind(window);
+  window.__cms = { leituras: 0 };
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    const caminho = url.replace(location.origin, "").split("?")[0];
+    const metodo = ((init && init.method) || "GET").toUpperCase();
+    if (metodo === "GET" && caminho === "/api/admin/cms-contents" && (cfg.lista === "negado" || cfg.lista === "invalido")) {
+      window.__cms.leituras += 1;
+      return cfg.lista === "negado"
+        ? new Response(JSON.stringify({ error: "role_required" }), { status: 403, headers: { "Content-Type": "application/json" } })
+        : new Response(JSON.stringify({}), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    return original(input, init);
+  };
+}
+
+test("browser UX-PRO-03 CMS: conteúdo do site (criar, transicionar, publicar, reverter, negado, larguras e noite)", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const rh = await provisionStaff(pool, { role: "rh" });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const sufixo = randomUUID().slice(0, 8);
+  const MOTIVO = `Motivo sintético de publicação ${sufixo}`;
+  const evidence = process.env.UX_PORTAL_EVIDENCE_DIR || "";
+  const entries = [];
+
+  // --- servidor: ti publica, rh não ---------------------------------------
+  assert.equal((await api("/api/admin/cms-contents")).status, 401, "anônimo recebe 401");
+  assert.equal((await api("/api/admin/cms-contents", { cookie: rhCookie })).status, 403, "rh não publica conteúdo");
+  const listaTi = await api("/api/admin/cms-contents", { cookie: tiCookie });
+  assert.equal(listaTi.status, 200, "ti precisa ler o CMS");
+  assert.equal((await api("/api/admin/cms-contents", { method: "PATCH", cookie: tiCookie, body: { status: "publicado", reason: MOTIVO } })).status, 405,
+    "PATCH na coleção é 405 — a tela não pode usar essa rota");
+
+  // --- fixtures: uma página e um case sem autorização ---------------------
+  const slugPagina = `qa-cms-pagina-${sufixo}`;
+  const slugCase = `qa-cms-case-${sufixo}`;
+  const rascunhoPagina = await api("/api/admin/cms-contents", { method: "POST", cookie: tiCookie,
+    body: { slug: slugPagina, title: `Página QA ${sufixo}`, content: "Conteúdo sintético de página para o cenário de CMS do console de TI.", content_type: "pagina" } });
+  assert.equal(rascunhoPagina.status, 201, "a fixture de página precisa criar");
+  const rascunhoCase = await api("/api/admin/cms-contents", { method: "POST", cookie: tiCookie,
+    body: { slug: slugCase, title: `Case QA ${sufixo}`, content: "Conteúdo sintético de case sem autorização do cliente para publicar.", content_type: "case", is_authorized: false } });
+  assert.equal(rascunhoCase.status, 201, "a fixture de case precisa criar");
+  const idPagina = rascunhoPagina.body.id;
+  const idCase = rascunhoCase.body.id;
+
+  const comPagina = async (opcoes, acoes) => {
+    const browser = await launchBrowser();
+    try {
+      const context = await browser.newContext({ viewport: { width: opcoes.width ?? 1440, height: opcoes.height ?? 900 }, locale: "pt-BR" });
+      const cookie = opcoes.cookie ?? tiCookie;
+      await context.addCookies(cookie.split("; ").filter(Boolean).map(item => {
+        const separador = item.indexOf("=");
+        return { name: item.slice(0, separador), value: item.slice(separador + 1), url: baseUrl };
+      }));
+      const page = await context.newPage();
+      page.setDefaultTimeout(45_000);
+      page.setDefaultNavigationTimeout(90_000);
+      await page.addInitScript(cmsInjecao, Object.assign({ lista: "pass" }, opcoes.injecao || {}));
+      await page.goto(`${baseUrl}/admin/ti`, { waitUntil: "domcontentloaded" });
+      if (cookie === tiCookie) {
+        await page.getByRole("button", { name: "Conteúdo do site" }).click();
+        await page.getByTestId("cms").waitFor();
+        await page.waitForFunction(() => /Lido às/.test(document.querySelector('[data-testid="cms-hora"]')?.textContent || ""), null, { timeout: 45_000 });
+      }
+      const resultado = await acoes(page, context);
+      await context.close();
+      return resultado;
+    } finally { await browser.close(); }
+  };
+  const evidenciar = async (page, { estado, nome, width, theme }) => {
+    await capture(page, nome);
+    const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    entries.push({ viewport: width, theme, estado, screenshot: evidence ? `${nome}.png` : null, sobraDocumentoPx: sobra, problems: [] });
+    return sobra;
+  };
+
+  // --- 1) criar rascunho pela tela ----------------------------------------
+  const slugNovo = `qa-cms-novo-${sufixo}`;
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId(`cms-item-${slugPagina}-v1`).waitFor();
+    await page.getByTestId(`cms-item-${slugCase}-v1`).waitFor();
+    await page.getByLabel("slug", { exact: true }).fill(slugNovo);
+    await page.getByLabel("título", { exact: true }).fill(`Novo conteúdo ${sufixo}`);
+    await page.getByLabel("conteúdo", { exact: true }).fill("Conteúdo sintético criado pela interface do console de conteúdo do site, com mais de cinquenta caracteres.");
+    await page.getByRole("button", { name: "Criar rascunho" }).click();
+    await page.getByTestId("cms-ok").waitFor();
+    assert.match(await page.getByTestId("cms-ok").innerText(), /nada foi publicado/i);
+    await page.getByTestId(`cms-item-${slugNovo}-v1`).waitFor();
+    const criado = await pool.query("SELECT status, is_published FROM cms_contents WHERE slug = $1 ORDER BY version DESC LIMIT 1", [slugNovo]);
+    assert.equal(criado.rows[0].status, "rascunho");
+    assert.equal(criado.rows[0].is_published, false);
+    await evidenciar(page, { estado: "rascunho-criado", nome: "cms-1440-day-criado", width: 1440, theme: "day" });
+  });
+
+  // --- 2) transições reais até publicado ----------------------------------
+  await comPagina({ width: 1440 }, async (page) => {
+    const item = page.getByTestId(`cms-item-${slugPagina}-v1`);
+    await item.getByRole("button", { name: /abrir hist/ }).click();
+    await page.waitForFunction(() => document.querySelector('[data-testid="cms-detalhe"]')?.getAttribute("data-situacao") === "ok", null, { timeout: 30_000 });
+    assert.equal(await page.getByTestId("cms-detalhe").getAttribute("data-situacao"), "ok");
+    const textoDetalhe = await page.getByTestId("cms-detalhe").innerText();
+    assert.match(textoDetalhe, new RegExp(slugPagina), "o detalhe precisa mostrar o conteúdo (resposta plana)");
+    await page.getByLabel("motivo", { exact: true }).fill(MOTIVO);
+    await page.getByTestId("cms-transicao-em_revisao").click();
+    await page.getByTestId("cms-ok").waitFor();
+    await page.waitForFunction(() => /Em revisão/.test(document.querySelector('[data-testid="cms-detalhe"]')?.textContent || ""));
+    await page.getByTestId("cms-transicao-aprovado").click();
+    await page.waitForFunction(() => /Aprovado/.test(document.querySelector('[data-testid="cms-detalhe"]')?.textContent || ""), null, { timeout: 30_000 });
+    await page.getByTestId("cms-transicao-publicado").click();
+    await page.waitForFunction(() => /Publicado/.test(document.querySelector('[data-testid="cms-detalhe"]')?.textContent || ""), null, { timeout: 30_000 });
+    const publicado = await pool.query("SELECT status, is_published FROM cms_contents WHERE id = $1::uuid", [idPagina]);
+    assert.equal(publicado.rows[0].status, "publicado", "a transição real precisa chegar no banco");
+    assert.equal(publicado.rows[0].is_published, true, "publicar marca is_published");
+    const historico = await pool.query("SELECT next_status, reason FROM cms_content_history WHERE content_id = $1::uuid ORDER BY created_at ASC", [idPagina]);
+    // O primeiro evento é a criação do rascunho; depois, uma linha por transição.
+    assert.deepEqual(historico.rows.map(linha => linha.next_status), ["rascunho", "em_revisao", "aprovado", "publicado"],
+      "cada transição precisa deixar seu evento no histórico imutável");
+    assert.ok(historico.rows.some(linha => linha.reason === MOTIVO), "o motivo precisa ficar no histórico");
+    await evidenciar(page, { estado: "publicado", nome: "cms-1440-day-publicado", width: 1440, theme: "day" });
+  });
+
+  // --- 3) case sem autorização não publica (botão travado) ----------------
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId(`cms-item-${slugCase}-v1`).getByRole("button", { name: /abrir hist/ }).click();
+    await page.waitForFunction(() => document.querySelector('[data-testid="cms-detalhe"]')?.getAttribute("data-situacao") === "ok", null, { timeout: 30_000 });
+    await page.getByLabel("motivo", { exact: true }).fill(MOTIVO);
+    await page.getByTestId("cms-transicao-em_revisao").click();
+    await page.waitForFunction(() => /Em revisão/.test(document.querySelector('[data-testid="cms-detalhe"]')?.textContent || ""));
+    await page.getByTestId("cms-transicao-aprovado").click();
+    await page.waitForFunction(() => /Aprovado/.test(document.querySelector('[data-testid="cms-detalhe"]')?.textContent || ""), null, { timeout: 30_000 });
+    const publicar = page.getByTestId("cms-transicao-publicado");
+    assert.equal(await publicar.isDisabled(), true, "case sem autorização não pode ser publicado pela tela");
+    const noBanco = await pool.query("SELECT status FROM cms_contents WHERE id = $1::uuid", [idCase]);
+    assert.equal(noBanco.rows[0].status, "aprovado");
+    await evidenciar(page, { estado: "case-bloqueado", nome: "cms-1440-day-case", width: 1440, theme: "day" });
+  });
+
+  // --- 4) reverter cria rascunho novo -------------------------------------
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId(`cms-item-${slugPagina}-v1`).getByRole("button", { name: /abrir hist/ }).click();
+    await page.waitForFunction(() => document.querySelector('[data-testid="cms-detalhe"]')?.getAttribute("data-situacao") === "ok", null, { timeout: 30_000 });
+    await page.getByLabel("motivo", { exact: true }).fill(`${MOTIVO} reversão`);
+    await page.getByTestId("cms-reverter-1").click();
+    await page.getByTestId("cms-ok").waitFor();
+    assert.match(await page.getByTestId("cms-ok").innerText(), /Reversão para v1/i);
+    const versoes = await pool.query("SELECT status, version FROM cms_contents WHERE slug = $1 ORDER BY version DESC", [slugPagina]);
+    assert.ok(versoes.rows.length >= 2, "reverter cria nova versão");
+    assert.equal(versoes.rows[0].status, "rascunho", "a reversão nasce rascunho");
+    await evidenciar(page, { estado: "revertido", nome: "cms-1440-day-revertido", width: 1440, theme: "day" });
+  });
+
+  // --- 5) larguras e tema noturno -----------------------------------------
+  for (const width of [320, 390, 1440]) {
+    await comPagina({ width }, async (page) => {
+      await page.getByTestId(`cms-item-${slugPagina}-v1`).waitFor();
+      const sobra = await evidenciar(page, { estado: "autorizado", nome: `cms-${width}-day`, width, theme: "day" });
+      assert.ok(sobra <= 1, `o CMS transborda ${sobra}px em ${width}px`);
+    });
+  }
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId(`cms-item-${slugPagina}-v1`).waitFor();
+    await page.locator('[data-admin-theme-toggle="true"]').click();
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === "night");
+    await page.getByTestId("cms").waitFor();
+    const sobra = await evidenciar(page, { estado: "autorizado", nome: "cms-1440-night", width: 1440, theme: "night" });
+    assert.ok(sobra <= 1, `o CMS transborda ${sobra}px à noite`);
+  });
+
+  // --- 6) negação e payload inválido não viram "vazio" -------------------
+  await comPagina({ width: 1440, injecao: { lista: "negado" } }, async (page) => {
+    const estado = page.getByTestId("cms-estado-lista");
+    await estado.waitFor();
+    assert.equal(await estado.getAttribute("data-situacao"), "negado");
+    assert.match(await page.getByTestId("cms-faixa").innerText(), /indispon[íi]vel/i);
+    assert.doesNotMatch(await page.getByTestId("cms-card-lista").innerText(), /Nenhum conteúdo cadastrado/, "negado não é vazio");
+    await evidenciar(page, { estado: "negado", nome: "cms-1440-day-negado", width: 1440, theme: "day" });
+  });
+  await comPagina({ width: 1440, injecao: { lista: "invalido" } }, async (page) => {
+    const estado = page.getByTestId("cms-estado-lista");
+    await estado.waitFor();
+    assert.equal(await estado.getAttribute("data-situacao"), "invalido");
+    await evidenciar(page, { estado: "payload-invalido", nome: "cms-1440-day-invalido", width: 1440, theme: "day" });
+  });
+
+  if (evidence) {
+    await mkdir(evidence, { recursive: true });
+    await writeFile(path.join(evidence, "resumo.json"), JSON.stringify({
+      stage: "UX-PRO-03 · PUB-06 · conteúdo do site na aba do TiConsole (/admin/ti)",
+      generatedBy: "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+      route: "/admin/ti",
+      fatia: "13ª promoção com prova — CmsClient deixa de ser órfão",
+      entries,
+      limites: [
+        "Sem upload e sem renderização de HTML arbitrário: o CMS guarda texto e metadados.",
+        "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+        "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado.",
+        "Publicar substitui a versão publicada anterior (arquivando-a) e preserva todo o histórico; reverter cria rascunho novo.",
+      ],
+    }, null, 2));
+  }
+  for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
+});

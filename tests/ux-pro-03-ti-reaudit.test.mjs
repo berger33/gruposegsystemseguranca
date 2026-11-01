@@ -56,7 +56,7 @@ const tabsDeclaration = consoleSrc.match(/const tabs=(\[[\s\S]*?\]) as const;/)?
 // escreve as mesmas tabelas em `/admin/marcelo`). Toda nova
 // ABA exige atualizar esta constante E o inventário/CSV — é o atrito que a
 // guarda deve impor.
-const EXPECTED_TABS = 25;
+const EXPECTED_TABS = 26;
 const tabKeys = [...tabsDeclaration.matchAll(/\['([a-z0-9_]+)','([^']+)'\]/g)].map(match => match[1]);
 const dynamicNames = [...consoleSrc.matchAll(/const\s+(\w+)\s*=\s*dynamic\(\(\)\s*=>\s*import\(['"]\.\/([^'"]+)['"]\)\)/g)].map(match => match[2]);
 const renders = [...consoleSrc.matchAll(/active==='([a-z0-9_]+)'&&<(\w+)\/>/g)].map(match => ({ key: match[1], component: match[2] }));
@@ -85,7 +85,7 @@ function importersOf(base, selfPath) {
     .map(([file]) => path.relative(root, file));
 }
 
-test('UX-PRO-03 reauditoria: as 25 abas montadas têm teste focal e todos os endpoints despachados', () => {
+test('UX-PRO-03 reauditoria: as 26 abas montadas têm teste focal e todos os endpoints despachados', () => {
   assert.equal(renders.length, EXPECTED_TABS, 'toda aba declarada precisa estar renderizada');
   for (const { key, component } of renders) {
     const source = componentSources.get(path.join(tiDir, `${component}.tsx`));

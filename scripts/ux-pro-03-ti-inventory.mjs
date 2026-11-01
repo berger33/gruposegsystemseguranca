@@ -112,6 +112,12 @@ const PROMOCOES_COM_PROVA = [
     familia: 'CLI-09..14 cobranças fiscais, serviço adicional, satisfação, renovação, modos de entrada, pedidos de acesso, segurança da conta e troca de e-mail — migrado de /api/hr/cli-* (403 para ti) para os aliases canônicos /api/cli/* e /api/admin/portal-access-requests, com leitura por bloco que declara negado/falha/inválido em vez de lista vazia',
     relatorio: 'docs/UX-PRO-03-PROMOCAO-CLI-FINANCEIRO-2026-10-31.md',
   },
+  {
+    componente: 'CmsClient.tsx',
+    aba: 'cms',
+    familia: 'PUB-06 CMS do site: rascunho, revisão, aprovação, publicação, arquivamento, versões por snapshot, histórico imutável e reversão — com as transições migradas para PATCH /api/admin/cms-contents/:id (o protótipo chamava a coleção e recebia 405) e o detalhe lido no formato plano que a API devolve',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-CMS-CONTEUDO-2026-10-31.md',
+  },
 ];
 
 const sha256 = value => createHash('sha256').update(value).digest('hex');
