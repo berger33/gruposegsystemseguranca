@@ -189,6 +189,8 @@ export function createAdminRbacApi(ctx) {
       if (notes && notes.length > 1000) return ctx.json(res, 400, { error: "notes_too_long" });
       try {
         const db = ctx.getPool();
+        const identity = await db.query("SELECT id FROM auth_identities WHERE id=$1", [targetId]);
+        if (!identity.rows[0]) return ctx.json(res, 404, { error: "identity_not_found" });
         const id = randomUUID();
         await db.query(
           `INSERT INTO auth_access_reviews (id, reviewed_by, target_identity_id, decision, notes) VALUES ($1,$2,$3,$4,$5)`,

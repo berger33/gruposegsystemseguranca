@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { createHealthcheckApi } from '../src/server/healthcheck-api.mjs';
 
 const client = await readFile(new URL('../src/app/admin/ti/HealthcheckClient.tsx', import.meta.url), 'utf8');
 const consoleClient = await readFile(new URL('../src/app/admin/ti/TiConsole.tsx', import.meta.url), 'utf8');
@@ -37,6 +38,103 @@ test('UX-PRO-03 health: accurately describes status, diagnostics, and existing a
   assert.match(client, /Detalhe técnico sanitizado/);
   assert.match(client, /Processo respondendo/);
   assert.match(client, /Não pronto/);
+});
+
+test('UX-PRO-03 health: sanitizes credential-bearing connection strings in dependency failures', async () => {
+  const syntheticSecret = 'synthetic-only-password';
+  const pool = { query: async () => { throw new Error(`connect failed postgres://svc:${syntheticSecret}@db.invalid/app?token=synthetic-only-token`); } };
+  let response;
+  const health = createHealthcheckApi({
+    json: (_res, status, body) => { response = { status, body }; },
+    getPool: () => pool,
+    readAdminSession: async () => ({ role: 'ti', identityId: 'synthetic-identity' }),
+    sameOrigin: () => true,
+    observability: null,
+  });
+  await health.handleReady({ url: '/api/health/ready', headers: { host: 'test.invalid' } }, {});
+  const serialized = JSON.stringify(response);
+  assert.equal(response.status, 503);
+  assert.equal(response.body.ready, false);
+  assert.doesNotMatch(serialized, /synthetic-only-password|synthetic-only-token/);
+  assert.match(serialized, /REDACTED/);
+});
+
+test('UX-PRO-03 health: enforces same-origin and admin/ti RBAC on operational health and history', async () => {
+  const queries = [];
+  const pool = { query: async (sql, params) => {
+    queries.push({ sql, params });
+    if (sql.includes('COUNT(*) FILTER')) return { rows: [{ total: 0, failures: 0 }] };
+    if (sql.includes('COUNT(*) AS queued')) return { rows: [{ queued: 0 }] };
+    if (sql.startsWith('SELECT * FROM operational_')) return { rows: [] };
+    return { rows: [{ ok: 1 }] };
+  } };
+  const outcomes = [];
+  const health = createHealthcheckApi({
+    json: (_res, status, body) => { outcomes.push({ status, body }); },
+    getPool: () => pool,
+    readAdminSession: async req => req.role ? { role: req.role, identityId: 'synthetic-id' } : null,
+    sameOrigin: req => req.origin !== 'cross-site',
+    observability: null,
+  });
+  const request = (url, role, origin = 'same-site') => ({ url, role, origin, headers: { host: 'test.invalid' } });
+
+  await health.handleHealth(request('/api/admin/operational', 'ti', 'cross-site'), {});
+  assert.equal(outcomes.at(-1).status, 403);
+  assert.equal(outcomes.at(-1).body.error, 'same_origin_required');
+  await health.handleHealth(request('/api/admin/operational', null), {});
+  assert.equal(outcomes.at(-1).status, 401);
+  await health.handleHealth(request('/api/admin/operational', 'rh'), {});
+  assert.equal(outcomes.at(-1).status, 403);
+  assert.equal(outcomes.at(-1).body.error, 'operational_panel_restricted_admin_ti');
+  await health.handleHealth(request('/api/admin/operational', 'ti'), {});
+  assert.equal(outcomes.at(-1).status, 200);
+  assert.ok(queries.some(({ sql }) => sql.includes('healthcheck_query')));
+
+  await health.handleOperationalHistory(request('/api/admin/operational/history?limit=999', 'admin'), {});
+  assert.equal(outcomes.at(-1).status, 200);
+  assert.ok(queries.some(({ sql, params }) => sql.startsWith('SELECT * FROM operational_health_checks') && params[0] === 200));
+  await health.handleOperationalHistory(request('/api/admin/operational/history', 'rh'), {});
+  assert.equal(outcomes.at(-1).status, 403);
+  await health.handleOperationalHistory(request('/api/admin/operational/history', 'ti', 'cross-site'), {});
+  assert.equal(outcomes.at(-1).status, 403);
+  assert.equal(outcomes.at(-1).body.error, 'same_origin_required');
+});
+
+test('UX-PRO-03 health: preserves liveness and reports readiness degradation without hiding a ready database', async () => {
+  const writes = [];
+  let dependencyQueries = 0;
+  const pool = { query: async (sql, params) => {
+    dependencyQueries += 1;
+    if (sql.startsWith('SELECT 1')) return { rows: [{ ok: 1 }] };
+    if (sql.includes('notification_queue')) return { rows: [{ queued: 150 }] };
+    if (sql.includes('FROM integrations')) return { rows: [{ total: 2, failures: 1 }] };
+    writes.push({ sql, params });
+    return { rows: [] };
+  } };
+  const metrics = { http_requests_5xx: 8, jobs_failed: 2 };
+  const outcomes = [];
+  const health = createHealthcheckApi({
+    json: (_res, status, body) => { outcomes.push({ status, body }); },
+    getPool: () => pool,
+    readAdminSession: async () => null,
+    sameOrigin: () => true,
+    observability: { getMetrics: () => metrics },
+  });
+  await health.handleLive({ url: '/api/health/live' }, {});
+  assert.equal(outcomes.at(-1).status, 200);
+  assert.equal(outcomes.at(-1).body.check, 'liveness');
+  assert.equal(dependencyQueries, 0, 'liveness must not depend on database availability');
+
+  await health.handleReady({ url: '/api/health/ready' }, {});
+  const { status, body } = outcomes.at(-1);
+  assert.equal(status, 200);
+  assert.equal(body.ready, true);
+  assert.equal(body.overall_status, 'degraded');
+  assert.deepEqual(body.degraded_dependencies, ['queue', 'integrations', 'observability']);
+  assert.equal(body.checks.find(check => check.name === 'queue').metadata.queued, 150);
+  assert.equal(body.checks.find(check => check.name === 'observability').metadata.http_5xx, 8);
+  assert.ok(writes.some(({ sql }) => sql.startsWith('INSERT INTO operational_status')));
+  assert.equal(writes.filter(({ sql }) => sql.startsWith('INSERT INTO operational_health_checks')).length, 4);
 });
 
 test('UX-PRO-03 health: uses responsive theme tokens, labels, and visible keyboard focus', () => {

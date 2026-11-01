@@ -73,6 +73,10 @@ export function createAdminAuditApi(ctx) {
       ctx.json(res, 401, { error: "admin_session_required" });
       return null;
     }
+    if (!["admin", "ti"].includes(session.role)) {
+      ctx.json(res, 403, { error: "audit_access_restricted" });
+      return null;
+    }
     return session;
   }
 
@@ -177,14 +181,18 @@ export function createAdminAuditApi(ctx) {
 
     const filters = body?.filters || {};
     const actorKind = filters.actorKind || null;
+    const actorId = filters.actorId || null;
     const action = filters.action || null;
+    const target = filters.target || null;
     const result = filters.result || null;
     const from = filters.from || null;
     const to = filters.to || null;
     const format = body?.format || "json";
 
     if (actorKind && !ALLOWED_ACTOR_KINDS.has(actorKind)) return ctx.json(res, 400, { error: "invalid_actor_kind" });
+    if (actorId !== null && (typeof actorId !== "string" || actorId.length > 200)) return ctx.json(res, 400, { error: "invalid_actor_id" });
     if (action && !ALLOWED_ACTIONS.has(action)) return ctx.json(res, 400, { error: "invalid_action" });
+    if (target !== null && (typeof target !== "string" || target.length > 500)) return ctx.json(res, 400, { error: "invalid_target" });
     if (result && !ALLOWED_RESULTS.has(result)) return ctx.json(res, 400, { error: "invalid_result" });
     if (!["json","csv"].includes(format)) return ctx.json(res, 400, { error: "invalid_format" });
 
@@ -205,7 +213,9 @@ export function createAdminAuditApi(ctx) {
       const values = [];
       let idx = 1;
       if (actorKind) { conditions.push(`actor_kind = $${idx++}`); values.push(actorKind); }
+      if (actorId) { conditions.push(`actor_id = $${idx++}`); values.push(actorId); }
       if (action) { conditions.push(`action = $${idx++}`); values.push(action); }
+      if (target) { conditions.push(`target = $${idx++}`); values.push(target); }
       if (result) { conditions.push(`result = $${idx++}`); values.push(result); }
       if (fromDate) { conditions.push(`created_at >= $${idx++}`); values.push(fromDate.toISOString()); }
       if (toDate) { conditions.push(`created_at <= $${idx++}`); values.push(toDate.toISOString()); }

@@ -1,0 +1,36 @@
+{
+  "stage": "PLT-07 · liveness, readiness, health operacional e histórico",
+  "generatedBy": "tests/ux-portal-workspace.integration.test.mjs (PostgreSQL 17 descartável + Chromium)",
+  "route": "/admin/ti",
+  "entries": [
+    {
+      "viewport": 390,
+      "theme": "day",
+      "estado": "readiness-pronto-ou-degradado",
+      "screenshot": "pl07-390-ready-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 390,
+      "theme": "day",
+      "estado": "historico-autorizado-ti",
+      "screenshot": "pl07-390-history-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 390,
+      "theme": "day",
+      "estado": "rh-negado",
+      "screenshot": "pl07-390-rh-denied.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    }
+  ],
+  "limits": [
+    "Prontidão verificada contra banco descartável migrado; não simula falha real de infraestrutura neste cenário HTTP/browser.",
+    "A degradação sintética de fila/integrações/observabilidade é coberta pelo focal unitário, não pelo banco real.",
+    "Sem aceite humano, UAT ou reauditoria integral; PLT-07 permanece a_revalidar e produção NO-GO."
+  ]
+}
