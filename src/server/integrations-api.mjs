@@ -1,6 +1,10 @@
 // PLT-03: integrações com status configurado/não configurado/falha, último processamento, erros sanitizados e teste de conexão
 
 const ALLOWED_PROVIDERS = new Set(["smtp","whatsapp","payment","nfe","llm","calendar","storage","sms","push","webhook","other"]);
+// Nomes de subcaminho já publicados pela aba "Registros de integração"
+// (`integration-log-api.mjs`). Nenhum deles pode virar `id` de integração: o
+// roteador precisa manter esses caminhos livres para a aba viva.
+export const INTEGRATION_ROUTE_SUBPATHS = new Set(["jobs","logs","webhooks","reconciliation"]);
 const ALLOWED_STATUS = new Set(["not_configured","configured","failure","testing"]);
 
 function sanitizeError(err) {
@@ -55,6 +59,16 @@ export function createIntegrationsApi(ctx) {
   function requireSameOrigin(req, res) {
     if (ctx.sameOrigin(req)) return true;
     ctx.json(res, 403, { error: "same_origin_required" });
+    return false;
+  }
+
+  // PLT-03 é plataforma: ler o catálogo é de qualquer sessão staff, mas testar
+  // conexão e renomear integração mudam o estado da plataforma. Medido antes:
+  // `rh` recebia **200** nos dois — inclusive criando integração nova.
+  const PAPEIS_DE_ESCRITA = new Set(["admin", "ti"]);
+  function requireWriteRole(session, res) {
+    if (PAPEIS_DE_ESCRITA.has(String(session?.role || ""))) return true;
+    ctx.json(res, 403, { error: "role_required", allowed: ["admin", "ti"] });
     return false;
   }
 
@@ -150,6 +164,7 @@ export function createIntegrationsApi(ctx) {
     if (!requireSameOrigin(req, res)) return;
     const session = await requireAdminSession(req, res);
     if (!session) return;
+    if (!requireWriteRole(session, res)) return;
 
     if (!id || id.length > 100) return ctx.json(res, 400, { error: "invalid_integration_id" });
 
@@ -225,6 +240,7 @@ export function createIntegrationsApi(ctx) {
     if (!requireSameOrigin(req, res)) return;
     const session = await requireAdminSession(req, res);
     if (!session) return;
+    if (!requireWriteRole(session, res)) return;
 
     let body;
     try {
@@ -233,11 +249,21 @@ export function createIntegrationsApi(ctx) {
       return ctx.json(res, 400, { error: "invalid_request" });
     }
 
-    const name = body?.name ? String(body.name).trim().slice(0,100) : null;
+    const idLimpo = String(id || "").trim();
+    // `id` é o nome do caminho: precisa ser curto e não pode colidir com os
+    // subcaminhos da aba viva "Registros de integração".
+    if (!idLimpo || idLimpo.length > 100) return ctx.json(res, 400, { error: "invalid_integration_id" });
+    if (INTEGRATION_ROUTE_SUBPATHS.has(idLimpo.toLowerCase())) return ctx.json(res, 400, { error: "invalid_integration_id" });
+
+    // Nome em branco era aceito em silêncio: o `PATCH` respondia 200 e a linha
+    // continuava com o nome antigo — o operador achava que tinha renomeado.
+    const temNome = body !== null && typeof body === "object" && body.name !== undefined && body.name !== null;
+    const name = temNome ? String(body.name).trim() : null;
     const provider = body?.provider ? String(body.provider).toLowerCase() : null;
 
     if (provider && !ALLOWED_PROVIDERS.has(provider)) return ctx.json(res, 400, { error: "invalid_provider" });
-    if (name && name.length < 1) return ctx.json(res, 400, { error: "invalid_name" });
+    if (temNome && (name.length < 1 || name.length > 100)) return ctx.json(res, 400, { error: "invalid_name" });
+    if (!name && !provider) return ctx.json(res, 400, { error: "no_fields" });
 
     let db;
     try {
@@ -247,22 +273,22 @@ export function createIntegrationsApi(ctx) {
     }
 
     try {
-      const existing = await db.query("SELECT id FROM integrations WHERE id = $1", [id]);
+      const existing = await db.query("SELECT id FROM integrations WHERE id = $1", [idLimpo]);
       if (existing.rows.length === 0) {
         // Cria nova integração se não existir e provider válido
         if (!provider) return ctx.json(res, 400, { error: "provider_required" });
         await db.query(
           `INSERT INTO integrations (id, provider, name, status, config_sanitized) VALUES ($1,$2,$3,'not_configured','{}'::jsonb)`,
-          [id, provider, name || id]
+          [idLimpo, provider, name || idLimpo]
         );
       } else {
-        if (name) await db.query("UPDATE integrations SET name = $2, updated_at = NOW() WHERE id = $1", [id, name]);
-        if (provider) await db.query("UPDATE integrations SET provider = $2, updated_at = NOW() WHERE id = $1", [id, provider]);
+        if (name) await db.query("UPDATE integrations SET name = $2, updated_at = NOW() WHERE id = $1", [idLimpo, name]);
+        if (provider) await db.query("UPDATE integrations SET provider = $2, updated_at = NOW() WHERE id = $1", [idLimpo, provider]);
       }
 
-      await audit(db, { action: "integration_update", target: id, result: "allowed", actorKind: session.role, actorId: session.identityId });
+      await audit(db, { action: "integration_update", target: idLimpo, result: "allowed", actorKind: session.role, actorId: session.identityId });
 
-      const updated = await db.query("SELECT id, provider, name, status, config_sanitized, last_check_at, last_success_at, last_failure_at, last_error_sanitized, last_processed_at FROM integrations WHERE id = $1", [id]);
+      const updated = await db.query("SELECT id, provider, name, status, config_sanitized, last_check_at, last_success_at, last_failure_at, last_error_sanitized, last_processed_at FROM integrations WHERE id = $1", [idLimpo]);
 
       return ctx.json(res, 200, { integration: updated.rows[0] });
     } catch (e) {

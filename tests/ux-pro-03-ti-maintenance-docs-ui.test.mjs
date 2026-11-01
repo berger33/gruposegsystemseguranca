@@ -23,7 +23,7 @@ test('UX-PRO-03 PLT-18: a família deixa de ser órfã e ganha aba real no conso
   assert.match(consoleClient, /const MaintenanceDocClient=dynamic\(\(\)=>import\('\.\/MaintenanceDocClient'\)\)/);
   assert.match(consoleClient, /active==='manutencao'&&<MaintenanceDocClient\/>/);
   assert.match(page, /allowedRoles=\{\['ti','admin'\]\}/);
-  assert.match(consoleClient, /'saude','observacao','incidentes','integracoes','dependencias','manutencao'/);
+  assert.match(consoleClient, /'saude','observacao','incidentes','integracoes','integracao_catalogo','dependencias','manutencao'/);
 });
 
 test('UX-PRO-03 PLT-18: os dois contratos, os métodos e o papel admin/ti são preservados', () => {

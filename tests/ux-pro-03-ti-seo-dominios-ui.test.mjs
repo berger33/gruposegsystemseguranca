@@ -143,14 +143,14 @@ test("SEO: a tela não grava sitemap, não engole falha e não publica às cegas
   assert.ok(!/prompt\(/.test(componente), "nada de prompt()");
 });
 
-test("SEO: a aba existe, é dinâmica, está no grupo certo e o console tem 30 abas", () => {
+test("SEO: a aba existe, é dinâmica, está no grupo certo e o console tem 32 abas", () => {
   const declaracao = consoleTi.match(/const tabs=(\[[\s\S]*?\]) as const;/)?.[1] ?? "";
   const abas = [...declaracao.matchAll(/\['([a-z0-9_]+)','([^']+)'\]/g)].map(item => item[1]);
-  assert.equal(abas.length, 30, "as promoções levam o console de 26 para 30 abas");
+  assert.equal(abas.length, 32, "as promoções levam o console de 26 para 32 abas");
   assert.ok(abas.includes("seo"));
   assert.match(consoleTi, /const SeoClient=dynamic\(\(\)=>import\('\.\/SeoClient'\)\);/);
   assert.match(consoleTi, /\{active==='seo'&&<SeoClient\/>\}/);
-  assert.match(consoleTi, /name:'Experiência e comunicação',keys:\['avisos','visual','cliente','cms','seo','plt_notificacoes','emp_pwa'\]/);
+  assert.match(consoleTi, /name:'Experiência e comunicação',keys:\['avisos','visual','cliente','cms','seo','plt_notificacoes','emp_pwa','pub_faq'\]/);
   assert.match(pkg.scripts["test:unit"], /tests\/ux-pro-03-ti-seo-dominios-ui\.test\.mjs/);
 });
 

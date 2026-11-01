@@ -30,7 +30,7 @@ prova rota alguma. Workflows seguem **49**.
 
 ### Método
 
-Uma única passada por **1.671 arquivos** de `tests/`, `.github/workflows/`,
+Uma única passada por **1.681 arquivos** de `tests/`, `.github/workflows/`,
 `docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, a auditoria de 26/10, a
 fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
 meta-estado, não prova de requisito, e evitam auto-referência. De cada arquivo o gerador extrai todos os IDs com
@@ -43,8 +43,8 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 | Classe | Significado | IDs |
 |---|---|---|
 | `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **23** |
-| `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **118** |
-| `somente_documento` | só há citação em documentos | **81** |
+| `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **122** |
+| `somente_documento` | só há citação em documentos | **77** |
 | `somente_codigo` / `sem_evidencia_legivel` | — | **0** |
 
 > **Recontagem E23 (30/10/2026):** a tabela acima já não é a fotografia de 27/10
@@ -63,6 +63,22 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 > permanece **0/222**. Este texto **não** é ajustado à mão:
 > `tests/requisitos-222-inventory.test.mjs` compara as contagens, o núcleo duro e
 > o número de arquivos varridos com o JSON e falha na primeira divergência.
+>
+> **Recontagem E23 (01/11/2026, 18ª promoção):** 23/120/79 depois da promoção
+> de `PubFaqAssistedClient` (PUB-02/PUB-05, FAQ assistida e segmentos no
+> console de TI). `PUB-02` e `PUB-05` passam de `somente_documento` para
+> `mencionado_em_gate` porque o relatório e o cenário `browser UX-PRO-03
+> PUB-02/05` citam os dois IDs. Continua sendo **evidência textual**: os dois
+> requisitos seguem `pronto_local`, com `aceite_humano=nao_registrado` e
+> `reauditoria_integral=nao_executada`; 0/222 aceito.
+>
+> **Recontagem E23 (01/11/2026, 19ª promoção):** 23/122/77 depois da promoção de
+> `IntegrationsClient` (PLT-03, catálogo de integrações e teste de conexão).
+> `PLT-03` sai do núcleo duro (o relatório e o cenário `browser UX-PRO-03 PLT-03`
+> o citam) e `PLT-15` também, por ser citado no rodapé da mesma tela como dono
+> dos registros — **sem** tela nova para ele. Evidência textual; `a_revalidar`
+> sem menção em gate cai de 20 para **18**. Aceite humano e reauditoria integral
+> seguem **0/222**.
 
 > **Aviso central:** "mencionado em gate" **não é prova de jornada**. Um ID pode
 > ser citado num assert de vocabulário e ainda assim não ter jornada, RBAC,
@@ -77,30 +93,34 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 | `a_revalidar` (estado confirmado, 04/10) | **45** — a diferença de 1 é explícita, não corrigida |
 | `pronto_local` declarado | **164** |
 | `em_execucao` / `entregue` declarados | **6 / 6** |
-| **`a_revalidar` sem nenhuma menção em gate** | **20** |
+| **`a_revalidar` sem nenhuma menção em gate** | **18** |
 | Com aceite humano registrado | **0** |
 | Com reauditoria integral executada | **0** |
 
-### O núcleo duro (20 IDs)
+### O núcleo duro (18 IDs)
 
-`PLT-01`, `PLT-02`, `PLT-03`, `PLT-06`, `PLT-07`, `PLT-09`, `PLT-12`, `PLT-15`,
+`PLT-01`, `PLT-02`, `PLT-06`, `PLT-07`, `PLT-09`, `PLT-12`,
 `EXT-16`, `EXT-17`, `AI-01`…`AI-10`.
 
 São exatamente as famílias que a auditoria já apontava como bloqueadas:
 segurança/escopo de documentos, plataforma, EXT-16/17 (biometria e central,
 bloqueadas por privacidade) e **toda a frente de IA real** (F14).
 
-**Saíram do núcleo desde 27/10 (7 IDs, todos com relatório próprio):** `CLI-02` e
+**Saíram do núcleo desde 27/10 (9 IDs, todos com relatório próprio):** `PLT-03`
+(19ª promoção do console de TI, catálogo de integrações) e `PLT-15` (citado no
+rodapé da mesma tela como dono dos registros/jobs/webhooks) passaram a
+`mencionado_em_gate` — `PLT-15` **não** ganhou tela nova aqui, só a fronteira
+declarada. `CLI-02` e
 `CLI-03` passaram a `gate_nomeado`; `CLI-05`…`CLI-08` e `PLT-10` passaram a
 `mencionado_em_gate`. A família SEC recebeu um **mapa de reauditoria técnica com 35 âncoras em 5 execuções de gates** (`docs/REQUISITOS-SEC-REAUDITORIA-2026-10-28.md`), levando os 15 IDs SEC de `somente_documento` para `mencionado_em_gate`. Isso **não** significa que os
 requisitos foram implementados/revalidados: o relatório SEC marca
 `aceite_humano=nao_registrado` e `reauditoria_integral=nao_executada` em todos os
 15. A classe textual indica somente que há evidência técnica mapeada.
 
-Entre os 46 `a_revalidar`, **26 têm alguma menção em gate**: `SEC-03`, `SEC-07`,
+Entre os 46 `a_revalidar`, **28 têm alguma menção em gate**: `SEC-03`, `SEC-07`,
 `SEC-10`…`SEC-15`, `CLI-01`, `CLI-02` e `CLI-03` (`gate_nomeado`), `CLI-05`…`CLI-10`,
-`PLT-10`, `PLT-11`, `PLT-13`, `PLT-14`, `PLT-16`…`PLT-18`, `EXT-06` e `EXT-09`
-(`gate_nomeado`). Isso **não** os torna revalidados: a menção é um ponto de
+`PLT-03`, `PLT-10`, `PLT-11`, `PLT-13`, `PLT-14`, `PLT-15`, `PLT-16`…`PLT-18`,
+`EXT-06` e `EXT-09` (`gate_nomeado`). Isso **não** os torna revalidados: a menção é um ponto de
 partida, não um aceite.
 
 ## 4. RED → GREEN

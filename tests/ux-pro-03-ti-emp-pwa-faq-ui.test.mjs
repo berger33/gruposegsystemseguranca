@@ -204,14 +204,14 @@ test("EMP-18: o servidor ganhou caminho canônico e o PATCH deixou de responder 
   assert.match(api, /if \(!Number\.isInteger\(maxQueue\) \|\| maxQueue < 1 \|\| maxQueue > 200\)/);
 });
 
-test("EMP-18: a aba existe, é dinâmica, está no grupo certo e o console tem 30 abas", () => {
+test("EMP-18: a aba existe, é dinâmica, está no grupo certo e o console tem 32 abas", () => {
   const declaracao = consoleTi.match(/const tabs=(\[[\s\S]*?\]) as const;/)?.[1] ?? "";
   const abas = [...declaracao.matchAll(/\['([a-z0-9_]+)','([^']+)'\]/g)].map(item => item[1]);
-  assert.equal(abas.length, 30, "a promoção leva o console de 29 para 30 abas");
+  assert.equal(abas.length, 32, "a promoção leva o console de 29 para 32 abas");
   assert.ok(abas.includes("emp_pwa"));
   assert.match(consoleTi, /const EmpPwaClient=dynamic\(\(\)=>import\('\.\/EmpPwaClient'\)\);/);
   assert.match(consoleTi, /\{active==='emp_pwa'&&<EmpPwaClient\/>\}/);
-  assert.match(consoleTi, /name:'Experiência e comunicação',keys:\['avisos','visual','cliente','cms','seo','plt_notificacoes','emp_pwa'\]/);
+  assert.match(consoleTi, /name:'Experiência e comunicação',keys:\['avisos','visual','cliente','cms','seo','plt_notificacoes','emp_pwa','pub_faq'\]/);
   assert.match(pkg.scripts["test:unit"], /tests\/ux-pro-03-ti-emp-pwa-faq-ui\.test\.mjs/);
 });
 

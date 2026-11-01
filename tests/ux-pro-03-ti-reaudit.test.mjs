@@ -56,10 +56,16 @@ const tabsDeclaration = consoleSrc.match(/const tabs=(\[[\s\S]*?\]) as const;/)?
 // escreve as mesmas tabelas em `/admin/marcelo`; em 31/10 a 28ª aba promoveu
 // PUB-10 (`OriginMetricsClient`), que não tem superfície equivalente fora de
 // `/admin/ti` — nenhum arquivo de `src/app` fora do console chama aquelas três
-// rotas). Toda nova
+// rotas). Em 01/11 a 30ª aba promoveu EMP-18/19 (`EmpPwaClient`, caminho
+// canônico fora da borda legada de RH) e a 31ª promoveu PUB-02/PUB-05
+// (`PubFaqAssistedClient`: regras da FAQ assistida, transferência humana e
+// segmentos do site — quatro rotas `/api/admin/*` sem nenhum outro consumidor
+// em `src/app`) e a 32ª promoveu PLT-03 (`IntegrationsClient`: catálogo de
+// integrações e teste de conexão — duas rotas `/api/admin/integrations*` sem
+// nenhum outro consumidor em `src/app`). Toda nova
 // ABA exige atualizar esta constante E o inventário/CSV — é o atrito que a
 // guarda deve impor.
-const EXPECTED_TABS = 30;
+const EXPECTED_TABS = 32;
 const tabKeys = [...tabsDeclaration.matchAll(/\['([a-z0-9_]+)','([^']+)'\]/g)].map(match => match[1]);
 const dynamicNames = [...consoleSrc.matchAll(/const\s+(\w+)\s*=\s*dynamic\(\(\)\s*=>\s*import\(['"]\.\/([^'"]+)['"]\)\)/g)].map(match => match[2]);
 const renders = [...consoleSrc.matchAll(/active==='([a-z0-9_]+)'&&<(\w+)\/>/g)].map(match => ({ key: match[1], component: match[2] }));
@@ -88,7 +94,7 @@ function importersOf(base, selfPath) {
     .map(([file]) => path.relative(root, file));
 }
 
-test('UX-PRO-03 reauditoria: as 28 abas montadas têm teste focal e todos os endpoints despachados', () => {
+test('UX-PRO-03 reauditoria: as 32 abas montadas têm teste focal e todos os endpoints despachados', () => {
   assert.equal(renders.length, EXPECTED_TABS, 'toda aba declarada precisa estar renderizada');
   for (const { key, component } of renders) {
     const source = componentSources.get(path.join(tiDir, `${component}.tsx`));

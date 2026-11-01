@@ -33,7 +33,7 @@ import { createAdminRbacApi } from "./src/server/admin-rbac-api.mjs";
 import { createAdminAuditApi } from "./src/server/admin-audit-api.mjs";
 import { createNotificationQueue } from "./src/server/notification-queue.mjs";
 import { createAdminNotificationsApi } from "./src/server/admin-notifications-api.mjs";
-import { createIntegrationsApi } from "./src/server/integrations-api.mjs";
+import { createIntegrationsApi, INTEGRATION_ROUTE_SUBPATHS } from "./src/server/integrations-api.mjs";
 import { createServiceCatalogApi } from "./src/server/service-catalog-api.mjs";
 import { createFaqApi } from "./src/server/faq-api.mjs";
 import { createCrmApi } from "./src/server/crm-api.mjs";
@@ -2806,7 +2806,15 @@ async function routeApi(req, res) {
   const integrationTestMatch = url.pathname.match(/^\/api\/admin\/integrations\/([^\/]+)\/test$/i);
   if (integrationTestMatch) return integrationsApi.handleTest(req, res, integrationTestMatch[1]);
   const integrationMatch = url.pathname.match(/^\/api\/admin\/integrations\/([^\/]+)$/i);
-  if (integrationMatch) return integrationsApi.handleUpdate(req, res, integrationMatch[1]);
+  // PLT-03: os subcaminhos da aba viva "Registros de integração" são literais
+  // (`/jobs`, `/logs`, `/webhooks`, `/reconciliation`) e ficam declarados mais
+  // abaixo neste mesmo roteador. Como o padrão `/:id` casa primeiro, os quatro
+  // caíam em `handleUpdate` (que só aceita PUT/PATCH) e respondiam **405** —
+  // quatro painéis de uma aba já montada estavam mortos. O `Set` é o mesmo do
+  // módulo, para que um `id` reservado não possa ser criado por PATCH.
+  if (integrationMatch && !INTEGRATION_ROUTE_SUBPATHS.has(integrationMatch[1].toLowerCase())) {
+    return integrationsApi.handleUpdate(req, res, integrationMatch[1]);
+  }
   if (url.pathname === "/api/catalog" || url.pathname === "/api/services") return serviceCatalogApi.handleList(req, res, url);
   const catalogMatch = url.pathname.match(/^\/api\/catalog\/([^\/]+)$/i) || url.pathname.match(/^\/api\/services\/([^\/]+)$/i);
   if (catalogMatch) return serviceCatalogApi.handleGet(req, res, catalogMatch[1]);
