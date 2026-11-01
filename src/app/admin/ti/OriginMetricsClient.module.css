@@ -1,0 +1,35 @@
+/* PUB-10 no console de TI: tokens compartilhados, sem hex, foco visível. */
+.wrap{display:grid;gap:1rem;min-width:0;margin-top:1.25rem;padding:clamp(.85rem,2vw,1.5rem);border:1px solid var(--ux-color-border);border-radius:16px;background:var(--ux-color-surface);color:var(--ux-color-text);box-shadow:var(--ux-shadow-card)}
+.head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:1rem;min-width:0}
+.head h2{margin:.2rem 0 .4rem;font-size:clamp(1.35rem,2.1vw,1.75rem)}
+.lead{max-width:82ch;margin:0;color:var(--ux-color-muted);font-size:.86rem;line-height:1.55;overflow-wrap:anywhere}
+.headActions{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;min-width:0}
+.stamp{padding:.32rem .6rem;border:1px solid var(--ux-color-border);border-radius:999px;background:var(--ux-color-canvas);font-size:.78rem;font-weight:650;white-space:nowrap}
+.headActions button{min-height:36px;padding:.45rem .75rem;border:1px solid var(--ux-color-border);border-radius:9px;background:var(--ux-color-surface);color:var(--ux-color-text);font:inherit;font-weight:650;cursor:pointer}
+.headActions button:hover:not(:disabled){border-color:var(--ux-color-brand)}
+.headActions button:disabled{cursor:wait;opacity:.65}
+.ok,.alert{margin:0;padding:.7rem .8rem;border:1px solid var(--ux-color-border);border-left-width:4px;border-radius:10px;background:var(--ux-color-canvas);font-size:.85rem;line-height:1.5;overflow-wrap:anywhere}
+.ok{border-color:var(--ux-color-brand)}
+.alert{border-color:var(--ux-color-warning)}
+.card{display:grid;gap:.6rem;min-width:0;padding:clamp(.85rem,1.7vw,1.15rem);border:1px solid var(--ux-color-border);border-radius:14px;background:var(--ux-color-canvas)}
+.card h3{margin:0;font-size:1rem}
+.hint{margin:0;color:var(--ux-color-muted);font-size:.79rem;line-height:1.45;overflow-wrap:anywhere}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr));gap:.55rem;min-width:0}
+.field{display:grid;gap:.3rem;min-width:0;font-size:.8rem;font-weight:650}
+.field input,.field select{width:100%;min-height:40px;box-sizing:border-box;padding:.5rem .6rem;border:1px solid var(--ux-color-border);border-radius:8px;background:var(--ux-color-surface);color:var(--ux-color-text);font:inherit;font-size:.82rem;font-weight:400}
+.err{color:var(--ux-color-warning);font-size:.75rem;font-weight:600}
+.form button{grid-column:1/-1;min-height:40px;padding:.5rem .8rem;border:1px solid var(--ux-color-border);border-radius:8px;background:var(--ux-color-surface);color:var(--ux-color-text);font:inherit;font-weight:650;font-size:.82rem;cursor:pointer}
+.form button:hover:not(:disabled){border-color:var(--ux-color-brand)}
+.form button:disabled{cursor:wait;opacity:.65}
+.list{display:grid;gap:.3rem;margin:0;padding:0;list-style:none;font-size:.78rem;max-height:16rem;overflow:auto}
+.list li{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;min-width:0;padding:.4rem .55rem;border-left:2px solid var(--ux-color-border);background:var(--ux-color-surface);overflow-wrap:anywhere}
+.list li[data-situacao="concluido_sem_vencedor"],.list li[data-situacao="desconhecida"]{border-left-color:var(--ux-color-warning)}
+.list button{min-height:32px;padding:.25rem .5rem;border:1px solid var(--ux-color-border);border-radius:7px;background:var(--ux-color-canvas);color:var(--ux-color-text);font:inherit;font-size:.75rem;font-weight:650;cursor:pointer}
+.list button:hover:not(:disabled){border-color:var(--ux-color-brand)}
+.list button:disabled{cursor:wait;opacity:.65}
+.stateNote{margin:0;padding:.45rem .6rem;border:1px dashed var(--ux-color-border);border-radius:8px;background:var(--ux-color-surface);color:var(--ux-color-muted);font-size:.78rem;line-height:1.45;overflow-wrap:anywhere}
+.stateNote[data-situacao="negado"],.stateNote[data-situacao="invalido"]{border-style:solid;border-color:var(--ux-color-warning);color:var(--ux-color-text)}
+.foot{margin:0;color:var(--ux-color-muted);font-size:.78rem;line-height:1.5}
+.wrap :is(button,input,select):focus-visible{outline:3px solid var(--ux-color-brand);outline-offset:2px}
+@media(max-width:900px){.form{grid-template-columns:repeat(auto-fit,minmax(min(100%,11rem),1fr))}}
+@media(max-width:740px){.head{flex-direction:column}.headActions{width:100%;justify-content:space-between}.card{padding:.8rem}.form{grid-template-columns:minmax(0,1fr)}.list{max-height:none}}

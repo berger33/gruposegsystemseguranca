@@ -3,25 +3,25 @@
   "resumo": "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
   "data": "2026-10-27",
   "criterio": "promover por area somente com prova (decisao de 02/10); prova estatica nao substitui gate de navegador nem aceite humano",
-  "tiConsoleSha256": "176794ddbd6988d5ba99d8ffb51dd4616affda5ca33a78365c1bc1d1073caa02",
+  "tiConsoleSha256": "bdd9716afdd5f39d2bae99a6357a0e657237180a528fdfcd840e69ae2d376a4d",
   "pageSha256": "360bf2564469679a4cc7c0b6b9274f05557188f701a3f3b89649ce4d70d56313",
   "total": 84,
-  "abas": 27,
-  "importsDinamicos": 27,
+  "abas": 28,
+  "importsDinamicos": 28,
   "console": {
-    "total": 27,
-    "comProva": 27,
+    "total": 28,
+    "comProva": 28,
     "lacunas": []
   },
   "workspace": {
     "total": 25
   },
   "orfos": {
-    "total": 32,
+    "total": 31,
     "promovidosSemSairDaClassificacao": 0
   },
   "promocoesComProva": {
-    "total": 14,
+    "total": 15,
     "todasMontadas": true,
     "detalhes": [
       {
@@ -107,6 +107,12 @@
         "aba": "seo",
         "familia": "PUB-08 SEO técnico: configurações por caminho com noindex preservado, redirecionamentos, prévia derivada de sitemap (a rota deixou de aceitar POST) e verificação de domínio — declarando que publicar é inalcançável nesta entrega porque o servidor recusa marcar domínio como verificado sem DNS/HTTP real",
         "relatorio": "docs/UX-PRO-03-PROMOCAO-SEO-DOMINIOS-2026-10-31.md"
+      },
+      {
+        "componente": "OriginMetricsClient.tsx",
+        "aba": "pub_metricas",
+        "familia": "PUB-10 mensuração de origem, conversão e testes A/B: métricas com minimização e canal do enum do banco, eventos de conversão (ingestão pública, lead com FK e hash que o servidor NÃO produz nesta entrega) e ciclo de A/B com motivo real no histórico — a transição voltou a funcionar depois de corrigir o 42P08 que fazia todo PATCH responder 500",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-MENSURACAO-ORIGEM-AB-2026-10-31.md"
       }
     ]
   },

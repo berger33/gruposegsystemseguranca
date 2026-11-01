@@ -124,6 +124,12 @@ const PROMOCOES_COM_PROVA = [
     familia: 'PUB-08 SEO técnico: configurações por caminho com noindex preservado, redirecionamentos, prévia derivada de sitemap (a rota deixou de aceitar POST) e verificação de domínio — declarando que publicar é inalcançável nesta entrega porque o servidor recusa marcar domínio como verificado sem DNS/HTTP real',
     relatorio: 'docs/UX-PRO-03-PROMOCAO-SEO-DOMINIOS-2026-10-31.md',
   },
+  {
+    componente: 'OriginMetricsClient.tsx',
+    aba: 'pub_metricas',
+    familia: 'PUB-10 mensuração de origem, conversão e testes A/B: métricas com minimização e canal do enum do banco, eventos de conversão (ingestão pública, lead com FK e hash que o servidor NÃO produz nesta entrega) e ciclo de A/B com motivo real no histórico — a transição voltou a funcionar depois de corrigir o 42P08 que fazia todo PATCH responder 500',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-MENSURACAO-ORIGEM-AB-2026-10-31.md',
+  },
 ];
 
 const sha256 = value => createHash('sha256').update(value).digest('hex');

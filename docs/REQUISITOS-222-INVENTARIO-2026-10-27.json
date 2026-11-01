@@ -65,7 +65,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1656,
+    "arquivosVarridos": 1661,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -870,6 +870,9 @@
       "arquivos_gate": [
         "tests/l04-delivery.integration.test.mjs",
         "tests/ux-crm-workspace.integration.test.mjs",
+        "tests/ux-portal-workspace.integration.test.mjs",
+        "tests/ux-pro-03-ti-mensuracao-origem-ui.test.mjs",
+        "tests/ux-pro-03-ti-reaudit.test.mjs",
         "tests/ux-pro-06-metricas-origem-estados.test.mjs"
       ],
       "arquivos_documento": [
@@ -883,15 +886,18 @@
         "docs/PROMPT-CONTINUACAO-CRM-TAREFAS.md"
       ],
       "arquivos_codigo": [
+        "scripts/ux-pro-03-ti-inventory.mjs",
         "src/app/admin/leads/OriginMetricsPanel.tsx",
         "src/app/admin/leads/origin-metrics-state.ts",
+        "src/app/admin/ti/OriginMetricsClient.module.css",
         "src/app/admin/ti/OriginMetricsClient.tsx",
+        "src/app/admin/ti/pub-metrics-state.ts",
         "src/lib/public-lead-validation.mjs",
         "src/server/crm-api.mjs"
       ],
-      "ocorrencias_gate": 9,
-      "ocorrencias_documento": 53,
-      "ocorrencias_codigo": 6,
+      "ocorrencias_gate": 25,
+      "ocorrencias_documento": 59,
+      "ocorrencias_codigo": 10,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -5438,7 +5444,7 @@
         "src/server/adm-panel-api.mjs"
       ],
       "ocorrencias_gate": 4,
-      "ocorrencias_documento": 19,
+      "ocorrencias_documento": 20,
       "ocorrencias_codigo": 12,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"

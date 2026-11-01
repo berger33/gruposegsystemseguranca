@@ -9374,3 +9374,267 @@ test("browser UX-PRO-03 SEO: SEO e domínios (noindex preservado, redirects, pr�
   }
   for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
 });
+
+// UX-PRO-03 (15ª promoção) — "Mensuração de origem e A/B": o PUB-10 deixa de ser órfão.
+// O protótipo engolia 403 em lista vazia, trocava o status do A/B por botões
+// fixos em qualquer linha, gravava motivo constante e pedia o vencedor por
+// `prompt()`. O servidor confere o VALOR do status, não a ORDEM — a tela diz isso.
+function pubMetricsInjecao(cfg) {
+  const original = window.fetch.bind(window);
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    const caminho = url.replace(location.origin, "").split("?")[0];
+    const metodo = ((init && init.method) || "GET").toUpperCase();
+    if (metodo === "GET" && caminho === "/api/admin/origin-metrics" && cfg.metricas === "negado") {
+      return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } });
+    }
+    return original(input, init);
+  };
+}
+
+test("browser UX-PRO-03 PUB-10: mensuração de origem e A/B (minimização, ingestão pública, ciclo local, negado, larguras e noite)", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const rh = await provisionStaff(pool, { role: "rh" });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const sufixo = randomUUID().slice(0, 8);
+  const origem = `qa-site-${sufixo}`;
+  const chaveAb = `qa-ab-${sufixo}`;
+  const ipSintetico = `198.51.100.${Number.parseInt(sufixo.slice(0, 2), 16) % 250}`;
+  const evidence = process.env.UX_PORTAL_EVIDENCE_DIR || "";
+  const entries = [];
+
+  // --- servidor: papéis, faixas e o que é ingestão pública ---------------
+  assert.equal((await api("/api/admin/origin-metrics")).status, 401, "anônimo recebe 401 na leitura");
+  assert.equal((await api("/api/admin/origin-metrics", { cookie: rhCookie })).status, 401,
+    "papel sem permissão recebe 401 unauthorized (não 403) nesta rota — a tela declara isso");
+  assert.equal((await api("/api/admin/origin-metrics", { cookie: tiCookie })).status, 200);
+  assert.equal((await api("/api/admin/conversion-events", { cookie: tiCookie })).status, 200);
+  assert.equal((await api("/api/admin/ab-tests", { cookie: tiCookie })).status, 200);
+
+  const excedido = await api("/api/admin/origin-metrics", { method: "POST", cookie: tiCookie,
+    body: { origin: origem, period_start: "2026-10-01", period_end: "2026-10-31", total_leads: 10, converted_leads: 11 } });
+  assert.equal(excedido.status, 400);
+  assert.equal(excedido.body.error, "converted_exceeds_total");
+
+  const metricaCriada = await api("/api/admin/origin-metrics", { method: "POST", cookie: tiCookie,
+    body: { origin: origem, campaign: "qa-campanha", channel: "organic", period_start: "2026-10-01", period_end: "2026-10-31",
+      total_leads: 40, converted_leads: 10, total_opportunities: 4, total_contracts: 1, notes: "Métrica sintética do gate de mensuração." } });
+  assert.equal(metricaCriada.status, 201);
+  assert.equal(metricaCriada.body.is_minimized, true, "minimização é decisão do servidor");
+  assert.equal(Number(metricaCriada.body.converted_leads), 10);
+  const duplicada = await api("/api/admin/origin-metrics", { method: "POST", cookie: tiCookie,
+    body: { origin: origem, campaign: "qa-campanha", channel: "organic", period_start: "2026-10-01", period_end: "2026-10-31", total_leads: 1, converted_leads: 0 } });
+  assert.equal(duplicada.status, 409);
+  assert.equal(duplicada.body.error, "duplicate_period_origin");
+
+  // Ingestão pública: POST de evento aceita anônimo por desenho; a leitura não.
+  const eventoSemSessao = await api("/api/admin/conversion-events", { method: "POST",
+    body: { event_type: "lead_received", origin: origem, channel: "organic", ip: ipSintetico, user_agent: "gate-agent/1.0" } });
+  assert.equal(eventoSemSessao.status, 201, "POST de evento é ingestão pública por desenho");
+  assert.equal(eventoSemSessao.body.is_minimized, true);
+  // Defeito medido: `hashValue` do servidor usa `require('node:crypto')` dentro
+  // de módulo ESM, o erro é engolido e o INSERT grava NULL. O evento é aceito,
+  // mas NENHUM hash é produzido — a tela declara isso em vez de prometer hash.
+  assert.equal(eventoSemSessao.body.ip_hash, null, "o servidor não produz hash nesta entrega");
+  assert.equal(eventoSemSessao.body.user_agent_hash, null);
+  assert.equal(await api("/api/admin/conversion-events").then(r => r.status), 401, "a leitura do mesmo evento exige sessão");
+
+  const testeCriado = await api("/api/admin/ab-tests", { method: "POST", cookie: tiCookie,
+    body: { test_key: chaveAb, hypothesis: "Retorno rápido no formulário aumenta a conversão do site institucional.",
+      description: "Teste sintético criado pelo gate de mensuração.", metric_name: "conversion_rate",
+      traffic_required: 100, treatment: "Dados minimizados, sem IP original, apenas hash SHA-256.", variant_a: {}, variant_b: {} } });
+  assert.equal(testeCriado.status, 201);
+  assert.equal(testeCriado.body.status, "rascunho");
+  const vencedorInvalido = await api("/api/admin/ab-tests", { method: "PATCH", cookie: tiCookie,
+    body: { id: testeCriado.body.id, status: "concluido", winner: "C", reason: "Conclusão sintética com vencedor inválido." } });
+  assert.equal(vencedorInvalido.status, 400);
+  assert.equal(vencedorInvalido.body.error, "invalid_winner");
+  const motivoCurto = await api("/api/admin/ab-tests", { method: "PATCH", cookie: tiCookie,
+    body: { id: testeCriado.body.id, status: "aprovado", reason: "curto" } });
+  assert.equal(motivoCurto.status, 400);
+  assert.equal(motivoCurto.body.error, "invalid_reason");
+  // O servidor NÃO impõe ordem: aprovar e voltar para rascunho é aceito. Isso é
+  // o que a tela declara — a sequência é política local, não garantia da API.
+  assert.equal((await api("/api/admin/ab-tests", { method: "PATCH", cookie: tiCookie,
+    body: { id: testeCriado.body.id, status: "aprovado", reason: "Aprovação sintética do gate de mensuração." } })).status, 200);
+  const retrocesso = await api("/api/admin/ab-tests", { method: "PATCH", cookie: tiCookie,
+    body: { id: testeCriado.body.id, status: "rascunho", reason: "Retrocesso sintético provando ausência de máquina no servidor." } });
+  assert.equal(retrocesso.status, 200, "a API aceita retrocesso: a tela é quem oferece só o ciclo");
+  assert.equal(retrocesso.body.status, "rascunho");
+
+  const comPagina = async (opcoes, acoes) => {
+    const browser = await launchBrowser();
+    try {
+      const context = await browser.newContext({ viewport: { width: opcoes.width ?? 1440, height: opcoes.height ?? 900 }, locale: "pt-BR" });
+      const cookie = opcoes.cookie ?? tiCookie;
+      await context.addCookies(cookie.split("; ").filter(Boolean).map(item => {
+        const separador = item.indexOf("=");
+        return { name: item.slice(0, separador), value: item.slice(separador + 1), url: baseUrl };
+      }));
+      const page = await context.newPage();
+      page.setDefaultTimeout(45_000);
+      page.setDefaultNavigationTimeout(90_000);
+      await page.addInitScript(pubMetricsInjecao, Object.assign({ metricas: "pass" }, opcoes.injecao || {}));
+      await page.goto(`${baseUrl}/admin/ti`, { waitUntil: "domcontentloaded" });
+      if (cookie === tiCookie) {
+        await page.getByRole("button", { name: "Mensuração de origem e A/B" }).click();
+        await page.getByTestId("pub-mensuracao").waitFor();
+        await page.waitForFunction(() => /Lido às/.test(document.querySelector('[data-testid="pub-hora"]')?.textContent || ""), null, { timeout: 45_000 });
+      }
+      const resultado = await acoes(page, context);
+      await context.close();
+      return resultado;
+    } finally { await browser.close(); }
+  };
+  const evidenciar = async (page, { estado, nome, width, theme }) => {
+    await capture(page, nome);
+    const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    entries.push({ viewport: width, theme, estado, screenshot: evidence ? `${nome}.png` : null, sobraDocumentoPx: sobra, problems: [] });
+    return sobra;
+  };
+
+  // --- 1) leitura nas três larguras e à noite ----------------------------
+  for (const width of [320, 390, 1440]) {
+    await comPagina({ width }, async (page) => {
+      await page.getByTestId("pub-card-ab").waitFor();
+      assert.match(await page.getByTestId("pub-aviso-ordem").innerText(), /valor do status, n[ãa]o a sequ[êe]ncia/i);
+      assert.match(await page.getByTestId("pub-aviso-ingestao").innerText(), /ingest[ãa]o p[úu]blica/i);
+      await page.getByTestId(`pub-metrica-${origem}`).waitFor();
+      assert.match(await page.getByTestId(`pub-metrica-${origem}`).innerText(), /25[.,]00%/);
+      const sobra = await evidenciar(page, { estado: "autorizado", nome: `pub-metricas-${width}-day`, width, theme: "day" });
+      assert.ok(sobra <= 1, `mensuração transborda ${sobra}px em ${width}px`);
+    });
+  }
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId("pub-card-ab").waitFor();
+    await page.locator('[data-admin-theme-toggle="true"]').click();
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === "night");
+    await page.getByTestId("pub-hora").waitFor();
+    const sobra = await evidenciar(page, { estado: "autorizado", nome: "pub-metricas-1440-night", width: 1440, theme: "night" });
+    assert.ok(sobra <= 1, `mensuração transborda ${sobra}px à noite`);
+  });
+
+  // --- 2) criar métrica e evento pela tela -------------------------------
+  const origemNova = `qa-nova-${sufixo}`;
+  await comPagina({ width: 1440 }, async (page) => {
+    const card = page.getByTestId("pub-card-metricas");
+    await card.getByLabel("origem da métrica").fill(origemNova);
+    await card.getByLabel("canal").selectOption("organic");
+    await card.getByLabel("início da métrica").fill("2026-10-01");
+    await card.getByLabel("fim da métrica").fill("2026-10-31");
+    await card.getByLabel("total de leads").fill("20");
+    await card.getByLabel("leads convertidos").fill("5");
+    await card.getByRole("button", { name: /Registrar métrica/ }).click();
+    await page.getByTestId("pub-ok").waitFor();
+    assert.match(await page.getByTestId("pub-ok").innerText(), /minimiza/i);
+    await page.getByTestId(`pub-metrica-${origemNova}`).waitFor();
+    const linha = await pool.query("SELECT is_minimized, total_leads, converted_leads FROM pub_origin_metrics WHERE origin = $1", [origemNova]);
+    assert.equal(linha.rows[0].is_minimized, true);
+    assert.equal(Number(linha.rows[0].total_leads), 20);
+    await evidenciar(page, { estado: "metrica-criada", nome: "pub-metricas-1440-day-criada", width: 1440, theme: "day" });
+  });
+
+  await comPagina({ width: 1440 }, async (page) => {
+    const card = page.getByTestId("pub-card-eventos");
+    await card.getByLabel("origem do evento").fill(origemNova);
+    // UUID torto é recusado ANTES do POST (o servidor viraria 500 na coluna uuid).
+    await card.getByLabel("lead do evento").fill("nao-e-uuid");
+    await card.getByRole("button", { name: /Registrar evento/ }).click();
+    await page.getByText(/UUID v[áa]lido/i).waitFor();
+    assert.equal((await pool.query("SELECT 1 FROM pub_conversion_events WHERE origin = $1", [origemNova])).rowCount, 0,
+      "evento com lead inválido não grava nada");
+    // UUID bem formado, mas inexistente: a FK de public_leads não perdoa. O
+    // servidor responde erro de servidor e a tela NÃO pode dizer que gravou.
+    await card.getByLabel("lead do evento").fill("f2c6a1d4-0b6f-4c11-9a1a-1f2b3c4d5e6f");
+    await card.getByRole("button", { name: /Registrar evento/ }).click();
+    await page.getByTestId("pub-erro").waitFor();
+    assert.match(await page.getByTestId("pub-erro").innerText(), /servidor falhou|nada foi confirmado/i);
+    assert.equal((await pool.query("SELECT 1 FROM pub_conversion_events WHERE origin = $1", [origemNova])).rowCount, 0,
+      "lead inexistente não grava evento");
+    await card.getByLabel("lead do evento").fill("");
+    await card.getByLabel("IP do evento").fill(ipSintetico);
+    await card.getByRole("button", { name: /Registrar evento/ }).click();
+    await page.getByTestId("pub-ok").waitFor();
+    assert.match(await page.getByTestId("pub-ok").innerText(), /ip_hash nulo|nada de hash/i,
+      "a tela não pode afirmar hash que o servidor não produziu");
+    assert.doesNotMatch(await page.getByTestId("pub-ok").innerText(), /em hash SHA-256/i);
+    const evento = await pool.query("SELECT ip_hash, user_agent_hash, is_minimized FROM pub_conversion_events WHERE origin = $1", [origemNova]);
+    assert.equal(evento.rowCount, 1);
+    assert.equal(evento.rows[0].ip_hash, null, "nada de hash é gravado nesta entrega");
+    assert.equal(evento.rows[0].is_minimized, true);
+    assert.match(await page.getByTestId("pub-aviso-hash").innerText(), /nulos/i);
+    await page.waitForFunction(() => /sem hash/i.test(document.querySelector('[data-testid="pub-lista-eventos"]')?.textContent || ""), null, { timeout: 45_000 });
+    // O valor digitado permanece no campo (é o formulário do operador), mas a
+    // lista que vem do servidor não pode devolvê-lo: só o estado do hash.
+    assert.ok(!(await page.getByTestId("pub-lista-eventos").innerText()).includes(ipSintetico),
+      "o IP não pode voltar na lista lida do servidor");
+    await evidenciar(page, { estado: "evento-criado", nome: "pub-metricas-1440-day-evento", width: 1440, theme: "day" });
+  });
+
+  // --- 3) ciclo do A/B: só os passos permitidos, motivo real ------------
+  const chaveNova = `qa-novo-${sufixo}`;
+  await comPagina({ width: 1440 }, async (page) => {
+    const card = page.getByTestId("pub-card-ab");
+    await card.getByLabel("chave do teste").fill(chaveNova);
+    await card.getByLabel("hipótese do teste").fill("Botão de retorno mais visível aumenta a conversão do formulário.");
+    await card.getByLabel("descrição do teste").fill("Teste sintético criado pela interface do console.");
+    await card.getByLabel("tráfego exigido").fill("150");
+    await card.getByLabel("tratamento de dados").fill("Dados minimizados, sem IP original, com hash SHA-256.");
+    await card.getByLabel("motivo do teste").fill("Transição sintética registrada pela interface.");
+    await card.getByRole("button", { name: /Criar teste em rascunho/ }).click();
+    await page.getByTestId("pub-ok").waitFor();
+    const linha = page.getByTestId(`pub-ab-${chaveNova}`);
+    await linha.waitFor();
+    assert.match(await linha.innerText(), /rascunho/i);
+    assert.equal(await page.getByTestId(`pub-avancar-${chaveNova}-em_execucao`).count(), 0, "rascunho não pula para execução");
+    assert.equal(await page.getByTestId(`pub-avancar-${chaveNova}-concluido`).count(), 0, "rascunho não conclui");
+    assert.equal(await page.getByTestId(`pub-avancar-${chaveNova}-em_revisao`).count(), 1);
+    await page.getByTestId(`pub-avancar-${chaveNova}-em_revisao`).click();
+    await page.getByTestId("pub-ok").waitFor();
+    assert.match(await page.getByTestId("pub-ok").innerText(), /motivo gravado/i);
+    await page.waitForFunction(key => /em revis/i.test(document.querySelector(`[data-testid="pub-ab-${key}"]`)?.textContent || ""), chaveNova, { timeout: 45_000 });
+    const banco = await pool.query("SELECT status FROM pub_ab_tests WHERE test_key = $1", [chaveNova]);
+    assert.equal(banco.rows[0].status, "em_revisao");
+    const historico = await pool.query(
+      "SELECT reason FROM pub_ab_test_history WHERE test_id = (SELECT id FROM pub_ab_tests WHERE test_key = $1) ORDER BY created_at", [chaveNova]);
+    assert.equal(historico.rowCount, 2, "criação + transição registradas no histórico");
+    assert.equal(historico.rows[1].reason, "Transição sintética registrada pela interface.",
+      "o motivo do histórico é o que o operador digitou, não texto fixo do código");
+    await evidenciar(page, { estado: "ab-transicionado", nome: "pub-metricas-1440-day-ab", width: 1440, theme: "day" });
+  });
+
+  // --- 4) negação não vira lista vazia ----------------------------------
+  await comPagina({ width: 1440, injecao: { metricas: "negado" } }, async (page) => {
+    const estadoLista = page.getByTestId("pub-estado-metricas");
+    await estadoLista.waitFor();
+    assert.equal(await estadoLista.getAttribute("data-situacao"), "negado");
+    assert.doesNotMatch(await page.getByTestId("pub-card-metricas").innerText(), /Nenhum registro/i, "negado não é vazio");
+    await evidenciar(page, { estado: "negado", nome: "pub-metricas-1440-day-negado", width: 1440, theme: "day" });
+  });
+
+  // --- 5) papel negado no gate ------------------------------------------
+  await comPagina({ cookie: rhCookie, width: 1440 }, async (page) => {
+    await page.locator('[data-admin-gate="forbidden"]').waitFor();
+    assert.equal(await page.getByTestId("pub-mensuracao").count(), 0, "rh não monta a mensuração");
+    await evidenciar(page, { estado: "papel-negado", nome: "pub-metricas-1440-day-rh", width: 1440, theme: "day" });
+  });
+
+  if (evidence) {
+    await mkdir(evidence, { recursive: true });
+    await writeFile(path.join(evidence, "resumo.json"), JSON.stringify({
+      stage: "UX-PRO-03 · PUB-10 · Mensuração de origem e A/B na aba do TiConsole (/admin/ti)",
+      generatedBy: "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+      route: "/admin/ti",
+      fatia: "15ª promoção com prova — OriginMetricsClient deixa de ser órfão",
+      entries,
+      limites: [
+        "A rota de eventos aceita POST público por desenho; a tela declara isso e as leituras exigem sessão admin/ti.",
+        "O servidor confere o valor do status do A/B, não a ordem: a sequência é política desta tela.",
+        "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+        "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado.",
+      ],
+    }, null, 2));
+  }
+  for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
+});

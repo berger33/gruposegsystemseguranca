@@ -143,10 +143,10 @@ test("SEO: a tela não grava sitemap, não engole falha e não publica às cegas
   assert.ok(!/prompt\(/.test(componente), "nada de prompt()");
 });
 
-test("SEO: a aba existe, é dinâmica, está no grupo certo e o console tem 27 abas", () => {
+test("SEO: a aba existe, é dinâmica, está no grupo certo e o console tem 28 abas", () => {
   const declaracao = consoleTi.match(/const tabs=(\[[\s\S]*?\]) as const;/)?.[1] ?? "";
   const abas = [...declaracao.matchAll(/\['([a-z0-9_]+)','([^']+)'\]/g)].map(item => item[1]);
-  assert.equal(abas.length, 27, "a promoção leva o console de 26 para 27 abas");
+  assert.equal(abas.length, 28, "as promoções levam o console de 26 para 28 abas");
   assert.ok(abas.includes("seo"));
   assert.match(consoleTi, /const SeoClient=dynamic\(\(\)=>import\('\.\/SeoClient'\)\);/);
   assert.match(consoleTi, /\{active==='seo'&&<SeoClient\/>\}/);

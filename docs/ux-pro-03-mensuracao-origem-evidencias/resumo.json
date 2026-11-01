@@ -1,0 +1,86 @@
+{
+  "stage": "UX-PRO-03 · PUB-10 · Mensuração de origem e A/B na aba do TiConsole (/admin/ti)",
+  "generatedBy": "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+  "route": "/admin/ti",
+  "fatia": "15ª promoção com prova — PubMetricsClient deixa de ser órfão",
+  "entries": [
+    {
+      "viewport": 320,
+      "theme": "day",
+      "estado": "autorizado",
+      "screenshot": "pub-metricas-320-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 390,
+      "theme": "day",
+      "estado": "autorizado",
+      "screenshot": "pub-metricas-390-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "autorizado",
+      "screenshot": "pub-metricas-1440-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "night",
+      "estado": "autorizado",
+      "screenshot": "pub-metricas-1440-night.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "metrica-criada",
+      "screenshot": "pub-metricas-1440-day-criada.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "evento-criado",
+      "screenshot": "pub-metricas-1440-day-evento.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "ab-transicionado",
+      "screenshot": "pub-metricas-1440-day-ab.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "negado",
+      "screenshot": "pub-metricas-1440-day-negado.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "papel-negado",
+      "screenshot": "pub-metricas-1440-day-rh.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    }
+  ],
+  "limites": [
+    "A rota de eventos aceita POST público por desenho; a tela declara isso e as leituras exigem sessão admin/ti.",
+    "O servidor confere o valor do status do A/B, não a ordem: a sequência é política desta tela.",
+    "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+    "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado."
+  ]
+}

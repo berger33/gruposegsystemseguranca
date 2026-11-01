@@ -155,10 +155,10 @@ test("CMS: a tela declara estados e não engole falha", () => {
   assert.match(componente, /data-testid="cms-estado-lista"/);
 });
 
-test("CMS: a aba existe, é dinâmica, está no grupo certo e o console tem 27 abas", () => {
+test("CMS: a aba existe, é dinâmica, está no grupo certo e o console tem 28 abas", () => {
   const declaracao = consoleTi.match(/const tabs=(\[[\s\S]*?\]) as const;/)?.[1] ?? "";
   const abas = [...declaracao.matchAll(/\['([a-z0-9_]+)','([^']+)'\]/g)].map(item => item[1]);
-  assert.equal(abas.length, 27, "as promoções levam o console de 25 para 27 abas");
+  assert.equal(abas.length, 28, "as promoções levam o console de 25 para 28 abas");
   assert.ok(abas.includes("cms"));
   assert.match(consoleTi, /const CmsClient=dynamic\(\(\)=>import\('\.\/CmsClient'\)\);/);
   assert.match(consoleTi, /\{active==='cms'&&<CmsClient\/>\}/);
