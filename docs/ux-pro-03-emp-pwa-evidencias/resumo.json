@@ -1,0 +1,103 @@
+{
+  "stage": "UX-PRO-03 · EMP-18/19 · App do funcionário (PWA e FAQ interna) na aba do TiConsole (/admin/ti)",
+  "generatedBy": "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+  "route": "/admin/ti",
+  "fatia": "17ª promoção com prova — EmpPwaClient deixa de ser órfão",
+  "entries": [
+    {
+      "viewport": 320,
+      "theme": "day",
+      "estado": "autorizado",
+      "screenshot": "emp-320-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 390,
+      "theme": "day",
+      "estado": "autorizado",
+      "screenshot": "emp-390-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "autorizado",
+      "screenshot": "emp-1440-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "night",
+      "estado": "autorizado",
+      "screenshot": "emp-1440-night.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "config-criada",
+      "screenshot": "emp-1440-day-config.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "config-recusada",
+      "screenshot": "emp-1440-day-config-recusada.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "config-desativada",
+      "screenshot": "emp-1440-day-config-desativada.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "faq-criada",
+      "screenshot": "emp-1440-day-faq.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "faq-publicada",
+      "screenshot": "emp-1440-day-faq-publicada.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "negado",
+      "screenshot": "emp-1440-day-negado.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "papel-negado",
+      "screenshot": "emp-1440-day-rh.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    }
+  ],
+  "limites": [
+    "Os aliases /api/hr/pwa-configs e /api/hr/faq-internal continuam negando ti: a tela usa /api/admin/pwa-configs e /api/admin/faq-internal, fora da borda legada de RH.",
+    "Fila offline, conflitos, log de acesso ao FAQ e preferências de acessibilidade são dado de funcionário e seguem atrás de employees.read: a tela declara, não monta.",
+    "O servidor confere o valor da situação da FAQ, não a ordem: a sequência é política desta tela.",
+    "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+    "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado."
+  ]
+}

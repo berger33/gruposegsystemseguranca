@@ -36,8 +36,12 @@ test('UX-PRO-03 CLI-05/06/07/08: a família deixa de ser órfã e ganha aba real
   assert.match(consoleClient, /const CliAdvancedClient=dynamic\(\(\)=>import\('\.\/CliAdvancedClient'\)\)/);
   assert.match(consoleClient, /active==='cliente'&&<CliAdvancedClient\/>/);
   assert.match(page, /allowedRoles=\{\['ti','admin'\]\}/);
-  // A aba precisa estar num grupo de navegação, senão não é alcançável.
-  assert.match(consoleClient, /keys:\['avisos','visual','cliente'\]/);
+  // A aba precisa estar num grupo de navegação, senão não é alcançável. O
+  // grupo pode ganhar outras abas da mesma família (o CMS entrou nele em
+  // 31/10): o que esta guarda exige é que 'cliente' esteja DENTRO do grupo.
+  const grupoExperiencia = consoleClient.match(/name:'Experiência e comunicação',keys:\[([^\]]*)\]/)?.[1] ?? '';
+  assert.ok(grupoExperiencia.includes("'cliente'"),
+    "a aba do portal v2 precisa ficar no grupo 'Experiência e comunicação'");
 });
 
 test('UX-PRO-03 CLI-05/06/07/08: os nove contratos, os métodos e o papel admin/ti são preservados', () => {

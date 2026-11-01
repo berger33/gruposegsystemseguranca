@@ -1675,6 +1675,22 @@ function hrPermissionCompat(session, roles) {
   );
 }
 
+// `hrPermissionCompat` traduz a lista de papéis do handler em permissão granular
+// de RH — e, para listas SEM `rh`, em permissão de COMPENSAÇÃO. Era por isso que
+// `admin` e `ti`, os papéis que o handler do PWA autoriza explicitamente,
+// recebiam 403 mesmo com sessão válida. Em EMP-18/EMP-19 os aliases de RH
+// continuam exatamente como estavam (borda legada + este adaptador); só os dois
+// caminhos canônicos de administração, que não passam pela borda de RH, usam a
+// checagem de papel que o próprio módulo declara — mesmo critério dos módulos que
+// nunca foram publicados sob `/api/hr/*`.
+const EMP_CANONICAL_ADMIN_PATHS = new Set(["/api/admin/pwa-configs", "/api/admin/faq-internal"]);
+function empPwaRequireRole(session, roles) {
+  if (session?.requestPath && EMP_CANONICAL_ADMIN_PATHS.has(session.requestPath)) {
+    return Array.isArray(roles) && roles.includes(session.role);
+  }
+  return hrPermissionCompat(session, roles);
+}
+
 async function readHrSession(req) {
   const session = await readSession(req);
   const requestPath = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`).pathname;
@@ -1905,7 +1921,7 @@ const empPwaApi = createEmpPwaApi({
   },
   sameOrigin,
   requireSession: readHrSession,
-  requireRole: hrPermissionCompat,
+  requireRole: empPwaRequireRole,
 });
 
 const opsApi = createOpsApi({
@@ -3544,7 +3560,15 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/pwa/offline" || url.pathname === "/offline.html") {
     return empPwaApi.handleOfflinePage(req, res);
   }
-  if (url.pathname === "/api/admin/hr/pwa-configs" || url.pathname === "/api/crm/hr/pwa-configs" || url.pathname === "/api/hr/pwa-configs") {
+  // Alias canônico de ADMINISTRAÇÃO da configuração do PWA. Os três aliases de
+  // RH continuam existindo e continuam passando pela borda legada
+  // (`authorizeLegacyHrRequest`), que exige `employees.read` — permissão que só
+  // os papéis `rh` e `marcelo` recebem automática (migrações 102 e 180). O
+  // handler, por sua vez, só exige sessão de equipe na leitura e `admin`/`ti` na
+  // escrita: eram justamente os papéis barrados na borda. Configuração de PWA
+  // não é dado de funcionário, então este caminho é o canônico da tela — mesmo
+  // precedente de `/api/admin/portal-access-requests`.
+  if (url.pathname === "/api/admin/pwa-configs" || url.pathname === "/api/admin/hr/pwa-configs" || url.pathname === "/api/crm/hr/pwa-configs" || url.pathname === "/api/hr/pwa-configs") {
     return empPwaApi.handlePwaConfigs(req, res);
   }
   if (url.pathname === "/api/admin/hr/offline-queue" || url.pathname === "/api/crm/hr/offline-queue" || url.pathname === "/api/hr/offline-queue") {
@@ -3554,7 +3578,10 @@ async function routeApi(req, res) {
     return empPwaApi.handleOfflineConflicts(req, res);
   }
   // EMP-19 FAQ interna acessível
-  if (url.pathname === "/api/admin/hr/faq-internal" || url.pathname === "/api/crm/hr/faq-internal" || url.pathname === "/api/hr/faq-internal" || url.pathname === "/api/employee/faq") {
+  // Idem FAQ interna: o conteúdo é da empresa, não dado pessoal do funcionário.
+  // O alias canônico de administração fica fora da borda de RH; os aliases de
+  // RH e o caminho do funcionário continuam exatamente como estavam.
+  if (url.pathname === "/api/admin/faq-internal" || url.pathname === "/api/admin/hr/faq-internal" || url.pathname === "/api/crm/hr/faq-internal" || url.pathname === "/api/hr/faq-internal" || url.pathname === "/api/employee/faq") {
     return empPwaApi.handleFaqInternal(req, res);
   }
   if (url.pathname === "/api/admin/hr/faq-access-logs" || url.pathname === "/api/crm/hr/faq-access-logs" || url.pathname === "/api/hr/faq-access-logs") {
@@ -3835,7 +3862,7 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/cli-portal-mode-configs" || url.pathname === "/api/crm/hr/cli-portal-mode-configs" || url.pathname === "/api/hr/cli-portal-mode-configs" || url.pathname === "/api/cli/portal-mode-configs") {
     return cliFinanceApi.handlePortalModeConfigs(req, res);
   }
-  if (url.pathname === "/api/admin/hr/cli-portal-access-requests" || url.pathname === "/api/crm/hr/cli-portal-access-requests" || url.pathname === "/api/hr/cli-portal-access-requests" || url.pathname === "/api/cli/portal-access-requests" || url.pathname === "/api/client/portal-access-requests" || url.pathname === "/api/public/portal-access-requests") {
+  if (url.pathname === "/api/admin/hr/cli-portal-access-requests" || url.pathname === "/api/crm/hr/cli-portal-access-requests" || url.pathname === "/api/hr/cli-portal-access-requests" || url.pathname === "/api/cli/portal-access-requests" || url.pathname === "/api/client/portal-access-requests" || url.pathname === "/api/public/portal-access-requests" || url.pathname === "/api/admin/portal-access-requests") {
     return cliFinanceApi.handlePortalAccessRequests(req, res);
   }
   // CLI-14 segurança conta MFA opcional gestão sessões troca e-mail concluída fluxos backend real
@@ -5217,6 +5244,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/admin/hr/pwa-configs"
   || pathname === "/api/crm/hr/pwa-configs"
   || pathname === "/api/hr/pwa-configs"
+  || pathname === "/api/admin/pwa-configs"
   || pathname === "/api/admin/hr/offline-queue"
   || pathname === "/api/crm/hr/offline-queue"
   || pathname === "/api/hr/offline-queue"
@@ -5226,6 +5254,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/admin/hr/faq-internal"
   || pathname === "/api/crm/hr/faq-internal"
   || pathname === "/api/hr/faq-internal"
+  || pathname === "/api/admin/faq-internal"
   || pathname === "/api/employee/faq"
   || pathname === "/api/admin/hr/faq-access-logs"
   || pathname === "/api/crm/hr/faq-access-logs"
@@ -5567,6 +5596,20 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/hr/cli-portal-access-requests"
   || pathname === "/api/cli/portal-access-requests"
   || pathname === "/api/client/portal-access-requests"
+  // Faltava aqui: o alias público estava despachado em `routeApi` e é o que a
+  // tela `/cliente/acesso` usa, mas nunca entrou na lista de caminhos de API —
+  // toda requisição caía no Next e voltava 404.
+  || pathname === "/api/public/portal-access-requests"
+  // Alias canônico de ADMINISTRAÇÃO da jornada CLI-13. Os aliases
+  // `/api/{admin/,crm/}*hr/cli-portal-access-requests` continuam existindo, mas
+  // passam antes pela borda legada de RH (`authorizeLegacyHrRequest`), que exige
+  // a permissão `employees.read` e devolve 403 justamente para `ti`/`admin` —
+  // os papéis que o próprio handler autoriza via `ensureAuth`. Medido no gate:
+  // `ti` recebia 403 nos três aliases de RH. Este caminho não é público
+  // (`handlePortalAccessRequests` só trata como público `/api/client/`,
+  // `/api/public/` e `/api/cli/`), então chega em `ensureAuth(["admin","ti"])`
+  // com sessão individual e origem conferida no servidor.
+  || pathname === "/api/admin/portal-access-requests"
   || pathname === "/api/admin/hr/cli-security-events"
   || pathname === "/api/crm/hr/cli-security-events"
   || pathname === "/api/hr/cli-security-events"

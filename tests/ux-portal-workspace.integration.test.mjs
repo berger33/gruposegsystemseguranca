@@ -325,7 +325,7 @@ test('o isolamento por conta do cliente continua decidido no servidor', { skip: 
 });
 
 test('browser: falha de leitura NÃO devolve a tela de login do funcionário', { skip: !RUN }, async () => {
-  const browser = await launchBrowser();
+  console.log('SONDA_FASE 5 browser'); const browser = await launchBrowser();
   try {
     // A pessoa entra de verdade (o POST de sessão não é tocado) e, em seguida,
     // a LEITURA do portal falha. É o cenário que o defeito antigo confundia
@@ -8332,5 +8332,1947 @@ test('browser UX-PRO-03: ADM-01..06 pauta, retratos e aprovações (papéis, esc
   } finally {
     await context?.close();
     await browser.close();
+  }
+});
+
+// ============================================================================
+// UX-PRO-06 (CLI-13) — fila de acesso do portal com estado honesto.
+//
+// Antes desta fatia (medido nesta mesma base em PostgreSQL 17 + Chromium):
+//  - `GET` da fila respondia 403 para `ti`/`admin` nos três aliases de RH
+//    (`authorizeLegacyHrRequest` exige `employees.read`) e 405 em `/api/cli/`;
+//  - o alias público `/api/public/portal-access-requests` devolvia 404;
+//  - a tela dizia "Não foi possível carregar" E "Nenhum pedido registrado";
+//  - a negativa mantinha os pedidos na tela, `{}` virava fila vazia e um item
+//    sem UUID era publicado como pedido;
+//  - a escrita morria em silêncio com corpo não-JSON e publicava o código cru.
+//
+// Este cenário prova papéis (autorizado, negado e anônimo), escrita real com
+// status e corpo, 503 + retry, payload inválido, negativa na releitura, A/B sem
+// resíduo, quatro larguras, tema noturno e teclado — com evidência por estado.
+// ============================================================================
+function cli13Injecao(estadoInicial) {
+  const original = window.fetch.bind(window);
+  window.__cli13 = { ...estadoInicial, leituras: 0, escritas: [] };
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : (input?.url || "");
+    const metodo = (init?.method || "GET").toUpperCase();
+    const caminho = new URL(url, location.origin).pathname;
+    const fila = caminho.endsWith("portal-access-requests");
+    const json = (status, corpo, tipo = "application/json") => new Response(corpo, { status, headers: { "content-type": tipo } });
+    if (fila && metodo === "GET") {
+      window.__cli13.leituras += 1;
+      if (window.__cli13.atraso) await new Promise(resolve => setTimeout(resolve, window.__cli13.atraso));
+      const modo = window.__cli13.fila;
+      if (modo === "503") return json(503, JSON.stringify({ error: "audit_unavailable" }));
+      if (modo === "403") return json(403, JSON.stringify({ error: "forbidden" }));
+      if (modo === "invalido") return json(200, JSON.stringify({ requests: [{ id: "nao-e-uuid" }] }));
+      if (modo === "sem-campo") return json(200, "{}");
+      if (modo === "vazia") return json(200, JSON.stringify({ requests: [] }));
+    }
+    if (fila && metodo === "PATCH" && window.__cli13.escrita === "html503") {
+      return json(503, "<html><body>503</body></html>", "text/html");
+    }
+    return original(input, init);
+  };
+}
+
+test("browser UX-PRO-06 CLI-13: fila de acesso do portal (papéis, escrita real, falhas, retry, A/B, larguras, noite e teclado)", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const rh = await provisionStaff(pool, { role: "rh" });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const sufixo = randomUUID().slice(0, 8);
+  const ROTA_FILA = "/api/admin/portal-access-requests";
+  const ROTA_MODOS = "/api/cli/portal-mode-configs";
+  const MOTIVO = `Motivo sintético da decisão pela interface ${sufixo}.`;
+  const evidence = process.env.UX_PORTAL_EVIDENCE_DIR || "";
+  const entries = [];
+  const sombraDocumento = page => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+
+  // --- servidor: papéis e compatibilidade dos aliases ----------------------
+  assert.equal((await api(ROTA_FILA)).status, 401, "anônimo recebe 401");
+  assert.equal((await api(ROTA_MODOS)).status, 401, "anônimo recebe 401 nos modos");
+  assert.equal((await api(ROTA_FILA, { cookie: rhCookie })).status, 403, "papel sem acesso recebe 403");
+  assert.equal((await api(ROTA_MODOS, { cookie: rhCookie })).status, 403, "papel sem acesso recebe 403 nos modos");
+  // A borda legada de RH continua de pé: o alias antigo segue negando `ti`.
+  // (Se algum dia alguém "resolver" a fila afrouxando a borda, isto cai.)
+  assert.equal((await api("/api/hr/cli-portal-access-requests", { cookie: tiCookie })).status, 403);
+  // O alias público documentado existe de novo (antes: 404).
+  const publico = await api("/api/public/portal-access-requests", { method: "POST", headers: { "idempotency-key": `qa-cli13-${sufixo}-a` },
+    body: { mode: "solicitacao_aprovacao", client_account_id: "00000000-0000-4000-8000-000000000000",
+      requested_email: "caminho-publico@exemplo.invalid", requested_name: "Caminho público", document_ref: "12.345.0001/99" } });
+  assert.notEqual(publico.status, 404, "o alias público não pode voltar a cair no Next");
+
+  // --- dois pedidos pendentes reais (contas A e B) -------------------------
+  const contaA = randomUUID();
+  const contaB = randomUUID();
+  await pool.query(
+    `INSERT INTO client_accounts (id, display_name, document_ref, created_by) VALUES
+      ($1::uuid,'QA CLI13 Conta A Sintetica','11122233344','ti'),
+      ($2::uuid,'QA CLI13 Conta B Sintetica','55566677788','ti')`,
+    [contaA, contaB],
+  );
+  const pedidoA = await api("/api/public/portal-access-requests", { method: "POST", headers: { "idempotency-key": `qa-cli13-${sufixo}-aa` },
+    body: { mode: "solicitacao_aprovacao", client_account_id: contaA, requested_email: `qa-cli13-a-${sufixo}@exemplo.invalid`,
+      requested_name: "Pessoa QA A", document_ref: "11.122.2333/44" } });
+  assert.equal(pedidoA.status, 201, "o caminho público real precisa criar o pedido A");
+  const pedidoB = await api("/api/client/portal-access-requests", { method: "POST", headers: { "idempotency-key": `qa-cli13-${sufixo}-bb` },
+    body: { mode: "solicitacao_aprovacao", client_account_id: contaB, requested_email: `qa-cli13-b-${sufixo}@exemplo.invalid`,
+      requested_name: "Pessoa QA B", document_ref: "55.566.6777/88" } });
+  assert.equal(pedidoB.status, 201, "o alias de cliente continua criando pedido");
+  const idA = pedidoA.body.request.id;
+  const idB = pedidoB.body.request.id;
+  const protocoloA = pedidoA.body.request.protocol;
+  const protocoloB = pedidoB.body.request.protocol;
+  // O corpo do POST público devolve id/protocol/mode/status/created_at (não
+  // `verified_link`): o vínculo é conferido no banco, que é quem decide.
+  const vinculoA = await pool.query("SELECT verified_link FROM cli_portal_access_requests WHERE id = $1::uuid", [pedidoA.body.request.id]);
+  assert.equal(vinculoA.rows[0].verified_link, true, "o vínculo é decidido no servidor");
+
+  const filaTi = await api(ROTA_FILA, { cookie: tiCookie });
+  assert.equal(filaTi.status, 200, "ti precisa ler a fila (antes: 403 em todos os aliases)");
+  assert.ok(filaTi.body.requests.some(item => item.id === idA) && filaTi.body.requests.some(item => item.id === idB));
+
+  // --- utilitários de navegador -------------------------------------------
+  const comPagina = async (opcoes, acoes) => {
+    const browser = await launchBrowser();
+    try {
+      const context = await browser.newContext({ viewport: { width: opcoes.width ?? 1440, height: opcoes.height ?? 900 }, locale: "pt-BR" });
+      const cookie = opcoes.cookie ?? tiCookie;
+      await context.addCookies(cookie.split("; ").filter(Boolean).map(item => {
+        const separador = item.indexOf("=");
+        return { name: item.slice(0, separador), value: item.slice(separador + 1), url: baseUrl };
+      }));
+      const page = await context.newPage();
+      page.setDefaultTimeout(45_000);
+      page.setDefaultNavigationTimeout(90_000);
+      page.on("dialog", dialog => dialog.accept(opcoes.motivo ?? MOTIVO));
+      // A injeção é sempre instalada (com padrão "passar direto"): as fases
+      // precisam poder trocar o comportamento DEPOIS da primeira leitura.
+      await page.addInitScript(cli13Injecao, Object.assign({ fila: "pass", escrita: "pass" }, opcoes.injecao || {}));
+      await page.goto(`${baseUrl}/admin/portal/solicitacoes`, { waitUntil: "domcontentloaded" });
+      const resultado = await acoes(page, context);
+      await context.close();
+      return resultado;
+    } finally { await browser.close(); }
+  };
+  const evidenciar = async (page, { estado, nome, width, theme }) => {
+    await capture(page, nome);
+    const sobra = await sombraDocumento(page);
+    entries.push({ viewport: width, theme, estado, screenshot: evidence ? `${nome}.png` : null, sobraDocumentoPx: sobra, problems: [] });
+    return sobra;
+  };
+  const texto = page => page.evaluate(() => document.body.innerText.replace(/\s+/g, " ").trim());
+
+  // --- 1) papel NEGADO: o gate não entrega a área --------------------------
+  await comPagina({ cookie: rhCookie, width: 1440 }, async (page) => {
+    await page.locator('[data-admin-gate="forbidden"]').waitFor();
+    const corpo = await texto(page);
+    assert.doesNotMatch(corpo, /Solicitações/, "papel negado não vê a fila");
+    assert.doesNotMatch(corpo, new RegExp(protocoloA), "papel negado não vê protocolo");
+    await evidenciar(page, { estado: "negado", nome: "cli13-1440-day-negado", width: 1440, theme: "day" });
+  });
+
+  // --- 2) leitura AUTORIZADA em quatro larguras e noite --------------------
+  for (const width of [320, 390, 768, 1440]) {
+    await comPagina({ width }, async (page) => {
+      await page.getByTestId("cli13-fila-lista").getByText(protocoloA).waitFor();
+      await page.getByTestId("cli13-fila-lista").getByText(protocoloB).waitFor();
+      assert.ok(await page.getByTestId("cli13-fila-hora").isVisible(), "a tela declara a hora da leitura concluída");
+      assert.equal(await page.getByTestId("cli13-fila-vazia").count(), 0, "com pedidos na fila, nada de 'vazio'");
+      const sobra = await evidenciar(page, { estado: "autorizado", nome: `cli13-${width}-day`, width, theme: "day" });
+      assert.ok(sobra <= 1, `a fila transborda ${sobra}px em ${width}px`);
+    });
+  }
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId("cli13-fila-lista").getByText(protocoloA).waitFor();
+    await page.locator('[data-admin-theme-toggle="true"]').click();
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === "night");
+    await page.getByTestId("cli13-fila-lista").getByText(protocoloB).waitFor();
+    const sobra = await evidenciar(page, { estado: "autorizado", nome: "cli13-1440-night", width: 1440, theme: "night" });
+    assert.ok(sobra <= 1, `a fila transborda ${sobra}px no tema noturno`);
+    const fundo = await page.getByTestId("cli13-fila").evaluate(node => getComputedStyle(node).backgroundColor);
+    assert.notEqual(fundo, "rgb(255, 255, 255)", "o painel da fila acompanha o tema noturno");
+  });
+
+  // --- 3) 503 transitório: preserva, declara a hora e recupera no retry ----
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId("cli13-fila-lista").getByText(protocoloA).waitFor();
+    const respostaReal = page.waitForResponse(r => new URL(r.url()).pathname === ROTA_FILA && r.request().method() === "GET");
+    await page.getByRole("button", { name: "Atualizar" }).click();
+    assert.equal((await respostaReal).status(), 200, "a releitura autorizada fala com o servidor real");
+    await page.evaluate(() => { window.__cli13.fila = "503"; });
+    await page.getByRole("button", { name: "Atualizar" }).click();
+    const banda = page.getByTestId("cli13-fila-desatualizada");
+    await banda.waitFor();
+    assert.match(await banda.innerText(), /desatualizados/i);
+    assert.match(await banda.innerText(), /\d{2}:\d{2}/, "a banda diz a hora da última leitura concluída");
+    assert.ok(await page.getByTestId("cli13-fila-lista").getByText(protocoloA).isVisible(), "o pedido lido não pode desaparecer");
+    assert.equal(await page.getByTestId("cli13-fila-erro").count(), 0, "falha transitória não é falha sem leitura");
+    assert.equal(await page.getByTestId("cli13-fila-vazia").count(), 0);
+    await evidenciar(page, { estado: "falha-transitoria", nome: "cli13-1440-day-transitoria", width: 1440, theme: "day" });
+    // Retry de verdade: volta a falar com o servidor e a banda sai.
+    await page.evaluate(() => { window.__cli13.fila = "pass"; });
+    await banda.getByRole("button", { name: "Tentar novamente" }).click();
+    await banda.waitFor({ state: "detached" });
+    await page.getByTestId("cli13-fila-lista").getByText(protocoloA).waitFor();
+  });
+
+  // --- 4) payload inválido NÃO é fila vazia --------------------------------
+  await comPagina({ injecao: { fila: "sem-campo" }, width: 1440 }, async (page) => {
+    const banda = page.getByTestId("cli13-fila-erro");
+    await banda.waitFor();
+    assert.equal(await banda.getAttribute("data-falha"), "invalid");
+    assert.match(await banda.innerText(), /resposta inválida/i);
+    assert.equal(await page.getByTestId("cli13-fila-vazia").count(), 0, "payload inválido nunca vira 'nenhum pedido registrado'");
+    await evidenciar(page, { estado: "payload-invalido", nome: "cli13-1440-day-invalido", width: 1440, theme: "day" });
+  });
+  await comPagina({ injecao: { fila: "vazia" }, width: 1440 }, async (page) => {
+    await page.getByTestId("cli13-fila-vazia").waitFor();
+    assert.equal(await page.getByTestId("cli13-fila-erro").count(), 0, "fila vazia não é falha");
+    await evidenciar(page, { estado: "vazio", nome: "cli13-1440-day-vazio", width: 1440, theme: "day" });
+  });
+
+  // --- 5) negativa na RELEITURA descarta o que estava na tela --------------
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId("cli13-fila-lista").getByText(protocoloA).waitFor();
+    await page.evaluate(() => { window.__cli13.fila = "403"; });
+    await page.getByRole("button", { name: "Atualizar" }).click();
+    const negado = page.getByTestId("cli13-fila-negado");
+    await negado.waitFor();
+    assert.equal(await page.getByTestId("cli13-fila-lista").count(), 0, "negativa descarta a lista");
+    assert.doesNotMatch(await texto(page), new RegExp(protocoloA), "negativa não pode manter protocolo na tela");
+    assert.equal(await negado.getByRole("button", { name: "Tentar novamente" }).count(), 0, "negativa não oferece repetir a mesma chamada");
+    await evidenciar(page, { estado: "negado-na-releitura", nome: "cli13-1440-day-negado-releitura", width: 1440, theme: "day" });
+  });
+
+  // --- 6) escrita real pela interface: aprovação A, rejeição B -------------
+  const escrita = await comPagina({ width: 1440 }, async (page) => {
+    const linhaA = page.getByTestId("cli13-pedido").filter({ hasText: protocoloA });
+    const linhaB = page.getByTestId("cli13-pedido").filter({ hasText: protocoloB });
+    await linhaA.waitFor();
+    await linhaB.waitFor();
+    const respostaA = page.waitForResponse(r => new URL(r.url()).pathname === ROTA_FILA && r.request().method() === "PATCH");
+    await linhaA.getByRole("button", { name: "Aprovar e emitir convite" }).click();
+    const httpA = await respostaA;
+    const corpoA = await httpA.json();
+    assert.equal(httpA.status(), 200, "a aprovação precisa sair pela interface");
+    assert.equal(corpoA.request.status, "aprovada");
+    assert.match(String(corpoA.inviteUrl), /^\/cliente\/convite\?token=/);
+    await page.getByTestId("cli13-acao-ok").getByText(/Convite canônico criado/).waitFor();
+    // A/B sem resíduo: a linha B continua pendente e decidível.
+    await page.getByTestId("cli13-pedido").filter({ hasText: protocoloA }).getByText("Aprovada").waitFor();
+    assert.match(await linhaB.innerText(), /Pendente/);
+    assert.equal(await linhaB.getByRole("button", { name: "Rejeitar com motivo" }).count(), 1);
+    assert.equal(await page.getByTestId("cli13-pedido").filter({ hasText: protocoloA }).getByRole("button", { name: "Rejeitar com motivo" }).count(), 0,
+      "pedido já decidido não oferece nova decisão");
+    const respostaB = page.waitForResponse(r => new URL(r.url()).pathname === ROTA_FILA && r.request().method() === "PATCH");
+    await linhaB.getByRole("button", { name: "Rejeitar com motivo" }).click();
+    const httpB = await respostaB;
+    const corpoB = await httpB.json();
+    assert.equal(httpB.status(), 200);
+    assert.equal(corpoB.request.status, "rejeitada");
+    await page.getByTestId("cli13-acao-ok").getByText("Rejeição registrada.").waitFor();
+    await evidenciar(page, { estado: "escrita-real", nome: "cli13-1440-day-escrita", width: 1440, theme: "day" });
+    return { corpoA, corpoB };
+  });
+  assert.equal(escrita.corpoA.request.id, idA);
+  assert.equal(escrita.corpoB.request.id, idB);
+
+  // Banco: as decisões ficaram registradas com autor, motivo e histórico.
+  const linhas = await pool.query(
+    "SELECT id, status, decision_reason, approved_by_identity, invite_id FROM cli_portal_access_requests WHERE id = ANY($1::uuid[]) ORDER BY protocol",
+    [[idA, idB]],
+  );
+  assert.equal(linhas.rows.length, 2);
+  const aprovado = linhas.rows.find(row => row.id === idA);
+  const rejeitado = linhas.rows.find(row => row.id === idB);
+  assert.equal(aprovado.status, "aprovada");
+  assert.equal(aprovado.approved_by_identity, ti.id);
+  assert.equal(aprovado.decision_reason, MOTIVO);
+  assert.ok(aprovado.invite_id, "a aprovação precisa emitir o convite canônico");
+  assert.equal(rejeitado.status, "rejeitada");
+  assert.equal(rejeitado.decision_reason, MOTIVO);
+  const historico = await pool.query(
+    "SELECT next_status FROM cli_portal_access_request_history WHERE request_id = ANY($1::uuid[]) ORDER BY created_at ASC",
+    [[idA, idB]],
+  );
+  assert.deepEqual(historico.rows.map(row => row.next_status).sort(), ["aprovada", "pendente", "pendente", "rejeitada"]);
+  const auditoria = await pool.query(
+    "SELECT count(*)::int AS total FROM auth_access_audit WHERE action = 'portal_access_request_review' AND target = ANY($1::text[])",
+    [[idA, idB]],
+  );
+  assert.ok(auditoria.rows[0].total >= 2, "cada decisão precisa de trilha de auditoria");
+  const convite = await pool.query("SELECT kind, email FROM auth_invites WHERE id = $1::uuid", [aprovado.invite_id]);
+  assert.equal(convite.rows[0].kind, "client");
+  assert.equal(convite.rows[0].email, `qa-cli13-a-${sufixo}@exemplo.invalid`);
+
+  // --- 7) escrita com corpo não-JSON: falha DITA, nunca silêncio -----------
+  await comPagina({ injecao: { escrita: "html503" }, width: 1440 }, async (page) => {
+    const pendente = await pool.query(
+      `INSERT INTO cli_portal_access_requests (id, protocol, mode, client_account_id, requested_email, requested_name, document_ref, status, verified_link)
+       VALUES (gen_random_uuid(), $1, 'solicitacao_aprovacao', $2::uuid, $3, 'Pessoa QA C', '99887766554', 'pendente', true) RETURNING protocol`,
+      [`ACC-CLI-20261031-${sufixo.slice(0, 4).toUpperCase()}`, contaA, `qa-cli13-c-${sufixo}@exemplo.invalid`],
+    );
+    const protocoloC = pendente.rows[0].protocol;
+    const linha = page.getByTestId("cli13-pedido").filter({ hasText: protocoloC });
+    await linha.waitFor();
+    const antes = await texto(page);
+    await linha.getByRole("button", { name: "Rejeitar com motivo" }).click();
+    const erro = page.getByTestId("cli13-acao-erro");
+    await erro.waitFor();
+    assert.match(await erro.innerText(), /indisponível/i, "corpo não-JSON precisa de frase própria");
+    assert.notEqual(antes, await texto(page), "a tela não pode ficar em silêncio");
+    const doBanco = await pool.query("SELECT status FROM cli_portal_access_requests WHERE protocol = $1", [protocoloC]);
+    assert.equal(doBanco.rows[0].status, "pendente", "a escrita recusada não pode mudar o estado no banco");
+    await evidenciar(page, { estado: "escrita-recusada", nome: "cli13-1440-day-escrita-recusada", width: 1440, theme: "day" });
+  });
+
+  // --- 8) teclado: primeiro foco do conteúdo, percurso real e contorno -----
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId("cli13-fila-lista").getByText(protocoloA).waitFor();
+    // O primeiro controle do CONTEÚDO da página (a navegação do shell também
+    // tem um link para /admin/portal — o foco aqui é o retorno da própria tela).
+    const retorno = page.getByRole("link", { name: "Configuração do portal", exact: true });
+    assert.equal(await retorno.count(), 1, "a tela declara o próprio retorno");
+    await retorno.focus();
+    const percurso = [];
+    for (let passo = 0; passo < 8; passo += 1) {
+      percurso.push(await page.evaluate(() => {
+        const ativo = document.activeElement;
+        const estilo = ativo ? getComputedStyle(ativo) : null;
+        return {
+          tag: ativo?.tagName ?? null,
+          rotulo: (ativo?.textContent || ativo?.getAttribute("aria-label") || "").trim().slice(0, 32),
+          href: ativo?.getAttribute("href") ?? null,
+          contorno: estilo ? `${estilo.outlineStyle} ${estilo.outlineWidth}` : null,
+        };
+      }));
+      await page.keyboard.press("Tab");
+    }
+    assert.ok(percurso.length === 8);
+    assert.equal(percurso[0].href, "/admin/portal", "o primeiro foco do conteúdo é o retorno da própria tela");
+    const interativos = percurso.filter(item => item.tag === "BUTTON" || item.tag === "INPUT");
+    assert.ok(interativos.length >= 3, "o percurso precisa alcançar os controles da fila");
+    for (const item of interativos) {
+      assert.match(String(item.contorno), /solid 3px/, `contorno visível obrigatório em ${item.rotulo}`);
+    }
+    // Foco na falha: só quando a falha veio de uma ação da pessoa.
+    await page.evaluate(() => { window.__cli13.fila = "invalido"; });
+    await page.getByRole("button", { name: "Atualizar" }).click();
+    await page.getByTestId("cli13-fila-erro").waitFor();
+    const focado = await page.evaluate(() => ({
+      role: document.activeElement?.getAttribute("role"),
+      testId: document.activeElement?.getAttribute("data-testid"),
+    }));
+    assert.equal(focado.role, "alert");
+    assert.equal(focado.testId, "cli13-fila-erro");
+    await evidenciar(page, { estado: "teclado-falha", nome: "cli13-1440-day-teclado", width: 1440, theme: "day" });
+  });
+
+  // --- 9) out-of-order NÃO é alcançável pela UI ----------------------------
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId("cli13-fila-lista").getByText(protocoloA).waitFor();
+    await page.evaluate(() => { window.__cli13.leituras = 0; window.__cli13.atraso = 800; });
+    const medir = () => {
+      const secao = document.querySelector('[data-testid="cli13-fila"]');
+      if (!secao) return { existe: false };
+      const botao = [...secao.querySelectorAll("button")].find(item => /Atualiz/.test(item.textContent || ""));
+      return {
+        existe: true,
+        ariaBusy: secao.getAttribute("aria-busy"),
+        desabilitado: Boolean(botao?.disabled),
+        rotulo: (botao?.textContent || "").trim(),
+        leituras: window.__cli13.leituras,
+      };
+    };
+    await page.getByRole("button", { name: "Atualizar" }).click();
+    // Leitura única: enquanto a leitura está em curso, o mesmo botão fica
+    // travado e a região se declara ocupada.
+    await page.waitForFunction(() => {
+      const secao = document.querySelector('[data-testid="cli13-fila"]');
+      const botao = secao && [...secao.querySelectorAll("button")].find(item => /Atualiz/.test(item.textContent || ""));
+      return secao?.getAttribute("aria-busy") === "true" && Boolean(botao?.disabled);
+    }, null, { timeout: 15_000 }).catch(async () => {
+      throw new Error(`estado de leitura única não foi observado: ${JSON.stringify(await page.evaluate(medir))}`);
+    });
+    const durante = await page.evaluate(medir);
+    assert.equal(durante.desabilitado, true, "durante a leitura o atualizar fica travado (leitura única)");
+    assert.equal(durante.rotulo, "Atualizando…");
+    await page.waitForFunction(() => document.querySelector('[data-testid="cli13-fila"]')?.getAttribute("aria-busy") === "false");
+    assert.equal(await page.getByRole("button", { name: "Atualizar" }).isEnabled(), true);
+    // Com o botão travado durante a leitura, dois GET simultâneos pela tela não
+    // são alcançáveis: a resposta fora de ordem fica provada no teste focal.
+    assert.ok(await page.evaluate(() => window.__cli13.leituras) <= 1);
+  });
+
+  // --- resumo das evidências ----------------------------------------------
+  if (evidence) {
+    await mkdir(evidence, { recursive: true });
+    await writeFile(path.join(evidence, "resumo.json"), JSON.stringify({
+      stage: "UX-PRO-06 · CLI-13 · fila de acesso do portal (/admin/portal/solicitacoes)",
+      generatedBy: "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+      route: "/admin/portal/solicitacoes",
+      fatia: "UX-PRO-06 — estado honesto da fila de acesso do portal",
+      entries,
+      limites: [
+        "Sem SMTP real: a aprovação emite o convite canônico, não envia e-mail.",
+        "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+        "Sem leitor de tela e sem Windows: teclado e contraste medidos só no Chromium empacotado.",
+        "A fila é global do módulo (não escopada por conta): A/B prova que a decisão de um pedido não contamina o outro.",
+        "Resposta fora de ordem não é alcançável pela tela (atualizar travado durante a leitura); fica provada no teste focal.",
+      ],
+    }, null, 2));
+  }
+  for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
+});
+
+// UX-PRO-03 (12ª promoção) — a aba "Financeiro do portal" do TiConsole monta o
+// console CLI (CLI-09..14). O componente era órfão e falava com os oito
+// endpoints pelos aliases `/api/hr/cli-*`, que a borda legada de RH nega para
+// `ti` (o papel que monta a tela) e engolia cada falha em lista vazia.
+function cliFinInjecao(cfg) {
+  const original = window.fetch.bind(window);
+  window.__clifin = { leituras: 0, escritas: 0 };
+  const rotas = cfg.rotas || {};
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    const caminho = url.replace(location.origin, "").split("?")[0];
+    const metodo = ((init && init.method) || "GET").toUpperCase();
+    if (metodo === "GET") {
+      window.__clifin.leituras += 1;
+      const regra = rotas[caminho];
+      if (regra === "negado") return new Response(JSON.stringify({ error: "individual_staff_required" }), { status: 403, headers: { "Content-Type": "application/json" } });
+      if (regra === "falha") return new Response(JSON.stringify({ error: "internal_error" }), { status: 500, headers: { "Content-Type": "application/json" } });
+      if (regra === "invalido") return new Response(JSON.stringify({}), { status: 200, headers: { "Content-Type": "application/json" } });
+      if (regra === "atraso") { await new Promise(r => setTimeout(r, 1200)); }
+    } else {
+      window.__clifin.escritas += 1;
+    }
+    return original(input, init);
+  };
+}
+
+test("browser UX-PRO-03 CLI-FIN: console CLI do TI (rotas canônicas, estados honestos, escrita real, larguras e noite)", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const rh = await provisionStaff(pool, { role: "rh" });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const sufixo = randomUUID().slice(0, 8);
+  const ROTAS = [
+    "/api/cli/charges-v2",
+    "/api/cli/service-requests",
+    "/api/cli/satisfaction-surveys",
+    "/api/cli/renewal-communications",
+    "/api/cli/portal-mode-configs",
+    "/api/admin/portal-access-requests",
+    "/api/cli/security-events",
+    "/api/cli/email-change-requests",
+  ];
+  const MOTIVO = `Motivo sintético do console CLI ${sufixo}`;
+  const evidence = process.env.UX_PORTAL_EVIDENCE_DIR || "";
+  const entries = [];
+
+  // --- servidor: as oito rotas canônicas respondem para `ti` ---------------
+  for (const rota of ROTAS) {
+    const resposta = await api(rota, { cookie: tiCookie });
+    assert.equal(resposta.status, 200, `${rota} precisa responder 200 para ti (antes: 403 nos aliases de RH)`);
+  }
+  // A borda legada de RH continua de pé: se alguém "resolver" a tela
+  // afrouxando `employees.read`, este cenário cai.
+  assert.equal((await api("/api/hr/cli-charges-v2", { cookie: tiCookie })).status, 403,
+    "o alias de RH continua negando ti — a tela não pode voltar para lá");
+  assert.equal((await api("/api/admin/portal-access-requests", { cookie: rhCookie })).status, 403,
+    "a fila administrativa continua restrita a ti|admin");
+
+  // --- um pedido real na fila, para o bloco de acessos ter conteúdo --------
+  const conta = randomUUID();
+  await pool.query(
+    `INSERT INTO client_accounts (id, display_name, document_ref, created_by) VALUES ($1::uuid,'QA CLI-FIN Conta Sintetica','99988877766','ti')`,
+    [conta],
+  );
+  const pedido = await api("/api/public/portal-access-requests", { method: "POST", headers: { "idempotency-key": `qa-clifin-${sufixo}` },
+    body: { mode: "solicitacao_aprovacao", client_account_id: conta, requested_email: `qa-clifin-${sufixo}@exemplo.invalid`,
+      requested_name: "Pessoa QA CLI-FIN", document_ref: "99.988.8777/66" } });
+  assert.equal(pedido.status, 201, "o pedido público precisa existir para o bloco de acessos");
+  const protocolo = pedido.body.request.protocol;
+
+  // --- utilitários de navegador -------------------------------------------
+  const comPagina = async (opcoes, acoes) => {
+    const browser = await launchBrowser();
+    try {
+      const context = await browser.newContext({ viewport: { width: opcoes.width ?? 1440, height: opcoes.height ?? 900 }, locale: "pt-BR" });
+      const cookie = opcoes.cookie ?? tiCookie;
+      await context.addCookies(cookie.split("; ").filter(Boolean).map(item => {
+        const separador = item.indexOf("=");
+        return { name: item.slice(0, separador), value: item.slice(separador + 1), url: baseUrl };
+      }));
+      const page = await context.newPage();
+      page.setDefaultTimeout(45_000);
+      page.setDefaultNavigationTimeout(90_000);
+      await page.addInitScript(cliFinInjecao, Object.assign({ rotas: {} }, opcoes.injecao || {}));
+      await page.goto(`${baseUrl}/admin/ti`, { waitUntil: "domcontentloaded" });
+      if (opcoes.cookie === undefined || cookie === tiCookie) {
+        await page.getByRole("button", { name: "Financeiro do portal" }).click();
+        await page.getByTestId("clifin").waitFor();
+        await page.waitForFunction(() => /Lido às/.test(document.querySelector('[data-testid="clifin-hora"]')?.textContent || ""), null, { timeout: 45_000 });
+      }
+      const resultado = await acoes(page, context);
+      await context.close();
+      return resultado;
+    } finally { await browser.close(); }
+  };
+  const evidenciar = async (page, { estado, nome, width, theme }) => {
+    await capture(page, nome);
+    const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    entries.push({ viewport: width, theme, estado, screenshot: evidence ? `${nome}.png` : null, sobraDocumentoPx: sobra, problems: [] });
+    return sobra;
+  };
+
+  // --- 1) leitura autorizada em quatro larguras ---------------------------
+  for (const width of [320, 390, 768, 1440]) {
+    await comPagina({ width }, async (page) => {
+      await page.getByTestId("clifin-lista-acessos").getByText(protocolo).waitFor();
+      assert.equal(await page.getByTestId("clifin-faixa").count(), 0, "sem negativa nem falha, nada de faixa de erro");
+      for (const chave of ["cobrancas", "servicos", "satisfacao", "renovacoes", "modos", "acessos", "seguranca", "emails"]) {
+        assert.ok(await page.getByTestId(`clifin-bloco-${chave}`).isVisible(), `bloco ${chave} precisa estar na tela`);
+      }
+      const sobra = await evidenciar(page, { estado: "autorizado", nome: `clifin-${width}-day`, width, theme: "day" });
+      assert.ok(sobra <= 1, `o console CLI transborda ${sobra}px em ${width}px`);
+    });
+  }
+
+  // --- 2) tema noturno ----------------------------------------------------
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.locator('[data-admin-theme-toggle="true"]').click();
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === "night");
+    await page.getByTestId("clifin-lista-acessos").getByText(protocolo).waitFor();
+    const sobra = await evidenciar(page, { estado: "autorizado", nome: "clifin-1440-night", width: 1440, theme: "night" });
+    assert.ok(sobra <= 1, `o console CLI transborda ${sobra}px à noite`);
+    const fundo = await page.getByTestId("clifin").evaluate(node => getComputedStyle(node).backgroundColor);
+    assert.notEqual(fundo, "rgb(255, 255, 255)", "o console acompanha o tema noturno");
+  });
+
+  // --- 3) 403 num bloco: NEGADO explícito, nunca "vazio" ------------------
+  await comPagina({ width: 1440, injecao: { rotas: { "/api/cli/charges-v2": "negado" } } }, async (page) => {
+    await page.getByTestId("clifin-faixa").waitFor();
+    const faixa = await page.getByTestId("clifin-faixa").innerText();
+    assert.match(faixa, /negad/i, "a faixa precisa declarar a negativa");
+    assert.doesNotMatch(faixa, /individual_staff_required/, "código cru não vai para a tela");
+    const estado = page.getByTestId("clifin-estado-cobrancas");
+    await estado.waitFor();
+    assert.equal(await estado.getAttribute("data-situacao"), "negado");
+    assert.doesNotMatch(await estado.innerText(), /nenhum registro/i, "negação não pode ser exibida como vazio");
+    assert.equal(await page.getByTestId("clifin-lista-acessos").getByText(protocolo).count(), 1,
+      "a negativa de um bloco não derruba os outros");
+    await evidenciar(page, { estado: "negado", nome: "clifin-1440-day-negado", width: 1440, theme: "day" });
+  });
+
+  // --- 4) payload inválido e falha de servidor ---------------------------
+  await comPagina({ width: 1440, injecao: { rotas: { "/api/cli/service-requests": "invalido", "/api/cli/email-change-requests": "falha" } } }, async (page) => {
+    const invalido = page.getByTestId("clifin-estado-servicos");
+    await invalido.waitFor();
+    assert.equal(await invalido.getAttribute("data-situacao"), "invalido");
+    assert.match(await invalido.innerText(), /inválida|sem a lista/i);
+    const falha = page.getByTestId("clifin-estado-emails");
+    await falha.waitFor();
+    assert.equal(await falha.getAttribute("data-situacao"), "falha");
+    await page.getByTestId("clifin-faixa").waitFor();
+    assert.match(await page.getByTestId("clifin-faixa").innerText(), /2 de 8/, "a faixa conta os blocos que falharam");
+    await evidenciar(page, { estado: "invalido-e-falha", nome: "clifin-1440-day-invalido", width: 1440, theme: "day" });
+  });
+
+  // --- 5) escrita REAL: mudança de modo com motivo ------------------------
+  await comPagina({ width: 1440 }, async (page) => {
+    const bloco = page.getByTestId("clifin-bloco-modos");
+    await bloco.getByLabel("modo", { exact: true }).selectOption("convite");
+    await bloco.getByLabel("situação do modo").selectOption("true");
+    await bloco.getByLabel("requer aprovação").selectOption("true");
+    await bloco.getByLabel("libera contratos").selectOption("false");
+    await bloco.getByLabel("motivo da mudança de modo").fill(MOTIVO);
+    await bloco.getByRole("button", { name: "Atualizar modo" }).click();
+    await page.getByTestId("clifin-ok").waitFor();
+    assert.match(await page.getByTestId("clifin-ok").innerText(), /Modo convite atualizado/i);
+    const linha = await pool.query("SELECT is_active, requires_approval, auto_release_contracts FROM cli_portal_mode_configs WHERE mode = 'convite'");
+    assert.equal(linha.rows[0].requires_approval, true, "a escrita real precisa chegar no banco");
+    const historico = await pool.query("SELECT reason FROM cli_portal_mode_config_history WHERE mode = 'convite' ORDER BY changed_at DESC LIMIT 1");
+    assert.equal(historico.rows[0].reason, MOTIVO, "o motivo precisa ficar no histórico");
+    await evidenciar(page, { estado: "escrita-real", nome: "clifin-1440-day-escrita", width: 1440, theme: "day" });
+  });
+
+  // --- 6) recusa REAL do servidor, traduzida ------------------------------
+  await comPagina({ width: 1440 }, async (page) => {
+    const bloco = page.getByTestId("clifin-bloco-modos");
+    await bloco.getByLabel("modo", { exact: true }).selectOption("autocadastro");
+    await bloco.getByLabel("libera contratos").selectOption("true");
+    await bloco.getByLabel("motivo da mudança de modo").fill(`${MOTIVO} recusa`);
+    await bloco.getByRole("button", { name: "Atualizar modo" }).click();
+    const erro = page.getByTestId("clifin-erro");
+    await erro.waitFor();
+    const texto = await erro.innerText();
+    assert.match(texto, /autocadastro nunca libera contratos sozinho/i);
+    assert.doesNotMatch(texto, /autocadastro_never_releases_contracts/, "código cru não vai para a tela");
+    await evidenciar(page, { estado: "escrita-recusada", nome: "clifin-1440-day-recusada", width: 1440, theme: "day" });
+  });
+
+  // --- 7) motivo curto: recusa ANTES de enviar ----------------------------
+  await comPagina({ width: 1440 }, async (page) => {
+    const bloco = page.getByTestId("clifin-bloco-modos");
+    const escritasAntes = await page.evaluate(() => window.__clifin.escritas);
+    await bloco.getByLabel("motivo da mudança de modo").fill("curto");
+    await bloco.getByRole("button", { name: "Atualizar modo" }).click();
+    const erro = page.getByTestId("clifin-erro");
+    await erro.waitFor();
+    assert.match(await erro.innerText(), /pelo menos 10 caracteres/i);
+    assert.equal(await page.evaluate(() => window.__clifin.escritas), escritasAntes, "motivo curto não vira requisição");
+    await evidenciar(page, { estado: "motivo-curto", nome: "clifin-1440-day-motivo", width: 1440, theme: "day" });
+  });
+
+  // --- 8) papel negado na rota inteira: o AdminGate barra ----------------
+  await comPagina({ cookie: rhCookie, width: 1440 }, async (page) => {
+    await page.locator('[data-admin-gate="forbidden"]').waitFor();
+    assert.equal(await page.getByTestId("clifin").count(), 0, "papel sem acesso não monta o console CLI");
+    await evidenciar(page, { estado: "papel-negado", nome: "clifin-1440-day-rh", width: 1440, theme: "day" });
+  });
+
+  // --- resumo das evidências ---------------------------------------------
+  if (evidence) {
+    await mkdir(evidence, { recursive: true });
+    await writeFile(path.join(evidence, "resumo.json"), JSON.stringify({
+      stage: "UX-PRO-03 · CLI-09..14 · console CLI na aba Financeiro do portal (/admin/ti)",
+      generatedBy: "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+      route: "/admin/ti",
+      fatia: "12ª promoção com prova — CliFinanceClient deixa de ser órfão",
+      entries,
+      limites: [
+        "Sem SMTP real: a troca de e-mail gera token no servidor; nenhum e-mail sai.",
+        "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+        "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado.",
+        "As listas vêm vazias de verdade quando a base não tem dados; nada de exemplo sintético na tela.",
+        "A fila de pedidos é global do módulo (não escopada por conta).",
+      ],
+    }, null, 2));
+  }
+  for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
+});
+
+// UX-PRO-03 (13ª promoção) — "Conteúdo do site": o CMS (PUB-06) deixa de ser
+// órfão. O protótipo mandava as transições para PATCH na coleção (405 no
+// servidor) e lia `detail.content` de uma resposta plana.
+function cmsInjecao(cfg) {
+  const original = window.fetch.bind(window);
+  window.__cms = { leituras: 0 };
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    const caminho = url.replace(location.origin, "").split("?")[0];
+    const metodo = ((init && init.method) || "GET").toUpperCase();
+    if (metodo === "GET" && caminho === "/api/admin/cms-contents" && (cfg.lista === "negado" || cfg.lista === "invalido")) {
+      window.__cms.leituras += 1;
+      return cfg.lista === "negado"
+        ? new Response(JSON.stringify({ error: "role_required" }), { status: 403, headers: { "Content-Type": "application/json" } })
+        : new Response(JSON.stringify({}), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    return original(input, init);
+  };
+}
+
+test("browser UX-PRO-03 CMS: conteúdo do site (criar, transicionar, publicar, reverter, negado, larguras e noite)", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const rh = await provisionStaff(pool, { role: "rh" });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const sufixo = randomUUID().slice(0, 8);
+  const MOTIVO = `Motivo sintético de publicação ${sufixo}`;
+  const evidence = process.env.UX_PORTAL_EVIDENCE_DIR || "";
+  const entries = [];
+
+  // --- servidor: ti publica, rh não ---------------------------------------
+  assert.equal((await api("/api/admin/cms-contents")).status, 401, "anônimo recebe 401");
+  assert.equal((await api("/api/admin/cms-contents", { cookie: rhCookie })).status, 403, "rh não publica conteúdo");
+  const listaTi = await api("/api/admin/cms-contents", { cookie: tiCookie });
+  assert.equal(listaTi.status, 200, "ti precisa ler o CMS");
+  assert.equal((await api("/api/admin/cms-contents", { method: "PATCH", cookie: tiCookie, body: { status: "publicado", reason: MOTIVO } })).status, 405,
+    "PATCH na coleção é 405 — a tela não pode usar essa rota");
+
+  // --- fixtures: uma página e um case sem autorização ---------------------
+  const slugPagina = `qa-cms-pagina-${sufixo}`;
+  const slugCase = `qa-cms-case-${sufixo}`;
+  const rascunhoPagina = await api("/api/admin/cms-contents", { method: "POST", cookie: tiCookie,
+    body: { slug: slugPagina, title: `Página QA ${sufixo}`, content: "Conteúdo sintético de página para o cenário de CMS do console de TI.", content_type: "pagina" } });
+  assert.equal(rascunhoPagina.status, 201, "a fixture de página precisa criar");
+  const rascunhoCase = await api("/api/admin/cms-contents", { method: "POST", cookie: tiCookie,
+    body: { slug: slugCase, title: `Case QA ${sufixo}`, content: "Conteúdo sintético de case sem autorização do cliente para publicar.", content_type: "case", is_authorized: false } });
+  assert.equal(rascunhoCase.status, 201, "a fixture de case precisa criar");
+  const idPagina = rascunhoPagina.body.id;
+  const idCase = rascunhoCase.body.id;
+
+  const comPagina = async (opcoes, acoes) => {
+    const browser = await launchBrowser();
+    try {
+      const context = await browser.newContext({ viewport: { width: opcoes.width ?? 1440, height: opcoes.height ?? 900 }, locale: "pt-BR" });
+      const cookie = opcoes.cookie ?? tiCookie;
+      await context.addCookies(cookie.split("; ").filter(Boolean).map(item => {
+        const separador = item.indexOf("=");
+        return { name: item.slice(0, separador), value: item.slice(separador + 1), url: baseUrl };
+      }));
+      const page = await context.newPage();
+      page.setDefaultTimeout(45_000);
+      page.setDefaultNavigationTimeout(90_000);
+      await page.addInitScript(cmsInjecao, Object.assign({ lista: "pass" }, opcoes.injecao || {}));
+      await page.goto(`${baseUrl}/admin/ti`, { waitUntil: "domcontentloaded" });
+      if (cookie === tiCookie) {
+        await page.getByRole("button", { name: "Conteúdo do site" }).click();
+        await page.getByTestId("cms").waitFor();
+        await page.waitForFunction(() => /Lido às/.test(document.querySelector('[data-testid="cms-hora"]')?.textContent || ""), null, { timeout: 45_000 });
+      }
+      const resultado = await acoes(page, context);
+      await context.close();
+      return resultado;
+    } finally { await browser.close(); }
+  };
+  const evidenciar = async (page, { estado, nome, width, theme }) => {
+    await capture(page, nome);
+    const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    entries.push({ viewport: width, theme, estado, screenshot: evidence ? `${nome}.png` : null, sobraDocumentoPx: sobra, problems: [] });
+    return sobra;
+  };
+
+  // --- 1) criar rascunho pela tela ----------------------------------------
+  const slugNovo = `qa-cms-novo-${sufixo}`;
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId(`cms-item-${slugPagina}-v1`).waitFor();
+    await page.getByTestId(`cms-item-${slugCase}-v1`).waitFor();
+    await page.getByLabel("slug", { exact: true }).fill(slugNovo);
+    await page.getByLabel("título", { exact: true }).fill(`Novo conteúdo ${sufixo}`);
+    await page.getByLabel("conteúdo", { exact: true }).fill("Conteúdo sintético criado pela interface do console de conteúdo do site, com mais de cinquenta caracteres.");
+    await page.getByRole("button", { name: "Criar rascunho" }).click();
+    await page.getByTestId("cms-ok").waitFor();
+    assert.match(await page.getByTestId("cms-ok").innerText(), /nada foi publicado/i);
+    await page.getByTestId(`cms-item-${slugNovo}-v1`).waitFor();
+    const criado = await pool.query("SELECT status, is_published FROM cms_contents WHERE slug = $1 ORDER BY version DESC LIMIT 1", [slugNovo]);
+    assert.equal(criado.rows[0].status, "rascunho");
+    assert.equal(criado.rows[0].is_published, false);
+    await evidenciar(page, { estado: "rascunho-criado", nome: "cms-1440-day-criado", width: 1440, theme: "day" });
+  });
+
+  // --- 2) transições reais até publicado ----------------------------------
+  await comPagina({ width: 1440 }, async (page) => {
+    const item = page.getByTestId(`cms-item-${slugPagina}-v1`);
+    await item.getByRole("button", { name: /abrir hist/ }).click();
+    await page.waitForFunction(() => document.querySelector('[data-testid="cms-detalhe"]')?.getAttribute("data-situacao") === "ok", null, { timeout: 30_000 });
+    assert.equal(await page.getByTestId("cms-detalhe").getAttribute("data-situacao"), "ok");
+    const textoDetalhe = await page.getByTestId("cms-detalhe").innerText();
+    assert.match(textoDetalhe, new RegExp(slugPagina), "o detalhe precisa mostrar o conteúdo (resposta plana)");
+    await page.getByLabel("motivo", { exact: true }).fill(MOTIVO);
+    await page.getByTestId("cms-transicao-em_revisao").click();
+    await page.getByTestId("cms-ok").waitFor();
+    await page.waitForFunction(() => /Em revisão/.test(document.querySelector('[data-testid="cms-detalhe"]')?.textContent || ""));
+    await page.getByTestId("cms-transicao-aprovado").click();
+    await page.waitForFunction(() => /Aprovado/.test(document.querySelector('[data-testid="cms-detalhe"]')?.textContent || ""), null, { timeout: 30_000 });
+    await page.getByTestId("cms-transicao-publicado").click();
+    await page.waitForFunction(() => /Publicado/.test(document.querySelector('[data-testid="cms-detalhe"]')?.textContent || ""), null, { timeout: 30_000 });
+    const publicado = await pool.query("SELECT status, is_published FROM cms_contents WHERE id = $1::uuid", [idPagina]);
+    assert.equal(publicado.rows[0].status, "publicado", "a transição real precisa chegar no banco");
+    assert.equal(publicado.rows[0].is_published, true, "publicar marca is_published");
+    const historico = await pool.query("SELECT next_status, reason FROM cms_content_history WHERE content_id = $1::uuid ORDER BY created_at ASC", [idPagina]);
+    // O primeiro evento é a criação do rascunho; depois, uma linha por transição.
+    assert.deepEqual(historico.rows.map(linha => linha.next_status), ["rascunho", "em_revisao", "aprovado", "publicado"],
+      "cada transição precisa deixar seu evento no histórico imutável");
+    assert.ok(historico.rows.some(linha => linha.reason === MOTIVO), "o motivo precisa ficar no histórico");
+    await evidenciar(page, { estado: "publicado", nome: "cms-1440-day-publicado", width: 1440, theme: "day" });
+  });
+
+  // --- 3) case sem autorização não publica (botão travado) ----------------
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId(`cms-item-${slugCase}-v1`).getByRole("button", { name: /abrir hist/ }).click();
+    await page.waitForFunction(() => document.querySelector('[data-testid="cms-detalhe"]')?.getAttribute("data-situacao") === "ok", null, { timeout: 30_000 });
+    await page.getByLabel("motivo", { exact: true }).fill(MOTIVO);
+    await page.getByTestId("cms-transicao-em_revisao").click();
+    await page.waitForFunction(() => /Em revisão/.test(document.querySelector('[data-testid="cms-detalhe"]')?.textContent || ""));
+    await page.getByTestId("cms-transicao-aprovado").click();
+    await page.waitForFunction(() => /Aprovado/.test(document.querySelector('[data-testid="cms-detalhe"]')?.textContent || ""), null, { timeout: 30_000 });
+    const publicar = page.getByTestId("cms-transicao-publicado");
+    assert.equal(await publicar.isDisabled(), true, "case sem autorização não pode ser publicado pela tela");
+    const noBanco = await pool.query("SELECT status FROM cms_contents WHERE id = $1::uuid", [idCase]);
+    assert.equal(noBanco.rows[0].status, "aprovado");
+    await evidenciar(page, { estado: "case-bloqueado", nome: "cms-1440-day-case", width: 1440, theme: "day" });
+  });
+
+  // --- 4) reverter cria rascunho novo -------------------------------------
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId(`cms-item-${slugPagina}-v1`).getByRole("button", { name: /abrir hist/ }).click();
+    await page.waitForFunction(() => document.querySelector('[data-testid="cms-detalhe"]')?.getAttribute("data-situacao") === "ok", null, { timeout: 30_000 });
+    await page.getByLabel("motivo", { exact: true }).fill(`${MOTIVO} reversão`);
+    await page.getByTestId("cms-reverter-1").click();
+    await page.getByTestId("cms-ok").waitFor();
+    assert.match(await page.getByTestId("cms-ok").innerText(), /Reversão para v1/i);
+    const versoes = await pool.query("SELECT status, version FROM cms_contents WHERE slug = $1 ORDER BY version DESC", [slugPagina]);
+    assert.ok(versoes.rows.length >= 2, "reverter cria nova versão");
+    assert.equal(versoes.rows[0].status, "rascunho", "a reversão nasce rascunho");
+    await evidenciar(page, { estado: "revertido", nome: "cms-1440-day-revertido", width: 1440, theme: "day" });
+  });
+
+  // --- 5) larguras e tema noturno -----------------------------------------
+  for (const width of [320, 390, 1440]) {
+    await comPagina({ width }, async (page) => {
+      await page.getByTestId(`cms-item-${slugPagina}-v1`).waitFor();
+      const sobra = await evidenciar(page, { estado: "autorizado", nome: `cms-${width}-day`, width, theme: "day" });
+      assert.ok(sobra <= 1, `o CMS transborda ${sobra}px em ${width}px`);
+    });
+  }
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId(`cms-item-${slugPagina}-v1`).waitFor();
+    await page.locator('[data-admin-theme-toggle="true"]').click();
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === "night");
+    await page.getByTestId("cms").waitFor();
+    const sobra = await evidenciar(page, { estado: "autorizado", nome: "cms-1440-night", width: 1440, theme: "night" });
+    assert.ok(sobra <= 1, `o CMS transborda ${sobra}px à noite`);
+  });
+
+  // --- 6) negação e payload inválido não viram "vazio" -------------------
+  await comPagina({ width: 1440, injecao: { lista: "negado" } }, async (page) => {
+    const estado = page.getByTestId("cms-estado-lista");
+    await estado.waitFor();
+    assert.equal(await estado.getAttribute("data-situacao"), "negado");
+    assert.match(await page.getByTestId("cms-faixa").innerText(), /indispon[íi]vel/i);
+    assert.doesNotMatch(await page.getByTestId("cms-card-lista").innerText(), /Nenhum conteúdo cadastrado/, "negado não é vazio");
+    await evidenciar(page, { estado: "negado", nome: "cms-1440-day-negado", width: 1440, theme: "day" });
+  });
+  await comPagina({ width: 1440, injecao: { lista: "invalido" } }, async (page) => {
+    const estado = page.getByTestId("cms-estado-lista");
+    await estado.waitFor();
+    assert.equal(await estado.getAttribute("data-situacao"), "invalido");
+    await evidenciar(page, { estado: "payload-invalido", nome: "cms-1440-day-invalido", width: 1440, theme: "day" });
+  });
+
+  if (evidence) {
+    await mkdir(evidence, { recursive: true });
+    await writeFile(path.join(evidence, "resumo.json"), JSON.stringify({
+      stage: "UX-PRO-03 · PUB-06 · conteúdo do site na aba do TiConsole (/admin/ti)",
+      generatedBy: "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+      route: "/admin/ti",
+      fatia: "13ª promoção com prova — CmsClient deixa de ser órfão",
+      entries,
+      limites: [
+        "Sem upload e sem renderização de HTML arbitrário: o CMS guarda texto e metadados.",
+        "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+        "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado.",
+        "Publicar substitui a versão publicada anterior (arquivando-a) e preserva todo o histórico; reverter cria rascunho novo.",
+      ],
+    }, null, 2));
+  }
+  for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
+});
+
+// UX-PRO-03 (14ª promoção) — "SEO e domínios": o PUB-08 deixa de ser órfão.
+// O protótipo gravava sitemap numa rota que virou prévia (405) e prometia
+// "publicar após domínio verificado" quando o servidor recusa declarar
+// verificado sem DNS/HTTP real.
+function seoInjecao(cfg) {
+  const original = window.fetch.bind(window);
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    const caminho = url.replace(location.origin, "").split("?")[0];
+    const metodo = ((init && init.method) || "GET").toUpperCase();
+    if (metodo === "GET" && caminho === "/api/admin/seo-configs" && cfg.configs === "negado") {
+      return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } });
+    }
+    return original(input, init);
+  };
+}
+
+test("browser UX-PRO-03 SEO: SEO e domínios (noindex preservado, redirects, prévia de sitemap, domínio pendente, negado, larguras e noite)", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const rh = await provisionStaff(pool, { role: "rh" });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const sufixo = randomUUID().slice(0, 8);
+  const caminho = `/qa-seo-${sufixo}`;
+  const origemRedirect = `/qa-antigo-${sufixo}`;
+  const dominio = `qa-${sufixo}.exemplo.invalid`;
+  const evidence = process.env.UX_PORTAL_EVIDENCE_DIR || "";
+  const entries = [];
+
+  // --- servidor: o que é executável e o que é recusado por desenho ---------
+  assert.equal((await api("/api/admin/seo-configs")).status, 401, "anônimo recebe 401");
+  assert.equal((await api("/api/admin/seo-configs", { cookie: rhCookie })).status, 403, "rh não administra SEO");
+  assert.equal((await api("/api/admin/seo-configs", { cookie: tiCookie })).status, 200, "ti lê SEO");
+  assert.equal((await api("/api/admin/seo-sitemap", { method: "POST", cookie: tiCookie, body: { url: "/" } })).status, 405,
+    "o sitemap virou prévia derivada: POST é 405");
+  const previa = await api("/api/admin/seo-sitemap", { cookie: tiCookie });
+  assert.equal(previa.status, 200);
+  assert.equal(previa.body.derived, true, "a prévia é derivada do catálogo público");
+  const dominioPendente = await api("/api/admin/domain-verifications", { method: "POST", cookie: tiCookie,
+    body: { domain: dominio, verification_method: "dns_txt", verification_token: `token-sintetico-${sufixo}-abcdef` } });
+  assert.equal(dominioPendente.status, 201, "cadastrar domínio pendente funciona");
+  const verificar = await api("/api/admin/domain-verifications", { method: "PATCH", cookie: tiCookie,
+    body: { id: dominioPendente.body.id, status: "verificado" } });
+  assert.equal(verificar.status, 400, "o servidor recusa declarar verificado sem prova real");
+  assert.equal(verificar.body.error, "domain_verification_not_supported");
+  const configCriada = await api("/api/admin/seo-configs", { method: "POST", cookie: tiCookie,
+    body: { path: caminho, title: `Página SEO ${sufixo}`, description: "Descrição sintética com mais de dez caracteres.", robots: "noindex, nofollow", sitemap_priority: 0.5, changefreq: "weekly" } });
+  assert.equal(configCriada.status, 201);
+  assert.equal(configCriada.body.is_noindex, true, "criar nasce noindex");
+  const publicar = await api("/api/admin/seo-configs", { method: "PATCH", cookie: tiCookie,
+    body: { id: configCriada.body.id, is_published: true } });
+  assert.equal(publicar.status, 400, "publicar preservando noindex é recusado pelo servidor");
+  assert.equal(publicar.body.error, "cannot_publish_with_noindex");
+
+  const comPagina = async (opcoes, acoes) => {
+    const browser = await launchBrowser();
+    try {
+      const context = await browser.newContext({ viewport: { width: opcoes.width ?? 1440, height: opcoes.height ?? 900 }, locale: "pt-BR" });
+      const cookie = opcoes.cookie ?? tiCookie;
+      await context.addCookies(cookie.split("; ").filter(Boolean).map(item => {
+        const separador = item.indexOf("=");
+        return { name: item.slice(0, separador), value: item.slice(separador + 1), url: baseUrl };
+      }));
+      const page = await context.newPage();
+      page.setDefaultTimeout(45_000);
+      page.setDefaultNavigationTimeout(90_000);
+      await page.addInitScript(seoInjecao, Object.assign({ configs: "pass" }, opcoes.injecao || {}));
+      await page.goto(`${baseUrl}/admin/ti`, { waitUntil: "domcontentloaded" });
+      if (cookie === tiCookie) {
+        await page.getByRole("button", { name: "SEO e domínios" }).click();
+        await page.getByTestId("seo").waitFor();
+        await page.waitForFunction(() => /Lido às/.test(document.querySelector('[data-testid="seo-hora"]')?.textContent || ""), null, { timeout: 45_000 });
+      }
+      const resultado = await acoes(page, context);
+      await context.close();
+      return resultado;
+    } finally { await browser.close(); }
+  };
+  const evidenciar = async (page, { estado, nome, width, theme }) => {
+    await capture(page, nome);
+    const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    entries.push({ viewport: width, theme, estado, screenshot: evidence ? `${nome}.png` : null, sobraDocumentoPx: sobra, problems: [] });
+    return sobra;
+  };
+
+  // --- 1) leitura: prévia do sitemap e aviso de publicação bloqueada ------
+  for (const width of [320, 390, 1440]) {
+    await comPagina({ width }, async (page) => {
+      await page.getByTestId("seo-sitemap").waitFor();
+      assert.equal(await page.getByTestId("seo-publicacao").getAttribute("data-permitido"), "nao");
+      assert.match(await page.getByTestId("seo-publicacao").innerText(), /bloqueada|n[ãa]o [ée] execut[áa]vel/i);
+      await page.getByTestId(`seo-config-${caminho}`).waitFor();
+      const sobra = await evidenciar(page, { estado: "autorizado", nome: `seo-${width}-day`, width, theme: "day" });
+      assert.ok(sobra <= 1, `SEO transborda ${sobra}px em ${width}px`);
+    });
+  }
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId(`seo-config-${caminho}`).waitFor();
+    await page.locator('[data-admin-theme-toggle="true"]').click();
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === "night");
+    await page.getByTestId("seo-sitemap").waitFor();
+    const sobra = await evidenciar(page, { estado: "autorizado", nome: "seo-1440-night", width: 1440, theme: "night" });
+    assert.ok(sobra <= 1, `SEO transborda ${sobra}px à noite`);
+  });
+
+  // --- 2) criar configuração pela tela (nasce noindex) --------------------
+  const caminhoNovo = `/qa-seo-novo-${sufixo}`;
+  await comPagina({ width: 1440 }, async (page) => {
+    const card = page.getByTestId("seo-card-configs");
+    await card.getByLabel("caminho", { exact: true }).fill(caminhoNovo);
+    await card.getByLabel("título SEO").fill(`Nova página ${sufixo}`);
+    await card.getByLabel("descrição SEO").fill("Descrição sintética criada pela interface do console de SEO.");
+    await card.getByLabel("prioridade").fill("0.7");
+    await card.getByRole("button", { name: /Criar configuração/ }).click();
+    await page.getByTestId("seo-ok").waitFor();
+    assert.match(await page.getByTestId("seo-ok").innerText(), /noindex preservado/i);
+    await page.getByTestId(`seo-config-${caminhoNovo}`).waitFor();
+    const linha = await pool.query("SELECT is_noindex, is_published, sitemap_priority FROM seo_configs WHERE path = $1", [caminhoNovo]);
+    assert.equal(linha.rows[0].is_noindex, true, "a tela nunca cria indexável");
+    assert.equal(linha.rows[0].is_published, false);
+    assert.equal(Number(linha.rows[0].sitemap_priority), 0.7);
+    await evidenciar(page, { estado: "config-criada", nome: "seo-1440-day-criada", width: 1440, theme: "day" });
+  });
+
+  // --- 3) manter noindex (PATCH real) ------------------------------------
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId(`seo-manter-${caminho}`).click();
+    await page.getByTestId("seo-ok").waitFor();
+    assert.match(await page.getByTestId("seo-ok").innerText(), /mantido com noindex/i);
+    const linha = await pool.query("SELECT is_noindex, is_published FROM seo_configs WHERE path = $1", [caminho]);
+    assert.equal(linha.rows[0].is_noindex, true);
+    assert.equal(linha.rows[0].is_published, false);
+  });
+
+  // --- 4) redirecionamento real ------------------------------------------
+  // Destino precisa ser rota pública de verdade: a política recusa 404.
+  const destinoPublico = (previa.body.paths || []).filter(item => typeof item === "string" && item !== "/" && item !== origemRedirect)[0];
+  assert.ok(destinoPublico, "a prévia do sitemap oferece ao menos uma rota pública como destino");
+  await comPagina({ width: 1440 }, async (page) => {
+    const card = page.getByTestId("seo-card-redirects");
+    assert.match(await page.getByTestId("seo-regra-destino").innerText(), /rota pública/i);
+    // Primeiro o caminho errado, para provar que o erro é traduzido e não vira sucesso.
+    await card.getByLabel("origem").fill(origemRedirect);
+    await card.getByLabel("destino").fill(`/nao-existe-${sufixo}`);
+    await card.getByLabel("motivo do redirecionamento").fill(`Motivo sintético do redirect ${sufixo}`);
+    await card.getByRole("button", { name: /Criar redirecionamento/ }).click();
+    await page.getByTestId("seo-erro").waitFor();
+    assert.match(await page.getByTestId("seo-erro").innerText(), /rota pública/i);
+    assert.equal((await pool.query("SELECT 1 FROM seo_redirects WHERE old_path = $1", [origemRedirect])).rowCount, 0, "destino inválido não grava");
+    await card.getByLabel("destino").fill(destinoPublico);
+    await card.getByRole("button", { name: /Criar redirecionamento/ }).click();
+    await page.getByTestId("seo-ok").waitFor();
+    assert.match(await page.getByTestId("seo-ok").innerText(), /registrado/i);
+    const linha = await pool.query("SELECT old_path, new_path, redirect_type, reason FROM seo_redirects WHERE old_path = $1", [origemRedirect]);
+    assert.equal(linha.rows[0].new_path, destinoPublico);
+    assert.equal(linha.rows[0].redirect_type, "301");
+    assert.equal(linha.rows[0].reason, `Motivo sintético do redirect ${sufixo}`);
+    await evidenciar(page, { estado: "redirect-criado", nome: "seo-1440-day-redirect", width: 1440, theme: "day" });
+  });
+
+  // --- 5) domínio pendente pela tela -------------------------------------
+  const dominioNovo = `qa-novo-${sufixo}.exemplo.invalid`;
+  await comPagina({ width: 1440 }, async (page) => {
+    const card = page.getByTestId("seo-card-dominios");
+    await card.getByLabel("domínio").fill(dominioNovo);
+    await card.getByLabel("token de verificação").fill(`token-sintetico-${sufixo}-novo`);
+    await card.getByRole("button", { name: /Registrar domínio pendente/ }).click();
+    await page.getByTestId("seo-ok").waitFor();
+    assert.match(await page.getByTestId("seo-ok").innerText(), /pendente/i);
+    const linha = await pool.query("SELECT status FROM domain_verifications WHERE domain = $1", [dominioNovo]);
+    assert.equal(linha.rows[0].status, "pendente");
+    assert.equal(await page.getByTestId("seo-publicacao").getAttribute("data-permitido"), "nao");
+    await evidenciar(page, { estado: "dominio-pendente", nome: "seo-1440-day-dominio", width: 1440, theme: "day" });
+  });
+
+  // --- 6) negação não vira lista vazia -----------------------------------
+  await comPagina({ width: 1440, injecao: { configs: "negado" } }, async (page) => {
+    const estado = page.getByTestId("seo-estado-configs");
+    await estado.waitFor();
+    assert.equal(await estado.getAttribute("data-situacao"), "negado");
+    assert.doesNotMatch(await page.getByTestId("seo-card-configs").innerText(), /nenhum registro/i, "negado não é vazio");
+    await evidenciar(page, { estado: "negado", nome: "seo-1440-day-negado", width: 1440, theme: "day" });
+  });
+
+  // --- 7) papel negado no gate -------------------------------------------
+  await comPagina({ cookie: rhCookie, width: 1440 }, async (page) => {
+    await page.locator('[data-admin-gate="forbidden"]').waitFor();
+    assert.equal(await page.getByTestId("seo").count(), 0, "rh não monta o console de SEO");
+    await evidenciar(page, { estado: "papel-negado", nome: "seo-1440-day-rh", width: 1440, theme: "day" });
+  });
+
+  if (evidence) {
+    await mkdir(evidence, { recursive: true });
+    await writeFile(path.join(evidence, "resumo.json"), JSON.stringify({
+      stage: "UX-PRO-03 · PUB-08 · SEO e domínios na aba do TiConsole (/admin/ti)",
+      generatedBy: "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+      route: "/admin/ti",
+      fatia: "14ª promoção com prova — SeoClient deixa de ser órfão",
+      entries,
+      limites: [
+        "Publicar é inalcançável nesta entrega: o servidor recusa declarar domínio verificado sem DNS/HTTP real e recusa publicar com noindex.",
+        "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+        "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado.",
+        "O sitemap administrativo é prévia derivada (GET); não há loja de linhas para editar.",
+      ],
+    }, null, 2));
+  }
+  for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
+});
+
+// UX-PRO-03 (15ª promoção) — "Mensuração de origem e A/B": o PUB-10 deixa de ser órfão.
+// O protótipo engolia 403 em lista vazia, trocava o status do A/B por botões
+// fixos em qualquer linha, gravava motivo constante e pedia o vencedor por
+// `prompt()`. O servidor confere o VALOR do status, não a ORDEM — a tela diz isso.
+function pubMetricsInjecao(cfg) {
+  const original = window.fetch.bind(window);
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    const caminho = url.replace(location.origin, "").split("?")[0];
+    const metodo = ((init && init.method) || "GET").toUpperCase();
+    if (metodo === "GET" && caminho === "/api/admin/origin-metrics" && cfg.metricas === "negado") {
+      return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } });
+    }
+    return original(input, init);
+  };
+}
+
+test("browser UX-PRO-03 PUB-10: mensuração de origem e A/B (minimização, ingestão pública, ciclo local, negado, larguras e noite)", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const rh = await provisionStaff(pool, { role: "rh" });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const sufixo = randomUUID().slice(0, 8);
+  const origem = `qa-site-${sufixo}`;
+  const chaveAb = `qa-ab-${sufixo}`;
+  const ipSintetico = `198.51.100.${Number.parseInt(sufixo.slice(0, 2), 16) % 250}`;
+  const evidence = process.env.UX_PORTAL_EVIDENCE_DIR || "";
+  const entries = [];
+
+  // --- servidor: papéis, faixas e o que é ingestão pública ---------------
+  assert.equal((await api("/api/admin/origin-metrics")).status, 401, "anônimo recebe 401 na leitura");
+  assert.equal((await api("/api/admin/origin-metrics", { cookie: rhCookie })).status, 401,
+    "papel sem permissão recebe 401 unauthorized (não 403) nesta rota — a tela declara isso");
+  assert.equal((await api("/api/admin/origin-metrics", { cookie: tiCookie })).status, 200);
+  assert.equal((await api("/api/admin/conversion-events", { cookie: tiCookie })).status, 200);
+  assert.equal((await api("/api/admin/ab-tests", { cookie: tiCookie })).status, 200);
+
+  const excedido = await api("/api/admin/origin-metrics", { method: "POST", cookie: tiCookie,
+    body: { origin: origem, period_start: "2026-10-01", period_end: "2026-10-31", total_leads: 10, converted_leads: 11 } });
+  assert.equal(excedido.status, 400);
+  assert.equal(excedido.body.error, "converted_exceeds_total");
+
+  const metricaCriada = await api("/api/admin/origin-metrics", { method: "POST", cookie: tiCookie,
+    body: { origin: origem, campaign: "qa-campanha", channel: "organic", period_start: "2026-10-01", period_end: "2026-10-31",
+      total_leads: 40, converted_leads: 10, total_opportunities: 4, total_contracts: 1, notes: "Métrica sintética do gate de mensuração." } });
+  assert.equal(metricaCriada.status, 201);
+  assert.equal(metricaCriada.body.is_minimized, true, "minimização é decisão do servidor");
+  assert.equal(Number(metricaCriada.body.converted_leads), 10);
+  const duplicada = await api("/api/admin/origin-metrics", { method: "POST", cookie: tiCookie,
+    body: { origin: origem, campaign: "qa-campanha", channel: "organic", period_start: "2026-10-01", period_end: "2026-10-31", total_leads: 1, converted_leads: 0 } });
+  assert.equal(duplicada.status, 409);
+  assert.equal(duplicada.body.error, "duplicate_period_origin");
+
+  // Ingestão pública: POST de evento aceita anônimo por desenho; a leitura não.
+  const eventoSemSessao = await api("/api/admin/conversion-events", { method: "POST",
+    body: { event_type: "lead_received", origin: origem, channel: "organic", ip: ipSintetico, user_agent: "gate-agent/1.0" } });
+  assert.equal(eventoSemSessao.status, 201, "POST de evento é ingestão pública por desenho");
+  assert.equal(eventoSemSessao.body.is_minimized, true);
+  // Defeito medido: `hashValue` do servidor usa `require('node:crypto')` dentro
+  // de módulo ESM, o erro é engolido e o INSERT grava NULL. O evento é aceito,
+  // mas NENHUM hash é produzido — a tela declara isso em vez de prometer hash.
+  assert.equal(eventoSemSessao.body.ip_hash, null, "o servidor não produz hash nesta entrega");
+  assert.equal(eventoSemSessao.body.user_agent_hash, null);
+  assert.equal(await api("/api/admin/conversion-events").then(r => r.status), 401, "a leitura do mesmo evento exige sessão");
+
+  const testeCriado = await api("/api/admin/ab-tests", { method: "POST", cookie: tiCookie,
+    body: { test_key: chaveAb, hypothesis: "Retorno rápido no formulário aumenta a conversão do site institucional.",
+      description: "Teste sintético criado pelo gate de mensuração.", metric_name: "conversion_rate",
+      traffic_required: 100, treatment: "Dados minimizados, sem IP original, apenas hash SHA-256.", variant_a: {}, variant_b: {} } });
+  assert.equal(testeCriado.status, 201);
+  assert.equal(testeCriado.body.status, "rascunho");
+  const vencedorInvalido = await api("/api/admin/ab-tests", { method: "PATCH", cookie: tiCookie,
+    body: { id: testeCriado.body.id, status: "concluido", winner: "C", reason: "Conclusão sintética com vencedor inválido." } });
+  assert.equal(vencedorInvalido.status, 400);
+  assert.equal(vencedorInvalido.body.error, "invalid_winner");
+  const motivoCurto = await api("/api/admin/ab-tests", { method: "PATCH", cookie: tiCookie,
+    body: { id: testeCriado.body.id, status: "aprovado", reason: "curto" } });
+  assert.equal(motivoCurto.status, 400);
+  assert.equal(motivoCurto.body.error, "invalid_reason");
+  // O servidor NÃO impõe ordem: aprovar e voltar para rascunho é aceito. Isso é
+  // o que a tela declara — a sequência é política local, não garantia da API.
+  assert.equal((await api("/api/admin/ab-tests", { method: "PATCH", cookie: tiCookie,
+    body: { id: testeCriado.body.id, status: "aprovado", reason: "Aprovação sintética do gate de mensuração." } })).status, 200);
+  const retrocesso = await api("/api/admin/ab-tests", { method: "PATCH", cookie: tiCookie,
+    body: { id: testeCriado.body.id, status: "rascunho", reason: "Retrocesso sintético provando ausência de máquina no servidor." } });
+  assert.equal(retrocesso.status, 200, "a API aceita retrocesso: a tela é quem oferece só o ciclo");
+  assert.equal(retrocesso.body.status, "rascunho");
+
+  const comPagina = async (opcoes, acoes) => {
+    const browser = await launchBrowser();
+    try {
+      const context = await browser.newContext({ viewport: { width: opcoes.width ?? 1440, height: opcoes.height ?? 900 }, locale: "pt-BR" });
+      const cookie = opcoes.cookie ?? tiCookie;
+      await context.addCookies(cookie.split("; ").filter(Boolean).map(item => {
+        const separador = item.indexOf("=");
+        return { name: item.slice(0, separador), value: item.slice(separador + 1), url: baseUrl };
+      }));
+      const page = await context.newPage();
+      page.setDefaultTimeout(45_000);
+      page.setDefaultNavigationTimeout(90_000);
+      await page.addInitScript(pubMetricsInjecao, Object.assign({ metricas: "pass" }, opcoes.injecao || {}));
+      await page.goto(`${baseUrl}/admin/ti`, { waitUntil: "domcontentloaded" });
+      if (cookie === tiCookie) {
+        await page.getByRole("button", { name: "Mensuração de origem e A/B" }).click();
+        await page.getByTestId("pub-mensuracao").waitFor();
+        await page.waitForFunction(() => /Lido às/.test(document.querySelector('[data-testid="pub-hora"]')?.textContent || ""), null, { timeout: 45_000 });
+      }
+      const resultado = await acoes(page, context);
+      await context.close();
+      return resultado;
+    } finally { await browser.close(); }
+  };
+  const evidenciar = async (page, { estado, nome, width, theme }) => {
+    await capture(page, nome);
+    const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    entries.push({ viewport: width, theme, estado, screenshot: evidence ? `${nome}.png` : null, sobraDocumentoPx: sobra, problems: [] });
+    return sobra;
+  };
+
+  // --- 1) leitura nas três larguras e à noite ----------------------------
+  for (const width of [320, 390, 1440]) {
+    await comPagina({ width }, async (page) => {
+      await page.getByTestId("pub-card-ab").waitFor();
+      assert.match(await page.getByTestId("pub-aviso-ordem").innerText(), /valor do status, n[ãa]o a sequ[êe]ncia/i);
+      assert.match(await page.getByTestId("pub-aviso-ingestao").innerText(), /ingest[ãa]o p[úu]blica/i);
+      await page.getByTestId(`pub-metrica-${origem}`).waitFor();
+      assert.match(await page.getByTestId(`pub-metrica-${origem}`).innerText(), /25[.,]00%/);
+      const sobra = await evidenciar(page, { estado: "autorizado", nome: `pub-metricas-${width}-day`, width, theme: "day" });
+      assert.ok(sobra <= 1, `mensuração transborda ${sobra}px em ${width}px`);
+    });
+  }
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.getByTestId("pub-card-ab").waitFor();
+    await page.locator('[data-admin-theme-toggle="true"]').click();
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === "night");
+    await page.getByTestId("pub-hora").waitFor();
+    const sobra = await evidenciar(page, { estado: "autorizado", nome: "pub-metricas-1440-night", width: 1440, theme: "night" });
+    assert.ok(sobra <= 1, `mensuração transborda ${sobra}px à noite`);
+  });
+
+  // --- 2) criar métrica e evento pela tela -------------------------------
+  const origemNova = `qa-nova-${sufixo}`;
+  await comPagina({ width: 1440 }, async (page) => {
+    const card = page.getByTestId("pub-card-metricas");
+    await card.getByLabel("origem da métrica").fill(origemNova);
+    await card.getByLabel("canal").selectOption("organic");
+    await card.getByLabel("início da métrica").fill("2026-10-01");
+    await card.getByLabel("fim da métrica").fill("2026-10-31");
+    await card.getByLabel("total de leads").fill("20");
+    await card.getByLabel("leads convertidos").fill("5");
+    await card.getByRole("button", { name: /Registrar métrica/ }).click();
+    await page.getByTestId("pub-ok").waitFor();
+    assert.match(await page.getByTestId("pub-ok").innerText(), /minimiza/i);
+    await page.getByTestId(`pub-metrica-${origemNova}`).waitFor();
+    const linha = await pool.query("SELECT is_minimized, total_leads, converted_leads FROM pub_origin_metrics WHERE origin = $1", [origemNova]);
+    assert.equal(linha.rows[0].is_minimized, true);
+    assert.equal(Number(linha.rows[0].total_leads), 20);
+    await evidenciar(page, { estado: "metrica-criada", nome: "pub-metricas-1440-day-criada", width: 1440, theme: "day" });
+  });
+
+  await comPagina({ width: 1440 }, async (page) => {
+    const card = page.getByTestId("pub-card-eventos");
+    await card.getByLabel("origem do evento").fill(origemNova);
+    // UUID torto é recusado ANTES do POST (o servidor viraria 500 na coluna uuid).
+    await card.getByLabel("lead do evento").fill("nao-e-uuid");
+    await card.getByRole("button", { name: /Registrar evento/ }).click();
+    await page.getByText(/UUID v[áa]lido/i).waitFor();
+    assert.equal((await pool.query("SELECT 1 FROM pub_conversion_events WHERE origin = $1", [origemNova])).rowCount, 0,
+      "evento com lead inválido não grava nada");
+    // UUID bem formado, mas inexistente: a FK de public_leads não perdoa. O
+    // servidor responde erro de servidor e a tela NÃO pode dizer que gravou.
+    await card.getByLabel("lead do evento").fill("f2c6a1d4-0b6f-4c11-9a1a-1f2b3c4d5e6f");
+    await card.getByRole("button", { name: /Registrar evento/ }).click();
+    await page.getByTestId("pub-erro").waitFor();
+    assert.match(await page.getByTestId("pub-erro").innerText(), /servidor falhou|nada foi confirmado/i);
+    assert.equal((await pool.query("SELECT 1 FROM pub_conversion_events WHERE origin = $1", [origemNova])).rowCount, 0,
+      "lead inexistente não grava evento");
+    await card.getByLabel("lead do evento").fill("");
+    await card.getByLabel("IP do evento").fill(ipSintetico);
+    await card.getByRole("button", { name: /Registrar evento/ }).click();
+    await page.getByTestId("pub-ok").waitFor();
+    assert.match(await page.getByTestId("pub-ok").innerText(), /ip_hash nulo|nada de hash/i,
+      "a tela não pode afirmar hash que o servidor não produziu");
+    assert.doesNotMatch(await page.getByTestId("pub-ok").innerText(), /em hash SHA-256/i);
+    const evento = await pool.query("SELECT ip_hash, user_agent_hash, is_minimized FROM pub_conversion_events WHERE origin = $1", [origemNova]);
+    assert.equal(evento.rowCount, 1);
+    assert.equal(evento.rows[0].ip_hash, null, "nada de hash é gravado nesta entrega");
+    assert.equal(evento.rows[0].is_minimized, true);
+    assert.match(await page.getByTestId("pub-aviso-hash").innerText(), /nulos/i);
+    await page.waitForFunction(() => /sem hash/i.test(document.querySelector('[data-testid="pub-lista-eventos"]')?.textContent || ""), null, { timeout: 45_000 });
+    // O valor digitado permanece no campo (é o formulário do operador), mas a
+    // lista que vem do servidor não pode devolvê-lo: só o estado do hash.
+    assert.ok(!(await page.getByTestId("pub-lista-eventos").innerText()).includes(ipSintetico),
+      "o IP não pode voltar na lista lida do servidor");
+    await evidenciar(page, { estado: "evento-criado", nome: "pub-metricas-1440-day-evento", width: 1440, theme: "day" });
+  });
+
+  // --- 3) ciclo do A/B: só os passos permitidos, motivo real ------------
+  const chaveNova = `qa-novo-${sufixo}`;
+  await comPagina({ width: 1440 }, async (page) => {
+    const card = page.getByTestId("pub-card-ab");
+    await card.getByLabel("chave do teste").fill(chaveNova);
+    await card.getByLabel("hipótese do teste").fill("Botão de retorno mais visível aumenta a conversão do formulário.");
+    await card.getByLabel("descrição do teste").fill("Teste sintético criado pela interface do console.");
+    await card.getByLabel("tráfego exigido").fill("150");
+    await card.getByLabel("tratamento de dados").fill("Dados minimizados, sem IP original, com hash SHA-256.");
+    await card.getByLabel("motivo do teste").fill("Transição sintética registrada pela interface.");
+    await card.getByRole("button", { name: /Criar teste em rascunho/ }).click();
+    await page.getByTestId("pub-ok").waitFor();
+    const linha = page.getByTestId(`pub-ab-${chaveNova}`);
+    await linha.waitFor();
+    assert.match(await linha.innerText(), /rascunho/i);
+    assert.equal(await page.getByTestId(`pub-avancar-${chaveNova}-em_execucao`).count(), 0, "rascunho não pula para execução");
+    assert.equal(await page.getByTestId(`pub-avancar-${chaveNova}-concluido`).count(), 0, "rascunho não conclui");
+    assert.equal(await page.getByTestId(`pub-avancar-${chaveNova}-em_revisao`).count(), 1);
+    await page.getByTestId(`pub-avancar-${chaveNova}-em_revisao`).click();
+    await page.getByTestId("pub-ok").waitFor();
+    assert.match(await page.getByTestId("pub-ok").innerText(), /motivo gravado/i);
+    await page.waitForFunction(key => /em revis/i.test(document.querySelector(`[data-testid="pub-ab-${key}"]`)?.textContent || ""), chaveNova, { timeout: 45_000 });
+    const banco = await pool.query("SELECT status FROM pub_ab_tests WHERE test_key = $1", [chaveNova]);
+    assert.equal(banco.rows[0].status, "em_revisao");
+    const historico = await pool.query(
+      "SELECT reason FROM pub_ab_test_history WHERE test_id = (SELECT id FROM pub_ab_tests WHERE test_key = $1) ORDER BY created_at", [chaveNova]);
+    assert.equal(historico.rowCount, 2, "criação + transição registradas no histórico");
+    assert.equal(historico.rows[1].reason, "Transição sintética registrada pela interface.",
+      "o motivo do histórico é o que o operador digitou, não texto fixo do código");
+    await evidenciar(page, { estado: "ab-transicionado", nome: "pub-metricas-1440-day-ab", width: 1440, theme: "day" });
+  });
+
+  // --- 4) negação não vira lista vazia ----------------------------------
+  await comPagina({ width: 1440, injecao: { metricas: "negado" } }, async (page) => {
+    const estadoLista = page.getByTestId("pub-estado-metricas");
+    await estadoLista.waitFor();
+    assert.equal(await estadoLista.getAttribute("data-situacao"), "negado");
+    assert.doesNotMatch(await page.getByTestId("pub-card-metricas").innerText(), /Nenhum registro/i, "negado não é vazio");
+    await evidenciar(page, { estado: "negado", nome: "pub-metricas-1440-day-negado", width: 1440, theme: "day" });
+  });
+
+  // --- 5) papel negado no gate ------------------------------------------
+  await comPagina({ cookie: rhCookie, width: 1440 }, async (page) => {
+    await page.locator('[data-admin-gate="forbidden"]').waitFor();
+    assert.equal(await page.getByTestId("pub-mensuracao").count(), 0, "rh não monta a mensuração");
+    await evidenciar(page, { estado: "papel-negado", nome: "pub-metricas-1440-day-rh", width: 1440, theme: "day" });
+  });
+
+  if (evidence) {
+    await mkdir(evidence, { recursive: true });
+    await writeFile(path.join(evidence, "resumo.json"), JSON.stringify({
+      stage: "UX-PRO-03 · PUB-10 · Mensuração de origem e A/B na aba do TiConsole (/admin/ti)",
+      generatedBy: "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+      route: "/admin/ti",
+      fatia: "15ª promoção com prova — OriginMetricsClient deixa de ser órfão",
+      entries,
+      limites: [
+        "A rota de eventos aceita POST público por desenho; a tela declara isso e as leituras exigem sessão admin/ti.",
+        "O servidor confere o valor do status do A/B, não a ordem: a sequência é política desta tela.",
+        "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+        "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado.",
+      ],
+    }, null, 2));
+  }
+  for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
+});
+
+// UX-PRO-03 (16ª promoção) — "Preferências e modelos de notificação": o PLT-05
+// deixa de ser órfão. O protótipo só lia as listas depois de dois cliques,
+// oferecia as quatro situações em qualquer modelo, mandava motivo de rejeição
+// fixo no código e o servidor criava linha nova a cada gravação global de
+// preferência (NULL não colide no UNIQUE), aceitava silêncio inválido como
+// falha de servidor e aprovava modelo marcado como NÃO seguro para informação
+// médica.
+function pltInjecao(cfg) {
+  const original = window.fetch.bind(window);
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    const caminho = url.replace(location.origin, "").split("?")[0];
+    const metodo = ((init && init.method) || "GET").toUpperCase();
+    if (metodo === "GET" && caminho === "/api/crm/notification-preferences" && cfg.preferencias === "negado") {
+      return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } });
+    }
+    return original(input, init);
+  };
+}
+
+test("browser UX-PRO-03 PLT-05: preferências e modelos de notificação (leitura própria, ciclo do modelo, motivo real, negado, larguras e noite)", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const rh = await provisionStaff(pool, { role: "rh" });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const sufixo = randomUUID().slice(0, 8);
+  const chaveModelo = `qa-plt-${sufixo}`;
+  const chaveInsegura = `qa-plt-med-${sufixo}`;
+  const motivoDigitado = `Texto fora do padrão PLT-05 — motivo do gate ${sufixo}.`;
+  const evidence = process.env.UX_PORTAL_EVIDENCE_DIR || "";
+  const entries = [];
+  const criados = [];
+
+  try {
+    // --- servidor: sessão, papéis e as regras que a tela declara ----------
+    assert.equal((await api("/api/crm/notification-preferences")).status, 401, "anônimo recebe 401 na leitura");
+    assert.equal((await api("/api/crm/notification-templates")).status, 401, "anônimo recebe 401 na lista de modelos");
+    assert.equal((await api("/api/crm/notification-preferences", { cookie: rhCookie })).status, 200,
+      "qualquer papel administrativo lê preferências; a escrita é que restringe");
+
+    // Preferência global (sem destinatário): duas gravações, UMA linha. Antes
+    // da correção cada POST criava linha nova, porque NULL não colide no
+    // UNIQUE(recipient_kind, recipient_id, channel).
+    const pref1 = await api("/api/crm/notification-preferences", { method: "POST", cookie: tiCookie,
+      body: { recipient_kind: "staff", channel: "email", is_enabled: true, is_email_enabled: true, quiet_hours_start: "22:00", quiet_hours_end: "07:00" } });
+    assert.equal(pref1.status, 200);
+    criados.push(pref1.body.preference.id);
+    const pref2 = await api("/api/crm/notification-preferences", { method: "POST", cookie: tiCookie,
+      body: { recipient_kind: "staff", channel: "email", is_enabled: false, is_email_enabled: false, quiet_hours_start: "22:00", quiet_hours_end: "07:00" } });
+    assert.equal(pref2.status, 200);
+    assert.equal(pref2.body.preference.id, pref1.body.preference.id, "a segunda gravação atualiza a mesma linha global");
+    const linhasPref = await pool.query("SELECT count(*)::int AS n, min(is_enabled::text) AS enabled FROM crm_notification_preferences WHERE recipient_kind='staff' AND recipient_id IS NULL AND channel='email'");
+    assert.equal(linhasPref.rows[0].n, 1, "preferência global não duplica");
+    assert.equal(linhasPref.rows[0].enabled, "false", "a segunda gravação sobrescreve o valor");
+
+    // Silêncio inválido é erro do operador (400), não falha do servidor (503).
+    const silencioRuim = await api("/api/crm/notification-preferences", { method: "POST", cookie: tiCookie,
+      body: { recipient_kind: "staff", channel: "email", quiet_hours_start: "25:00", quiet_hours_end: "07:00" } });
+    assert.equal(silencioRuim.status, 400);
+    assert.equal(silencioRuim.body.error, "invalid_quiet_hours");
+    const silencioSolo = await api("/api/crm/notification-preferences", { method: "POST", cookie: tiCookie,
+      body: { recipient_kind: "staff", channel: "email", quiet_hours_start: "22:00" } });
+    assert.equal(silencioSolo.status, 400, "silêncio é par");
+    const destinatarioTorto = await api("/api/crm/notification-preferences", { method: "POST", cookie: tiCookie,
+      body: { recipient_kind: "staff", channel: "email", recipient_id: "nao-e-uuid" } });
+    assert.equal(destinatarioTorto.status, 400);
+    assert.equal(destinatarioTorto.body.error, "invalid_recipient_id");
+
+    // PLT-05 no servidor: termo médico no push e no assunto é 400.
+    const pushMedico = await api("/api/crm/notification-templates", { method: "POST", cookie: tiCookie,
+      body: { template_key: chaveInsegura, channel: "push", subject: "Aviso", body: "Seu diagnóstico já está disponível no painel." } });
+    assert.equal(pushMedico.status, 400);
+    assert.equal(pushMedico.body.error, "medical_info_not_allowed_in_subject_push");
+    const assuntoMedico = await api("/api/crm/notification-templates", { method: "POST", cookie: tiCookie,
+      body: { template_key: chaveInsegura, channel: "email", subject: "Resultado do exame médico", body: "Mensagem comercial comum." } });
+    assert.equal(assuntoMedico.status, 400);
+    assert.equal(assuntoMedico.body.error, "medical_info_not_allowed_in_subject_push");
+
+    // E-mail com termo no corpo é aceito, mas nasce marcado como NÃO seguro —
+    // e um modelo não seguro não pode ser aprovado.
+    const inseguro = await api("/api/crm/notification-templates", { method: "POST", cookie: tiCookie,
+      body: { template_key: chaveInsegura, channel: "email", subject: "Retorno do atendimento", body: "Segue o laudo solicitado na consulta." } });
+    assert.equal(inseguro.status, 201);
+    criados.push(inseguro.body.template.id);
+    assert.equal(inseguro.body.template.is_medical_safe, false, "o servidor marca o conteúdo inseguro");
+    const aprovarInseguro = await api(`/api/crm/notification-templates/${inseguro.body.template.id}`, { method: "PATCH", cookie: tiCookie,
+      body: { status: "aprovado" } });
+    assert.equal(aprovarInseguro.status, 409);
+    assert.equal(aprovarInseguro.body.error, "medical_safety_required");
+    assert.equal((await pool.query("SELECT status FROM crm_notification_templates WHERE id=$1", [inseguro.body.template.id])).rows[0].status,
+      "rascunho", "a aprovação recusada não muda a situação");
+
+    // Criar já aprovado exige papel e deixa trilha de aprovação.
+    const criarAprovadoRh = await api("/api/crm/notification-templates", { method: "POST", cookie: rhCookie,
+      body: { template_key: `${chaveModelo}-rh`, channel: "email", subject: "Aviso", body: "Mensagem sem informação médica.", status: "aprovado" } });
+    assert.equal(criarAprovadoRh.status, 403);
+    assert.equal(criarAprovadoRh.body.error, "approval_requires_admin_ti");
+    const criarAprovado = await api("/api/crm/notification-templates", { method: "POST", cookie: tiCookie,
+      body: { template_key: `${chaveModelo}-aprovado`, channel: "email", subject: "Aviso", body: "Mensagem sem informação médica.", status: "aprovado" } });
+    assert.equal(criarAprovado.status, 201);
+    criados.push(criarAprovado.body.template.id);
+    assert.equal(criarAprovado.body.template.approved_by, "ti", "a criação aprovada grava quem aprovou");
+    assert.ok(criarAprovado.body.template.approved_at, "e quando aprovou");
+
+    // Rejeitar sem motivo é 400; com motivo, o texto gravado é o do operador.
+    const semMotivo = await api(`/api/crm/notification-templates/${criarAprovado.body.template.id}`, { method: "PATCH", cookie: tiCookie,
+      body: { status: "rejeitado" } });
+    assert.equal(semMotivo.status, 400);
+    assert.equal(semMotivo.body.error, "rejection_reason_required");
+    const comMotivo = await api(`/api/crm/notification-templates/${criarAprovado.body.template.id}`, { method: "PATCH", cookie: rhCookie,
+      body: { status: "rejeitado", rejection_reason: "Papel sem permissão deveria ser recusado." } });
+    assert.equal(comMotivo.status, 403, "rejeitar também exige admin/ti");
+    assert.equal(comMotivo.body.error, "approval_requires_admin_ti");
+
+    const comPagina = async (opcoes, acoes) => {
+      const browser = await launchBrowser();
+      try {
+        const context = await browser.newContext({ viewport: { width: opcoes.width ?? 1440, height: opcoes.height ?? 900 }, locale: "pt-BR" });
+        const cookie = opcoes.cookie ?? tiCookie;
+        await context.addCookies(cookie.split("; ").filter(Boolean).map(item => {
+          const separador = item.indexOf("=");
+          return { name: item.slice(0, separador), value: item.slice(separador + 1), url: baseUrl };
+        }));
+        const page = await context.newPage();
+        page.setDefaultTimeout(45_000);
+        page.setDefaultNavigationTimeout(90_000);
+        await page.addInitScript(pltInjecao, Object.assign({ preferencias: "pass" }, opcoes.injecao || {}));
+        await page.goto(`${baseUrl}/admin/ti`, { waitUntil: "domcontentloaded" });
+        if (cookie === tiCookie) {
+          await page.getByRole("button", { name: "Preferências e modelos de notificação" }).click();
+          await page.getByTestId("plt-notificacoes").waitFor();
+          await page.waitForFunction(() => /Lido às/.test(document.querySelector('[data-testid="plt-hora"]')?.textContent || ""), null, { timeout: 45_000 });
+        }
+        const resultado = await acoes(page, context);
+        await context.close();
+        return resultado;
+      } finally { await browser.close(); }
+    };
+    const evidenciar = async (page, { estado, nome, width, theme }) => {
+      await capture(page, nome);
+      const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      entries.push({ viewport: width, theme, estado, screenshot: evidence ? `${nome}.png` : null, sobraDocumentoPx: sobra, problems: [] });
+      return sobra;
+    };
+
+    // --- 1) leitura nas três larguras e à noite ---------------------------
+    for (const width of [320, 390, 1440]) {
+      await comPagina({ width }, async (page) => {
+        await page.getByTestId("plt-card-preferencias").waitFor();
+        await page.getByTestId("plt-card-modelos").waitFor();
+        assert.match(await page.getByTestId("plt-aviso-preferencia").innerText(), /global do tipo|atualizada/i);
+        assert.match(await page.getByTestId("plt-aviso-quiet").innerText(), /HH:MM/);
+        assert.match(await page.getByTestId("plt-aviso-medico").innerText(), /PLT-05/);
+        assert.match(await page.getByTestId("plt-aviso-ordem").innerText(), /pol[íi]tica desta tela/i);
+        await page.getByTestId("plt-pref-staff-email-global").waitFor();
+        assert.match(await page.getByTestId("plt-pref-staff-email-global").innerText(), /silêncio 22:00.07:00/);
+        const sobra = await evidenciar(page, { estado: "autorizado", nome: `plt-${width}-day`, width, theme: "day" });
+        assert.ok(sobra <= 1, `preferências transborda ${sobra}px em ${width}px`);
+      });
+    }
+    await comPagina({ width: 1440 }, async (page) => {
+      await page.getByTestId("plt-card-modelos").waitFor();
+      await page.locator('[data-admin-theme-toggle="true"]').click();
+      await page.waitForFunction(() => document.documentElement.dataset.adminTheme === "night");
+      await page.getByTestId("plt-hora").waitFor();
+      const sobra = await evidenciar(page, { estado: "autorizado", nome: "plt-1440-night", width: 1440, theme: "night" });
+      assert.ok(sobra <= 1, `preferências transborda ${sobra}px à noite`);
+    });
+
+    // --- 2) criar modelo pela tela, com só o próximo passo oferecido ------
+    await comPagina({ width: 1440 }, async (page) => {
+      const card = page.getByTestId("plt-card-modelos");
+      await card.getByLabel("chave do modelo").fill(chaveModelo);
+      await card.getByLabel("canal do modelo").selectOption("email");
+      await card.getByLabel("assunto do modelo").fill("Aviso de reunião da equipe");
+      await card.getByLabel("corpo do modelo").fill("Sua reunião de alinhamento foi confirmada para amanhã às 9h.");
+      await card.getByRole("button", { name: /Criar modelo/ }).click();
+      await page.getByTestId("plt-ok").waitFor();
+      assert.match(await page.getByTestId("plt-ok").innerText(), /criado em rascunho|criado em em_revisao/i);
+      const linha = page.getByTestId(`plt-modelo-${chaveModelo}-email-v1`);
+      await linha.waitFor();
+      assert.equal(await page.getByTestId(`plt-avancar-${chaveModelo}-email-v1-aprovado`).count(), 0, "rascunho não aprova direto");
+      assert.equal(await page.getByTestId(`plt-avancar-${chaveModelo}-email-v1-rejeitado`).count(), 0, "rascunho não rejeita");
+      assert.equal(await page.getByTestId(`plt-avancar-${chaveModelo}-email-v1-em_revisao`).count(), 1);
+      const banco = await pool.query("SELECT is_medical_safe, status FROM crm_notification_templates WHERE template_key=$1 AND channel='email'", [chaveModelo]);
+      assert.equal(banco.rowCount, 1);
+      assert.equal(banco.rows[0].is_medical_safe, true);
+      assert.equal(banco.rows[0].status, "rascunho");
+      criados.push(...(await pool.query("SELECT id FROM crm_notification_templates WHERE template_key=$1", [chaveModelo])).rows.map(r => r.id));
+      await evidenciar(page, { estado: "modelo-criado", nome: "plt-1440-day-modelo", width: 1440, theme: "day" });
+    });
+
+    // --- 3) a tela avisa sobre informação médica ANTES do POST ------------
+    await comPagina({ width: 1440 }, async (page) => {
+      const card = page.getByTestId("plt-card-modelos");
+      await card.getByLabel("chave do modelo").fill(`${chaveModelo}-med`);
+      await card.getByLabel("canal do modelo").selectOption("email");
+      await card.getByLabel("assunto do modelo").fill("Seu diagnóstico saiu");
+      await card.getByLabel("corpo do modelo").fill("Mensagem comum de aviso.");
+      await card.getByRole("button", { name: /Criar modelo/ }).click();
+      await page.getByTestId("plt-erro-assunto").waitFor();
+      assert.match(await page.getByTestId("plt-erro-assunto").innerText(), /m[ée]dic/i);
+      assert.equal((await pool.query("SELECT 1 FROM crm_notification_templates WHERE template_key=$1", [`${chaveModelo}-med`])).rowCount, 0,
+        "nada foi enviado ao servidor com termo médico no assunto");
+      await evidenciar(page, { estado: "modelo-recusado", nome: "plt-1440-day-modelo-recusado", width: 1440, theme: "day" });
+    });
+
+    // --- 4) ciclo real: em revisão, rejeição exige motivo digitado --------
+    await comPagina({ width: 1440 }, async (page) => {
+      const chaveItem = `${chaveModelo}-email-v1`;
+      await page.getByTestId(`plt-avancar-${chaveItem}-em_revisao`).click();
+      await page.getByTestId("plt-ok").waitFor();
+      await page.waitForFunction(key => /em_revisao/.test(document.querySelector(`[data-testid="plt-modelo-${key}"]`)?.textContent || ""), chaveItem, { timeout: 45_000 });
+      // Sem motivo, rejeitar não sai da tela.
+      await page.getByTestId(`plt-avancar-${chaveItem}-rejeitado`).click();
+      await page.getByTestId("plt-erro-motivo").waitFor();
+      assert.match(await page.getByTestId("plt-erro-motivo").innerText(), /motivo/i);
+      assert.equal((await pool.query("SELECT status FROM crm_notification_templates WHERE template_key=$1", [chaveModelo])).rows[0].status,
+        "em_revisao", "sem motivo a rejeição não é enviada");
+      await page.getByLabel("motivo da rejeição").fill(motivoDigitado);
+      await page.getByTestId(`plt-avancar-${chaveItem}-rejeitado`).click();
+      await page.getByTestId("plt-ok").waitFor();
+      assert.match(await page.getByTestId("plt-ok").innerText(), /motivo digitado/i);
+      const banco = await pool.query("SELECT status, rejection_reason FROM crm_notification_templates WHERE template_key=$1", [chaveModelo]);
+      assert.equal(banco.rows[0].status, "rejeitado");
+      assert.equal(banco.rows[0].rejection_reason, motivoDigitado, "o motivo gravado é o que o operador digitou");
+      await evidenciar(page, { estado: "modelo-rejeitado", nome: "plt-1440-day-modelo-rejeitado", width: 1440, theme: "day" });
+    });
+
+    // --- 5) preferência global pela tela: atualiza, não duplica -----------
+    await comPagina({ width: 1440 }, async (page) => {
+      const card = page.getByTestId("plt-card-preferencias");
+      const antes = await pool.query("SELECT count(*)::int AS n FROM crm_notification_preferences WHERE recipient_kind='client' AND recipient_id IS NULL AND channel='whatsapp'");
+      // O formulário volta ao padrão depois de gravar: preencher de novo é
+      // parte da prova de que a SEGUNDA gravação atualiza a MESMA linha.
+      const preencherEPreparar = async () => {
+        await card.getByLabel("tipo de destinatário").selectOption("client");
+        await card.getByLabel("canal da preferência").selectOption("whatsapp");
+        await card.getByLabel("início do silêncio").fill("21:30");
+        await card.getByLabel("fim do silêncio").fill("08:00");
+        await card.getByLabel("whatsapp ligado").check();
+        await card.getByRole("button", { name: /Salvar preferência/ }).click();
+      };
+      await preencherEPreparar();
+      await page.getByTestId("plt-ok").waitFor();
+      assert.match(await page.getByTestId("plt-ok").innerText(), /atualizada, n[ãa]o duplicada/i);
+      await preencherEPreparar();
+      await page.waitForFunction(() => /n[ãa]o duplicada/i.test(document.querySelector('[data-testid="plt-ok"]')?.textContent || ""), null, { timeout: 45_000 });
+      const depois = await pool.query("SELECT count(*)::int AS n, min(quiet_hours_start::text) AS inicio FROM crm_notification_preferences WHERE recipient_kind='client' AND recipient_id IS NULL AND channel='whatsapp'");
+      assert.equal(depois.rows[0].n, antes.rows[0].n + 1, "duas gravações, uma linha só");
+      assert.match(depois.rows[0].inicio, /^21:30/);
+      const criada = await pool.query("SELECT id FROM crm_notification_preferences WHERE recipient_kind='client' AND recipient_id IS NULL AND channel='whatsapp'");
+      criados.push(...criada.rows.map(r => r.id));
+      await evidenciar(page, { estado: "preferencia-gravada", nome: "plt-1440-day-preferencia", width: 1440, theme: "day" });
+    });
+
+    // --- 6) silêncio inválido é recusado na tela --------------------------
+    await comPagina({ width: 1440 }, async (page) => {
+      const card = page.getByTestId("plt-card-preferencias");
+      await card.getByLabel("tipo de destinatário").selectOption("lead");
+      await card.getByLabel("canal da preferência").selectOption("sms");
+      await card.getByLabel("início do silêncio").fill("25:00");
+      await card.getByLabel("fim do silêncio").fill("07:00");
+      await card.getByRole("button", { name: /Salvar preferência/ }).click();
+      await page.getByTestId("plt-erro-quiet").waitFor();
+      assert.match(await page.getByTestId("plt-erro-quiet").innerText(), /HH:MM/);
+      assert.equal((await pool.query("SELECT 1 FROM crm_notification_preferences WHERE recipient_kind='lead' AND channel='sms'")).rowCount, 0,
+        "silêncio inválido não chega ao servidor");
+    });
+
+    // --- 7) negação não vira lista vazia ----------------------------------
+    await comPagina({ width: 1440, injecao: { preferencias: "negado" } }, async (page) => {
+      const estadoLista = page.getByTestId("plt-estado-preferencias");
+      await estadoLista.waitFor();
+      assert.equal(await estadoLista.getAttribute("data-situacao"), "negado");
+      assert.doesNotMatch(await page.getByTestId("plt-card-preferencias").innerText(), /Nenhum registro/i, "negado não é vazio");
+      await evidenciar(page, { estado: "negado", nome: "plt-1440-day-negado", width: 1440, theme: "day" });
+    });
+
+    // --- 8) papel negado no gate ------------------------------------------
+    await comPagina({ cookie: rhCookie, width: 1440 }, async (page) => {
+      await page.locator('[data-admin-gate="forbidden"]').waitFor();
+      assert.equal(await page.getByTestId("plt-notificacoes").count(), 0, "rh não monta as preferências");
+      await evidenciar(page, { estado: "papel-negado", nome: "plt-1440-day-rh", width: 1440, theme: "day" });
+    });
+
+    if (evidence) {
+      await mkdir(evidence, { recursive: true });
+      await writeFile(path.join(evidence, "resumo.json"), JSON.stringify({
+        stage: "UX-PRO-03 · PLT-05 · Preferências e modelos de notificação na aba do TiConsole (/admin/ti)",
+        generatedBy: "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+        route: "/admin/ti",
+        fatia: "16ª promoção com prova — NotificationPreferencesClient deixa de ser órfão",
+        entries,
+        limites: [
+          "A aba exige sessão administrativa; papel rh abre o console mas não escreve aprovação — o servidor responde 403 e a tela declara.",
+          "Aprovar modelo com informação médica é recusado com 409: o conteúdo continua gravado, apenas não pode ser aprovado.",
+          "Sem envio real de e-mail, WhatsApp, SMS ou push: esta fatia promove preferências e modelos, não a entrega.",
+          "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+          "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado.",
+        ],
+      }, null, 2));
+    }
+    for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
+  } finally {
+    const ids = criados.filter(Boolean);
+    if (ids.length) {
+      await pool.query("DELETE FROM crm_notification_templates WHERE id = ANY($1::uuid[])", [ids]).catch(() => {});
+      await pool.query("DELETE FROM crm_notification_preferences WHERE id = ANY($1::uuid[])", [ids]).catch(() => {});
+    }
+    await pool.query("DELETE FROM crm_notification_preferences WHERE recipient_kind IN ('staff','client','lead') AND channel IN ('email','whatsapp','sms') AND recipient_id IS NULL AND created_at > NOW() - INTERVAL '10 minutes'").catch(() => {});
+    await pool.query("DELETE FROM crm_notification_templates WHERE template_key LIKE $1", [`qa-plt-${sufixo}%`]).catch(() => {});
+  }
+});
+
+// UX-PRO-03 (17ª promoção) — "App do funcionário: PWA e FAQ interna": EMP-18 e
+// EMP-19 deixam de ser órfãos. O protótipo lia tudo por `/api/hr/*` — caminho
+// que passa pela borda legada de RH e exige `employees.read`, permissão que só
+// `rh` e `marcelo` recebem automática —, então `ti`, o papel que monta a tela,
+// recebia 403 nas cinco leituras e via cinco listas vazias (cada `.catch`
+// devolvia `[]`). Além disso o PATCH do servidor não validava nada: fila 0,
+// 21 tentativas, cor fora do padrão, categoria inexistente e nível de leitura
+// inválido respondiam 500 em vez de 400.
+function empInjecao(cfg) {
+  const original = window.fetch.bind(window);
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    const caminho = url.replace(location.origin, "").split("?")[0];
+    const metodo = ((init && init.method) || "GET").toUpperCase();
+    if (metodo === "GET" && caminho === "/api/admin/pwa-configs" && cfg.configs === "negado") {
+      return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } });
+    }
+    return original(input, init);
+  };
+}
+
+// Mesmo slug de `chaveFaq` no módulo puro — o testid da linha é previsível.
+const chaveFaqGate = (categoria, pergunta) =>
+  `${categoria}-${pergunta.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40)}`;
+
+test("browser UX-PRO-03 EMP-18/19: app do funcionário (PWA e FAQ) com caminho canônico, validação antes do banco, ciclo da FAQ, negado, larguras e noite", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const rh = await provisionStaff(pool, { role: "rh" });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const sufixo = randomUUID().slice(0, 8);
+  const nomeApp = `QA PWA ${sufixo}`;
+  const pergunta = `Como pedir troca de escala ${sufixo}?`;
+  const resposta = "Abra o portal do funcionário, escolha Escala e depois Troca de escala para enviar o pedido ao seu supervisor.";
+  const evidence = process.env.UX_PORTAL_EVIDENCE_DIR || "";
+  const entries = [];
+  const criados = [];
+
+  try {
+    // --- servidor: sessão, borda legada x caminho canônico ------------------
+    assert.equal((await api("/api/admin/pwa-configs")).status, 401, "anônimo recebe 401 na configuração do PWA");
+    assert.equal((await api("/api/admin/faq-internal")).status, 401, "anônimo recebe 401 na FAQ interna");
+    assert.equal((await api("/api/admin/pwa-configs", { cookie: tiCookie })).status, 200,
+      "ti lê a configuração pelo caminho canônico de administração");
+    assert.equal((await api("/api/admin/faq-internal?limit=50", { cookie: tiCookie })).status, 200,
+      "ti lê a FAQ interna pelo caminho canônico");
+    // O caminho que o protótipo usava continua negando ti: é a razão da fatia.
+    const legadoTi = await api("/api/hr/pwa-configs", { cookie: tiCookie });
+    assert.equal(legadoTi.status, 403, "a borda legada de RH continua negando ti");
+    assert.equal(legadoTi.body.error, "employee_permission_required");
+    assert.equal(legadoTi.body.permission, "employees.read");
+    assert.equal((await api("/api/admin/hr/faq-internal", { cookie: tiCookie })).status, 403,
+      "o alias de RH da FAQ também segue na borda");
+    // Nada foi afrouxado: os aliases de RH continuam funcionando para quem tem a permissão.
+    assert.equal((await api("/api/hr/pwa-configs", { cookie: rhCookie })).status, 200, "rh continua lendo o alias antigo");
+    // E a escrita continua restrita a admin/ti.
+    const criarRh = await api("/api/admin/pwa-configs", { method: "POST", cookie: rhCookie, body: {
+      name: `QA PWA rh ${sufixo}`, short_name: "QA",
+      description: "Tentativa de escrita por papel sem permissão de administração.",
+      theme_color: "#0f172a", background_color: "#ffffff", display: "standalone",
+      scope: "/", start_url: "/funcionario", approved_offline_tasks: ["occurrence"],
+      max_queue_size: 10, max_retries: 3,
+    } });
+    assert.equal(criarRh.status, 403);
+    assert.equal(criarRh.body.error, "forbidden");
+
+    // --- servidor: o PATCH valida antes do banco (400 em vez de 500) --------
+    const baseConfig = await api("/api/admin/pwa-configs", { method: "POST", cookie: tiCookie, body: {
+      name: `QA PWA base ${sufixo}`, short_name: "QA PWA",
+      description: "Configuração sintética criada pelo gate para provar a validação do PATCH.",
+      theme_color: "#0f172a", background_color: "#ffffff", display: "standalone",
+      scope: "/", start_url: "/funcionario", approved_offline_tasks: ["occurrence", "handover"],
+      max_queue_size: 50, max_retries: 5,
+    } });
+    assert.equal(baseConfig.status, 201);
+    const idConfig = baseConfig.body.config.id;
+    criados.push(["config", idConfig]);
+    const antes = (await pool.query("SELECT max_queue_size, max_retries, display, theme_color, description FROM emp_pwa_configs WHERE id=$1", [idConfig])).rows[0];
+    const invalidos = [
+      [{ max_queue_size: 0 }, "invalid_max_queue_size"],
+      [{ max_queue_size: 201 }, "invalid_max_queue_size"],
+      [{ max_retries: 21 }, "invalid_max_retries"],
+      [{ description: "curta" }, "invalid_description"],
+      [{ display: "janela" }, "invalid_display"],
+      [{ theme_color: "azul" }, "invalid_theme_color"],
+      [{ background_color: "#fff" }, "invalid_background_color"],
+      [{ approved_offline_tasks: ["teleporte"] }, "invalid_approved_offline_tasks"],
+      [{ do_not_cache_patterns: Array.from({ length: 51 }, (_, i) => `/p${i}`) }, "invalid_do_not_cache_patterns"],
+    ];
+    for (const [corpo, codigo] of invalidos) {
+      const resposta = await api("/api/admin/pwa-configs", { method: "PATCH", cookie: tiCookie, body: { id: idConfig, ...corpo } });
+      assert.equal(resposta.status, 400, `${codigo}: erro do operador precisa ser 400`);
+      assert.equal(resposta.body.error, codigo);
+    }
+    const depois = (await pool.query("SELECT max_queue_size, max_retries, display, theme_color, description FROM emp_pwa_configs WHERE id=$1", [idConfig])).rows[0];
+    assert.deepEqual(depois, antes, "nenhuma gravação recusada tocou a linha");
+
+    // Pergunta distinta da que a tela vai criar: o testid da linha é derivado de
+    // categoria + pergunta, e duas linhas iguais violariam o seletor.
+    const perguntaValidacao = `Pergunta sintética de validação ${sufixo}`;
+    const baseFaq = await api("/api/admin/faq-internal", { method: "POST", cookie: tiCookie, body: {
+      question: perguntaValidacao, answer: resposta, category: "escala", status: "rascunho",
+      reading_level: "simples", tags: ["escala", "portal"], is_simple_language: true, is_low_data: true,
+    } });
+    assert.equal(baseFaq.status, 201);
+    const idFaq = baseFaq.body.faq.id;
+    criados.push(["faq", idFaq]);
+    assert.equal(baseFaq.body.faq.is_published, false, "rascunho não nasce publicado");
+    for (const [corpo, codigo] of [
+      [{ category: "inventada" }, "invalid_category"],
+      [{ reading_level: "doutorado" }, "invalid_reading_level"],
+      [{ tags: Array.from({ length: 21 }, (_, i) => `t${i}`) }, "invalid_tags"],
+    ]) {
+      const resposta = await api("/api/admin/faq-internal", { method: "PATCH", cookie: tiCookie, body: { id: idFaq, ...corpo } });
+      assert.equal(resposta.status, 400, `${codigo}: erro do operador precisa ser 400`);
+      assert.equal(resposta.body.error, codigo);
+    }
+    const faqIntacta = (await pool.query("SELECT category, reading_level, tags FROM emp_faq_internal WHERE id=$1", [idFaq])).rows[0];
+    assert.equal(faqIntacta.category, "escala");
+    assert.equal(faqIntacta.reading_level, "simples");
+
+    // O manifest público existe e responde sem sessão (é o alvo real da config).
+    const manifest = await fetch(`${baseUrl}/api/pwa/manifest.json`);
+    assert.equal(manifest.status, 200, "o manifest público continua servido");
+
+    const comPagina = async (opcoes, acoes) => {
+      const browser = await launchBrowser();
+      try {
+        const context = await browser.newContext({ viewport: { width: opcoes.width ?? 1440, height: opcoes.height ?? 900 }, locale: "pt-BR" });
+        const cookie = opcoes.cookie ?? tiCookie;
+        await context.addCookies(cookie.split("; ").filter(Boolean).map(item => {
+          const separador = item.indexOf("=");
+          return { name: item.slice(0, separador), value: item.slice(separador + 1), url: baseUrl };
+        }));
+        const page = await context.newPage();
+        page.setDefaultTimeout(45_000);
+        page.setDefaultNavigationTimeout(90_000);
+        await page.addInitScript(empInjecao, Object.assign({ configs: "pass" }, opcoes.injecao || {}));
+        await page.goto(`${baseUrl}/admin/ti`, { waitUntil: "domcontentloaded" });
+        if (cookie === tiCookie) {
+          await page.getByRole("button", { name: "App do funcionário: PWA e FAQ" }).click();
+          await page.getByTestId("emp-pwa").waitFor();
+          await page.waitForFunction(() => /Lido às/.test(document.querySelector('[data-testid="emp-hora"]')?.textContent || ""), null, { timeout: 45_000 });
+        }
+        const resultado = await acoes(page, context);
+        await context.close();
+        return resultado;
+      } finally { await browser.close(); }
+    };
+    const evidenciar = async (page, { estado, nome, width, theme }) => {
+      await capture(page, nome);
+      const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      entries.push({ viewport: width, theme, estado, screenshot: evidence ? `${nome}.png` : null, sobraDocumentoPx: sobra, problems: [] });
+      return sobra;
+    };
+
+    // --- 1) leitura nas três larguras e à noite ----------------------------
+    for (const width of [320, 390, 1440]) {
+      await comPagina({ width }, async (page) => {
+        await page.getByTestId("emp-card-config").waitFor();
+        await page.getByTestId("emp-card-faq").waitFor();
+        assert.match(await page.getByTestId("emp-aviso-borda").innerText(), /employees\.read/);
+        assert.match(await page.getByTestId("emp-aviso-ativo").innerText(), /padrão embutido/i);
+        assert.match(await page.getByTestId("emp-aviso-faq").innerText(), /20 a 5\.000/);
+        assert.match(await page.getByTestId("emp-aviso-offline").innerText(), /employees\.read/);
+        // As listas vieram do servidor: nada de "negado" disfarçado de vazio.
+        assert.equal(await page.getByTestId("emp-estado-configs").count(), 0, "a configuração leu com registros");
+        assert.ok(await page.getByTestId("emp-lista-configs").locator("li").count() >= 1, "há configuração na lista");
+        const sobra = await evidenciar(page, { estado: "autorizado", nome: `emp-${width}-day`, width, theme: "day" });
+        assert.ok(sobra <= 1, `o app do funcionário transborda ${sobra}px em ${width}px`);
+      });
+    }
+    await comPagina({ width: 1440 }, async (page) => {
+      await page.getByTestId("emp-card-fora").waitFor();
+      await page.locator('[data-admin-theme-toggle="true"]').click();
+      await page.waitForFunction(() => document.documentElement.dataset.adminTheme === "night");
+      const sobra = await evidenciar(page, { estado: "autorizado", nome: "emp-1440-night", width: 1440, theme: "night" });
+      assert.ok(sobra <= 1, `o app do funcionário transborda ${sobra}px à noite`);
+    });
+
+    // --- 2) criar configuração pela tela: versão nova e prova no banco ------
+    const versaoAntes = (await pool.query("SELECT COALESCE(MAX(version),0)::int AS v FROM emp_pwa_configs")).rows[0].v;
+    let versaoCriada = 0;
+    await comPagina({ width: 1440 }, async (page) => {
+      const card = page.getByTestId("emp-card-config");
+      await card.getByLabel("nome do app").fill(nomeApp);
+      await card.getByLabel("nome curto do app").fill("QA PWA");
+      await card.getByLabel("descrição do app").fill("Configuração criada pela tela de TI durante o gate do portal.");
+      await card.getByLabel("tarefa offline shift_swap").check();
+      await card.getByRole("button", { name: /Criar versão da configuração/ }).click();
+      await page.getByTestId("emp-ok").waitFor();
+      assert.match(await page.getByTestId("emp-ok").innerText(), /criada ativa/i);
+      const banco = await pool.query("SELECT id, version, is_active, approved_offline_tasks FROM emp_pwa_configs WHERE name=$1", [nomeApp]);
+      assert.equal(banco.rowCount, 1);
+      versaoCriada = banco.rows[0].version;
+      criados.push(["config", banco.rows[0].id]);
+      assert.equal(banco.rows[0].is_active, true);
+      assert.ok(banco.rows[0].approved_offline_tasks.includes("shift_swap"));
+      assert.equal(versaoCriada, versaoAntes + 1, "a versão vem de MAX(version)+1, não do cliente");
+      await page.getByTestId(`emp-config-v${versaoCriada}-ativa`).waitFor();
+      await evidenciar(page, { estado: "config-criada", nome: "emp-1440-day-config", width: 1440, theme: "day" });
+    });
+
+    // --- 3) fila fora da faixa é recusada ANTES do envio -------------------
+    await comPagina({ width: 1440 }, async (page) => {
+      const card = page.getByTestId("emp-card-config");
+      const antesQtd = (await pool.query("SELECT count(*)::int AS n FROM emp_pwa_configs")).rows[0].n;
+      await card.getByLabel("nome do app").fill(`${nomeApp} fila`);
+      await card.getByLabel("nome curto do app").fill("QA Fila");
+      await card.getByLabel("descrição do app").fill("Configuração com fila inválida criada pela tela durante o gate.");
+      await card.getByLabel("tamanho da fila").fill("0");
+      await card.getByRole("button", { name: /Criar versão da configuração/ }).click();
+      await page.getByTestId("emp-erro-fila").waitFor();
+      assert.match(await page.getByTestId("emp-erro-fila").innerText(), /1 a 200/);
+      const depoisQtd = (await pool.query("SELECT count(*)::int AS n FROM emp_pwa_configs")).rows[0].n;
+      assert.equal(depoisQtd, antesQtd, "fila inválida não chega ao servidor");
+      await evidenciar(page, { estado: "config-recusada", nome: "emp-1440-day-config-recusada", width: 1440, theme: "day" });
+    });
+
+    // --- 4) desativar pela tela e o manifest cair no padrão do código ------
+    await comPagina({ width: 1440 }, async (page) => {
+      await page.getByTestId(`emp-alternar-v${versaoCriada}-ativa`).click();
+      await page.getByTestId("emp-ok").waitFor();
+      assert.match(await page.getByTestId("emp-ok").innerText(), /desativada/);
+      await page.waitForFunction(versao => Boolean(document.querySelector(`[data-testid="emp-config-v${versao}-inativa"]`)), versaoCriada, { timeout: 45_000 });
+      const banco = await pool.query("SELECT is_active FROM emp_pwa_configs WHERE name=$1", [nomeApp]);
+      assert.equal(banco.rows[0].is_active, false);
+      const manifest = await fetch(`${baseUrl}/api/pwa/manifest.json`);
+      assert.equal(manifest.status, 200, "sem configuração ativa o manifest continua respondendo (padrão do código)");
+      await evidenciar(page, { estado: "config-desativada", nome: "emp-1440-day-config-desativada", width: 1440, theme: "day" });
+    });
+
+    // --- 5) FAQ pela tela: nasce rascunho e só o próximo passo é oferecido --
+    await comPagina({ width: 1440 }, async (page) => {
+      const card = page.getByTestId("emp-card-faq");
+      await card.getByLabel("pergunta da FAQ").fill(pergunta);
+      await card.getByLabel("categoria da FAQ").selectOption("escala");
+      await card.getByLabel("nível de leitura").selectOption("simples");
+      await card.getByLabel("situação inicial da FAQ").selectOption("rascunho");
+      await card.getByLabel("etiquetas da FAQ").fill("escala, plantao");
+      await card.getByLabel("resposta da FAQ").fill(resposta);
+      await card.getByRole("button", { name: /Criar pergunta/ }).click();
+      await page.getByTestId("emp-ok").waitFor();
+      assert.match(await page.getByTestId("emp-ok").innerText(), /rascunho.*nada foi publicado/i);
+      const chave = chaveFaqGate("escala", pergunta);
+      const linha = page.getByTestId(`emp-faq-${chave}`);
+      await linha.waitFor();
+      assert.equal(await page.getByTestId(`emp-mover-${chave}-publicado`).count(), 0, "rascunho não publica direto");
+      assert.equal(await page.getByTestId(`emp-mover-${chave}-em_revisao`).count(), 1);
+      const banco = await pool.query("SELECT id, status, is_published FROM emp_faq_internal WHERE question=$1", [pergunta]);
+      assert.equal(banco.rowCount, 1);
+      criados.push(["faq", banco.rows[0].id]);
+      assert.equal(banco.rows[0].status, "rascunho");
+      assert.equal(banco.rows[0].is_published, false);
+      await evidenciar(page, { estado: "faq-criada", nome: "emp-1440-day-faq", width: 1440, theme: "day" });
+    });
+
+    // --- 6) ciclo real: revisão e publicação gravam is_published -----------
+    await comPagina({ width: 1440 }, async (page) => {
+      const chave = chaveFaqGate("escala", pergunta);
+      await page.getByTestId(`emp-mover-${chave}-em_revisao`).click();
+      await page.getByTestId("emp-ok").waitFor();
+      await page.waitForFunction(key => /em_revisao/.test(document.querySelector(`[data-testid="emp-faq-${key}"]`)?.getAttribute("data-situacao") || ""), chave, { timeout: 45_000 });
+      await page.getByTestId(`emp-mover-${chave}-publicado`).click();
+      await page.getByTestId("emp-ok").waitFor();
+      assert.match(await page.getByTestId("emp-ok").innerText(), /publicação ligada pelo servidor/);
+      await page.waitForFunction(key => document.querySelector(`[data-testid="emp-faq-${key}"]`)?.getAttribute("data-situacao") === "publicado", chave, { timeout: 45_000 });
+      const publicado = (await pool.query("SELECT status, is_published, published_by FROM emp_faq_internal WHERE question=$1", [pergunta])).rows[0];
+      assert.equal(publicado.status, "publicado");
+      assert.equal(publicado.is_published, true, "publicar liga is_published");
+      assert.equal(publicado.published_by, "ti", "e grava quem publicou");
+      await evidenciar(page, { estado: "faq-publicada", nome: "emp-1440-day-faq-publicada", width: 1440, theme: "day" });
+      await page.getByTestId(`emp-mover-${chave}-arquivado`).click();
+      await page.waitForFunction(key => document.querySelector(`[data-testid="emp-faq-${key}"]`)?.getAttribute("data-situacao") === "arquivado", chave, { timeout: 45_000 });
+      const arquivado = (await pool.query("SELECT status, is_published FROM emp_faq_internal WHERE question=$1", [pergunta])).rows[0];
+      assert.equal(arquivado.status, "arquivado");
+      assert.equal(arquivado.is_published, false, "arquivar desliga a publicação");
+    });
+
+    // --- 7) negação não vira lista vazia ----------------------------------
+    await comPagina({ width: 1440, injecao: { configs: "negado" } }, async (page) => {
+      const estadoLista = page.getByTestId("emp-estado-configs");
+      await estadoLista.waitFor();
+      assert.equal(await estadoLista.getAttribute("data-situacao"), "negado");
+      assert.doesNotMatch(await page.getByTestId("emp-card-config").innerText(), /Nenhum registro/i, "negado não é vazio");
+      await evidenciar(page, { estado: "negado", nome: "emp-1440-day-negado", width: 1440, theme: "day" });
+    });
+
+    // --- 8) papel negado no gate ------------------------------------------
+    await comPagina({ cookie: rhCookie, width: 1440 }, async (page) => {
+      await page.locator('[data-admin-gate="forbidden"]').waitFor();
+      assert.equal(await page.getByTestId("emp-pwa").count(), 0, "rh não monta o app do funcionário no console de TI");
+      await evidenciar(page, { estado: "papel-negado", nome: "emp-1440-day-rh", width: 1440, theme: "day" });
+    });
+
+    if (evidence) {
+      await mkdir(evidence, { recursive: true });
+      await writeFile(path.join(evidence, "resumo.json"), JSON.stringify({
+        stage: "UX-PRO-03 · EMP-18/19 · App do funcionário (PWA e FAQ interna) na aba do TiConsole (/admin/ti)",
+        generatedBy: "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+        route: "/admin/ti",
+        fatia: "17ª promoção com prova — EmpPwaClient deixa de ser órfão",
+        entries,
+        limites: [
+          "Os aliases /api/hr/pwa-configs e /api/hr/faq-internal continuam negando ti: a tela usa /api/admin/pwa-configs e /api/admin/faq-internal, fora da borda legada de RH.",
+          "Fila offline, conflitos, log de acesso ao FAQ e preferências de acessibilidade são dado de funcionário e seguem atrás de employees.read: a tela declara, não monta.",
+          "O servidor confere o valor da situação da FAQ, não a ordem: a sequência é política desta tela.",
+          "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+          "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado.",
+        ],
+      }, null, 2));
+    }
+    for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
+  } finally {
+    const configIds = criados.filter(([tipo]) => tipo === "config").map(([, id]) => id);
+    const faqIds = criados.filter(([tipo]) => tipo === "faq").map(([, id]) => id);
+    if (configIds.length) await pool.query("DELETE FROM emp_pwa_configs WHERE id = ANY($1::uuid[])", [configIds]).catch(() => {});
+    if (faqIds.length) await pool.query("DELETE FROM emp_faq_internal WHERE id = ANY($1::uuid[])", [faqIds]).catch(() => {});
+    await pool.query("DELETE FROM emp_pwa_configs WHERE name LIKE $1", [`QA PWA %${sufixo}%`]).catch(() => {});
+    await pool.query("DELETE FROM emp_faq_internal WHERE question LIKE $1", [`%${sufixo}%`]).catch(() => {});
   }
 });

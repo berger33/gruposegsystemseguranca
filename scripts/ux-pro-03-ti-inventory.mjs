@@ -106,6 +106,42 @@ const PROMOCOES_COM_PROVA = [
     familia: 'ADM-01..06 pauta do dia, retratos comercial/operacional/financeiro, risco de renovação e aprovação unificada com alçada (ADM-07..12 descartado: /api/adm/panel/* já escreve as mesmas tabelas em /admin/marcelo)',
     relatorio: 'docs/UX-PRO-03-PROMOCAO-PAINEL-ADM-2026-10-30.md',
   },
+  {
+    componente: 'CliFinanceClient.tsx',
+    aba: 'cli_financeiro',
+    familia: 'CLI-09..14 cobranças fiscais, serviço adicional, satisfação, renovação, modos de entrada, pedidos de acesso, segurança da conta e troca de e-mail — migrado de /api/hr/cli-* (403 para ti) para os aliases canônicos /api/cli/* e /api/admin/portal-access-requests, com leitura por bloco que declara negado/falha/inválido em vez de lista vazia',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-CLI-FINANCEIRO-2026-10-31.md',
+  },
+  {
+    componente: 'CmsClient.tsx',
+    aba: 'cms',
+    familia: 'PUB-06 CMS do site: rascunho, revisão, aprovação, publicação, arquivamento, versões por snapshot, histórico imutável e reversão — com as transições migradas para PATCH /api/admin/cms-contents/:id (o protótipo chamava a coleção e recebia 405) e o detalhe lido no formato plano que a API devolve',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-CMS-CONTEUDO-2026-10-31.md',
+  },
+  {
+    componente: 'SeoClient.tsx',
+    aba: 'seo',
+    familia: 'PUB-08 SEO técnico: configurações por caminho com noindex preservado, redirecionamentos, prévia derivada de sitemap (a rota deixou de aceitar POST) e verificação de domínio — declarando que publicar é inalcançável nesta entrega porque o servidor recusa marcar domínio como verificado sem DNS/HTTP real',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-SEO-DOMINIOS-2026-10-31.md',
+  },
+  {
+    componente: 'OriginMetricsClient.tsx',
+    aba: 'pub_metricas',
+    familia: 'PUB-10 mensuração de origem, conversão e testes A/B: métricas com minimização e canal do enum do banco, eventos de conversão (ingestão pública, lead com FK e hash que o servidor NÃO produz nesta entrega) e ciclo de A/B com motivo real no histórico — a transição voltou a funcionar depois de corrigir o 42P08 que fazia todo PATCH responder 500',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-MENSURACAO-ORIGEM-AB-2026-10-31.md',
+  },
+  {
+    componente: 'NotificationPreferencesClient.tsx',
+    aba: 'plt_notificacoes',
+    familia: 'PLT-05 preferências de notificação por destinatário/canal com silêncio em HH:MM e modelos versionados sem informação médica em assunto/push — depois de DESCARTAR FinClient (duplicado por /admin/financeiro e pela aba financeiro_cadastros) e OpsClient (duplicado por /admin/operacao); o servidor passou a atualizar preferência global (NULL não colide no UNIQUE), validar silêncio com 400 e recusar aprovação de modelo inseguro (409)',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-PREFERENCIAS-NOTIFICACAO-2026-11-01.md',
+  },
+  {
+    componente: 'EmpPwaClient.tsx',
+    aba: 'emp_pwa',
+    familia: 'EMP-18/EMP-19 app do funcionário: configuração do PWA versionada (nome, cores, exibição e tarefas offline do enum do banco) e FAQ interna com ciclo de revisão e linguagem simples/baixo consumo — depois de DESCARTAR EmpAdvanced2Client, cujas 11 rotas /api/admin/hr/* passam pela borda legada de RH que nega admin/ti; os aliases /api/hr/pwa-configs e /api/hr/faq-internal continuam 403 de propósito e a tela usa o caminho canônico de administração; o PATCH passou a validar fila 1..200, tentativas 1..20, cores #rrggbb, display/categoria/nível de leitura do enum, devolvendo 400 em vez de 500',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-APP-FUNCIONARIO-PWA-FAQ-2026-11-01.md',
+  },
 ];
 
 const sha256 = value => createHash('sha256').update(value).digest('hex');

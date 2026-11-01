@@ -35,8 +35,8 @@
       "entregue": 7
     },
     "porClasseEvidencia": {
-      "mencionado_em_gate": 114,
-      "somente_documento": 85,
+      "mencionado_em_gate": 118,
+      "somente_documento": 81,
       "gate_nomeado": 23
     },
     "aRevalidarDeclarado": 46,
@@ -65,7 +65,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1637,
+    "arquivosVarridos": 1671,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -730,9 +730,12 @@
       "estado_declarado_0410": "pronto_local",
       "estado_confirmado_0410": "pronto_local",
       "pendencia_0410": "Textos e autorização de cases precisam de aceite humano antes de uso real. Texto simples; sem novo upload público.",
-      "classe_evidencia_atual": "somente_documento",
+      "classe_evidencia_atual": "mencionado_em_gate",
       "arquivos_gate_nomeados": [],
-      "arquivos_gate": [],
+      "arquivos_gate": [
+        "tests/ux-portal-workspace.integration.test.mjs",
+        "tests/ux-pro-03-ti-cms-conteudo-ui.test.mjs"
+      ],
       "arquivos_documento": [
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
@@ -744,11 +747,14 @@
         "docs/PROMPT-CONTINUACAO-CRM-TAREFAS.md"
       ],
       "arquivos_codigo": [
-        "src/app/admin/ti/CmsClient.tsx"
+        "scripts/ux-pro-03-ti-inventory.mjs",
+        "src/app/admin/ti/CmsClient.module.css",
+        "src/app/admin/ti/CmsClient.tsx",
+        "src/app/admin/ti/cms-content-state.ts"
       ],
-      "ocorrencias_gate": 0,
-      "ocorrencias_documento": 21,
-      "ocorrencias_codigo": 1,
+      "ocorrencias_gate": 3,
+      "ocorrencias_documento": 24,
+      "ocorrencias_codigo": 4,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -792,7 +798,9 @@
       "arquivos_gate_nomeados": [],
       "arquivos_gate": [
         "tests/l04-delivery.integration.test.mjs",
-        "tests/seo-technical.test.mjs"
+        "tests/seo-technical.test.mjs",
+        "tests/ux-portal-workspace.integration.test.mjs",
+        "tests/ux-pro-03-ti-seo-dominios-ui.test.mjs"
       ],
       "arquivos_documento": [
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
@@ -805,15 +813,18 @@
         "docs/PROMPT-PROXIMA-SESSAO-L04.md"
       ],
       "arquivos_codigo": [
+        "scripts/ux-pro-03-ti-inventory.mjs",
+        "src/app/admin/ti/SeoClient.module.css",
         "src/app/admin/ti/SeoClient.tsx",
+        "src/app/admin/ti/seo-console-state.ts",
         "src/lib/segment-examples.mjs",
         "src/lib/seo-technical.mjs",
         "src/server/seo-api.mjs",
         "src/server/seo-technical-api.mjs"
       ],
-      "ocorrencias_gate": 12,
-      "ocorrencias_documento": 24,
-      "ocorrencias_codigo": 9,
+      "ocorrencias_gate": 15,
+      "ocorrencias_documento": 28,
+      "ocorrencias_codigo": 12,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -859,6 +870,9 @@
       "arquivos_gate": [
         "tests/l04-delivery.integration.test.mjs",
         "tests/ux-crm-workspace.integration.test.mjs",
+        "tests/ux-portal-workspace.integration.test.mjs",
+        "tests/ux-pro-03-ti-mensuracao-origem-ui.test.mjs",
+        "tests/ux-pro-03-ti-reaudit.test.mjs",
         "tests/ux-pro-06-metricas-origem-estados.test.mjs"
       ],
       "arquivos_documento": [
@@ -872,15 +886,18 @@
         "docs/PROMPT-CONTINUACAO-CRM-TAREFAS.md"
       ],
       "arquivos_codigo": [
+        "scripts/ux-pro-03-ti-inventory.mjs",
         "src/app/admin/leads/OriginMetricsPanel.tsx",
         "src/app/admin/leads/origin-metrics-state.ts",
+        "src/app/admin/ti/OriginMetricsClient.module.css",
         "src/app/admin/ti/OriginMetricsClient.tsx",
+        "src/app/admin/ti/pub-metrics-state.ts",
         "src/lib/public-lead-validation.mjs",
         "src/server/crm-api.mjs"
       ],
-      "ocorrencias_gate": 9,
-      "ocorrencias_documento": 53,
-      "ocorrencias_codigo": 6,
+      "ocorrencias_gate": 25,
+      "ocorrencias_documento": 59,
+      "ocorrencias_codigo": 10,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -2513,23 +2530,32 @@
       "estado_declarado_0410": "pronto_local",
       "estado_confirmado_0410": "pronto_local",
       "pendencia_0410": "Fila deliberadamente limitada; não armazena documentos médicos/salariais. Teste no Windows permanece para L10.",
-      "classe_evidencia_atual": "somente_documento",
+      "classe_evidencia_atual": "mencionado_em_gate",
       "arquivos_gate_nomeados": [],
-      "arquivos_gate": [],
+      "arquivos_gate": [
+        "tests/ux-portal-workspace.integration.test.mjs",
+        "tests/ux-pro-03-ti-emp-pwa-faq-ui.test.mjs"
+      ],
       "arquivos_documento": [
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
-        "docs/auditoria-2026-10-04/AUDITORIA.md"
+        "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
+        "docs/UX-PRO-03-PROMOCAO-APP-FUNCIONARIO-PWA-FAQ-2026-11-01.md",
+        "docs/auditoria-2026-10-04/AUDITORIA.md",
+        "docs/ux-pro-03-emp-pwa-evidencias/resumo.json"
       ],
       "arquivos_codigo": [
+        "scripts/ux-pro-03-ti-inventory.mjs",
+        "src/app/admin/ti/EmpPwaClient.module.css",
         "src/app/admin/ti/EmpPwaClient.tsx",
+        "src/app/admin/ti/emp-pwa-state.ts",
         "src/server/emp-pwa-api.mjs"
       ],
-      "ocorrencias_gate": 0,
-      "ocorrencias_documento": 8,
-      "ocorrencias_codigo": 7,
+      "ocorrencias_gate": 12,
+      "ocorrencias_documento": 12,
+      "ocorrencias_codigo": 8,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -2540,23 +2566,31 @@
       "estado_declarado_0410": "pronto_local",
       "estado_confirmado_0410": "pronto_local",
       "pendencia_0410": "Aceite humano no Windows permanece para L10; nenhuma integração externa é alegada.",
-      "classe_evidencia_atual": "somente_documento",
+      "classe_evidencia_atual": "mencionado_em_gate",
       "arquivos_gate_nomeados": [],
-      "arquivos_gate": [],
+      "arquivos_gate": [
+        "tests/ux-portal-workspace.integration.test.mjs",
+        "tests/ux-pro-03-ti-emp-pwa-faq-ui.test.mjs"
+      ],
       "arquivos_documento": [
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
+        "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
+        "docs/UX-PRO-03-PROMOCAO-APP-FUNCIONARIO-PWA-FAQ-2026-11-01.md",
         "docs/auditoria-2026-10-04/AUDITORIA.md"
       ],
       "arquivos_codigo": [
+        "scripts/ux-pro-03-ti-inventory.mjs",
+        "src/app/admin/ti/EmpPwaClient.module.css",
         "src/app/admin/ti/EmpPwaClient.tsx",
+        "src/app/admin/ti/emp-pwa-state.ts",
         "src/server/emp-pwa-api.mjs"
       ],
-      "ocorrencias_gate": 0,
-      "ocorrencias_documento": 5,
-      "ocorrencias_codigo": 2,
+      "ocorrencias_gate": 4,
+      "ocorrencias_documento": 7,
+      "ocorrencias_codigo": 5,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -4016,7 +4050,9 @@
       "arquivos_gate_nomeados": [],
       "arquivos_gate": [
         ".github/workflows/ci.yml",
-        "tests/cli-v2.integration.test.mjs"
+        "tests/cli-v2.integration.test.mjs",
+        "tests/ux-portal-workspace.integration.test.mjs",
+        "tests/ux-pro-03-ti-cli-financeiro-ui.test.mjs"
       ],
       "arquivos_documento": [
         "docs/AUDITORIA-TERRENO-L08.md",
@@ -4030,12 +4066,14 @@
       ],
       "arquivos_codigo": [
         "scripts/qa-l08-delivery-postgres.mjs",
+        "scripts/ux-pro-03-ti-inventory.mjs",
+        "src/app/admin/ti/CliFinanceClient.module.css",
         "src/app/admin/ti/CliFinanceClient.tsx",
         "src/server/cli-finance-api.mjs"
       ],
-      "ocorrencias_gate": 3,
-      "ocorrencias_documento": 15,
-      "ocorrencias_codigo": 7,
+      "ocorrencias_gate": 6,
+      "ocorrencias_documento": 19,
+      "ocorrencias_codigo": 8,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -4070,7 +4108,7 @@
       ],
       "ocorrencias_gate": 4,
       "ocorrencias_documento": 22,
-      "ocorrencias_codigo": 6,
+      "ocorrencias_codigo": 5,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -4110,7 +4148,7 @@
       ],
       "ocorrencias_gate": 10,
       "ocorrencias_documento": 41,
-      "ocorrencias_codigo": 7,
+      "ocorrencias_codigo": 6,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -4144,7 +4182,7 @@
       ],
       "ocorrencias_gate": 10,
       "ocorrencias_documento": 38,
-      "ocorrencias_codigo": 6,
+      "ocorrencias_codigo": 5,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -4157,11 +4195,14 @@
       "pendencia_0410": "`test:l08-delivery:pg`, cascata L03..L08 e aplicação da migração 144 adiados; sem aceite humano novo; Windows pendente.",
       "classe_evidencia_atual": "gate_nomeado",
       "arquivos_gate_nomeados": [
-        "tests/cli13-portal-access-modes.test.mjs"
+        "tests/cli13-portal-access-modes.test.mjs",
+        "tests/ux-pro-06-cli13-fila-acesso-estados.test.mjs"
       ],
       "arquivos_gate": [
         "docs/REQUISITOS-SEC-REAUDITORIA-2026-10-28.json",
-        "tests/cli13-portal-access-modes.test.mjs"
+        "tests/cli13-portal-access-modes.test.mjs",
+        "tests/ux-portal-workspace.integration.test.mjs",
+        "tests/ux-pro-06-cli13-fila-acesso-estados.test.mjs"
       ],
       "arquivos_documento": [
         "docs/AUDITORIA-TERRENO-L08.md",
@@ -4174,14 +4215,16 @@
         "docs/ENTREGA-L08.md"
       ],
       "arquivos_codigo": [
+        "src/app/admin/portal/solicitacoes/AccessRequests.module.css",
+        "src/app/admin/portal/solicitacoes/access-queue-state.ts",
         "src/app/admin/portal/solicitacoes/page.tsx",
         "src/app/admin/ti/CliFinanceClient.tsx",
         "src/server/cli-finance-api.mjs",
         "src/server/client-access-api.mjs"
       ],
-      "ocorrencias_gate": 14,
-      "ocorrencias_documento": 39,
-      "ocorrencias_codigo": 6,
+      "ocorrencias_gate": 29,
+      "ocorrencias_documento": 47,
+      "ocorrencias_codigo": 11,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -5418,7 +5461,7 @@
         "src/server/adm-panel-api.mjs"
       ],
       "ocorrencias_gate": 4,
-      "ocorrencias_documento": 19,
+      "ocorrencias_documento": 20,
       "ocorrencias_codigo": 12,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -5715,25 +5758,32 @@
       "estado_declarado_0410": "em_execucao",
       "estado_confirmado_0410": "em_execucao",
       "pendencia_0410": "SMTP está fora do escopo por decisão do cliente: não há e-mail real. Falta a tela de painel de notificações e a revisão de conteúdo de templ",
-      "classe_evidencia_atual": "somente_documento",
+      "classe_evidencia_atual": "mencionado_em_gate",
       "arquivos_gate_nomeados": [],
-      "arquivos_gate": [],
+      "arquivos_gate": [
+        "tests/ux-portal-workspace.integration.test.mjs",
+        "tests/ux-pro-03-ti-preferencias-notificacao-ui.test.mjs"
+      ],
       "arquivos_documento": [
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
+        "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
         "docs/UX-PRO-03-PROMOCAO-CLIENTE-V2-2026-10-28.md",
         "docs/UX-PRO-03-PROMOCAO-PAINEL-ADM-2026-10-30.md",
-        "docs/auditoria-2026-10-04/AUDITORIA.md"
+        "docs/UX-PRO-03-PROMOCAO-PREFERENCIAS-NOTIFICACAO-2026-11-01.md"
       ],
       "arquivos_codigo": [
+        "scripts/ux-pro-03-ti-inventory.mjs",
+        "src/app/admin/ti/NotificationPreferencesClient.module.css",
         "src/app/admin/ti/NotificationPreferencesClient.tsx",
+        "src/app/admin/ti/notification-prefs-state.ts",
         "src/server/notification-preferences-api.mjs"
       ],
-      "ocorrencias_gate": 0,
-      "ocorrencias_documento": 8,
-      "ocorrencias_codigo": 5,
+      "ocorrencias_gate": 23,
+      "ocorrencias_documento": 14,
+      "ocorrencias_codigo": 15,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
