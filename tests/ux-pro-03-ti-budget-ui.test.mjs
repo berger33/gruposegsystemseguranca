@@ -25,7 +25,7 @@ test('UX-PRO-03 PLT-16: a família deixa de ser órfã e ganha aba real no conso
   assert.match(consoleClient, /const BudgetClient=dynamic\(\(\)=>import\('\.\/BudgetClient'\)\)/);
   assert.match(consoleClient, /active==='orcamentos'&&<BudgetClient\/>/);
   assert.match(page, /allowedRoles=\{\['ti','admin'\]\}/);
-  assert.match(consoleClient, /'saude','observacao','incidentes','integracoes','dependencias','manutencao','orcamentos'/);
+  assert.match(consoleClient, /'saude','observacao','incidentes','integracoes','integracao_catalogo','dependencias','manutencao','orcamentos'/);
 });
 
 test('UX-PRO-03 PLT-16: os três contratos, os métodos e o papel admin/ti são preservados', () => {

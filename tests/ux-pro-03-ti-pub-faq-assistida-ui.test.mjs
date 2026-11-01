@@ -248,10 +248,10 @@ test("PUB-02/05: o servidor ganhou token de verdade, coerência de publicação 
   }
 });
 
-test("PUB-02/05: a aba existe, é dinâmica, está no grupo certo e o console tem 31 abas", () => {
+test("PUB-02/05: a aba existe, é dinâmica, está no grupo certo e o console tem 32 abas", () => {
   const declaracao = consoleTi.match(/const tabs=(\[[\s\S]*?\]) as const;/)?.[1] ?? "";
   const abas = [...declaracao.matchAll(/\['([a-z0-9_]+)','([^']+)'\]/g)].map(item => item[1]);
-  assert.equal(abas.length, 31, "a promoção leva o console de 30 para 31 abas");
+  assert.equal(abas.length, 32, "a promoção leva o console de 30 para 32 abas");
   assert.ok(abas.includes("pub_faq"));
   assert.match(consoleTi, /const PubFaqAssistedClient=dynamic\(\(\)=>import\('\.\/PubFaqAssistedClient'\)\);/);
   assert.match(consoleTi, /\{active==='pub_faq'&&<PubFaqAssistedClient\/>\}/);

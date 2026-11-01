@@ -212,10 +212,10 @@ test("PLT-05: o servidor não duplica preferência global, valida silêncio e ba
   assert.match(api, /approved_by_id/);
 });
 
-test("PLT-05: a aba existe, é dinâmica, está no grupo certo e o console tem 31 abas", () => {
+test("PLT-05: a aba existe, é dinâmica, está no grupo certo e o console tem 32 abas", () => {
   const declaracao = consoleTi.match(/const tabs=(\[[\s\S]*?\]) as const;/)?.[1] ?? "";
   const abas = [...declaracao.matchAll(/\['([a-z0-9_]+)','([^']+)'\]/g)].map(item => item[1]);
-  assert.equal(abas.length, 31, "a promoção leva o console de 28 para 31 abas");
+  assert.equal(abas.length, 32, "a promoção leva o console de 28 para 32 abas");
   assert.ok(abas.includes("plt_notificacoes"));
   assert.match(consoleTi, /const NotificationPreferencesClient=dynamic\(\(\)=>import\('\.\/NotificationPreferencesClient'\)\);/);
   assert.match(consoleTi, /\{active==='plt_notificacoes'&&<NotificationPreferencesClient\/>\}/);

@@ -148,6 +148,12 @@ const PROMOCOES_COM_PROVA = [
     familia: 'PUB-02/PUB-05 segmentos do site e FAQ assistida com transferência humana — depois de DESCARTAR os órfãos de dado de funcionário presos na borda legada de RH (EmpOpsClient, EmpPortalClient, EmpSelfClient, EmpProfileClient, EmpAdvanced2Client) e os que já têm superfície viva (/admin/operacao, /admin/financeiro, /admin/patrimonio, /admin/contratos/[id], /admin/publicacao); aqui nenhuma das quatro rotas /api/admin/{faq-assisted-rules,pub-faq-sessions,faq-handoff,pub-segments} tem outro consumidor em src/app. O servidor passou a gerar token de sessão com randomBytes importado (eram ~11 caracteres de Math.random e a criação de sessão respondia 500), a recusar publicação sem aprovação (409), situação publicado sem is_published (400), segmento publicado sem validação (409), transferência concluída sem resposta escrita (400) e id que não é UUID (400)',
     relatorio: 'docs/UX-PRO-03-PROMOCAO-PUB-FAQ-ASSISTIDA-2026-11-01.md',
   },
+  {
+    componente: 'IntegrationsClient.tsx',
+    aba: 'integracao_catalogo',
+    familia: 'PLT-03 catálogo de integrações, status configurado/não configurado/falha, erro sanitizado e teste de conexão — último órfão sem segunda superfície depois de medir os 27 restantes (11 presos na borda legada de RH e 16 já cobertos por /admin/operacao, /admin/financeiro, /admin/patrimonio, /admin/contratos/[id], /admin/publicacao, /admin/marcelo, /admin/frota, /admin/terceiros, /admin/satisfacao, /admin/qualidade, /admin/analytics e /admin/compliance). O roteador devolvia 405 em quatro subcaminhos da aba viva "Registros de integração" porque o padrão /:id casava antes; o PATCH aceitava nome em branco e corpo vazio com 200; e rh podia testar conexão e renomear integração',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-INTEGRACOES-CATALOGO-2026-11-01.md',
+  },
 ];
 
 const sha256 = value => createHash('sha256').update(value).digest('hex');

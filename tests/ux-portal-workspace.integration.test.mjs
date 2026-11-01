@@ -10690,3 +10690,234 @@ test("browser UX-PRO-03 PUB-02/05: FAQ assistida, transferência humana e segmen
     await pool.query("DELETE FROM pub_segments WHERE segment_key LIKE $1", [`qa-seg-${sufixo}`]).catch(() => {});
   }
 });
+
+// --- 19ª promoção (PLT-03): catálogo de integrações e teste de conexão ------
+// Injeta negação SOMENTE na leitura do catálogo; o resto do tráfego é real.
+function plt03Injecao(cfg) {
+  const original = window.fetch.bind(window);
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    const caminho = url.replace(location.origin, "").split("?")[0];
+    const metodo = ((init && init.method) || "GET").toUpperCase();
+    if (metodo === "GET" && caminho === "/api/admin/integrations" && cfg.catalogo === "negado") {
+      return new Response(JSON.stringify({ error: "role_required" }), { status: 403, headers: { "Content-Type": "application/json" } });
+    }
+    return original(input, init);
+  };
+}
+
+test("browser UX-PRO-03 PLT-03: catálogo de integrações, teste de conexão e escrita restrita (negado, larguras e noite)", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const rh = await provisionStaff(pool, { role: "rh" });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const sufixo = randomUUID().slice(0, 8);
+  const idNovo = `qa-plt03-${sufixo}`;
+  const nomeNovo = `Integração sintética do gate ${sufixo}`;
+  const nomeRenomeado = `SMTP renomeado pelo gate ${sufixo}`;
+  const evidence = process.env.UX_PORTAL_EVIDENCE_DIR || "";
+  const entries = [];
+  const criados = { ids: [] };
+
+  try {
+    // --- servidor: leitura por papel ------------------------------------
+    assert.equal((await api("/api/admin/integrations")).status, 401, "anônimo recebe 401 no catálogo");
+    const listaTi = await api("/api/admin/integrations", { cookie: tiCookie });
+    assert.equal(listaTi.status, 200, "ti precisa ler o catálogo");
+    const ids = (listaTi.body.integrations || []).map(item => item.id);
+    for (const padrao of ["smtp", "whatsapp", "payment", "nfe", "llm", "calendar", "storage"]) {
+      assert.ok(ids.includes(padrao), `o catálogo nasce com o padrão ${padrao}`);
+    }
+    const listaRh = await api("/api/admin/integrations", { cookie: rhCookie });
+    assert.equal(listaRh.status, 200, "rh lê o catálogo (a escrita é que restringe)");
+
+    // --- servidor: filtros que o protótipo nunca usava -------------------
+    const soSmtp = await api("/api/admin/integrations?provider=smtp", { cookie: tiCookie });
+    assert.equal(soSmtp.status, 200);
+    assert.ok(soSmtp.body.integrations.every(item => item.provider === "smtp"), "o filtro de provedor vem do servidor");
+    assert.equal((await api("/api/admin/integrations?provider=naoexiste", { cookie: tiCookie })).body.error, "invalid_provider");
+    assert.equal((await api("/api/admin/integrations?status=quebrado", { cookie: tiCookie })).body.error, "invalid_status");
+
+    // --- servidor: escrita exige admin/ti -------------------------------
+    const testeRh = await api("/api/admin/integrations/smtp/test", { method: "POST", cookie: rhCookie });
+    assert.equal(testeRh.status, 403, "rh não dispara teste de conexão");
+    assert.equal(testeRh.body.error, "role_required");
+    assert.equal((await api("/api/admin/integrations/smtp", { method: "PATCH", cookie: rhCookie, body: { name: "nomeado por rh" } })).status, 403,
+      "rh não renomeia integração");
+
+    // --- servidor: teste de conexão real e sanitizado -------------------
+    const testeTi = await api("/api/admin/integrations/smtp/test", { method: "POST", cookie: tiCookie });
+    assert.equal(testeTi.status, 200, "ti dispara o teste de conexão");
+    assert.equal(testeTi.body.integration.status, "not_configured", "sem MAIL_HOST o SMTP não está configurado");
+    assert.match(String(testeTi.body.integration.last_error_sanitized || ""), /SMTP n[ãa]o configurado/, "o motivo vem escrito, não em segredo");
+    assert.doesNotMatch(String(testeTi.body.integration.last_error_sanitized || ""), /MAIL_PASSWORD|password=/i, "erro sanitizado não expõe credencial");
+    assert.equal((await api("/api/admin/integrations/nao-existe/test", { method: "POST", cookie: tiCookie })).status, 404);
+
+    // --- servidor: PATCH em branco e vazio eram 200 ---------------------
+    const emBranco = await api("/api/admin/integrations/smtp", { method: "PATCH", cookie: tiCookie, body: { name: "   " } });
+    assert.equal(emBranco.status, 400, "nome em branco respondia 200 sem mudar nada");
+    assert.equal(emBranco.body.error, "invalid_name");
+    const semCampo = await api("/api/admin/integrations/smtp", { method: "PATCH", cookie: tiCookie, body: {} });
+    assert.equal(semCampo.status, 400);
+    assert.equal(semCampo.body.error, "no_fields");
+    assert.equal((await api("/api/admin/integrations/smtp", { method: "PATCH", cookie: tiCookie, body: { provider: "naoexiste" } })).body.error, "invalid_provider");
+
+    // --- servidor: os quatro subcaminhos da aba viva respondiam 405 -----
+    for (const [rota, chave] of [["jobs", "jobs"], ["logs", "logs"], ["webhooks", "webhooks"], ["reconciliation", "reports"]]) {
+      const vivo = await api(`/api/admin/integrations/${rota}`, { cookie: tiCookie });
+      assert.equal(vivo.status, 200, `a aba viva "Registros de integração" precisa de /${rota} (respondia 405 pelo padrão /:id)`);
+      assert.ok(Array.isArray(vivo.body[chave]), `/${rota} precisa devolver a lista ${chave}`);
+    }
+    assert.equal((await api("/api/admin/integrations/webhooks/deliveries", { cookie: tiCookie })).status, 200);
+
+    // --- servidor: criação e renomeio reais -----------------------------
+    const criada = await api(`/api/admin/integrations/${idNovo}`, { method: "PATCH", cookie: tiCookie, body: { provider: "webhook", name: nomeNovo } });
+    assert.equal(criada.status, 200, "o PATCH cria integração nova com provedor válido");
+    criados.ids.push(idNovo);
+    assert.equal(criada.body.integration.provider, "webhook");
+    const renomeada = await api("/api/admin/integrations/smtp", { method: "PATCH", cookie: tiCookie, body: { name: nomeRenomeado } });
+    assert.equal(renomeada.status, 200);
+    assert.equal(renomeada.body.integration.name, nomeRenomeado, "o nome gravado é o que o operador mandou");
+    const banco = await pool.query("SELECT name FROM integrations WHERE id = $1", ["smtp"]);
+    assert.equal(banco.rows[0].name, nomeRenomeado, "o banco confirma o renomeio");
+
+    const comPagina = async (opcoes, acoes) => {
+      const browser = await launchBrowser();
+      try {
+        const context = await browser.newContext({ viewport: { width: opcoes.width ?? 1440, height: opcoes.height ?? 900 }, locale: "pt-BR" });
+        const cookie = opcoes.cookie ?? tiCookie;
+        await context.addCookies(cookie.split("; ").filter(Boolean).map(item => {
+          const separador = item.indexOf("=");
+          return { name: item.slice(0, separador), value: item.slice(separador + 1), url: baseUrl };
+        }));
+        const page = await context.newPage();
+        page.setDefaultTimeout(45_000);
+        page.setDefaultNavigationTimeout(90_000);
+        await page.addInitScript(plt03Injecao, Object.assign({ catalogo: "pass" }, opcoes.injecao || {}));
+        await page.goto(`${baseUrl}/admin/ti`, { waitUntil: "domcontentloaded" });
+        if (cookie === tiCookie) {
+          await page.getByRole("button", { name: "Integrações: catálogo e teste" }).click();
+          await page.getByTestId("plt03").waitFor();
+          // A página de injeção espera `negado`: o estado inicial da tela é
+          // `vazio`, então esperar "ok" ali seria esperar o que não vai acontecer.
+          const esperado = opcoes.esperar ?? "ok";
+          await page.waitForFunction(
+            alvo => document.querySelector('[data-testid="plt03"]')?.getAttribute("data-situacao") === alvo,
+            esperado, { timeout: 45_000 },
+          );
+        }
+        const resultado = await acoes(page, context);
+        await context.close();
+        return resultado;
+      } finally { await browser.close(); }
+    };
+    const evidenciar = async (page, { estado, nome, width, theme }) => {
+      await capture(page, nome);
+      const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      entries.push({ viewport: width, theme, estado, screenshot: evidence ? `${nome}.png` : null, sobraDocumentoPx: sobra, problems: [] });
+      return sobra;
+    };
+
+    // --- 1) leitura nas três larguras e à noite -------------------------
+    for (const width of [320, 390, 1440]) {
+      await comPagina({ width }, async (page) => {
+        assert.ok(await page.getByTestId("plt03-card-smtp").count() === 1, "o cartão do SMTP precisa existir");
+        assert.ok(await page.getByTestId("plt03-card-whatsapp").count() === 1);
+        assert.match(await page.getByTestId("plt03-resumo").innerText(), /no catálogo/);
+        assert.match(await page.getByTestId("plt03-situacao").innerText(), /integra[çc][ãa]o\(ões\) no cat[áa]logo/i);
+        assert.equal(await page.getByTestId("plt03-vazio").count(), 0, "há integrações, então o vazio não aparece");
+        const sobra = await evidenciar(page, { estado: "autorizado", nome: `plt03-${width}-day`, width, theme: "day" });
+        assert.ok(sobra <= 1, `o catálogo transborda ${sobra}px em ${width}px`);
+      });
+    }
+    await comPagina({ width: 1440 }, async (page) => {
+      await page.locator('[data-admin-theme-toggle="true"]').click();
+      await page.waitForFunction(() => document.documentElement.dataset.adminTheme === "night");
+      const sobra = await evidenciar(page, { estado: "autorizado", nome: "plt03-1440-night", width: 1440, theme: "night" });
+      assert.ok(sobra <= 1, `o catálogo transborda ${sobra}px à noite`);
+    });
+
+    // --- 2) filtro do servidor aplicado pela tela -----------------------
+    await comPagina({ width: 1440 }, async (page) => {
+      await page.getByLabel("Provedor").selectOption("smtp");
+      await page.waitForFunction(() => document.querySelectorAll('[data-testid^="plt03-card-"]').length === 1, null, { timeout: 45_000 });
+      assert.equal(await page.getByTestId("plt03-card-smtp").count(), 1);
+      const sobra = await evidenciar(page, { estado: "filtro-provedor", nome: "plt03-1440-day-filtro", width: 1440, theme: "day" });
+      assert.ok(sobra <= 1);
+      await page.getByLabel("Situação").selectOption("failure");
+      await page.waitForFunction(() => document.querySelector('[data-testid="plt03"]')?.getAttribute("data-situacao") === "vazio", null, { timeout: 45_000 });
+      assert.equal(await page.getByTestId("plt03-vazio").count(), 1, "filtro sem resultado é vazio declarado, não erro");
+      await page.getByRole("button", { name: "Limpar filtros" }).click();
+      await page.waitForFunction(() => document.querySelector('[data-testid="plt03"]')?.getAttribute("data-situacao") === "ok", null, { timeout: 45_000 });
+      assert.ok(await page.locator('[data-testid^="plt03-card-"]').count() >= 7, "limpar o filtro traz o catálogo inteiro");
+    });
+
+    // --- 3) teste de conexão pela tela ----------------------------------
+    await comPagina({ width: 1440 }, async (page) => {
+      const antes = (await pool.query("SELECT last_check_at FROM integrations WHERE id = 'smtp'")).rows[0].last_check_at;
+      await page.getByTestId("plt03-testar-smtp").click();
+      await page.getByTestId("plt03-ok").waitFor();
+      const texto = await page.getByTestId("plt03-ok").innerText();
+      assert.match(texto, /n[ãa]o configurada/i, "o resultado é o do servidor, não um 'configurado' de tela");
+      assert.match(texto, /SMTP n[ãa]o configurado/i);
+      const depois = (await pool.query("SELECT last_check_at FROM integrations WHERE id = 'smtp'")).rows[0].last_check_at;
+      assert.ok(depois && (!antes || depois > antes), "o teste grava o instante da verificação no banco");
+      await evidenciar(page, { estado: "teste-conexao", nome: "plt03-1440-day-teste", width: 1440, theme: "day" });
+    });
+
+    // --- 4) renomeio pela tela, com nome em branco travado --------------
+    await comPagina({ width: 1440 }, async (page) => {
+      const card = page.getByTestId("plt03-card-smtp");
+      const botao = page.getByTestId("plt03-salvar-smtp");
+      await card.getByLabel("Nome da integração").fill("   ");
+      assert.equal(await botao.isDisabled(), true, "nome em branco não pode ser enviado");
+      const novo = `SMTP pela tela do gate ${sufixo}`;
+      await card.getByLabel("Nome da integração").fill(novo);
+      await botao.click();
+      await page.getByTestId("plt03-ok").waitFor();
+      assert.match(await page.getByTestId("plt03-ok").innerText(), /Nome atualizado/);
+      const banco = (await pool.query("SELECT name FROM integrations WHERE id = 'smtp'")).rows[0].name;
+      assert.equal(banco, novo, "o nome gravado é o digitado na tela");
+      await evidenciar(page, { estado: "renomeado", nome: "plt03-1440-day-renomeado", width: 1440, theme: "day" });
+    });
+
+    // --- 5) negação não vira catálogo vazio -----------------------------
+    await comPagina({ width: 1440, injecao: { catalogo: "negado" }, esperar: "negado" }, async (page) => {
+      const negado = await page.getByTestId("plt03-negado").innerText();
+      assert.match(negado, /n[ãa]o [ée] um cat[áa]logo vazio/i, "negação precisa ser declarada como negação");
+      assert.equal(await page.getByTestId("plt03-vazio").count(), 0, "negação não pode aparecer como vazio");
+      assert.equal(await page.locator('[data-testid^="plt03-card-"]').count(), 0);
+      await evidenciar(page, { estado: "negado", nome: "plt03-1440-day-negado", width: 1440, theme: "day" });
+    });
+
+    // --- 6) papel negado no gate ----------------------------------------
+    await comPagina({ cookie: rhCookie, width: 1440 }, async (page) => {
+      await page.locator('[data-admin-gate="forbidden"]').waitFor();
+      assert.equal(await page.getByTestId("plt03").count(), 0, "rh não monta o catálogo no console de TI");
+      await evidenciar(page, { estado: "papel-negado", nome: "plt03-1440-day-rh", width: 1440, theme: "day" });
+    });
+
+    if (evidence) {
+      await mkdir(evidence, { recursive: true });
+      await writeFile(path.join(evidence, "resumo.json"), JSON.stringify({
+        stage: "UX-PRO-03 · PLT-03 · catálogo de integrações e teste de conexão na aba do TiConsole (/admin/ti)",
+        generatedBy: "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+        route: "/admin/ti",
+        fatia: "19ª promoção com prova — IntegrationsClient deixa de ser órfão",
+        entries,
+        limites: [
+          "Só o provedor SMTP tem teste que abre conexão (transporter.verify, sem enviar mensagem); os demais respondem 'não configurado' sem chamada externa.",
+          "Segredos nunca chegam ao navegador: config_sanitized vem do servidor com valores marcados como [redacted].",
+          "Jobs, logs, webhooks, entregas e reconciliação continuam na aba viva 'Registros de integração' (PLT-15); esta tela não os duplica.",
+          "O servidor confere papel de escrita (admin/ti) e valida nome/provedor; a tela repete a validação antes do PATCH.",
+          "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+          "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado.",
+        ],
+      }, null, 2));
+    }
+    for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
+  } finally {
+    for (const id of criados.ids) await pool.query("DELETE FROM integrations WHERE id = $1", [id]).catch(() => {});
+    await pool.query("DELETE FROM integrations WHERE id LIKE $1", [`qa-plt03-%`]).catch(() => {});
+  }
+});

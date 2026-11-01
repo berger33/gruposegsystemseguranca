@@ -59,14 +59,16 @@ test('reauditoria 222: 46 a_revalidar, 20 sem menção após fatias CLI-02/03/05
     'a coluna de estado confirmado registra 45; a diferença precisa continuar explícita');
   // 36 era o retrato inicial; PLT-11/13 reduziram 2. O mapa SEC reduziu
   // 7 sem gate; fatias focais CLI-02/03/05..08 reduziram mais 6 para 21; a
-  // promoção da aba PLT-10 (28/10) tirou mais um do núcleo, deixando 20.
+  // promoção da aba PLT-10 (28/10) tirou mais um do núcleo, deixando 20. A 19ª
+  // promoção do console de TI (01/11) tirou PLT-03 (família da tela) e PLT-15
+  // (citado só como dono dos registros na mesma tela), deixando 18.
   // É menção técnica em gate, NÃO implementação integral nem aceite humano.
-  assert.equal(resumo.aRevalidarSemGate, 20);
-  // SEC-03, CLI-02/03/05..08 e PLT-10 têm mapa/prova técnica, sem inferir aceite.
-  for (const id of ['SEC-03', 'CLI-02', 'CLI-03', 'CLI-05', 'CLI-06', 'CLI-07', 'CLI-08', 'PLT-10']) {
+  assert.equal(resumo.aRevalidarSemGate, 18);
+  // SEC-03, CLI-02/03/05..08, PLT-03, PLT-10 e PLT-15 têm mapa/prova técnica, sem inferir aceite.
+  for (const id of ['SEC-03', 'CLI-02', 'CLI-03', 'CLI-05', 'CLI-06', 'CLI-07', 'CLI-08', 'PLT-03', 'PLT-10', 'PLT-15']) {
     assert.ok(!resumo.idsARevalidarSemGate.includes(id), `${id} tem evidência técnica focal`);
   }
-  for (const id of ['PLT-03', 'PLT-15', 'EXT-16', 'EXT-17', 'AI-01', 'AI-10']) {
+  for (const id of ['PLT-01', 'PLT-02', 'EXT-16', 'EXT-17', 'AI-01', 'AI-10']) {
     assert.ok(resumo.idsARevalidarSemGate.includes(id), `${id} precisa seguir no núcleo sem gate`);
   }
   const byId = new Map(data.requisitos.map(row => [row.id, row]));
@@ -106,9 +108,12 @@ test('reauditoria 222: nenhum ID inventa aceite humano ou reauditoria integral',
   // `browser UX-PRO-03 PUB-02/05`): o relatório e o cenário de gate citam os
   // dois IDs. Continua sendo evidência textual acrescentada — nenhum dos dois
   // está aceito por humano, e a reauditoria integral segue 0/222.
+  // 23/120/79 → 23/122/77 em 01/11 com a 19ª promoção (PLT-03 e PLT-15): os
+  // dois IDs saem de `somente_documento` porque o relatório e o cenário
+  // `browser UX-PRO-03 PLT-03` os citam. Evidência textual, 0/222 aceito.
   assert.equal(data.resumo.porClasseEvidencia.gate_nomeado, 23);
-  assert.equal(data.resumo.porClasseEvidencia.mencionado_em_gate, 120);
-  assert.equal(data.resumo.porClasseEvidencia.somente_documento, 79);
+  assert.equal(data.resumo.porClasseEvidencia.mencionado_em_gate, 122);
+  assert.equal(data.resumo.porClasseEvidencia.somente_documento, 77);
   assert.ok(data.requisitos.filter(row => row.prefixo === 'SEC')
     .every(row => row.classe_evidencia_atual === 'mencionado_em_gate'),
   'os 15 IDs SEC devem apontar para o mapa técnico de âncoras, sem inferir aceite');
