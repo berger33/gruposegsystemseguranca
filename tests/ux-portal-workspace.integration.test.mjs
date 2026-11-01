@@ -8727,3 +8727,232 @@ test("browser UX-PRO-06 CLI-13: fila de acesso do portal (papéis, escrita real,
   }
   for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
 });
+
+// UX-PRO-03 (12ª promoção) — a aba "Financeiro do portal" do TiConsole monta o
+// console CLI (CLI-09..14). O componente era órfão e falava com os oito
+// endpoints pelos aliases `/api/hr/cli-*`, que a borda legada de RH nega para
+// `ti` (o papel que monta a tela) e engolia cada falha em lista vazia.
+function cliFinInjecao(cfg) {
+  const original = window.fetch.bind(window);
+  window.__clifin = { leituras: 0, escritas: 0 };
+  const rotas = cfg.rotas || {};
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    const caminho = url.replace(location.origin, "").split("?")[0];
+    const metodo = ((init && init.method) || "GET").toUpperCase();
+    if (metodo === "GET") {
+      window.__clifin.leituras += 1;
+      const regra = rotas[caminho];
+      if (regra === "negado") return new Response(JSON.stringify({ error: "individual_staff_required" }), { status: 403, headers: { "Content-Type": "application/json" } });
+      if (regra === "falha") return new Response(JSON.stringify({ error: "internal_error" }), { status: 500, headers: { "Content-Type": "application/json" } });
+      if (regra === "invalido") return new Response(JSON.stringify({}), { status: 200, headers: { "Content-Type": "application/json" } });
+      if (regra === "atraso") { await new Promise(r => setTimeout(r, 1200)); }
+    } else {
+      window.__clifin.escritas += 1;
+    }
+    return original(input, init);
+  };
+}
+
+test("browser UX-PRO-03 CLI-FIN: console CLI do TI (rotas canônicas, estados honestos, escrita real, larguras e noite)", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const rh = await provisionStaff(pool, { role: "rh" });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const rhCookie = await loginStaffHttp(rh.email);
+  const sufixo = randomUUID().slice(0, 8);
+  const ROTAS = [
+    "/api/cli/charges-v2",
+    "/api/cli/service-requests",
+    "/api/cli/satisfaction-surveys",
+    "/api/cli/renewal-communications",
+    "/api/cli/portal-mode-configs",
+    "/api/admin/portal-access-requests",
+    "/api/cli/security-events",
+    "/api/cli/email-change-requests",
+  ];
+  const MOTIVO = `Motivo sintético do console CLI ${sufixo}`;
+  const evidence = process.env.UX_PORTAL_EVIDENCE_DIR || "";
+  const entries = [];
+
+  // --- servidor: as oito rotas canônicas respondem para `ti` ---------------
+  for (const rota of ROTAS) {
+    const resposta = await api(rota, { cookie: tiCookie });
+    assert.equal(resposta.status, 200, `${rota} precisa responder 200 para ti (antes: 403 nos aliases de RH)`);
+  }
+  // A borda legada de RH continua de pé: se alguém "resolver" a tela
+  // afrouxando `employees.read`, este cenário cai.
+  assert.equal((await api("/api/hr/cli-charges-v2", { cookie: tiCookie })).status, 403,
+    "o alias de RH continua negando ti — a tela não pode voltar para lá");
+  assert.equal((await api("/api/admin/portal-access-requests", { cookie: rhCookie })).status, 403,
+    "a fila administrativa continua restrita a ti|admin");
+
+  // --- um pedido real na fila, para o bloco de acessos ter conteúdo --------
+  const conta = randomUUID();
+  await pool.query(
+    `INSERT INTO client_accounts (id, display_name, document_ref, created_by) VALUES ($1::uuid,'QA CLI-FIN Conta Sintetica','99988877766','ti')`,
+    [conta],
+  );
+  const pedido = await api("/api/public/portal-access-requests", { method: "POST", headers: { "idempotency-key": `qa-clifin-${sufixo}` },
+    body: { mode: "solicitacao_aprovacao", client_account_id: conta, requested_email: `qa-clifin-${sufixo}@exemplo.invalid`,
+      requested_name: "Pessoa QA CLI-FIN", document_ref: "99.988.8777/66" } });
+  assert.equal(pedido.status, 201, "o pedido público precisa existir para o bloco de acessos");
+  const protocolo = pedido.body.request.protocol;
+
+  // --- utilitários de navegador -------------------------------------------
+  const comPagina = async (opcoes, acoes) => {
+    const browser = await launchBrowser();
+    try {
+      const context = await browser.newContext({ viewport: { width: opcoes.width ?? 1440, height: opcoes.height ?? 900 }, locale: "pt-BR" });
+      const cookie = opcoes.cookie ?? tiCookie;
+      await context.addCookies(cookie.split("; ").filter(Boolean).map(item => {
+        const separador = item.indexOf("=");
+        return { name: item.slice(0, separador), value: item.slice(separador + 1), url: baseUrl };
+      }));
+      const page = await context.newPage();
+      page.setDefaultTimeout(45_000);
+      page.setDefaultNavigationTimeout(90_000);
+      await page.addInitScript(cliFinInjecao, Object.assign({ rotas: {} }, opcoes.injecao || {}));
+      await page.goto(`${baseUrl}/admin/ti`, { waitUntil: "domcontentloaded" });
+      if (opcoes.cookie === undefined || cookie === tiCookie) {
+        await page.getByRole("button", { name: "Financeiro do portal" }).click();
+        await page.getByTestId("clifin").waitFor();
+        await page.waitForFunction(() => /Lido às/.test(document.querySelector('[data-testid="clifin-hora"]')?.textContent || ""), null, { timeout: 45_000 });
+      }
+      const resultado = await acoes(page, context);
+      await context.close();
+      return resultado;
+    } finally { await browser.close(); }
+  };
+  const evidenciar = async (page, { estado, nome, width, theme }) => {
+    await capture(page, nome);
+    const sobra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    entries.push({ viewport: width, theme, estado, screenshot: evidence ? `${nome}.png` : null, sobraDocumentoPx: sobra, problems: [] });
+    return sobra;
+  };
+
+  // --- 1) leitura autorizada em quatro larguras ---------------------------
+  for (const width of [320, 390, 768, 1440]) {
+    await comPagina({ width }, async (page) => {
+      await page.getByTestId("clifin-lista-acessos").getByText(protocolo).waitFor();
+      assert.equal(await page.getByTestId("clifin-faixa").count(), 0, "sem negativa nem falha, nada de faixa de erro");
+      for (const chave of ["cobrancas", "servicos", "satisfacao", "renovacoes", "modos", "acessos", "seguranca", "emails"]) {
+        assert.ok(await page.getByTestId(`clifin-bloco-${chave}`).isVisible(), `bloco ${chave} precisa estar na tela`);
+      }
+      const sobra = await evidenciar(page, { estado: "autorizado", nome: `clifin-${width}-day`, width, theme: "day" });
+      assert.ok(sobra <= 1, `o console CLI transborda ${sobra}px em ${width}px`);
+    });
+  }
+
+  // --- 2) tema noturno ----------------------------------------------------
+  await comPagina({ width: 1440 }, async (page) => {
+    await page.locator('[data-admin-theme-toggle="true"]').click();
+    await page.waitForFunction(() => document.documentElement.dataset.adminTheme === "night");
+    await page.getByTestId("clifin-lista-acessos").getByText(protocolo).waitFor();
+    const sobra = await evidenciar(page, { estado: "autorizado", nome: "clifin-1440-night", width: 1440, theme: "night" });
+    assert.ok(sobra <= 1, `o console CLI transborda ${sobra}px à noite`);
+    const fundo = await page.getByTestId("clifin").evaluate(node => getComputedStyle(node).backgroundColor);
+    assert.notEqual(fundo, "rgb(255, 255, 255)", "o console acompanha o tema noturno");
+  });
+
+  // --- 3) 403 num bloco: NEGADO explícito, nunca "vazio" ------------------
+  await comPagina({ width: 1440, injecao: { rotas: { "/api/cli/charges-v2": "negado" } } }, async (page) => {
+    await page.getByTestId("clifin-faixa").waitFor();
+    const faixa = await page.getByTestId("clifin-faixa").innerText();
+    assert.match(faixa, /negad/i, "a faixa precisa declarar a negativa");
+    assert.doesNotMatch(faixa, /individual_staff_required/, "código cru não vai para a tela");
+    const estado = page.getByTestId("clifin-estado-cobrancas");
+    await estado.waitFor();
+    assert.equal(await estado.getAttribute("data-situacao"), "negado");
+    assert.doesNotMatch(await estado.innerText(), /nenhum registro/i, "negação não pode ser exibida como vazio");
+    assert.equal(await page.getByTestId("clifin-lista-acessos").getByText(protocolo).count(), 1,
+      "a negativa de um bloco não derruba os outros");
+    await evidenciar(page, { estado: "negado", nome: "clifin-1440-day-negado", width: 1440, theme: "day" });
+  });
+
+  // --- 4) payload inválido e falha de servidor ---------------------------
+  await comPagina({ width: 1440, injecao: { rotas: { "/api/cli/service-requests": "invalido", "/api/cli/email-change-requests": "falha" } } }, async (page) => {
+    const invalido = page.getByTestId("clifin-estado-servicos");
+    await invalido.waitFor();
+    assert.equal(await invalido.getAttribute("data-situacao"), "invalido");
+    assert.match(await invalido.innerText(), /inválida|sem a lista/i);
+    const falha = page.getByTestId("clifin-estado-emails");
+    await falha.waitFor();
+    assert.equal(await falha.getAttribute("data-situacao"), "falha");
+    await page.getByTestId("clifin-faixa").waitFor();
+    assert.match(await page.getByTestId("clifin-faixa").innerText(), /2 de 8/, "a faixa conta os blocos que falharam");
+    await evidenciar(page, { estado: "invalido-e-falha", nome: "clifin-1440-day-invalido", width: 1440, theme: "day" });
+  });
+
+  // --- 5) escrita REAL: mudança de modo com motivo ------------------------
+  await comPagina({ width: 1440 }, async (page) => {
+    const bloco = page.getByTestId("clifin-bloco-modos");
+    await bloco.getByLabel("modo", { exact: true }).selectOption("convite");
+    await bloco.getByLabel("situação do modo").selectOption("true");
+    await bloco.getByLabel("requer aprovação").selectOption("true");
+    await bloco.getByLabel("libera contratos").selectOption("false");
+    await bloco.getByLabel("motivo da mudança de modo").fill(MOTIVO);
+    await bloco.getByRole("button", { name: "Atualizar modo" }).click();
+    await page.getByTestId("clifin-ok").waitFor();
+    assert.match(await page.getByTestId("clifin-ok").innerText(), /Modo convite atualizado/i);
+    const linha = await pool.query("SELECT is_active, requires_approval, auto_release_contracts FROM cli_portal_mode_configs WHERE mode = 'convite'");
+    assert.equal(linha.rows[0].requires_approval, true, "a escrita real precisa chegar no banco");
+    const historico = await pool.query("SELECT reason FROM cli_portal_mode_config_history WHERE mode = 'convite' ORDER BY changed_at DESC LIMIT 1");
+    assert.equal(historico.rows[0].reason, MOTIVO, "o motivo precisa ficar no histórico");
+    await evidenciar(page, { estado: "escrita-real", nome: "clifin-1440-day-escrita", width: 1440, theme: "day" });
+  });
+
+  // --- 6) recusa REAL do servidor, traduzida ------------------------------
+  await comPagina({ width: 1440 }, async (page) => {
+    const bloco = page.getByTestId("clifin-bloco-modos");
+    await bloco.getByLabel("modo", { exact: true }).selectOption("autocadastro");
+    await bloco.getByLabel("libera contratos").selectOption("true");
+    await bloco.getByLabel("motivo da mudança de modo").fill(`${MOTIVO} recusa`);
+    await bloco.getByRole("button", { name: "Atualizar modo" }).click();
+    const erro = page.getByTestId("clifin-erro");
+    await erro.waitFor();
+    const texto = await erro.innerText();
+    assert.match(texto, /autocadastro nunca libera contratos sozinho/i);
+    assert.doesNotMatch(texto, /autocadastro_never_releases_contracts/, "código cru não vai para a tela");
+    await evidenciar(page, { estado: "escrita-recusada", nome: "clifin-1440-day-recusada", width: 1440, theme: "day" });
+  });
+
+  // --- 7) motivo curto: recusa ANTES de enviar ----------------------------
+  await comPagina({ width: 1440 }, async (page) => {
+    const bloco = page.getByTestId("clifin-bloco-modos");
+    const escritasAntes = await page.evaluate(() => window.__clifin.escritas);
+    await bloco.getByLabel("motivo da mudança de modo").fill("curto");
+    await bloco.getByRole("button", { name: "Atualizar modo" }).click();
+    const erro = page.getByTestId("clifin-erro");
+    await erro.waitFor();
+    assert.match(await erro.innerText(), /pelo menos 10 caracteres/i);
+    assert.equal(await page.evaluate(() => window.__clifin.escritas), escritasAntes, "motivo curto não vira requisição");
+    await evidenciar(page, { estado: "motivo-curto", nome: "clifin-1440-day-motivo", width: 1440, theme: "day" });
+  });
+
+  // --- 8) papel negado na rota inteira: o AdminGate barra ----------------
+  await comPagina({ cookie: rhCookie, width: 1440 }, async (page) => {
+    await page.locator('[data-admin-gate="forbidden"]').waitFor();
+    assert.equal(await page.getByTestId("clifin").count(), 0, "papel sem acesso não monta o console CLI");
+    await evidenciar(page, { estado: "papel-negado", nome: "clifin-1440-day-rh", width: 1440, theme: "day" });
+  });
+
+  // --- resumo das evidências ---------------------------------------------
+  if (evidence) {
+    await mkdir(evidence, { recursive: true });
+    await writeFile(path.join(evidence, "resumo.json"), JSON.stringify({
+      stage: "UX-PRO-03 · CLI-09..14 · console CLI na aba Financeiro do portal (/admin/ti)",
+      generatedBy: "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+      route: "/admin/ti",
+      fatia: "12ª promoção com prova — CliFinanceClient deixa de ser órfão",
+      entries,
+      limites: [
+        "Sem SMTP real: a troca de e-mail gera token no servidor; nenhum e-mail sai.",
+        "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+        "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado.",
+        "As listas vêm vazias de verdade quando a base não tem dados; nada de exemplo sintético na tela.",
+        "A fila de pedidos é global do módulo (não escopada por conta).",
+      ],
+    }, null, 2));
+  }
+  for (const entry of entries) assert.deepEqual(entry.problems, [], `evidência com problema: ${entry.screenshot}`);
+});

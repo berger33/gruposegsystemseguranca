@@ -1,0 +1,103 @@
+{
+  "stage": "UX-PRO-03 · CLI-09..14 · console CLI na aba Financeiro do portal (/admin/ti)",
+  "generatedBy": "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+  "route": "/admin/ti",
+  "fatia": "12ª promoção com prova — CliFinanceClient deixa de ser órfão",
+  "entries": [
+    {
+      "viewport": 320,
+      "theme": "day",
+      "estado": "autorizado",
+      "screenshot": "clifin-320-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 390,
+      "theme": "day",
+      "estado": "autorizado",
+      "screenshot": "clifin-390-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 768,
+      "theme": "day",
+      "estado": "autorizado",
+      "screenshot": "clifin-768-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "autorizado",
+      "screenshot": "clifin-1440-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "night",
+      "estado": "autorizado",
+      "screenshot": "clifin-1440-night.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "negado",
+      "screenshot": "clifin-1440-day-negado.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "invalido-e-falha",
+      "screenshot": "clifin-1440-day-invalido.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "escrita-real",
+      "screenshot": "clifin-1440-day-escrita.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "escrita-recusada",
+      "screenshot": "clifin-1440-day-recusada.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "motivo-curto",
+      "screenshot": "clifin-1440-day-motivo.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "papel-negado",
+      "screenshot": "clifin-1440-day-rh.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    }
+  ],
+  "limites": [
+    "Sem SMTP real: a troca de e-mail gera token no servidor; nenhum e-mail sai.",
+    "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+    "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado.",
+    "As listas vêm vazias de verdade quando a base não tem dados; nada de exemplo sintético na tela.",
+    "A fila de pedidos é global do módulo (não escopada por conta)."
+  ]
+}

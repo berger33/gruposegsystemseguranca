@@ -106,6 +106,12 @@ const PROMOCOES_COM_PROVA = [
     familia: 'ADM-01..06 pauta do dia, retratos comercial/operacional/financeiro, risco de renovação e aprovação unificada com alçada (ADM-07..12 descartado: /api/adm/panel/* já escreve as mesmas tabelas em /admin/marcelo)',
     relatorio: 'docs/UX-PRO-03-PROMOCAO-PAINEL-ADM-2026-10-30.md',
   },
+  {
+    componente: 'CliFinanceClient.tsx',
+    aba: 'cli_financeiro',
+    familia: 'CLI-09..14 cobranças fiscais, serviço adicional, satisfação, renovação, modos de entrada, pedidos de acesso, segurança da conta e troca de e-mail — migrado de /api/hr/cli-* (403 para ti) para os aliases canônicos /api/cli/* e /api/admin/portal-access-requests, com leitura por bloco que declara negado/falha/inválido em vez de lista vazia',
+    relatorio: 'docs/UX-PRO-03-PROMOCAO-CLI-FINANCEIRO-2026-10-31.md',
+  },
 ];
 
 const sha256 = value => createHash('sha256').update(value).digest('hex');

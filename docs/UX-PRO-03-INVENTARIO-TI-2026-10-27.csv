@@ -10,7 +10,7 @@
 "CatalogClient.tsx","59","workspace","src/app/admin/comercial/ComercialWorkspace.tsx","","0","0","ux-pro-03-catalog-equipment-ui.test.mjs","herdado do workspace","montado_em_workspace"
 "CliAdvancedClient.tsx","768","console","TiConsole","cliente","9","0","ux-pro-03-ti-cli-v2-ui.test.mjs","ti|admin","com_prova"
 "CliClient.tsx","193","orfao","","","10","0","","nao_montado","orfao_nao_promovido"
-"CliFinanceClient.tsx","230","orfao","","","9","0","","nao_montado","orfao_nao_promovido"
+"CliFinanceClient.tsx","371","console","TiConsole","cli_financeiro","9","0","ux-portal-workspace.integration.test.mjs|ux-pro-03-ti-cli-financeiro-ui.test.mjs","ti|admin","com_prova"
 "CmsClient.tsx","56","orfao","","","3","0","","nao_montado","orfao_nao_promovido"
 "CommercialLibraryClient.tsx","123","workspace","src/app/admin/comercial/ComercialWorkspace.tsx","","4","0","","herdado do workspace","montado_em_workspace"
 "CommissionClient.tsx","152","workspace","src/app/admin/comercial/ComercialWorkspace.tsx","","4","0","","herdado do workspace","montado_em_workspace"

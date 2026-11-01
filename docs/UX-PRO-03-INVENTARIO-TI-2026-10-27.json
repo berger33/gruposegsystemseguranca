@@ -3,25 +3,25 @@
   "resumo": "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
   "data": "2026-10-27",
   "criterio": "promover por area somente com prova (decisao de 02/10); prova estatica nao substitui gate de navegador nem aceite humano",
-  "tiConsoleSha256": "985ca1ee41963eed8e87e5ef76a65aab930352910c027d49b5b623e2532ab20b",
+  "tiConsoleSha256": "a65800a006cd8b754364a72ed89d3c3fc242755a5c279d1f2c6f7a7905f0c6df",
   "pageSha256": "360bf2564469679a4cc7c0b6b9274f05557188f701a3f3b89649ce4d70d56313",
   "total": 84,
-  "abas": 24,
-  "importsDinamicos": 24,
+  "abas": 25,
+  "importsDinamicos": 25,
   "console": {
-    "total": 24,
-    "comProva": 24,
+    "total": 25,
+    "comProva": 25,
     "lacunas": []
   },
   "workspace": {
     "total": 25
   },
   "orfos": {
-    "total": 35,
+    "total": 34,
     "promovidosSemSairDaClassificacao": 0
   },
   "promocoesComProva": {
-    "total": 11,
+    "total": 12,
     "todasMontadas": true,
     "detalhes": [
       {
@@ -89,6 +89,12 @@
         "aba": "adm",
         "familia": "ADM-01..06 pauta do dia, retratos comercial/operacional/financeiro, risco de renovação e aprovação unificada com alçada (ADM-07..12 descartado: /api/adm/panel/* já escreve as mesmas tabelas em /admin/marcelo)",
         "relatorio": "docs/UX-PRO-03-PROMOCAO-PAINEL-ADM-2026-10-30.md"
+      },
+      {
+        "componente": "CliFinanceClient.tsx",
+        "aba": "cli_financeiro",
+        "familia": "CLI-09..14 cobranças fiscais, serviço adicional, satisfação, renovação, modos de entrada, pedidos de acesso, segurança da conta e troca de e-mail — migrado de /api/hr/cli-* (403 para ti) para os aliases canônicos /api/cli/* e /api/admin/portal-access-requests, com leitura por bloco que declara negado/falha/inválido em vez de lista vazia",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-CLI-FINANCEIRO-2026-10-31.md"
       }
     ]
   },

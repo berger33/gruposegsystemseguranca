@@ -65,7 +65,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1641,
+    "arquivosVarridos": 1646,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -4016,7 +4016,9 @@
       "arquivos_gate_nomeados": [],
       "arquivos_gate": [
         ".github/workflows/ci.yml",
-        "tests/cli-v2.integration.test.mjs"
+        "tests/cli-v2.integration.test.mjs",
+        "tests/ux-portal-workspace.integration.test.mjs",
+        "tests/ux-pro-03-ti-cli-financeiro-ui.test.mjs"
       ],
       "arquivos_documento": [
         "docs/AUDITORIA-TERRENO-L08.md",
@@ -4030,12 +4032,14 @@
       ],
       "arquivos_codigo": [
         "scripts/qa-l08-delivery-postgres.mjs",
+        "scripts/ux-pro-03-ti-inventory.mjs",
+        "src/app/admin/ti/CliFinanceClient.module.css",
         "src/app/admin/ti/CliFinanceClient.tsx",
         "src/server/cli-finance-api.mjs"
       ],
-      "ocorrencias_gate": 3,
-      "ocorrencias_documento": 15,
-      "ocorrencias_codigo": 7,
+      "ocorrencias_gate": 6,
+      "ocorrencias_documento": 19,
+      "ocorrencias_codigo": 8,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -4070,7 +4074,7 @@
       ],
       "ocorrencias_gate": 4,
       "ocorrencias_documento": 22,
-      "ocorrencias_codigo": 6,
+      "ocorrencias_codigo": 5,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -4110,7 +4114,7 @@
       ],
       "ocorrencias_gate": 10,
       "ocorrencias_documento": 41,
-      "ocorrencias_codigo": 7,
+      "ocorrencias_codigo": 6,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -4144,7 +4148,7 @@
       ],
       "ocorrencias_gate": 10,
       "ocorrencias_documento": 38,
-      "ocorrencias_codigo": 6,
+      "ocorrencias_codigo": 5,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -4186,7 +4190,7 @@
       ],
       "ocorrencias_gate": 29,
       "ocorrencias_documento": 47,
-      "ocorrencias_codigo": 12,
+      "ocorrencias_codigo": 11,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
