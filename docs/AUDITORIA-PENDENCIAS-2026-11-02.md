@@ -29,6 +29,9 @@
 | `node scripts/ux-pro-03-ti-inventory.mjs --check` | OK — **84** componentes, **32** abas, **19** promoções, **27** órfãos |
 | `node scripts/requisitos-222-inventory.mjs --check` | OK — **222** IDs, **13** `a_revalidar` sem gate, **1.699** arquivos varridos |
 | `node scripts/ux-pro-10b-contrast-inventory.mjs --check` | OK |
+| `npm run test:plt01-access-review-coverage:pg` | **12/12, exit 0** (PostgreSQL 17 descartável) |
+| `npm run test:plt06-observability:pg` | **23/23, exit 0** |
+| `npm run test:plt12-incidents:pg` | **20/20, exit 0** |
 | `git status` após a bateria | **limpo** |
 
 **Fotografia física do HEAD**
@@ -176,11 +179,11 @@
 
 `ci.yml` (o único job de bateria) roda: wave0, `reaudit:sec`, `npm audit --audit-level=moderate`, `typecheck`, `npm test`, `test:ux-pro-09e-pu4:browser`, `test:pglite-schema`, `ux-pro-00-precision`, `admin-navigation`, `build`, `test:rag`, `test:tenant:pg`, `test:demo-local:pg`, `test:cli-v2:pg`, `client-security.integration`.
 
-Dos **81 scripts de teste** do `package.json`, **26 não são referenciados por nenhum workflow** — só rodam na mão:
+Dos **80 scripts de teste** do `package.json`, **23 não são referenciados por nenhum workflow** — só rodam na mão:
 
-`test:integration` · `test:staff-auth:pg` · `test:client-access:pg` · `test:cli-v2:pg:objects` · `test:l02-delivery:pg` · `test:l03-delivery:pg` · `test:plt01-access-review-coverage:pg` · `test:plt06-observability:pg` · `test:plt12-incidents:pg` · `test:ext08-knowledge:pg` · `test:ext11-analytics:pg` · `test:ext12-visual:pg` · `test:ext13-reports:pg` · `test:ext14-intel:pg` · `test:ext15-emergency:pg` · `test:f03-lead-to-implementation:pg` · `test:f03-employee-request-rh-return:pg` · `test:f03-client-ticket-acceptance:pg` · `test:f03-contas-baixa-relatorio:pg` · `test:pendencies:pg` · `test:ux-public-routes:pg` · `test:ux-pro-09e-7` · `test:ux-pro-09e-pu6` · `test:ux-pro-04-reports` · `test:ux-pro-10b-keyboard`
+`test:integration` · `test:staff-auth:pg` · `test:client-access:pg` · `test:cli-v2:pg:objects` · `test:l02-delivery:pg` · `test:l03-delivery:pg` · `test:ext08-knowledge:pg` · `test:ext11-analytics:pg` · `test:ext12-visual:pg` · `test:ext13-reports:pg` · `test:ext14-intel:pg` · `test:ext15-emergency:pg` · `test:f03-lead-to-implementation:pg` · `test:f03-employee-request-rh-return:pg` · `test:f03-client-ticket-acceptance:pg` · `test:f03-contas-baixa-relatorio:pg` · `test:pendencies:pg` · `test:ux-public-routes:pg` · `test:ux-pro-09e-7` · `test:ux-pro-09e-pu6` · `test:ux-pro-04-reports` · `test:ux-pro-10b-keyboard`
 
-**Consequência:** as três fatias de gate nomeado entregues nesta semana (PLT-01, PLT-06, PLT-12) têm prova executada **manualmente**, não no CI.
+> **Corrigido em 02/11 (PR #330):** os três gates de PLT-01/06/12 saíram dessa lista — passaram a ser executados pelo workflow `plt-jornadas-delivery.yml`, com a guarda `tests/plt-gates-wired.test.mjs` impedindo nova orfandade. O restante continua manual.
 
 ---
 
@@ -190,7 +193,7 @@ Dos **81 scripts de teste** do `package.json`, **26 não são referenciados por 
 |---|---|---|---|
 | **N1** | **O ledger reincidiu (E12/E20).** `STATUS-VIGENTE.md` declara como base o merge da PR #328 (`5fde81d…`), mas o HEAD é `a46bd88…` (merge da PLT-12). A PLT-12 **não** tem seção “Atualização corrente” e **não** tem relatório datado (`docs/PLT-12-*.md` não existe) — só mexeu em 2 linhas do ledger. Quebra o padrão de PLT-01/02/06/07 | `git show --stat 39fdc74` → `docs/STATUS-VIGENTE.md \| 2 +-`; `find docs -iname '*PLT*12*'` → vazio | Próxima sessão não sabe que a PLT-12 foi fechada e pode reimplementá-la |
 | **N2** | **`.probe-plt12.mjs`, 288 linhas, commitado na raiz.** O próprio arquivo diz “PROBER TEMPORÁRIO — não será commitado”. Não é referenciado por nada, não está no `.gitignore` | `git log --oneline -- .probe-plt12.mjs` → `39fdc74`; `grep -rn "probe-plt12"` → só ele mesmo | Lixo de depuração versionado, com `embedded-postgres` no topo do clone |
-| **N3** | **Os gates nomeados novos não estão no CI** (`test:plt01…:pg`, `test:plt06…:pg`, `test:plt12-incidents:pg`) | `grep -rn "plt12" .github/workflows/` → vazio | Gate que não roda sozinho não protege contra regressão |
+| **N3** | **Os gates nomeados novos não estavam no CI** (`test:plt01…:pg`, `test:plt06…:pg`, `test:plt12-incidents:pg`) → **corrigido em 02/11 pela PR #330** | `grep -rn "plt12" .github/workflows/` → vazio antes; depois, job `plt-gates-postgres` verde (20/20) | Gate que não roda sozinho não protege contra regressão |
 | **N4** | **Cobertura real de rotas continua rasa**: 101/101 sem estados, **81** sem teclado, **46** sem captura, **16** com captura parcial | `docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv` (101 linhas) | “101/101 com gate” significa só *a rota carrega* |
 | **N5** | **171 MB de ZIPs obsoletos** seguem versionados (16 arquivos), com ~65 migrações de defasagem | `du -ch $(git ls-files downloads dist)` → **171 MB** | Clone inchado; risco de instalar versão morta |
 | **N6** | **3 PRs paradas por 1 check** (#321, #308, #310) e **1 PR verde não mergeada** (#318) | `gh pr view … --json statusCheckRollup` | Trabalho pronto parado; #318 ainda altera o ledger de migrações |
@@ -240,7 +243,7 @@ Homologação RAG beta com 5 perfis · `is_beta_mode=false` · remoção do `noi
 
 ## 14. Limites desta auditoria
 
-- Executado: `npm ci`, `npm test`, `typecheck`, `build`, wave0, cinco inventários `--check`, `reaudit:sec`, contagens físicas e leitura de histórico via `git`.
-- **Não** executados aqui: gates PostgreSQL/Chromium — falta `postgres`/`pg_dump` no sandbox; os números desses gates vêm dos relatórios datados e **precisam ser reconferidos**.
+- Executado: `npm ci`, `npm test`, `typecheck`, `build`, wave0, cinco inventários `--check`, `reaudit:sec`, contagens físicas, leitura de histórico via `git` e **três gates PostgreSQL reais** (PLT-01 12/12, PLT-06 23/23, PLT-12 20/20).
+- **Correção importante:** a afirmação "gates PostgreSQL não rodam neste ambiente" vale **só para os que exigem o cliente PostgreSQL do sistema** (`pg_dump`/`psql` — `test:backup-restore:pg` e afins). Os gates que sobem o próprio cluster via `embedded-postgres` rodam normalmente e foram executados aqui. Os demais números de gates vêm dos relatórios datados e **precisam ser reconferidos**.
 - Não houve: validação em **Windows**, teste com **leitor de tela**, revisão **WCAG** manual, análise de segurança ofensiva, parecer jurídico/contábil, **aceite humano** ou UAT.
 - Este documento **não** promove requisito, **não** marca item de produção e **não** substitui `STATUS-VIGENTE.md`.
