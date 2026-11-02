@@ -57,7 +57,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1712,
+    "arquivosVarridos": 1717,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -3997,10 +3997,10 @@
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CLI-06-08-REAUDITORIA-TECNICA-2026-10-28.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
+        "docs/E15-CATALOGO-CANONICO-DE-ROTAS-2026-11-02.md",
+        "docs/E15-ROTAS-CATALOGO-2026-11-02.json",
         "docs/ENTREGA-L08-RELATORIO-2026-10-03-CLI06-08-AGENDA-RELATORIOS.md",
-        "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
-        "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
-        "docs/auditoria-2026-10-04/AUDITORIA.md"
+        "docs/PLANO-MESTRE-IMPLEMENTACAO.md"
       ],
       "arquivos_codigo": [
         "src/app/admin/clientes/VisitsSection.tsx",
@@ -4008,7 +4008,7 @@
         "src/server/cli-advanced-api.mjs"
       ],
       "ocorrencias_gate": 3,
-      "ocorrencias_documento": 8,
+      "ocorrencias_documento": 10,
       "ocorrencias_codigo": 3,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -6155,6 +6155,7 @@
       "arquivos_documento": [
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
+        "docs/E15-ROTAS-CATALOGO-2026-11-02.json",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
         "docs/UX-PRO-03-PROMOCAO-INTEGRACOES-CATALOGO-2026-11-01.md",
@@ -6165,7 +6166,7 @@
         "src/app/admin/ti/IntegrationsClient.tsx"
       ],
       "ocorrencias_gate": 1,
-      "ocorrencias_documento": 9,
+      "ocorrencias_documento": 10,
       "ocorrencias_codigo": 1,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
