@@ -63,11 +63,13 @@ test('reauditoria 222: 46 a_revalidar, contagem atual de IDs sem menção em gat
   // promoção do console (01/11) citou PLT-03 e PLT-15; o gate PLT-07 e a prova
   // corrente do PLT-02 acrescentaram menções técnicas. Em 02/11 a jornada de
   // cobertura da revisão periódica de acessos criou dois testes com o ID no
-  // nome e um gate dedicado, então PLT-01 saiu do núcleo (16 → 15). Isso reduz
-  // a contagem sem gate, mas não reaudita nem fecha os requisitos.
-  assert.equal(resumo.aRevalidarSemGate, 15);
+  // nome e um gate dedicado, então PLT-01 saiu do núcleo (16 → 15). Em 02/11 a
+  // fatia PLT-06 criou mais dois testes nomeados, um gate e um relatório, e
+  // PLT-06 saiu do núcleo (15 → 14). Isso reduz a contagem sem gate, mas não
+  // reaudita nem fecha os requisitos.
+  assert.equal(resumo.aRevalidarSemGate, 14);
   // IDs com mapa/prova textual nomeada ou mencionada; nenhum recebe aceite por isso.
-  for (const id of ['SEC-03', 'CLI-02', 'CLI-03', 'CLI-05', 'CLI-06', 'CLI-07', 'CLI-08', 'PLT-01', 'PLT-02', 'PLT-03', 'PLT-07', 'PLT-10', 'PLT-15']) {
+  for (const id of ['SEC-03', 'CLI-02', 'CLI-03', 'CLI-05', 'CLI-06', 'CLI-07', 'CLI-08', 'PLT-01', 'PLT-02', 'PLT-03', 'PLT-06', 'PLT-07', 'PLT-10', 'PLT-15']) {
     assert.ok(!resumo.idsARevalidarSemGate.includes(id), `${id} tem evidência técnica focal`);
   }
   for (const id of ['EXT-16', 'EXT-17', 'AI-01', 'AI-10']) {
@@ -118,9 +120,12 @@ test('reauditoria 222: nenhum ID inventa aceite humano ou reauditoria integral',
   // 23/124/75 → 24/124/74 em 02/11: PLT-01 ganhou dois testes com o ID no nome
   // e um gate dedicado (cobertura da revisão periódica de acessos). Evidência
   // textual acrescentada; o requisito segue `a_revalidar` e 0/222 com aceite.
-  assert.equal(data.resumo.porClasseEvidencia.gate_nomeado, 24);
+  // 24/124/74 → 25/124/73 também em 02/11: PLT-06 ganhou testes nomeados, gate
+  // PostgreSQL dedicado e relatório de jornada/RBAC. Mesma natureza: onde
+  // procurar a prova, não aceite humano.
+  assert.equal(data.resumo.porClasseEvidencia.gate_nomeado, 25);
   assert.equal(data.resumo.porClasseEvidencia.mencionado_em_gate, 124);
-  assert.equal(data.resumo.porClasseEvidencia.somente_documento, 74);
+  assert.equal(data.resumo.porClasseEvidencia.somente_documento, 73);
   assert.ok(data.requisitos.filter(row => row.prefixo === 'SEC')
     .every(row => row.classe_evidencia_atual === 'mencionado_em_gate'),
   'os 15 IDs SEC devem apontar para o mapa técnico de âncoras, sem inferir aceite');

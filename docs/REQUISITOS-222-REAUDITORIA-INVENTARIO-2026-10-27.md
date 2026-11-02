@@ -30,7 +30,7 @@ prova rota alguma. Workflows seguem **49**.
 
 ### Método
 
-Uma única passada por **1.690 arquivos** de `tests/`, `.github/workflows/`,
+Uma única passada por **1.695 arquivos** de `tests/`, `.github/workflows/`,
 `docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, a auditoria de 26/10, a
 fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
 meta-estado, não prova de requisito, e evitam auto-referência. De cada arquivo o gerador extrai todos os IDs com
@@ -42,9 +42,9 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 
 | Classe | Significado | IDs |
 |---|---|---|
-| `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **24** |
+| `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **25** |
 | `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **124** |
-| `somente_documento` | só há citação em documentos | **74** |
+| `somente_documento` | só há citação em documentos | **73** |
 | `somente_codigo` / `sem_evidencia_legivel` | — | **0** |
 
 > **Recontagem E23 (30/10/2026):** a tabela acima já não é a fotografia de 27/10
@@ -97,6 +97,17 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 > `reauditoria_integral=nao_executada`: gate nomeado é onde procurar a prova, não
 > aceite. 0/222 aceito.
 
+> **Recontagem E23 (02/11/2026, PLT-06):** 25/124/73. A fatia de jornada/RBAC/
+> evidência da observabilidade criou dois arquivos de teste com o ID no nome
+> (`tests/plt06-observability-read-contract.test.mjs` e
+> `tests/plt06-observability-read-contract.integration.test.mjs`), o gate
+> `scripts/qa-plt06-observability-postgres.mjs` e o relatório datado. `PLT-06`
+> sai de `somente_documento` para `gate_nomeado`, o núcleo sem gate cai de
+> **15 → 14** e o núcleo duro passa a listar **16** IDs. É evidência técnica de
+> leitura/RBAC/correlação/ciclo de alerta, **não** fechamento do requisito:
+> `PLT-06` permanece `a_revalidar`, aceite humano **0/222**, reauditoria integral
+> **não executada** e produção **NO-GO**.
+
 > **Aviso central:** "mencionado em gate" **não é prova de jornada**. Um ID pode
 > ser citado num assert de vocabulário e ainda assim não ter jornada, RBAC,
 > A/B, erro/vazio ou aceite. A classe só diz **onde procurar**.
@@ -110,13 +121,13 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 | `a_revalidar` (estado confirmado, 04/10) | **45** — a diferença de 1 é explícita, não corrigida |
 | `pronto_local` declarado | **164** |
 | `em_execucao` / `entregue` declarados | **6 / 6** |
-| **`a_revalidar` sem nenhuma menção em gate** | **15** |
+| **`a_revalidar` sem nenhuma menção em gate** | **14** |
 | Com aceite humano registrado | **0** |
 | Com reauditoria integral executada | **0** |
 
-### O núcleo duro (17 IDs)
+### O núcleo duro (16 IDs)
 
-`PLT-02`, `PLT-06`, `PLT-07`, `PLT-09`, `PLT-12`,
+`PLT-02`, `PLT-07`, `PLT-09`, `PLT-12`,
 `EXT-16`, `EXT-17`, `AI-01`…`AI-10`.
 
 São exatamente as famílias que a auditoria já apontava como bloqueadas:

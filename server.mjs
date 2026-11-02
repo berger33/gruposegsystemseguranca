@@ -3078,7 +3078,9 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/observability" || url.pathname === "/api/crm/observability") {
     return observabilityApi.handleMetrics(req, res);
   }
-  const obsAlertMatch = url.pathname.match(/^\/api\/admin\/observability\/alerts\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/observability\/alerts\/([0-9a-f-]{36})$/i);
+  // PLT-06: um id fora do formato UUID precisa CHEGAR ao handler para ser
+  // recusado com 400 invalid_alert_id; o handler mantém a validação canônica.
+  const obsAlertMatch = url.pathname.match(/^\/api\/admin\/observability\/alerts\/([^/]+)$/i) || url.pathname.match(/^\/api\/crm\/observability\/alerts\/([^/]+)$/i);
   if (obsAlertMatch) return observabilityApi.handleAlertAction(req, res, obsAlertMatch[1]);
   if (url.pathname === "/api/admin/observability/metrics" || url.pathname === "/api/crm/observability/metrics") {
     return observabilityApi.handleMetrics(req, res);
