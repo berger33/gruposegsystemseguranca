@@ -58,7 +58,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1699,
+    "arquivosVarridos": 1700,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -5669,7 +5669,7 @@
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/PLT-01-COBERTURA-REVISAO-ACESSOS-2026-11-02.md",
         "docs/PLT-06-OBSERVABILIDADE-JORNADA-RBAC-GATE-2026-11-02.md",
-        "docs/PROMPT-PROXIMA-SESSAO.md"
+        "docs/PLT-12-RESPOSTA-INCIDENTE-2026-11-02.md"
       ],
       "arquivos_codigo": [
         "scripts/local-demo.mjs",
@@ -5678,7 +5678,7 @@
         "src/server/admin-rbac-api.mjs"
       ],
       "ocorrencias_gate": 25,
-      "ocorrencias_documento": 44,
+      "ocorrencias_documento": 45,
       "ocorrencias_codigo": 4,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -5702,16 +5702,16 @@
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/PLT-02-AUDITORIA-FILTROS-RBAC-2026-11-01.md",
         "docs/PLT-06-OBSERVABILIDADE-JORNADA-RBAC-GATE-2026-11-02.md",
+        "docs/PLT-12-RESPOSTA-INCIDENTE-2026-11-02.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
-        "docs/auditoria-2026-10-04/AUDITORIA.md",
-        "docs/ux-pro-03-plt-02-auditoria-evidencias/resumo.json"
+        "docs/auditoria-2026-10-04/AUDITORIA.md"
       ],
       "arquivos_codigo": [
         "src/app/admin/ti/AuditClient.tsx",
         "src/server/admin-audit-api.mjs"
       ],
       "ocorrencias_gate": 6,
-      "ocorrencias_documento": 15,
+      "ocorrencias_documento": 16,
       "ocorrencias_codigo": 2,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -5838,10 +5838,10 @@
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/PLT-06-OBSERVABILIDADE-JORNADA-RBAC-GATE-2026-11-02.md",
+        "docs/PLT-12-RESPOSTA-INCIDENTE-2026-11-02.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
         "docs/auditoria-2026-10-04/AUDITORIA.md",
-        "docs/evidencias/F10-lote54-ollama-real-fallback-pglite-serial.md",
-        "docs/evidencias/F10-lote57-silent-pglite-widgets-rag-integration.md"
+        "docs/evidencias/F10-lote54-ollama-real-fallback-pglite-serial.md"
       ],
       "arquivos_codigo": [
         "scripts/qa-plt06-observability-postgres.mjs",
@@ -5851,7 +5851,7 @@
         "src/server/observability.mjs"
       ],
       "ocorrencias_gate": 39,
-      "ocorrencias_documento": 15,
+      "ocorrencias_documento": 16,
       "ocorrencias_codigo": 6,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -5874,16 +5874,16 @@
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/PLT-06-OBSERVABILIDADE-JORNADA-RBAC-GATE-2026-11-02.md",
         "docs/PLT-07-HARDENING-ERROR-SANITIZATION-2026-11-01.md",
+        "docs/PLT-12-RESPOSTA-INCIDENTE-2026-11-02.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
-        "docs/auditoria-2026-10-04/AUDITORIA.md",
-        "docs/ux-pro-03-plt-07-healthcheck-evidencias/resumo.json"
+        "docs/auditoria-2026-10-04/AUDITORIA.md"
       ],
       "arquivos_codigo": [
         "src/server/healthcheck-api.mjs",
         "src/server/observability-read-contract.mjs"
       ],
       "ocorrencias_gate": 5,
-      "ocorrencias_documento": 14,
+      "ocorrencias_documento": 15,
       "ocorrencias_codigo": 2,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -6035,6 +6035,7 @@
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
+        "docs/PLT-12-RESPOSTA-INCIDENTE-2026-11-02.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
         "docs/auditoria-2026-10-04/AUDITORIA.md"
       ],
@@ -6043,7 +6044,7 @@
         "src/server/incident-read-contract.mjs"
       ],
       "ocorrencias_gate": 43,
-      "ocorrencias_documento": 5,
+      "ocorrencias_documento": 10,
       "ocorrencias_codigo": 2,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"

@@ -1,8 +1,22 @@
 # Status vigente — Grupo SEG System
 
-**Última reconciliação:** 02/11/2026 · **Base:** `5fde81d21a77b85a7f66ee664c889b04cb9a1f67` (`main`, merge da PR #328, 45/45 checks) · **Branch de trabalho:** `arena/f9020140-gruposegsystemseguranca`.
+**Última reconciliação:** 02/11/2026 · **Base:** `a46bd884d40fdb371bfc57e79b23f86ab4601db6` (`main`, merge da PLT-12 — commit `39fdc74`) · **Branch de trabalho:** `arena/6e1e3051-gruposegsystemseguranca`.
 
 > **PR #324 obsoleta:** a PR docs-only, aberta a partir de `arena/4e952467-…`, reconcilia a base para `3ebdef5…`, que ficou atrás da `main` atual (`89abfa5…`). Permanece aberta e não foi mergeada, fechada ou alterada nesta sessão; decisão do dono necessária para encerrá-la.
+>
+> **PRs abertas em 02/11 (5):** #318 (E16 — worker durável EXT-07, **46/46 verde**, cria a migração 182), #321 (UX-PRO-06 vistoria, 1 check vermelho), #308 (RH reclamações compartilhadas, 1 check vermelho), #310 (docs ERP/Omie, 2 checks vermelhos), #324 (docs, base obsoleta). Nenhuma foi mergeada, fechada ou reescrita nesta sessão.
+>
+> **Auditoria de pendências por fatia publicada em 02/11:** [`AUDITORIA-PENDENCIAS-2026-11-02.md`](AUDITORIA-PENDENCIAS-2026-11-02.md) (retrato datado; não substitui este arquivo).
+
+### Atualização corrente — PLT-12: contrato, RBAC e evidência da resposta a incidente (02/11/2026)
+
+Fatia aditiva de **jornada/RBAC/evidência**, **sem** promoção de tela, **sem** abrir a borda legada de RH (`authorizeLegacyHrRequest` / `employees.read`) e **sem** substituir superfícies vivas. `TiConsole.tsx`, as 32 abas, as 19 promoções e os 27 órfãos não foram alterados. Nenhuma migração nova: **001–181** imutáveis, próxima livre **182**.
+
+O módulo puro `src/server/incident-read-contract.mjs` (109 linhas) fixa os vocabulários fechados (8 tipos, 4 severidades, 8 status, 6 evidências, 7 ações, 6 destinatários), a matriz de transição, os campos exigidos por transição (`em_contencao` ⇒ `containment_lead_name`; `encerrado` ⇒ `root_cause`) e a fronteira da superfície (`leitura_grava_auditoria:false`, `abre_borda_rh_legada:false`, `evidencia_nao_eh_upload:true`, `comunicacao_so_registro_interno:true`). Dois defeitos reais foram corrigidos: `server.mjs` passou a casar `/incidents/([^/]+)` — com `/evidences`, `/actions` e `/communications` despachados **antes** do `:id` — para que um id torto receba **400 `invalid_id`** em vez do 404 genérico do roteador; e `src/server/incident-api.mjs` trocou o `CASE` ambíguo (`inconsistent types deduced for parameter $1`) por lógica em JS com status whitelistado.
+
+Provas **reexecutadas e medidas em 02/11** nesta sessão: focal `tests/plt12-incident-response.test.mjs` **17/17, exit 0**; gate `npm run test:plt12-incidents:pg` **20/20, exit 0** em PostgreSQL 17 descartável (001–181), `server.mjs --dev` real e sessões `ti`/`rh`/`admin` reais, com resumo TAP autoauditado (`PLT12_TAP_SUMMARY: pass=20 fail=0 skipped=0 todo=0 minimo_exigido=20`). **RED reproduzido** na mesma data revertendo os dois hunks (`git apply -R` do commit): gate **18/20, exit 1**, falhando exatamente “id inválido responde 400 `invalid_id`” (era 404) e “ação de resposta e conclusão com auditoria” (era 500 do `CASE`); o focal ficou 17/17 nos dois estados — quem pegou os dois defeitos foi o gate HTTP + PostgreSQL, não o contrato.
+
+**PLT-12 ganha gate nomeado, mas permanece `a_revalidar`.** Matriz de 222: 25/124/73 → **26/124/72**, núcleo `a_revalidar` sem gate **14 → 13**; **0/222 com aceite humano**, **0/222 com reauditoria integral**. Produção **NO-GO**. Relatório: [`PLT-12-RESPOSTA-INCIDENTE-2026-11-02.md`](PLT-12-RESPOSTA-INCIDENTE-2026-11-02.md) — publicado tardiamente nesta sessão porque a fatia havia reconciliado os ledgers sem deixar relatório datado. Limites: sem exercício da aba em Chromium, sem worker/provedor externo, evidência sem upload e comunicação sem envio.
 
 ### Atualização corrente — PLT-06: jornada, RBAC e evidência de gate da observabilidade (02/11/2026)
 
