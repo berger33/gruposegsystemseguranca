@@ -18,6 +18,39 @@
 >
 > **Auditoria de pendências por fatia publicada em 02/11:** [`AUDITORIA-PENDENCIAS-2026-11-02.md`](AUDITORIA-PENDENCIAS-2026-11-02.md) (retrato datado; não substitui este arquivo).
 
+### Atualização corrente — o `QA baseline` do `main` ficou vermelho por gate sensível a carga, não por conteúdo (02/11/2026)
+
+**O fato.** Depois do merge da **PR #337** (`1c62745…`), o `PostgreSQL 17 backup and restore gates` fechou **success** e o
+`QA baseline` fechou **failure** no step `Client security regras 005/006 (embedded PostgreSQL, synthetic)` do job
+`static-and-smoke`.
+
+**Por que não é conteúdo — três provas independentes.** (1) A árvore do merge é **byte-idêntica** à do head da PR:
+`tree(b403173) == tree(1c62745) == 885785ce…`, e **essa árvore esteve 46/46 verde** no mesmo job durante os checks da PR.
+(2) O `QA baseline` do `main` vinha **success em #330, #331, #332, #333, #334, #335 e #336** — sete seguidos. (3) O teste
+que falha **não lê nada que a 183 toca**: ele aplica um subconjunto escolhido à mão (`001–006`, `011`, `097–101`) e não
+contém uma referência ao `CHECK`, às 5 ações nem ao número do ledger.
+
+**O flake reproduzido, com causa.** O comando exato da CI —
+`RUN_DATABASE_INTEGRATION=1 node --test --test-concurrency=1 tests/client-security.integration.test.mjs` — passa **4/4 em
+isolamento (3 execuções)** e **falha 2/4** quando roda **concorrente com `npm test`** neste sandbox de 2 vCPUs, com
+`terminating connection due to administrator command` em dois subtestes: o `after` do harness derruba o cluster
+embutido enquanto as consultas ainda estão em voo. Sob a mesma carga, `npm test` passou **1517/1517 nas duas rodadas** —
+a bateria hermética é robusta; o gate com cluster próprio é que não é.
+
+**Limites da investigação.** Os logs do CI são inalcançáveis daqui (`*.blob.core.windows.net`, fora do allowlist —
+`gh run view --log-failed` cai com EOF) e a anotação do job traz só `Process completed with exit code 1`.
+`gh run rerun 41531450803 --failed` foi **recusado** (`cannot be rerun; its workflow file may be broken`), então a
+re-verificação é esta PR: o `QA baseline` que rodar sobre este commit é a quarta amostra do mesmo conteúdo.
+
+**Não consertei o harness aqui, e isso é escolha nomeada.** Endurecer teardown de gate (amarrar o `after` ao fim dos
+subtestes, ou dar folga de timeout ao step) é mudança em `tests/` com risco próprio e **não estava autorizada** nesta
+sessão — a fila P2 está esgotada e item funcional novo exige decisão do dono. Fica como **N8** em
+[`AUDITORIA-PENDENCIAS-2026-11-02.md`](AUDITORIA-PENDENCIAS-2026-11-02.md). O que não se faz: tratar vermelho de gate
+instável como defeito do produto e “corrigir” conteúdo são estar quebrado.
+
+**Estado do merge anterior continua valendo:** migração **183** aplicada nos dois motores, `001–182` intocadas, as 4 PRs
+triadas (duas portadas, duas fechadas como superseded), produção **NO-GO**, aceite humano **0/222**.
+
 ### Atualização corrente — migração 183 (o `CHECK` de `auth_access_audit`) e triagem com porte das 4 PRs abertas (02/11/2026)
 
 **O que mudou.** Duas frentes autorizadas pelo dono, na mesma fatia: **(1)** a dívida que o gate do PLT-06 mediu e
