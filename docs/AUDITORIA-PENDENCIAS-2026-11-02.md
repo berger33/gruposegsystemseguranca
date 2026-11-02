@@ -7,6 +7,8 @@
 
 > Antecessor imediato: [`AUDITORIA-FATIAS-PENDENTES-2026-10-28.md`](AUDITORIA-FATIAS-PENDENTES-2026-10-28.md) (fotografia de 28/10). Este documento **reconcilia** aquela fila com o HEAD de hoje: o que fechou, o que continua, o que apareceu.
 
+> **Atualização de 02/11 (fatia C+D+E, sobre o `main` `14da00c`):** **N8 fechado** com causa medida e harness corrigido, e **#321/#310 fechadas como superseded** com prova por blob. O corpo deste documento continua sendo o retrato da data dele; as linhas vivas (`§1` tabela de PRs, `§5` N8, `§8` e `§13`) foram reconciliadas abaixo.
+
 > **Reconciliação de 02/11 (depois do E16):** a **#318** foi integrada ao `main` pelo merge commit **`1f6c0ea`** (pais `e1b3303` + `3ea54e3`), porque a base dela (`6303213`, #317) estava 40 commits atrás e `PUT /pulls/318/update-branch` respondia **422 merge conflict**. Com isso a **migração 182** (`durable_jobs`, E16) está aplicada — **001–181 intocadas** — e a **próxima livre é 183**. As linhas abaixo marcadas como "fechado na integração de 02/11" refletem esse estado; as contagens físicas foram **re-medidas** (246/178 no `tests`/`test:unit`, 139 módulos, `server.mjs` 6.310 linhas, 50 workflows, 414 `.md` na raiz de `docs/`).
 
 ---
@@ -48,7 +50,7 @@
 | Workflows | **50** (só `ci.yml` roda a bateria base; `plt-jornadas-delivery.yml` roda os gates PLT-01/06/12) |
 | Documentos | **414** `.md` na raiz de `docs/` |
 | ZIPs versionados (`downloads/` + `dist/`) | **16 arquivos, 171 MB** |
-| PRs abertas / issues abertas | **4 / 0** (a #318 foi integrada e fechada como superseded) |
+| PRs abertas / issues abertas | **0 / 0** — em 02/11: #318 integrada e fechada; #308 e #324 fechadas como superseded; **#321 e #310 fechadas como superseded na fatia C+D+E** (conteúdo já no `main`, provado por blob) |
 
 ---
 
@@ -165,14 +167,14 @@
 
 ---
 
-## 8. PRs abertas — decisão pendente do proprietário (05/11/2026)
+## 8. PRs abertas — decisão pendente do proprietário (05/11/2026) — **encerrado em 02/11: nenhuma PR aberta**
 
 | PR | Título | Checks | Situação |
 |---|---|---|---|
 | **#318** | `feat(e16)`: worker durável EXT-07, fila com lease, retomada exactly-once (**migração 182**) | **45/45 checks medidos em 30/10** (o ledger dizia 46/46), mas sobre a base antiga (`6303213`, #317) e **CONFLITANTE** com o `main` pós-#332 | **Integrada e fechada como superseded** em 02/11: o conteúdo entrou por `1f6c0ea` (merge de `3ea54e3`), com os 4 conflitos resolvidos — inventários **regenerados por script**, `package.json` em união, `STATUS-VIGENTE.md` à mão. `PUT /pulls/318/update-branch` respondia **422**. Migração **182** aplicada; próxima livre **183**. O merge entrou no `main` pela **PR #333** (`ad49440`, 47 checks verdes), que também fechou a #318 |
-| **#321** | `feat(ux-pro-06)`: estado de leitura honesto da Vistoria em `/admin/comercial` | re-medido em 02/11: **45/45 verdes** (nem 91/92 nem `ux-portal` — a contagem antiga era de outra base e o ledger chamava de “1 vermelho”) | **Portada inteira pela PR #337** (merge `1c62745…`): gate do CRM **47/47** e focal **9/9** medidos no `main` de hoje, não na base dela. O PR original fica para o dono fechar |
+| **#321** | `feat(ux-pro-06)`: estado de leitura honesto da Vistoria em `/admin/comercial` | re-medido em 02/11: **45/45 verdes** (nem 91/92 nem `ux-portal` — a contagem antiga era de outra base e o ledger chamava de “1 vermelho”) | **Portada inteira pela PR #337** (merge `1c62745…`): gate do CRM **47/47** e focal **9/9** medidos no `main` de hoje, não na base dela. **FECHADA como superseded em 02/11** (decisão do dono): os artefatos de código (`InspectionClient.tsx`, `.module.css`, focal 9/9 e o relatório) são **blob a blob idênticos** ao `main`, os documentos estão **mais novos** aqui e `tests/ux-crm-workspace.integration.test.mjs` tem **689 linhas a mais** no `main` — ou seja, `main ⊇ PR` |
 | **#308** | `feat(ux-pro-03)`: jornada do RH em reclamações compartilhadas | **44/45** — falha `ux-hr-postgres-browser`, **reproduzida localmente 19/20** | **FECHADA como superseded** (decisão do dono, 02/11): a jornada já estava no `main` pela **#319** com `SharedEmployeeComplaints.tsx` e id `reclamacoes-compartilhadas`; merge duplicaria aba e componente. Só o relatório foi aproveitado, em `docs/`, declarado **não executado** |
-| **#310** | `docs`: apresentação do ERP, lacunas vs. Omie, relatório semanal | **1 falha** (não 2) — `static-and-smoke`, e **aplica limpa** no `main` | **Portada inteira pela PR #337**: causa era só o inventário do 222 não regenerado (`arquivosVarridos` 1.620→1.621; só o `.md` entra na varredura). Docs entraram com os inventários refeitos. O PR original fica para o dono fechar |
+| **#310** | `docs`: apresentação do ERP, lacunas vs. Omie, relatório semanal | **1 falha** (não 2) — `static-and-smoke`, e **aplica limpa** no `main` | **Portada inteira pela PR #337**: causa era só o inventário do 222 não regenerado (`arquivosVarridos` 1.620→1.621; só o `.md` entra na varredura). Docs entraram com os inventários refeitos. **FECHADA como superseded em 02/11** (decisão do dono): os **3/3** arquivos que ela toca são **blob a blob idênticos** ao `main` |
 | **#324** | `docs`: reconcilia o ledger após a PR #323 | **1/1 verde** na base obsoleta (`3ebdef5…`, 45 commits atrás) | **FECHADA como superseded**: o `STATUS-VIGENTE.md` dela estava morto, mas o parágrafo **Entrega** do relatório da mensuração de origem não estava no `main` — foi dobrado na PR #337 com os 3 hashes conferidos antes |
 
 ---
@@ -200,7 +202,7 @@ Dos **80 scripts de teste** do `package.json`, **23 não são referenciados por 
 | **N5** | **171 MB de ZIPs obsoletos** seguem versionados (16 arquivos), com ~65 migrações de defasagem | `du -ch $(git ls-files downloads dist)` → **171 MB** | Clone inchado; risco de instalar versão morta |
 | **N6** | **FECHADO na fatia da 183 (02/11):** as 4 PRs abertas foram triadas com execução local e sortidas — **#321** e **#310** portadas para `arena/2d86e921-…`, **#308** e **#324** fechadas como superseded (a jornada da #308 já estava no `main` pela #319). A **#318** tinha saído da fila em `1f6c0ea`. | `gh pr checks`, `gh pr diff --name-only`, `git merge-tree` e gate reproduzido em `embedded-postgres` + Chromium | O que travava as quatro era (a) inventário do 222 não regenerado, (b) implementação paralela a uma já mergeada, (c) base obsoleta. Nenhum merge foi feito: as três que entraram entraram por **porte**, não por merge. |
 | **N7** | **A fila de notificações do console nunca pode enviar e-mail: `mailer` está literalmente `null`.** `server.mjs:1229` cria `createAdminNotificationsApi({ …, mailer: null })` com o comentário “will be set if nodemailer configured; for now null”. `admin-notifications-api.mjs:140` repassa `mailer: ctx.mailer` ao `processNext`, e `notification-queue.mjs` marca `not_configured` quando não há mailer — o item reteima até `dead`. Configurar `MAIL_HOST` **não** muda esse caminho. (O e-mail de **lead** é outro caminho: `sendLeadEmail` cria o transporte do `nodemailer` a partir do env) | Leitura de `server.mjs:1229`, `src/server/admin-notifications-api.mjs:140`, `src/server/notification-queue.mjs:182-206` | Fila administrativa nasce morta: não é “provedor não escolhido”, é ausência de ligação no servidor. Qualquer tela que prometa aviso por e-mail está prometendo o que o código não faz |
-| **N8** | **O gate `client-security` é sensível a carga e derruba o `QA baseline` do `main` sem defeito de conteúdo.** Na run do merge `1c62745…` o step "Client security regras 005/006" fechou exit 1 com a árvore **idêntica** (tree `885785ce…`) à da PR #337, que estava **46/46 verde** no mesmo job. Reproduzi o flake localmente: o comando exato da CI passa **4/4 em isolamento (3×)** e falha **2/4** quando roda concorrente com `npm test` em 2 vCPUs, com `terminating connection due to administrator command` — o `after` do harness derruba o cluster embutido com consultas em voo. Logs do CI são inalcançáveis (`*.blob.core.windows.net` fora do allowlist; anotação traz só "Process completed with exit code 1") e `gh run rerun --failed` foi recusado ("cannot be rerun"). **Não consertado aqui:** endurecer harness de gate é fatia própria e não estava autorizada; a correção provável é amarrar o teardown ao fim dos subtestes (ou dar folga de timeout ao step). Registro em `docs/STATUS-VIGENTE.md`. | `diff de árvores` + `RUN_DATABASE_INTEGRATION=1 node --test --test-concurrency=1 tests/client-security.integration.test.mjs` sob carga | Falso positivo trava o `main` vermelho e ensina a ignorar vermelho; o risco real é o oposto: alguém "consertar" conteúdo que não está quebrado |
+| **N8** | **FECHADO em 02/11 (fatia C+D+E). O gate `client-security` era sensível a carga e derrubava o `QA baseline` do `main` sem defeito de conteúdo.** Na run do merge `1c62745…` o step "Client security regras 005/006" fechou exit 1 com a árvore **idêntica** (tree `885785ce…`) à da PR #337, que estava **46/46 verde** no mesmo job. **Causa medida** (trace síncrono sob carga; qualquer `await` extra mascarava o flake): o corpo do subteste **já tinha terminado** e o `pool.end()` **já tinha sido chamado** quando o `pg.stop()` (SIGINT) mata os backends restantes; a `FATAL: terminating connection due to administrator command` chega ao `pg.Pool` como evento `error` e, **sem listener no arquivo**, o Node a converte em **`uncaughtException`** — exatamente o `failureType: 'uncaughtException'` do TAP, não uma asserção falha. **Conserto:** `pool.on("error", …)` suprimindo **só** o desligamento do próprio teardown e **só** depois de ele começar; nenhum timeout afrouxado, nenhum step alterado, nenhum conteúdo "corrigido". **Medido:** isolado 4/4 × 3 antes e depois; concorrente com `npm test` falhava 1–2 de 4 antes e fechou **6/6** depois; `npm test` 1517/1517 nas duas condições. | `trace síncrono` + `RUN_DATABASE_INTEGRATION=1 node --test --test-concurrency=1 tests/client-security.integration.test.mjs` isolado e sob carga | O falso positivo travava o `main` vermelho e ensinava a ignorar vermelho; o risco real era o oposto: alguém "consertar" conteúdo que não estava quebrado |
 
 ---
 
@@ -215,7 +217,7 @@ Dos **80 scripts de teste** do `package.json`, **23 não são referenciados por 
 7. **RPO/RTO**, teto de hospedagem (referência R$ 200/mês), domínio, CNPJ, logotipo, política de privacidade aprovada, textos e FAQ.
 8. Modo de acesso remoto (historicamente Tailscale Funnel, opção B) — **não ativar** sem autorização.
 9. **Matriz papel × ação × escopo** do CLI-02 (B8).
-10. Destino das **PRs abertas** (§8): a **#318** (migração 182) já foi integrada e fechada como superseded em 02/11; restam **#321, #308, #310 e #324**.
+10. Destino das **PRs abertas** (§8): **resolvido em 02/11** — #318 integrada e fechada; #308 e #324 fechadas como superseded pela fatia da 183; **#321 e #310 fechadas como superseded** na fatia C+D+E, com os arquivos por elas tocados medidos blob a blob contra o `main`. **Nenhuma PR aberta.**
 11. Autorização **explícita e por escrito** para publicar em produção.
 
 ---
@@ -230,7 +232,7 @@ Homologação RAG beta com 5 perfis · `is_beta_mode=false` · remoção do `noi
 ## 13. Ordem recomendada (menor risco → maior valor)
 
 **Imediato (destrava leitura do estado):**
-1. **N1** — reconciliar `STATUS-VIGENTE.md` com `a46bd88` e publicar o relatório datado da PLT-12 (1 PR docs).
+1. **N1** — reconciliar `STATUS-VIGENTE.md` com o topo do `main` e publicar o relatório datado da PLT-12 (1 PR docs). **Feito e reincidente por natureza:** cada merge deixa o cabeçalho uma merge atrás; a fatia C+D+E reconciliou para `14da00c`.
 2. **N2** — remover `.probe-plt12.mjs` (1 PR).
 3. **N3** — ligar `test:plt01/plt06/plt12:pg` a um workflow (ou declarar por escrito que são manuais).
 
