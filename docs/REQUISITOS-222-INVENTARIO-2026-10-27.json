@@ -36,13 +36,12 @@
     },
     "porClasseEvidencia": {
       "mencionado_em_gate": 124,
-      "somente_documento": 75,
-      "gate_nomeado": 23
+      "somente_documento": 74,
+      "gate_nomeado": 24
     },
     "aRevalidarDeclarado": 46,
-    "aRevalidarSemGate": 16,
+    "aRevalidarSemGate": 15,
     "idsARevalidarSemGate": [
-      "PLT-01",
       "PLT-06",
       "PLT-09",
       "PLT-12",
@@ -61,7 +60,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1685,
+    "arquivosVarridos": 1690,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -3836,7 +3835,7 @@
         "src/server/cli-api.mjs"
       ],
       "ocorrencias_gate": 7,
-      "ocorrencias_documento": 19,
+      "ocorrencias_documento": 20,
       "ocorrencias_codigo": 4,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -5655,25 +5654,34 @@
       "estado_declarado_0410": "a_revalidar",
       "estado_confirmado_0410": "entregue",
       "pendencia_0410": "preencher",
-      "classe_evidencia_atual": "somente_documento",
-      "arquivos_gate_nomeados": [],
-      "arquivos_gate": [],
+      "classe_evidencia_atual": "gate_nomeado",
+      "arquivos_gate_nomeados": [
+        "tests/plt01-access-review-coverage.integration.test.mjs",
+        "tests/plt01-access-review-coverage.test.mjs"
+      ],
+      "arquivos_gate": [
+        "tests/plt01-access-review-coverage.integration.test.mjs",
+        "tests/plt01-access-review-coverage.test.mjs"
+      ],
       "arquivos_documento": [
         "docs/AVALIACAO-ENTREGA-LOCAL-COMPLETA.md",
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/EXECUCAO-ENTREGA-LOCAL.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
+        "docs/PLT-01-COBERTURA-REVISAO-ACESSOS-2026-11-02.md",
         "docs/PROMPT-PROXIMA-SESSAO.md",
-        "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
-        "docs/auditoria-2026-10-04/AUDITORIA.md"
+        "docs/RELATORIO-PENDENCIAS-COMPLETO.md"
       ],
       "arquivos_codigo": [
-        "scripts/local-demo.mjs"
+        "scripts/local-demo.mjs",
+        "scripts/qa-plt01-access-review-coverage-postgres.mjs",
+        "src/server/access-review-coverage.mjs",
+        "src/server/admin-rbac-api.mjs"
       ],
-      "ocorrencias_gate": 0,
-      "ocorrencias_documento": 36,
-      "ocorrencias_codigo": 1,
+      "ocorrencias_gate": 25,
+      "ocorrencias_documento": 42,
+      "ocorrencias_codigo": 4,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -6309,11 +6317,11 @@
         "src/app/admin/ti/ExtClient.tsx",
         "src/lib/third-party-request.ts",
         "src/lib/third-party-vocabulary.mjs",
-        "src/server/ext-third-party-api.mjs"
+        "src/server/access-review-coverage.mjs"
       ],
       "ocorrencias_gate": 89,
-      "ocorrencias_documento": 80,
-      "ocorrencias_codigo": 21,
+      "ocorrencias_documento": 81,
+      "ocorrencias_codigo": 22,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -6355,11 +6363,11 @@
         "src/app/admin/ti/ExtClient.tsx",
         "src/lib/bidding-request.ts",
         "src/lib/bidding-vocabulary.mjs",
-        "src/server/ext-bidding-api.mjs"
+        "src/server/access-review-coverage.mjs"
       ],
       "ocorrencias_gate": 116,
-      "ocorrencias_documento": 57,
-      "ocorrencias_codigo": 25,
+      "ocorrencias_documento": 58,
+      "ocorrencias_codigo": 26,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
