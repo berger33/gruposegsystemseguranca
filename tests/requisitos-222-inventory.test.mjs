@@ -61,14 +61,16 @@ test('reauditoria 222: 46 a_revalidar, contagem atual de IDs sem menção em gat
   // 7 sem gate; fatias focais CLI-02/03/05..08 reduziram mais 6 para 21; a
   // promoção da aba PLT-10 (28/10) tirou mais um do núcleo, deixando 20. A 19ª
   // promoção do console (01/11) citou PLT-03 e PLT-15; o gate PLT-07 e a prova
-  // corrente do PLT-02 acrescentaram menções técnicas. Isso reduz a contagem
-  // sem gate, mas não reaudita nem fecha os requisitos.
-  assert.equal(resumo.aRevalidarSemGate, 16);
+  // corrente do PLT-02 acrescentaram menções técnicas. Em 02/11 a jornada de
+  // cobertura da revisão periódica de acessos criou dois testes com o ID no
+  // nome e um gate dedicado, então PLT-01 saiu do núcleo (16 → 15). Isso reduz
+  // a contagem sem gate, mas não reaudita nem fecha os requisitos.
+  assert.equal(resumo.aRevalidarSemGate, 15);
   // IDs com mapa/prova textual nomeada ou mencionada; nenhum recebe aceite por isso.
-  for (const id of ['SEC-03', 'CLI-02', 'CLI-03', 'CLI-05', 'CLI-06', 'CLI-07', 'CLI-08', 'PLT-02', 'PLT-03', 'PLT-07', 'PLT-10', 'PLT-15']) {
+  for (const id of ['SEC-03', 'CLI-02', 'CLI-03', 'CLI-05', 'CLI-06', 'CLI-07', 'CLI-08', 'PLT-01', 'PLT-02', 'PLT-03', 'PLT-07', 'PLT-10', 'PLT-15']) {
     assert.ok(!resumo.idsARevalidarSemGate.includes(id), `${id} tem evidência técnica focal`);
   }
-  for (const id of ['PLT-01', 'EXT-16', 'EXT-17', 'AI-01', 'AI-10']) {
+  for (const id of ['EXT-16', 'EXT-17', 'AI-01', 'AI-10']) {
     assert.ok(resumo.idsARevalidarSemGate.includes(id), `${id} precisa seguir no núcleo sem gate`);
   }
   const byId = new Map(data.requisitos.map(row => [row.id, row]));
@@ -113,9 +115,12 @@ test('reauditoria 222: nenhum ID inventa aceite humano ou reauditoria integral',
   // `browser UX-PRO-03 PLT-03` os citam. PLT-07 e PLT-02 também passam a
   // `mencionado_em_gate` por provas focais/browser, sem alterar o estado dos
   // requisitos nem inferir aceite.
-  assert.equal(data.resumo.porClasseEvidencia.gate_nomeado, 23);
+  // 23/124/75 → 24/124/74 em 02/11: PLT-01 ganhou dois testes com o ID no nome
+  // e um gate dedicado (cobertura da revisão periódica de acessos). Evidência
+  // textual acrescentada; o requisito segue `a_revalidar` e 0/222 com aceite.
+  assert.equal(data.resumo.porClasseEvidencia.gate_nomeado, 24);
   assert.equal(data.resumo.porClasseEvidencia.mencionado_em_gate, 124);
-  assert.equal(data.resumo.porClasseEvidencia.somente_documento, 75);
+  assert.equal(data.resumo.porClasseEvidencia.somente_documento, 74);
   assert.ok(data.requisitos.filter(row => row.prefixo === 'SEC')
     .every(row => row.classe_evidencia_atual === 'mencionado_em_gate'),
   'os 15 IDs SEC devem apontar para o mapa técnico de âncoras, sem inferir aceite');

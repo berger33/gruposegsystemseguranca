@@ -44,6 +44,11 @@
 .reason { max-width: 320px; overflow-wrap: anywhere; }
 .scopeWarning { display: block; margin-top: 4px; color: var(--ux-color-warning); }
 .workspace .danger { border-color: var(--ux-color-danger-strong); background: var(--ux-color-surface); color: var(--ux-color-danger-strong); }
+.coverageSummary { margin: 0; color: var(--ux-color-muted); line-height: 1.6; }
+.coverageSummary strong { color: var(--ux-color-text); }
+.coveragePendente, .coverageNeutra { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: .8rem; font-weight: 700; }
+.coveragePendente { background: var(--ux-color-warning-soft); color: var(--ux-color-warning); }
+.coverageNeutra { background: var(--ux-color-table-stripe); color: var(--ux-color-muted); }
 .auditNote { margin: 0; color: var(--ux-color-muted); font-size: .88rem; line-height: 1.6; }
 .auditNote code { color: var(--ux-color-text); }
 @media (max-width: 760px) { .heading, .sectionTitle { flex-direction: column; } .fields { grid-template-columns: minmax(0, 1fr); } .full { grid-column: auto; } .workspace button { width: 100%; } .session { width: auto; } }

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { grantPermission, revokePermission, hasPermission, isValidPermission, isValidScopeType, KNOWN_PERMISSIONS } from "./rbac.mjs";
+import { classifyCoverage, parseCoverageLimit, resolveReviewRule } from "./access-review-coverage.mjs";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -159,9 +160,54 @@ export function createAdminRbacApi(ctx) {
     }
   }
 
+  // PLT-01 — cobertura da revisão periódica: leitura derivada de
+  // auth_access_reviews, sem alterar permissões e sem inventar prazo quando a
+  // regra de periodicidade não foi declarada pelo operador.
+  async function readAccessReviewCoverage(res, url) {
+    const limit = parseCoverageLimit(url.searchParams.get("limit"));
+    try {
+      const db = ctx.getPool();
+      const identities = await db.query(
+        `SELECT i.id, i.email, i.status, p.role
+           FROM auth_identities i
+           LEFT JOIN auth_staff_profiles p ON p.identity_id = i.id
+          WHERE i.kind = 'staff' AND i.status = 'active'
+          ORDER BY i.email ASC
+          LIMIT 500`
+      );
+      const reviews = await db.query(
+        `SELECT target_identity_id, MAX(created_at) AS created_at, COUNT(*)::int AS total
+           FROM auth_access_reviews
+          GROUP BY target_identity_id`
+      );
+      return ctx.json(res, 200, classifyCoverage({
+        rule: resolveReviewRule(process.env),
+        identities: identities.rows,
+        reviews: reviews.rows,
+        asOf: new Date(),
+        limit,
+      }));
+    } catch (error) {
+      return databaseFailure(res, error, "Could not compute access review coverage.");
+    }
+  }
+
+  async function handleAccessReviewCoverage(req, res, url) {
+    const session = await requireAdminSession(req, res, "admin.access_review");
+    if (!session) return;
+    if (!requireMethod(req, res, ["GET"])) return;
+    return readAccessReviewCoverage(res, url || new URL("http://test.invalid/api/admin/access-reviews"));
+  }
+
   async function handleAccessReviews(req, res, url) {
     const session = await requireAdminSession(req, res, "admin.access_review");
     if (!session) return;
+    const requestedView = url?.searchParams?.get("view") || "";
+    if (requestedView === "coverage") {
+      // A cobertura é somente leitura: POST nessa visão nunca cria revisão.
+      if (req.method !== "GET") return ctx.json(res, 405, { error: "method_not_allowed" }, { Allow: "GET" });
+      return readAccessReviewCoverage(res, url);
+    }
     if (req.method === "GET") {
       try {
         const db = ctx.getPool();
@@ -213,5 +259,6 @@ export function createAdminRbacApi(ctx) {
     handleGrantPermission,
     handleRevokePermission,
     handleAccessReviews,
+    handleAccessReviewCoverage,
   };
 }

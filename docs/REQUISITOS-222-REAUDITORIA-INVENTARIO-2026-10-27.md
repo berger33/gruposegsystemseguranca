@@ -30,7 +30,7 @@ prova rota alguma. Workflows seguem **49**.
 
 ### Método
 
-Uma única passada por **1.685 arquivos** de `tests/`, `.github/workflows/`,
+Uma única passada por **1.690 arquivos** de `tests/`, `.github/workflows/`,
 `docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, a auditoria de 26/10, a
 fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
 meta-estado, não prova de requisito, e evitam auto-referência. De cada arquivo o gerador extrai todos os IDs com
@@ -42,9 +42,9 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 
 | Classe | Significado | IDs |
 |---|---|---|
-| `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **23** |
+| `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **24** |
 | `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **124** |
-| `somente_documento` | só há citação em documentos | **75** |
+| `somente_documento` | só há citação em documentos | **74** |
 | `somente_codigo` / `sem_evidencia_legivel` | — | **0** |
 
 > **Recontagem E23 (30/10/2026):** a tabela acima já não é a fotografia de 27/10
@@ -87,6 +87,16 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 > duro, 16 seguem sem menção em gate. O núcleo permanece 18 itens porque a
 > evidência citada não fecha requisito.
 >
+> **Recontagem E23 (02/11/2026, PLT-01):** 24/124/74. A fatia de cobertura da
+> revisão periódica de acessos criou dois arquivos de teste com o ID no nome
+> (`tests/plt01-access-review-coverage.test.mjs` e
+> `tests/plt01-access-review-coverage.integration.test.mjs`) e um gate dedicado,
+> então `PLT-01` sai de `somente_documento` para `gate_nomeado` e do núcleo sem
+> gate (**16 → 15**), que passa a ter 17 IDs. O requisito **continua**
+> `a_revalidar`, com `aceite_humano=nao_registrado` e
+> `reauditoria_integral=nao_executada`: gate nomeado é onde procurar a prova, não
+> aceite. 0/222 aceito.
+
 > **Aviso central:** "mencionado em gate" **não é prova de jornada**. Um ID pode
 > ser citado num assert de vocabulário e ainda assim não ter jornada, RBAC,
 > A/B, erro/vazio ou aceite. A classe só diz **onde procurar**.
@@ -100,20 +110,23 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 | `a_revalidar` (estado confirmado, 04/10) | **45** — a diferença de 1 é explícita, não corrigida |
 | `pronto_local` declarado | **164** |
 | `em_execucao` / `entregue` declarados | **6 / 6** |
-| **`a_revalidar` sem nenhuma menção em gate** | **16** |
+| **`a_revalidar` sem nenhuma menção em gate** | **15** |
 | Com aceite humano registrado | **0** |
 | Com reauditoria integral executada | **0** |
 
-### O núcleo duro (18 IDs)
+### O núcleo duro (17 IDs)
 
-`PLT-01`, `PLT-02`, `PLT-06`, `PLT-07`, `PLT-09`, `PLT-12`,
+`PLT-02`, `PLT-06`, `PLT-07`, `PLT-09`, `PLT-12`,
 `EXT-16`, `EXT-17`, `AI-01`…`AI-10`.
 
 São exatamente as famílias que a auditoria já apontava como bloqueadas:
 segurança/escopo de documentos, plataforma, EXT-16/17 (biometria e central,
 bloqueadas por privacidade) e **toda a frente de IA real** (F14).
 
-**Saíram do núcleo desde 27/10 (9 IDs, todos com relatório próprio):** `PLT-03`
+**Saíram do núcleo desde 27/10 (10 IDs, todos com relatório próprio):** `PLT-01`
+(02/11, cobertura da revisão periódica de acessos: módulo
+`src/server/access-review-coverage.mjs`, visão `?view=coverage` e o gate
+`test:plt01-access-review-coverage:pg`, com prova focal nomeada pelo ID), `PLT-03`
 (19ª promoção do console de TI, catálogo de integrações) e `PLT-15` (citado no
 rodapé da mesma tela como dono dos registros/jobs/webhooks) passaram a
 `mencionado_em_gate` — `PLT-15` **não** ganhou tela nova aqui, só a fronteira
@@ -124,7 +137,7 @@ requisitos foram implementados/revalidados: o relatório SEC marca
 `aceite_humano=nao_registrado` e `reauditoria_integral=nao_executada` em todos os
 15. A classe textual indica somente que há evidência técnica mapeada.
 
-Entre os 46 `a_revalidar`, **30 têm alguma menção em gate**: `PLT-02`, `PLT-07`, `SEC-03`, `SEC-07`,
+Entre os 46 `a_revalidar`, **31 têm alguma menção em gate**: `PLT-01` (`gate_nomeado`, 02/11), `PLT-02`, `PLT-07`, `SEC-03`, `SEC-07`,
 `SEC-10`…`SEC-15`, `CLI-01`, `CLI-02` e `CLI-03` (`gate_nomeado`), `CLI-05`…`CLI-10`,
 `PLT-03`, `PLT-10`, `PLT-11`, `PLT-13`, `PLT-14`, `PLT-15`, `PLT-16`…`PLT-18`,
 `EXT-06` e `EXT-09` (`gate_nomeado`). Isso **não** os torna revalidados: a menção é um ponto de
