@@ -36,13 +36,12 @@
     },
     "porClasseEvidencia": {
       "mencionado_em_gate": 124,
-      "somente_documento": 72,
-      "gate_nomeado": 26
+      "somente_documento": 71,
+      "gate_nomeado": 27
     },
     "aRevalidarDeclarado": 46,
-    "aRevalidarSemGate": 13,
+    "aRevalidarSemGate": 12,
     "idsARevalidarSemGate": [
-      "PLT-09",
       "EXT-16",
       "EXT-17",
       "AI-01",
@@ -58,7 +57,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1702,
+    "arquivosVarridos": 1707,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -5842,10 +5841,10 @@
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/PLT-06-OBSERVABILIDADE-JORNADA-RBAC-GATE-2026-11-02.md",
+        "docs/PLT-09-PRIVACIDADE-2026-11-02.md",
         "docs/PLT-12-RESPOSTA-INCIDENTE-2026-11-02.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
-        "docs/auditoria-2026-10-04/AUDITORIA.md",
-        "docs/evidencias/F10-lote54-ollama-real-fallback-pglite-serial.md"
+        "docs/auditoria-2026-10-04/AUDITORIA.md"
       ],
       "arquivos_codigo": [
         "scripts/qa-plt06-observability-postgres.mjs",
@@ -5855,7 +5854,7 @@
         "src/server/observability.mjs"
       ],
       "ocorrencias_gate": 44,
-      "ocorrencias_documento": 16,
+      "ocorrencias_documento": 17,
       "ocorrencias_codigo": 6,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -5929,22 +5928,34 @@
       "estado_declarado_0410": "a_revalidar",
       "estado_confirmado_0410": "a_revalidar",
       "pendencia_0410": "preencher",
-      "classe_evidencia_atual": "somente_documento",
-      "arquivos_gate_nomeados": [],
-      "arquivos_gate": [],
+      "classe_evidencia_atual": "gate_nomeado",
+      "arquivos_gate_nomeados": [
+        "tests/plt09-privacy-contract.test.mjs",
+        "tests/plt09-privacy.integration.test.mjs"
+      ],
+      "arquivos_gate": [
+        ".github/workflows/plt-jornadas-delivery.yml",
+        "tests/plt-gates-wired.test.mjs",
+        "tests/plt09-privacy-contract.test.mjs",
+        "tests/plt09-privacy.integration.test.mjs"
+      ],
       "arquivos_documento": [
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
+        "docs/PLT-09-PRIVACIDADE-2026-11-02.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
         "docs/auditoria-2026-10-04/AUDITORIA.md"
       ],
       "arquivos_codigo": [
-        "src/server/privacy-api.mjs"
+        "scripts/qa-plt09-privacy-postgres.mjs",
+        "src/server/privacy-api.mjs",
+        "src/server/privacy-read-contract.mjs",
+        "src/server/retention-api.mjs"
       ],
-      "ocorrencias_gate": 0,
-      "ocorrencias_documento": 5,
-      "ocorrencias_codigo": 2,
+      "ocorrencias_gate": 62,
+      "ocorrencias_documento": 13,
+      "ocorrencias_codigo": 5,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -6011,11 +6022,12 @@
       "arquivos_codigo": [
         "scripts/ux-pro-03-ti-inventory.mjs",
         "src/app/admin/ti/RetentionClient.module.css",
-        "src/app/admin/ti/RetentionClient.tsx"
+        "src/app/admin/ti/RetentionClient.tsx",
+        "src/server/retention-api.mjs"
       ],
       "ocorrencias_gate": 9,
       "ocorrencias_documento": 20,
-      "ocorrencias_codigo": 4,
+      "ocorrencias_codigo": 5,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -6948,13 +6960,13 @@
         "docs/EXECUCAO-ENTREGA-LOCAL.md",
         "docs/PLANO-CONCLUSAO-ARENA.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
-        "docs/PROMPT-CONTINUACAO-F14-IA-RAG-REAL.md"
+        "docs/PLT-09-PRIVACIDADE-2026-11-02.md"
       ],
       "arquivos_codigo": [
         "src/server/ext-reporting-api.mjs"
       ],
       "ocorrencias_gate": 0,
-      "ocorrencias_documento": 16,
+      "ocorrencias_documento": 17,
       "ocorrencias_codigo": 1,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -6975,15 +6987,15 @@
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/PLANO-CONCLUSAO-ARENA.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
+        "docs/PLT-09-PRIVACIDADE-2026-11-02.md",
         "docs/PROMPT-CONTINUACAO-F14-IA-RAG-REAL.md",
-        "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
-        "docs/UX-10-EXPANSAO-2026-10-06.md"
+        "docs/RELATORIO-PENDENCIAS-COMPLETO.md"
       ],
       "arquivos_codigo": [
         "src/server/ext-reporting-api.mjs"
       ],
       "ocorrencias_gate": 0,
-      "ocorrencias_documento": 13,
+      "ocorrencias_documento": 14,
       "ocorrencias_codigo": 1,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -7006,13 +7018,13 @@
         "docs/EXECUCAO-ENTREGA-LOCAL.md",
         "docs/PLANO-CONCLUSAO-ARENA.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
-        "docs/PROMPT-CONTINUACAO-F14-IA-RAG-REAL.md"
+        "docs/PLT-09-PRIVACIDADE-2026-11-02.md"
       ],
       "arquivos_codigo": [
         "src/server/ext-reporting-api.mjs"
       ],
       "ocorrencias_gate": 0,
-      "ocorrencias_documento": 28,
+      "ocorrencias_documento": 29,
       "ocorrencias_codigo": 2,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -7244,17 +7256,17 @@
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
+        "docs/PLT-09-PRIVACIDADE-2026-11-02.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
         "docs/UX-PRO-03-PROMOCAO-MONITORAMENTO-2026-10-29.md",
         "docs/auditoria-2026-10-04/02-PLANO-ARENA.md",
-        "docs/auditoria-2026-10-04/AUDITORIA.md",
-        "docs/evidencias/F10-lote54-ollama-real-fallback-pglite-serial.md"
+        "docs/auditoria-2026-10-04/AUDITORIA.md"
       ],
       "arquivos_codigo": [
         "src/server/ext-reporting-api.mjs"
       ],
       "ocorrencias_gate": 0,
-      "ocorrencias_documento": 12,
+      "ocorrencias_documento": 13,
       "ocorrencias_codigo": 2,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"

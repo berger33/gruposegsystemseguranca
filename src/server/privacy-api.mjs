@@ -1,8 +1,34 @@
 // PLT-09 política privacidade completa inventário dados finalidades bases destinatários prazos contatos direitos revisão competente
+import {
+  PRIVACY_DATA_CATEGORIES,
+  PRIVACY_LEGAL_BASES,
+  PRIVACY_POLICY_STATUSES,
+  PRIVACY_POLICY_PUBLIC_STATUS,
+  contactEmailProblem,
+  isPublishedStatus,
+  policyPublishProblem,
+} from './privacy-read-contract.mjs';
+
 export function createPrivacyApi({ json, readJson, sameOrigin, getPool, readAdminSession }) {
-  const DATA_CATEGORIES = ['identificacao','contato','localizacao','profissional','financeiro','tecnico','comportamental','sensivel','outro'];
-  const LEGAL_BASES = ['consentimento','execucao_contrato','cumprimento_legal','legitimo_interesse','protecao_vida','tutela_saude','exercicio_direitos','protecao_credito','outro'];
-  const POLICY_STATUSES = ['rascunho','em_revisao','aprovado','publicado','arquivado','rejeitado'];
+  const DATA_CATEGORIES = [...PRIVACY_DATA_CATEGORIES];
+  const LEGAL_BASES = [...PRIVACY_LEGAL_BASES];
+  const POLICY_STATUSES = [...PRIVACY_POLICY_STATUSES];
+
+  // Trilha de auditoria em `audit_log`. Até 02/11 estes INSERTs iam para
+  // `auth_access_audit` com ações `privacy_*`, que as migrações 100/103
+  // removeram do CHECK — o `catch {}` engolia a recusa e nenhuma escrita de
+  // inventário/política deixava rastro. `audit_log` aceita a ação como TEXTO e
+  // é a tabela usada pelo resto do domínio.
+  async function audit(pool, { action, actor, actorId, target }) {
+    try {
+      await pool.query(
+        'INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)',
+        [action, actor, target, JSON.stringify({ actor_id: actorId || null })],
+      );
+    } catch (error) {
+      console.error('privacy audit unavailable', error?.message || error);
+    }
+  }
 
   function sanitizeText(s, max) {
     if (s == null) return null;
@@ -46,7 +72,14 @@ export function createPrivacyApi({ json, readJson, sameOrigin, getPool, readAdmi
     }
 
     if (req.method === 'POST' || req.method === 'PUT') {
-      if (!['admin','ti'].includes(await readAdminSession(req)?.role)) return json(res, 403, { error: 'privacy_inventory_restricted_admin_ti' });
+      // Bug medido em 02/11: o `await` aplicado só ao resultado de
+      // `readAdminSession(req)` deixava o `?.role` sobre a promessa (undefined),
+      // então TODA escrita de inventário — inclusive `admin` e `ti` — respondia
+      // 403 `privacy_inventory_restricted_admin_ti`. A sessão é lida UMA vez
+      // aqui e o papel é lido do objeto resolvido.
+      const session = await readAdminSession(req);
+      if (!['admin','ti'].includes(session.role)) return json(res, 403, { error: 'privacy_inventory_restricted_admin_ti' });
+
       let body;
       try { body = await readJson(req, 10 * 1024); } catch { return json(res, 400, { error: 'invalid_json' }); }
       const data_category = String(body?.data_category || body?.dataCategory || '').toLowerCase();
@@ -72,7 +105,6 @@ export function createPrivacyApi({ json, readJson, sameOrigin, getPool, readAdmi
 
       try {
         const pool = getPool();
-        const session = await readAdminSession(req);
         const up = await pool.query(
           `INSERT INTO privacy_data_inventory (id, data_category, data_field, description, purpose, legal_basis, legal_basis_detail, retention_days, retention_description, recipients, is_sensitive, is_required, source, created_by, created_by_id)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
@@ -91,7 +123,7 @@ export function createPrivacyApi({ json, readJson, sameOrigin, getPool, readAdmi
            RETURNING *`,
           [crypto.randomUUID(), data_category, data_field, description, purpose, legal_basis, legal_basis_detail, ret, retention_description, recipients, is_sensitive, is_required, source, session.role, session.identityId || null]
         );
-        try { await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'privacy_inventory_create',$3,'allowed','none')", [session.role, session.identityId || session.role, up.rows[0].id]); } catch {}
+        await audit(pool, { action: 'privacy_inventory_create', actor: session.role, actorId: session.identityId, target: up.rows[0].id });
         return json(res, 200, { item: up.rows[0], note: 'Inventário atualizado com finalidade e base legal' });
       } catch (e) {
         console.error('privacy inventory upsert failed', e);
@@ -117,6 +149,11 @@ export function createPrivacyApi({ json, readJson, sameOrigin, getPool, readAdmi
         if (status) {
           if (!POLICY_STATUSES.includes(status)) return json(res, 400, { error: 'invalid_status' });
           conds.push(`status = $${idx++}`); vals.push(status);
+        }
+        // Filtro inválido não é silenciosamente ignorado: antes, `published=talvez`
+        // devolvia a lista inteira como se o filtro tivesse sido aplicado.
+        if (published !== null && !['true', 'false'].includes(published)) {
+          return json(res, 400, { error: 'invalid_published' });
         }
         if (published === 'true') conds.push(`is_published = true`);
         if (published === 'false') conds.push(`is_published = false`);
@@ -147,6 +184,11 @@ export function createPrivacyApi({ json, readJson, sameOrigin, getPool, readAdmi
 
       if (!title) return json(res, 400, { error: 'invalid_title' });
       if (!content) return json(res, 400, { error: 'invalid_content' });
+      // Recusa em 400 o que o CHECK da migração 047 recusaria em 503. A
+      // validação olha o valor BRUTO: o sanitizado vira `null` acima do limite,
+      // e era justamente aí que o INSERT prosseguia e o banco respondia 503.
+      const emailProblem = contactEmailProblem(body?.contact_email || body?.contactEmail);
+      if (emailProblem) return json(res, 400, { error: emailProblem });
 
       try {
         const pool = getPool();
@@ -160,7 +202,7 @@ export function createPrivacyApi({ json, readJson, sameOrigin, getPool, readAdmi
            VALUES ($1,$2,'rascunho',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
           [id, nextVersion, title, content, inventorySnap ? JSON.stringify(inventorySnap) : null, contact_email, dpo_name, dpo_contact, retention_summary, rights_description, recipients_description, session.role, session.identityId || null]
         );
-        try { await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'privacy_policy_create',$3,'allowed','none')", [session.role, session.identityId || session.role, id]); } catch {}
+        await audit(pool, { action: 'privacy_policy_create', actor: session.role, actorId: session.identityId, target: id });
         return json(res, 201, { policy: ins.rows[0], note: 'Política criada rascunho, revisão competente necessária antes de publicar, noindex mantido' });
       } catch (e) {
         console.error('privacy policy create failed', e);
@@ -196,7 +238,12 @@ export function createPrivacyApi({ json, readJson, sameOrigin, getPool, readAdmi
       const fields = []; const vals = []; let idx = 1;
       if (body?.title !== undefined) { const t = sanitizeText(body.title, 200); if (!t) return json(res, 400, { error: 'invalid_title' }); fields.push(`title = $${idx++}`); vals.push(t); }
       if (body?.content !== undefined) { const c = sanitizeText(body.content, 20000); if (!c) return json(res, 400, { error: 'invalid_content' }); fields.push(`content = $${idx++}`); vals.push(c); }
-      if (body?.contact_email !== undefined) { const ce = sanitizeText(body.contact_email, 320); fields.push(`contact_email = $${idx++}`); vals.push(ce); }
+      if (body?.contact_email !== undefined) {
+        const ce = sanitizeText(body.contact_email, 320);
+        const emailProblem = contactEmailProblem(body.contact_email);
+        if (emailProblem) return json(res, 400, { error: emailProblem });
+        fields.push(`contact_email = $${idx++}`); vals.push(ce);
+      }
       if (body?.dpo_name !== undefined) { const dn = sanitizeText(body.dpo_name, 200); fields.push(`dpo_name = $${idx++}`); vals.push(dn); }
       if (body?.dpo_contact !== undefined) { const dc = sanitizeText(body.dpo_contact, 500); fields.push(`dpo_contact = $${idx++}`); vals.push(dc); }
       if (body?.retention_summary !== undefined) { const rs = sanitizeText(body.retention_summary, 2000); fields.push(`retention_summary = $${idx++}`); vals.push(rs); }
@@ -209,22 +256,33 @@ export function createPrivacyApi({ json, readJson, sameOrigin, getPool, readAdmi
         if ((st === 'aprovado' || st === 'publicado') && session.role !== 'admin') {
           return json(res, 403, { error: 'approval_requires_admin', detail: 'Revisão competente antes de publicar (PLT-09) exige admin' });
         }
+        // O estado atual é lido UMA vez e a falha dele é fail-closed: antes, o
+        // `catch {}` deixava publicar quando a leitura do status não respondia.
+        let currentStatus = null;
+        try {
+          const pool = getPool();
+          const cur = await pool.query('SELECT status FROM privacy_policies WHERE id = $1', [policyId]);
+          if (!cur.rows[0]) return json(res, 404, { error: 'not_found' });
+          currentStatus = cur.rows[0].status;
+        } catch (e) {
+          console.error('privacy policy status read failed', e);
+          return json(res, 503, { error: 'policy_unavailable' });
+        }
+        // A regra vem do contrato; o código de erro devolvido à tela continua
+        // sendo o mesmo que a aba já traduz.
+        if (policyPublishProblem(currentStatus, st)) {
+          return json(res, 400, { error: 'must_be_approved_before_publish', detail: 'Política deve ser aprovada por admin antes de publicar' });
+        }
         fields.push(`status = $${idx++}`); vals.push(st);
+        // `is_published` é derivado do estado: arquivar ou rejeitar uma política
+        // publicada precisa deixá-la NÃO publicada (regressão medida em 02/11).
+        fields.push(`is_published = $${idx++}`); vals.push(isPublishedStatus(st));
         if (st === 'aprovado') {
           fields.push(`approved_by = $${idx++}`); vals.push(session.role);
           fields.push(`approved_by_id = $${idx++}`); vals.push(session.identityId || null);
           fields.push(`approved_at = NOW()`);
         }
-        if (st === 'publicado') {
-          // Must have been approved before
-          try {
-            const pool = getPool();
-            const cur = await pool.query('SELECT status FROM privacy_policies WHERE id = $1', [policyId]);
-            if (cur.rows[0]?.status !== 'aprovado') {
-              return json(res, 400, { error: 'must_be_approved_before_publish', detail: 'Política deve ser aprovada por admin antes de publicar' });
-            }
-          } catch {}
-          fields.push(`is_published = true`);
+        if (st === PRIVACY_POLICY_PUBLIC_STATUS) {
           fields.push(`published_at = NOW()`);
         }
         if (st === 'rejeitado') {
@@ -240,7 +298,7 @@ export function createPrivacyApi({ json, readJson, sameOrigin, getPool, readAdmi
         const upd = await pool.query(`UPDATE privacy_policies SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`, [...vals, policyId]);
         if (!upd.rows[0]) return json(res, 404, { error: 'not_found' });
         const action = upd.rows[0].status === 'aprovado' ? 'privacy_policy_approve' : upd.rows[0].status === 'publicado' ? 'privacy_policy_publish' : upd.rows[0].status === 'rejeitado' ? 'privacy_policy_reject' : 'privacy_policy_update';
-        try { await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,$3,$4,'allowed','none')", [session.role, session.identityId || session.role, action, policyId]); } catch {}
+        await audit(pool, { action, actor: session.role, actorId: session.identityId, target: policyId });
         return json(res, 200, { policy: upd.rows[0], note: upd.rows[0].is_published ? 'Política publicada, noindex pode ser removido em produção após revisão' : 'Política atualizada, revisão competente necessária antes de publicar' });
       } catch (e) {
         console.error('policy update failed', e);

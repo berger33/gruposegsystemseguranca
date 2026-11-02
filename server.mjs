@@ -3120,7 +3120,7 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/privacy/inventory" || url.pathname === "/api/crm/privacy/inventory" || url.pathname === "/api/privacy/inventory") {
     return privacyApi.handleInventory(req, res);
   }
-  const privacyPolicyByIdMatch = url.pathname.match(/^\/api\/admin\/privacy\/policies\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/privacy\/policies\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/privacy\/policies\/([0-9a-f-]{36})$/i);
+  const privacyPolicyByIdMatch = url.pathname.match(/^\/api\/admin\/privacy\/policies\/([^/]+)$/i) || url.pathname.match(/^\/api\/crm\/privacy\/policies\/([^/]+)$/i) || url.pathname.match(/^\/api\/privacy\/policies\/([^/]+)$/i);
   if (privacyPolicyByIdMatch) return privacyApi.handlePolicyById(req, res, privacyPolicyByIdMatch[1]);
   if (url.pathname === "/api/admin/privacy/policies" || url.pathname === "/api/crm/privacy/policies" || url.pathname === "/api/privacy/policies" || url.pathname === "/api/privacy") {
     return privacyApi.handlePolicies(req, res);
@@ -3129,7 +3129,7 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/lgpd/requests" || url.pathname === "/api/privacy/requests" || url.pathname === "/api/public/lgpd" || url.pathname === "/api/admin/lgpd/requests" || url.pathname === "/api/crm/lgpd/requests" || url.pathname === "/api/admin/privacy/requests") {
     return lgpdRequestApi.handleRequests(req, res);
   }
-  const lgpdByIdMatch = url.pathname.match(/^\/api\/admin\/lgpd\/requests\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/lgpd\/requests\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/admin\/privacy\/requests\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/lgpd\/requests\/([0-9a-f-]{36})$/i);
+  const lgpdByIdMatch = url.pathname.match(/^\/api\/admin\/lgpd\/requests\/([^/]+)$/i) || url.pathname.match(/^\/api\/crm\/lgpd\/requests\/([^/]+)$/i) || url.pathname.match(/^\/api\/admin\/privacy\/requests\/([^/]+)$/i) || url.pathname.match(/^\/api\/lgpd\/requests\/([^/]+)$/i);
   if (lgpdByIdMatch) return lgpdRequestApi.handleRequestById(req, res, lgpdByIdMatch[1]);
   // PLT-11 retention
   if (url.pathname === "/api/admin/retention/policies" || url.pathname === "/api/crm/retention/policies" || url.pathname === "/api/privacy/retention/policies" || url.pathname === "/api/admin/privacy/retention") {
@@ -3138,12 +3138,12 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/retention/exceptions" || url.pathname === "/api/crm/retention/exceptions" || url.pathname === "/api/privacy/retention/exceptions") {
     return retentionApi.handleExceptions(req, res);
   }
-  const retentionExcByIdMatch = url.pathname.match(/^\/api\/admin\/retention\/exceptions\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/retention\/exceptions\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/privacy\/retention\/exceptions\/([0-9a-f-]{36})$/i);
+  const retentionExcByIdMatch = url.pathname.match(/^\/api\/admin\/retention\/exceptions\/([^/]+)$/i) || url.pathname.match(/^\/api\/crm\/retention\/exceptions\/([^/]+)$/i) || url.pathname.match(/^\/api\/privacy\/retention\/exceptions\/([^/]+)$/i);
   if (retentionExcByIdMatch) return retentionApi.handleExceptionById(req, res, retentionExcByIdMatch[1]);
   if (url.pathname === "/api/admin/retention/disposal/jobs" || url.pathname === "/api/crm/retention/disposal/jobs" || url.pathname === "/api/admin/disposal/jobs" || url.pathname === "/api/privacy/disposal/jobs") {
     return retentionApi.handleJobs(req, res);
   }
-  const disposalJobByIdMatch = url.pathname.match(/^\/api\/admin\/retention\/disposal\/jobs\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/retention\/disposal\/jobs\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/admin\/disposal\/jobs\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/privacy\/disposal\/jobs\/([0-9a-f-]{36})$/i);
+  const disposalJobByIdMatch = url.pathname.match(/^\/api\/admin\/retention\/disposal\/jobs\/([^/]+)$/i) || url.pathname.match(/^\/api\/crm\/retention\/disposal\/jobs\/([^/]+)$/i) || url.pathname.match(/^\/api\/admin\/disposal\/jobs\/([^/]+)$/i) || url.pathname.match(/^\/api\/privacy\/disposal\/jobs\/([^/]+)$/i);
   if (disposalJobByIdMatch) return retentionApi.handleJobById(req, res, disposalJobByIdMatch[1]);
   if (url.pathname === "/api/admin/retention/disposal/logs" || url.pathname === "/api/crm/retention/disposal/logs" || url.pathname === "/api/admin/disposal/logs" || url.pathname === "/api/privacy/disposal/logs") {
     return retentionApi.handleLogs(req, res);
