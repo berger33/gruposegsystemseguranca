@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// PLT-01 / PLT-06 / PLT-12 — guarda de ORFANDADE de gate.
+// PLT-01 / PLT-06 / PLT-09 / PLT-12 — guarda de ORFANDADE de gate.
 //
 // As três fatias de jornada/RBAC/evidência entregues entre 01 e 02/11/2026
 // criaram gates nomeados em PostgreSQL 17 descartável, com relatório datado,
@@ -25,6 +25,7 @@ const WORKFLOWS_DIR = '.github/workflows';
 const PLT_GATES = [
   { id: 'PLT-01', script: 'test:plt01-access-review-coverage:pg', runner: 'scripts/qa-plt01-access-review-coverage-postgres.mjs', focal: 'tests/plt01-access-review-coverage.test.mjs' },
   { id: 'PLT-06', script: 'test:plt06-observability:pg', runner: 'scripts/qa-plt06-observability-postgres.mjs', focal: 'tests/plt06-observability-read-contract.test.mjs' },
+  { id: 'PLT-09', script: 'test:plt09-privacy:pg', runner: 'scripts/qa-plt09-privacy-postgres.mjs', focal: 'tests/plt09-privacy-contract.test.mjs' },
   { id: 'PLT-12', script: 'test:plt12-incidents:pg', runner: 'scripts/qa-plt12-incidents-postgres.mjs', focal: 'tests/plt12-incident-response.test.mjs' },
 ];
 

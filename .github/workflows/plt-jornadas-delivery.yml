@@ -1,8 +1,9 @@
 name: PLT jornadas delivery
-# PLT-01 (revisão periódica de acessos), PLT-06 (observabilidade) e PLT-12
-# (resposta a incidente) ganharam gates nomeados em PostgreSQL 17 descartável
-# entre 01 e 02/11/2026, mas nenhum era chamado por workflow: a prova só
-# existia quando alguém rodava o script na mão. Este workflow fecha essa
+# PLT-01 (revisão periódica de acessos), PLT-06 (observabilidade), PLT-09
+# (privacidade: inventário, política, pedidos LGPD e retenção) e PLT-12
+# (resposta a incidente) têm gates nomeados em PostgreSQL 17 descartável,
+# criados entre 01 e 02/11/2026. Os três primeiros nasceram órfãos — a prova só
+# existia quando alguém rodava o script na mão; este workflow fecha essa
 # orfandade e é exigido por tests/plt-gates-wired.test.mjs.
 on:
   pull_request:
@@ -15,16 +16,23 @@ on:
       - 'src/server/observability.mjs'
       - 'src/server/incident-api.mjs'
       - 'src/server/incident-read-contract.mjs'
+      - 'src/server/privacy-api.mjs'
+      - 'src/server/retention-api.mjs'
+      - 'src/server/lgpd-request-api.mjs'
+      - 'src/server/privacy-read-contract.mjs'
       - 'server.mjs'
       - 'tests/plt01-access-review-coverage.test.mjs'
       - 'tests/plt06-observability-read-contract.test.mjs'
       - 'tests/plt12-incident-response.test.mjs'
+      - 'tests/plt09-privacy-contract.test.mjs'
       - 'tests/plt01-access-review-coverage.integration.test.mjs'
       - 'tests/plt06-observability.integration.test.mjs'
       - 'tests/plt12-incident-response.integration.test.mjs'
+      - 'tests/plt09-privacy.integration.test.mjs'
       - 'scripts/qa-plt01-access-review-coverage-postgres.mjs'
       - 'scripts/qa-plt06-observability-postgres.mjs'
       - 'scripts/qa-plt12-incidents-postgres.mjs'
+      - 'scripts/qa-plt09-privacy-postgres.mjs'
       - 'scripts/qa-generated-files-guard.mjs'
       - 'scripts/migrate-site-visual.mjs'
       - 'db/migrations/**'
@@ -58,5 +66,7 @@ jobs:
         run: npm run test:plt01-access-review-coverage:pg
       - name: PLT-06 jornada, RBAC e correlação da observabilidade (PostgreSQL 17 descartável)
         run: npm run test:plt06-observability:pg
+      - name: PLT-09 privacidade — inventário, política, pedidos LGPD e retenção (PostgreSQL 17 descartável)
+        run: npm run test:plt09-privacy:pg
       - name: PLT-12 resposta a incidente (PostgreSQL 17 descartável)
         run: npm run test:plt12-incidents:pg

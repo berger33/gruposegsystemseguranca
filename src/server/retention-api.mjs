@@ -1,23 +1,41 @@
+// PLT-11 retenção por categoria, exceção formal e descarte declarado.
+// PLT-09 (esta fatia) liga o módulo ao contrato puro `privacy-read-contract.mjs`:
+// vocabulários fechados, guarda de método nas leituras (405 com `Allow`),
+// filtro fora do enum em 400 em vez de silenciosamente ignorado e contadores do
+// job de descarte sem cobertura fabricada. Nenhuma tabela, migração ou papel
+// mudou; o descarte continua declarativo (não apaga dado pessoal real).
 import crypto from 'node:crypto';
+import {
+  PRIVACY_DATA_CATEGORIES,
+  PRIVACY_LEGAL_BASES,
+  RETENTION_EXCEPTION_STATUSES,
+  RETENTION_DISPOSAL_METHODS,
+  RETENTION_JOB_STATUSES,
+  RETENTION_ALLOWED_TRANSITIONS,
+  RETENTION_MAX_DAYS,
+  disposalCounters,
+} from './privacy-read-contract.mjs';
 
-const CATEGORIES = ['identificacao','contato','localizacao','profissional','financeiro','tecnico','comportamental','sensivel','outro'];
-const LEGAL_BASIS = ['consentimento','execucao_contrato','cumprimento_legal','legitimo_interesse','protecao_vida','tutela_saude','exercicio_direitos','protecao_credito','outro'];
-const EXCEPTION_STATUSES = ['solicitado','em_analise','aprovado','rejeitado','expirado','revogado'];
-const DISPOSAL_METHODS = ['exclusao_logica','exclusao_fisica','anonimizacao','arquivamento'];
-const JOB_STATUSES = ['pendente','em_execucao','concluido','falha','parcial'];
+const CATEGORIES = [...PRIVACY_DATA_CATEGORIES];
+const LEGAL_BASIS = [...PRIVACY_LEGAL_BASES];
+const EXCEPTION_STATUSES = [...RETENTION_EXCEPTION_STATUSES];
+const DISPOSAL_METHODS = [...RETENTION_DISPOSAL_METHODS];
+const JOB_STATUSES = [...RETENTION_JOB_STATUSES];
 
-const ALLOWED_EXCEPTION_TRANSITIONS = {
-  solicitado: ['em_analise','rejeitado','aprovado'],
-  em_analise: ['aprovado','rejeitado'],
-  aprovado: ['expirado','revogado'],
-  rejeitado: [],
-  expirado: [],
-  revogado: [],
-};
+const ALLOWED_EXCEPTION_TRANSITIONS = RETENTION_ALLOWED_TRANSITIONS;
 
 function sanitizeText(v, max=2000){ if(typeof v!=='string') return ''; return v.trim().slice(0,max); }
 function hashRef(v){ return crypto.createHash('sha256').update(String(v)).digest('hex').slice(0,32); }
 function uuidRe(){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i; }
+
+// Resposta JSON única do módulo, agora com cabeçalhos (o 405 precisa de `Allow`;
+// antes o 405 desta superfície saía sem `Allow`, diferente do resto da casa).
+function send(res, status, payload, headers = {}){
+  const body = JSON.stringify(payload);
+  res.writeHead(status, {'Content-Type':'application/json','Content-Length':Buffer.byteLength(body),...headers});
+  res.end(body);
+  return undefined;
+}
 
 export function createRetentionApi({ pool, auditLog, sameOrigin, requireSession, requireRole }) {
   async function handlePolicies(req, res){
@@ -31,7 +49,10 @@ export function createRetentionApi({ pool, auditLog, sameOrigin, requireSession,
       const active = url.searchParams.get('is_active');
       const q = ['SELECT * FROM data_retention_policies'];
       const cond=[]; const params=[]; let i=1;
-      if(category && CATEGORIES.includes(category)){ cond.push(`category=$${i++}`); params.push(category); }
+      // Fora do enum é 400: antes o filtro era ignorado em silêncio e a lista
+      // inteira voltava como se tivesse sido filtrada (medido em 02/11).
+      if(category){ if(!CATEGORIES.includes(category)){ res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_category'})); return; } cond.push(`category=$${i++}`); params.push(category); }
+      if(active!==null && !['true','false'].includes(active)){ res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_is_active'})); return; }
       if(active==='true'){ cond.push(`is_active=true`); } else if(active==='false'){ cond.push(`is_active=false`); }
       if(cond.length) q.push('WHERE '+cond.join(' AND '));
       q.push('ORDER BY category, field_pattern LIMIT 200');
@@ -64,7 +85,7 @@ export function createRetentionApi({ pool, auditLog, sameOrigin, requireSession,
       await auditLog({ action: req.method==='POST'?'retention_policy_create':'retention_policy_update', actor: by, target: r.rows[0].id, meta: { category, field_pattern } });
       res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({policy:r.rows[0]})); return;
     }
-    res.writeHead(405,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
+    send(res, 405, {error:'method_not_allowed'}, {Allow:'GET, POST'});
   }
 
   async function handleExceptions(req, res){
@@ -77,8 +98,8 @@ export function createRetentionApi({ pool, auditLog, sameOrigin, requireSession,
       const status = url.searchParams.get('status');
       const category = url.searchParams.get('category');
       const cond=[]; const params=[]; let i=1;
-      if(status && EXCEPTION_STATUSES.includes(status)){ cond.push(`status=$${i++}`); params.push(status); }
-      if(category && CATEGORIES.includes(category)){ cond.push(`category=$${i++}`); params.push(category); }
+      if(status){ if(!EXCEPTION_STATUSES.includes(status)){ res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_status'})); return; } cond.push(`status=$${i++}`); params.push(status); }
+      if(category){ if(!CATEGORIES.includes(category)){ res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_category'})); return; } cond.push(`category=$${i++}`); params.push(category); }
       let sql='SELECT * FROM retention_exceptions';
       if(cond.length) sql+=' WHERE '+cond.join(' AND ');
       sql+=' ORDER BY created_at DESC LIMIT 200';
@@ -116,7 +137,7 @@ export function createRetentionApi({ pool, auditLog, sameOrigin, requireSession,
       await auditLog({ action:'retention_exception_create', actor: by, target: r.rows[0].id, meta: { category, field_reference } });
       res.writeHead(201,{'Content-Type':'application/json'}); res.end(JSON.stringify({exception:r.rows[0]})); return;
     }
-    res.writeHead(405,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
+    send(res, 405, {error:'method_not_allowed'}, {Allow:'GET, POST'});
   }
 
   async function handleExceptionById(req, res, id){
@@ -157,7 +178,7 @@ export function createRetentionApi({ pool, auditLog, sameOrigin, requireSession,
       await auditLog({ action: actionMap[next_status]||'retention_exception_approve', actor: by, target: id, meta: { previous: prev, next: next_status } });
       res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({exception:r.rows[0]})); return;
     }
-    res.writeHead(405,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
+    send(res, 405, {error:'method_not_allowed'}, {Allow:'GET, PATCH'});
   }
 
   async function handleJobs(req, res){
@@ -181,14 +202,14 @@ export function createRetentionApi({ pool, auditLog, sameOrigin, requireSession,
       // Execute: count expired exceptions, count policies, and log disposal simulation
       try {
         await pool.query(`UPDATE disposal_jobs SET status='em_execucao', started_at=now(), updated_at=now() WHERE id=$1`, [jobId]);
-        // Expire old exceptions
-        await pool.query(`UPDATE retention_exceptions SET status='expirado', updated_at=now() WHERE status='aprovado' AND expires_at < CURRENT_DATE`);
-        // Count policies active
+        // Expira as exceções vencidas e conta pelo RETURNING: antes a contagem
+        // era feita DEPOIS do próprio UPDATE (sempre 0) e `total_scanned` era a
+        // multiplicação sintética "políticas × 10". Os dois números eram
+        // cobertura fabricada exibida na aba de retenção (medido em 02/11).
+        const expiredRes = await pool.query(`UPDATE retention_exceptions SET status='expirado', updated_at=now() WHERE status='aprovado' AND expires_at < CURRENT_DATE RETURNING id`);
+        const expired = expiredRes.rowCount ?? expiredRes.rows.length;
         const pol = await pool.query(`SELECT COUNT(*)::int as c FROM data_retention_policies WHERE is_active=true`);
-        const exc = await pool.query(`SELECT COUNT(*)::int as c FROM retention_exceptions WHERE status='aprovado' AND expires_at < CURRENT_DATE`);
-        // Simulate scanning: for demo, we scan inventory + policies
-        const scanned = pol.rows[0].c * 10; // synthetic
-        const expired = exc.rows[0].c;
+        const excAll = await pool.query(`SELECT COUNT(*)::int as c FROM retention_exceptions`);
         // Create disposal_logs for expired exceptions as example of minimized history
         const expiredExcs = await pool.query(`SELECT * FROM retention_exceptions WHERE status='expirado' ORDER BY expires_at DESC LIMIT 20`);
         let disposed=0;
@@ -200,9 +221,10 @@ export function createRetentionApi({ pool, auditLog, sameOrigin, requireSession,
           disposed++;
         }
         // Also simulate disposal of old privacy inventory logs? For minimization, we keep only hash
+        const finalCounters = disposalCounters({ policiesEvaluated: pol.rows[0].c, exceptionsEvaluated: excAll.rows[0].c, exceptionsExpired: expired, disposed });
         await pool.query(`UPDATE disposal_jobs SET status=$1, finished_at=now(), total_scanned=$2, total_expired=$3, total_disposed=$4, updated_at=now() WHERE id=$5`,
-          [disposed>0?'concluido':'concluido', scanned, expired, disposed, jobId]);
-        await auditLog({ action:'disposal_job_execute', actor: by, target: jobId, meta: { scanned, expired, disposed } });
+          ['concluido', finalCounters.total_scanned, finalCounters.total_expired, finalCounters.total_disposed, jobId]);
+        await auditLog({ action:'disposal_job_execute', actor: by, target: jobId, meta: { scanned: finalCounters.total_scanned, expired: finalCounters.total_expired, disposed: finalCounters.total_disposed } });
         const finalJob = await pool.query('SELECT * FROM disposal_jobs WHERE id=$1', [jobId]);
         res.writeHead(201,{'Content-Type':'application/json'}); res.end(JSON.stringify({job:finalJob.rows[0]})); return;
       } catch(e){
@@ -210,7 +232,7 @@ export function createRetentionApi({ pool, auditLog, sameOrigin, requireSession,
         res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'job_failed', jobId})); return;
       }
     }
-    res.writeHead(405,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'method_not_allowed'}));
+    send(res, 405, {error:'method_not_allowed'}, {Allow:'GET, POST'});
   }
 
   async function handleJobById(req, res, id){
@@ -219,6 +241,9 @@ export function createRetentionApi({ pool, auditLog, sameOrigin, requireSession,
     if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
     if(!requireRole(sess,['admin','ti'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
     if(!uuidRe().test(id)){ res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_id'})); return; }
+    // Guarda de método: antes, DELETE/POST/PUT neste detalhe respondiam 200 com
+    // o job e os logs, como se a escrita tivesse acontecido (medido em 02/11).
+    if(req.method!=='GET'){ send(res, 405, {error:'method_not_allowed'}, {Allow:'GET'}); return; }
     const job = await pool.query('SELECT * FROM disposal_jobs WHERE id=$1', [id]);
     if(!job.rows.length){ res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
     const logs = await pool.query('SELECT * FROM disposal_logs WHERE job_id=$1 ORDER BY disposed_at DESC LIMIT 100', [id]);
@@ -230,10 +255,13 @@ export function createRetentionApi({ pool, auditLog, sameOrigin, requireSession,
     const sess = await requireSession(req);
     if(!sess){ res.writeHead(401,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'unauthorized'})); return; }
     if(!requireRole(sess,['admin','ti','rh'])){ res.writeHead(403,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'forbidden'})); return; }
+    // Leitura é GET: antes, POST e DELETE nos logs respondiam 200 com a lista,
+    // aceitando um método de escrita em rota de leitura (medido em 02/11).
+    if(req.method!=='GET'){ send(res, 405, {error:'method_not_allowed'}, {Allow:'GET'}); return; }
     const url = new URL(req.url,'http://localhost');
     const category = url.searchParams.get('category');
     const cond=[]; const params=[]; let i=1;
-    if(category && CATEGORIES.includes(category)){ cond.push(`category=$${i++}`); params.push(category); }
+    if(category){ if(!CATEGORIES.includes(category)){ send(res, 400, {error:'invalid_category'}); return; } cond.push(`category=$${i++}`); params.push(category); }
     let sql='SELECT * FROM disposal_logs';
     if(cond.length) sql+=' WHERE '+cond.join(' AND ');
     sql+=' ORDER BY disposed_at DESC LIMIT 200';

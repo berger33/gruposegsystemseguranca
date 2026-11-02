@@ -30,7 +30,7 @@ prova rota alguma. Workflows seguem **50** (o `plt-jornadas-delivery.yml` foi cr
 
 ### Método
 
-Uma única passada por **1.702 arquivos** de `tests/`, `.github/workflows/`,
+Uma única passada por **1.707 arquivos** de `tests/`, `.github/workflows/`,
 `docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, as auditorias de 26/10, 28/10 e
 02/11, a fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
 meta-estado, não prova de requisito, e evitam auto-referência. De cada arquivo o gerador extrai todos os IDs com
@@ -42,9 +42,9 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 
 | Classe | Significado | IDs |
 |---|---|---|
-| `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **26** |
+| `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **27** |
 | `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **124** |
-| `somente_documento` | só há citação em documentos | **72** |
+| `somente_documento` | só há citação em documentos | **71** |
 | `somente_codigo` / `sem_evidencia_legivel` | — | **0** |
 
 > **Recontagem E23 (30/10/2026):** a tabela acima já não é a fotografia de 27/10
@@ -119,6 +119,19 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 > `PLT-06` permanece `a_revalidar`, aceite humano **0/222**, reauditoria integral
 > **não executada** e produção **NO-GO**.
 
+> **Recontagem E23 (02/11/2026, PLT-09):** 26/124/72 → **27/124/71**. A fatia de
+> privacidade criou dois arquivos de teste com o ID no nome
+> (`tests/plt09-privacy-contract.test.mjs` e
+> `tests/plt09-privacy.integration.test.mjs`), o gate
+> `scripts/qa-plt09-privacy-postgres.mjs` e o contrato puro em
+> `src/server/privacy-read-contract.mjs`. `PLT-09` sai de `somente_documento`
+> para `gate_nomeado`, o núcleo sem gate cai de **13 → 12** e o núcleo duro
+> passa a listar **15** IDs. É contrato e prova de leitura/RBAC/evidência de
+> inventário, política, pedidos LGPD e retenção — **não** é parecer jurídico,
+> não publica política de privacidade real e não fecha o requisito: `PLT-09`
+> permanece `a_revalidar`, aceite humano **0/222**, reauditoria integral **não
+> executada** e produção **NO-GO**.
+
 > **Aviso central:** "mencionado em gate" **não é prova de jornada**. Um ID pode
 > ser citado num assert de vocabulário e ainda assim não ter jornada, RBAC,
 > A/B, erro/vazio ou aceite. A classe só diz **onde procurar**.
@@ -132,13 +145,13 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 | `a_revalidar` (estado confirmado, 04/10) | **45** — a diferença de 1 é explícita, não corrigida |
 | `pronto_local` declarado | **164** |
 | `em_execucao` / `entregue` declarados | **6 / 6** |
-| **`a_revalidar` sem nenhuma menção em gate** | **13** |
+| **`a_revalidar` sem nenhuma menção em gate** | **12** |
 | Com aceite humano registrado | **0** |
 | Com reauditoria integral executada | **0** |
 
-### O núcleo duro (16 IDs)
+### O núcleo duro (15 IDs)
 
-`PLT-02`, `PLT-07`, `PLT-09`, `PLT-12`,
+`PLT-02`, `PLT-07`, `PLT-12`,
 `EXT-16`, `EXT-17`, `AI-01`…`AI-10`.
 
 São exatamente as famílias que a auditoria já apontava como bloqueadas:
