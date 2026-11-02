@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // PLT-01 — gate autoauditável da cobertura da revisão periódica de acesso.
-// Cluster PostgreSQL 17 descartável, migrações 001–181, servidor HTTP real e
+// Cluster PostgreSQL 17 descartável, migrações 001–182, servidor HTTP real e
 // RBAC real (sessões ti/rh sintéticas). Não toca banco do operador. Não prova
 // aceite humano, UAT, auditoria integral nem produção.
 

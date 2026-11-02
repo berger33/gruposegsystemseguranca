@@ -57,7 +57,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1711,
+    "arquivosVarridos": 1712,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -5839,12 +5839,12 @@
       "arquivos_documento": [
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
+        "docs/INTEGRACAO-E16-2026-11-02.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/PLT-06-OBSERVABILIDADE-JORNADA-RBAC-GATE-2026-11-02.md",
         "docs/PLT-09-PRIVACIDADE-2026-11-02.md",
         "docs/PLT-12-RESPOSTA-INCIDENTE-2026-11-02.md",
-        "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
-        "docs/auditoria-2026-10-04/AUDITORIA.md"
+        "docs/RELATORIO-PENDENCIAS-COMPLETO.md"
       ],
       "arquivos_codigo": [
         "scripts/qa-plt06-observability-postgres.mjs",
@@ -5854,7 +5854,7 @@
         "src/server/observability.mjs"
       ],
       "ocorrencias_gate": 44,
-      "ocorrencias_documento": 17,
+      "ocorrencias_documento": 18,
       "ocorrencias_codigo": 6,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -5942,6 +5942,7 @@
       "arquivos_documento": [
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
+        "docs/INTEGRACAO-E16-2026-11-02.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/PLT-09-PRIVACIDADE-2026-11-02.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
@@ -5954,7 +5955,7 @@
         "src/server/retention-api.mjs"
       ],
       "ocorrencias_gate": 62,
-      "ocorrencias_documento": 13,
+      "ocorrencias_documento": 15,
       "ocorrencias_codigo": 5,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -6052,6 +6053,7 @@
       "arquivos_documento": [
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
+        "docs/INTEGRACAO-E16-2026-11-02.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/PLT-12-RESPOSTA-INCIDENTE-2026-11-02.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
@@ -6062,7 +6064,7 @@
         "src/server/incident-read-contract.mjs"
       ],
       "ocorrencias_gate": 48,
-      "ocorrencias_documento": 10,
+      "ocorrencias_documento": 11,
       "ocorrencias_codigo": 2,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -6958,15 +6960,15 @@
         "docs/CONTINUACAO-ARENA.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/EXECUCAO-ENTREGA-LOCAL.md",
+        "docs/INTEGRACAO-E16-2026-11-02.md",
         "docs/PLANO-CONCLUSAO-ARENA.md",
-        "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
-        "docs/PLT-09-PRIVACIDADE-2026-11-02.md"
+        "docs/PLANO-MESTRE-IMPLEMENTACAO.md"
       ],
       "arquivos_codigo": [
         "src/server/ext-reporting-api.mjs"
       ],
       "ocorrencias_gate": 0,
-      "ocorrencias_documento": 17,
+      "ocorrencias_documento": 18,
       "ocorrencias_codigo": 1,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -6985,17 +6987,17 @@
         "docs/AUDITORIA-TERRENO-L08.md",
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
+        "docs/INTEGRACAO-E16-2026-11-02.md",
         "docs/PLANO-CONCLUSAO-ARENA.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/PLT-09-PRIVACIDADE-2026-11-02.md",
-        "docs/PROMPT-CONTINUACAO-F14-IA-RAG-REAL.md",
-        "docs/RELATORIO-PENDENCIAS-COMPLETO.md"
+        "docs/PROMPT-CONTINUACAO-F14-IA-RAG-REAL.md"
       ],
       "arquivos_codigo": [
         "src/server/ext-reporting-api.mjs"
       ],
       "ocorrencias_gate": 0,
-      "ocorrencias_documento": 14,
+      "ocorrencias_documento": 15,
       "ocorrencias_codigo": 1,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -7016,15 +7018,15 @@
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/E3-E4-CANONICALIZACAO-IA-LEGADA-2026-10-27.md",
         "docs/EXECUCAO-ENTREGA-LOCAL.md",
+        "docs/INTEGRACAO-E16-2026-11-02.md",
         "docs/PLANO-CONCLUSAO-ARENA.md",
-        "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
-        "docs/PLT-09-PRIVACIDADE-2026-11-02.md"
+        "docs/PLANO-MESTRE-IMPLEMENTACAO.md"
       ],
       "arquivos_codigo": [
         "src/server/ext-reporting-api.mjs"
       ],
       "ocorrencias_gate": 0,
-      "ocorrencias_documento": 29,
+      "ocorrencias_documento": 30,
       "ocorrencias_codigo": 2,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -7255,18 +7257,18 @@
       "arquivos_documento": [
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
+        "docs/INTEGRACAO-E16-2026-11-02.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/PLT-09-PRIVACIDADE-2026-11-02.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
         "docs/UX-PRO-03-PROMOCAO-MONITORAMENTO-2026-10-29.md",
-        "docs/auditoria-2026-10-04/02-PLANO-ARENA.md",
-        "docs/auditoria-2026-10-04/AUDITORIA.md"
+        "docs/auditoria-2026-10-04/02-PLANO-ARENA.md"
       ],
       "arquivos_codigo": [
         "src/server/ext-reporting-api.mjs"
       ],
       "ocorrencias_gate": 0,
-      "ocorrencias_documento": 13,
+      "ocorrencias_documento": 14,
       "ocorrencias_codigo": 2,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"

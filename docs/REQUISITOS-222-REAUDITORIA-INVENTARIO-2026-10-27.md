@@ -30,7 +30,7 @@ prova rota alguma. Workflows seguem **50** (o `plt-jornadas-delivery.yml` foi cr
 
 ### Método
 
-Uma única passada por **1.711 arquivos** de `tests/`, `.github/workflows/`,
+Uma única passada por **1.712 arquivos** de `tests/`, `.github/workflows/`,
 `docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, as auditorias de 26/10, 28/10 e
 02/11, a fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
 meta-estado, não prova de requisito, e evitam auto-referência. De cada arquivo o gerador extrai todos os IDs com

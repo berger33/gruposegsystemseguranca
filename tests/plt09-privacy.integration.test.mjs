@@ -157,14 +157,14 @@ test('PLT-09 gate exige PostgreSQL real e não aceita skip silencioso', () => {
   if (REQUIRE) assert.ok(RUN);
 });
 
-test('PLT-09 gate: o cluster descartável aplicou 001–181 e a próxima migração livre continua 182', opt, async () => {
+test('PLT-09 gate: o cluster descartável aplicou 001–182 e a próxima migração livre é 183', opt, async () => {
   const ledger = (await pool.query(
     `SELECT count(*)::int AS n, min(filename) AS primeira, max(filename) AS ultima FROM __migrations WHERE filename LIKE '___-%'`,
   )).rows[0];
-  assert.equal(ledger.n, 181);
+  assert.equal(ledger.n, 182);
   assert.match(ledger.primeira, /^001-/);
-  assert.match(ledger.ultima, /^181-/);
-  assert.equal(182, 181 + 1, 'a próxima migração livre declarada é 182 (esta fatia não cria migração)');
+  assert.match(ledger.ultima, /^182-/);
+  assert.equal(183, 182 + 1, 'a próxima migração livre declarada é 183 (a 182 é do E16; esta fatia não cria migração)');
 });
 
 test('PLT-09 HTTP: anônimo recebe 401 nas quatro leituras de privacidade', opt, async () => {

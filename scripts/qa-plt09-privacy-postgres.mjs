@@ -2,7 +2,7 @@
 // PLT-09 — gate autoauditável de jornada/RBAC/evidência da privacidade
 // (inventário de dados/finalidades, política com aprovação antes de publicar,
 // pedido LGPD do titular e retenção/descarte declarativos).
-// Cluster PostgreSQL 17 descartável (embedded-postgres), migrações 001–181,
+// Cluster PostgreSQL 17 descartável (embedded-postgres), migrações 001–182,
 // `server.mjs --dev` real, sessões staff reais ti/rh/admin e resumo TAP com
 // MINIMUM_CASES e zero skip/todo. Não toca banco do operador. Não prova aceite
 // humano, UAT, homologação integral, parecer jurídico nem produção.
