@@ -24,7 +24,7 @@ Com os testes escritos e **sem** as correções de produção:
 - focal `node --test tests/plt06-observability-read-contract.test.mjs`: **6/12**, exit **1** — falhavam: leitura com INSERT de auditoria, método não GET em 200, status inválido em 503, 503 sem `error_sanitized`, telemetria persistindo senha de URI, e a guarda estática de superfície;
 - gate `npm run test:plt06-observability:pg`: **20/23**, exit **1** — falhavam: método não GET em 200, status inválido em 503 e id inválido respondendo 404 genérico em vez de 400 `invalid_alert_id`; resumo TAP autoauditado rejeitou o placar (`PLT06_GATE_REJECTED`).
 
-O gate também mediu uma **dívida anterior, preservada**: o handler de alertas ainda tenta gravar `observability_alert_ack` / `observability_alert_resolve` em `auth_access_audit`, mas o `CHECK` vigente das migrações 001–181 (reescrito na 103) não aceita essas ações e o `.catch()` as descarta em silêncio. **Não foi criada migração 182** nem alterado o nome das ações: a fatia prova o estado real do alerta e declara a dívida, sem afirmar trilha gravada.
+O gate também mediu uma **dívida anterior, preservada**: o handler de alertas ainda tenta gravar `observability_alert_ack` / `observability_alert_resolve` em `auth_access_audit`, mas o `CHECK` vigente das migrações 001–181 (reescrito na 103) não aceita essas ações e o `.catch()` as descarta em silêncio. **Não foi criada migração nesta fatia** nem alterado o nome das ações: a fatia prova o estado real do alerta e declara a dívida, sem afirmar trilha gravada. O número **182** foi depois consumido pelo E16 (fila `durable_jobs`, merge `1f6c0ea`), então a ampliação do `CHECK`, **se autorizada**, será a **183**.
 
 ## 3. Entregue (aditivo e pontual)
 
@@ -95,7 +95,7 @@ Contrato determinístico, sem banco, sessão, relógio ou rede: cinco tipos de l
 - **Não** houve aceite humano, UAT, Chromium/leitor de tela, revisão WCAG manual, homologação Windows, banco de destino, reauditoria integral ou produção. PLT-06 permanece `a_revalidar`.
 - O gate é HTTP + PostgreSQL; a aba `observacao` já montada foi preservada e conferida por guarda estática/HTML, **não** foi exercitada em navegador nesta fatia.
 - A telemetria continua necessariamente escrevendo em `observability_http_requests` e `observability_db_metrics` para registrar a própria requisição. “Leitura de estado” significa nenhum evento de `auth_access_audit` e nenhuma alteração em `observability_alerts`, não ausência de telemetria.
-- Ações de auditoria do ciclo de alerta seguem recusadas em silêncio pelo `CHECK` atual de `auth_access_audit` (medido no gate). Corrigir isso exigiria migração 182 e decisão de contrato; ficou fora desta fatia.
+- Ações de auditoria do ciclo de alerta seguem recusadas em silêncio pelo `CHECK` atual de `auth_access_audit` (medido no gate). Corrigir isso exigiria migração nova (**183** — a **182** é do E16) e decisão de contrato; ficou fora desta fatia.
 - `x-correlation-id` enviado pelo cliente continua limitado pelo `CHECK` de 8..100 caracteres do banco e pelo truncamento de 100 do servidor; o gate prova valor válido e valor longo truncado, mas não introduz nova validação para valores curtos.
 - Não foi simulado disparo real de alertas por taxa 5xx, lentidão ou falha de job, nem worker/scheduler durável, provedor externo, e-mail, SMTP ou dados reais.
 
