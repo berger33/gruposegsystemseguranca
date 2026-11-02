@@ -3,12 +3,12 @@
  "data": "2026-11-02",
  "base": "e8fefe967970c024247c3713d926f8e405d3c48a",
  "fonte_catalogo": "docs/E15-ROTAS-CATALOGO-2026-11-02.json",
- "server_sha256_prefixo": "c42a7ef6757014d8",
- "total_sombreadas": 12,
+ "server_sha256_prefixo": "04653b746a06d95d",
+ "total_sombreadas": 7,
  "declaradas_intencionais": 3,
- "a_revisar": 9,
- "executado_nesta_fatia": false,
- "nota": "Decisão, não execução. Nenhuma das 9 regras foi removida e server.mjs não foi tocado nesta fatia. 'remover_regra' e 'remover_alias' são decisões que descrevem o que uma fatia AUTORIZADA deve fazer; até lá a regra continua no lugar e o teste correspondente continua congelando o retrato.",
+ "a_revisar": 4,
+ "executado_nesta_fatia": true,
+ "nota": "Execução autorizada nesta fatia: removidas as três regras de journey-corrections e os dois aliases faq-assisted; os quatro falsos positivos permanecem como registro decisório. As cinco decisões executadas ficam preservadas como histórico. server.mjs foi alterado e o catálogo regenerado.",
  "decisoes": [
   {
    "caminho": "/api/admin/integrations/jobs",
@@ -21,7 +21,8 @@
    "decisao": "manter_rota",
    "motivo": "Falso positivo do modelo de cobertura: o padrão `/:id` da linha 2808 só despacha quando `!INTEGRATION_ROUTE_SUBPATHS.has(id)`; 'jobs' está no Set, então a linha 2808 NÃO responde e o despacho chega à linha 3192. O desvio é intencional e é o conserto do PLT-03 (era 405).",
    "efeito": "nenhum: nada muda",
-   "prova": "INTEGRATION_ROUTE_SUBPATHS = {jobs, logs, webhooks, reconciliation} em src/server/integrations-api.mjs:7; guard negado em server.mjs:2815; regra literal posterior em server.mjs:3192"
+   "prova": "INTEGRATION_ROUTE_SUBPATHS = {jobs, logs, webhooks, reconciliation} em src/server/integrations-api.mjs:7; guard negado em server.mjs:2815; regra literal posterior em server.mjs:3192",
+   "executada_nesta_fatia": false
   },
   {
    "caminho": "/api/admin/integrations/logs",
@@ -34,7 +35,8 @@
    "decisao": "manter_rota",
    "motivo": "Mesmo falso positivo do caso 'jobs': 'logs' está em INTEGRATION_ROUTE_SUBPATHS, logo a linha 2808 é desviada e a linha 3195 despacha.",
    "efeito": "nenhum: nada muda",
-   "prova": "src/server/integrations-api.mjs:7 + server.mjs:2815 + server.mjs:3195"
+   "prova": "src/server/integrations-api.mjs:7 + server.mjs:2815 + server.mjs:3195",
+   "executada_nesta_fatia": false
   },
   {
    "caminho": "/api/admin/integrations/webhooks",
@@ -47,7 +49,8 @@
    "decisao": "manter_rota",
    "motivo": "Mesmo falso positivo do caso 'jobs': 'webhooks' está em INTEGRATION_ROUTE_SUBPATHS, logo a linha 2808 é desviada e a linha 3198 despacha.",
    "efeito": "nenhum: nada muda",
-   "prova": "src/server/integrations-api.mjs:7 + server.mjs:2815 + server.mjs:3198"
+   "prova": "src/server/integrations-api.mjs:7 + server.mjs:2815 + server.mjs:3198",
+   "executada_nesta_fatia": false
   },
   {
    "caminho": "/api/admin/integrations/reconciliation",
@@ -60,7 +63,8 @@
    "decisao": "manter_rota",
    "motivo": "Mesmo falso positivo do caso 'jobs': 'reconciliation' está em INTEGRATION_ROUTE_SUBPATHS, logo a linha 2808 é desviada e a linha 3204 despacha.",
    "efeito": "nenhum: nada muda",
-   "prova": "src/server/integrations-api.mjs:7 + server.mjs:2815 + server.mjs:3204; a aba viva de registros de integração consome os quatro caminhos (src/app/admin/ti/IntegrationLogClient.tsx)"
+   "prova": "src/server/integrations-api.mjs:7 + server.mjs:2815 + server.mjs:3204; a aba viva de registros de integração consome os quatro caminhos (src/app/admin/ti/IntegrationLogClient.tsx)",
+   "executada_nesta_fatia": false
   },
   {
    "caminho": "/api/admin/hr/journey-corrections",
@@ -72,8 +76,9 @@
    "classe_real": "sombreada",
    "decisao": "remover_regra",
    "motivo": "Sombra real: a fronteira L03 (linha 2636) casa o caminho exato, sem guarda de negação, e retorna `employeeApi.handle` antes da linha 3457. `empPortalApi.handleJourneyCorrections` não é despachado por nenhuma outra regra — é regra morta e handler órfão.",
-   "efeito": "nenhum no comportamento HTTP (a regra já é inalcançável); a execução só pode ocorrer em fatia autorizada, removendo as linhas 3457–3459 e o handler órfão, com o catálogo regenerado",
-   "prova": "server.mjs:2636 (`[('/api/admin/hr/journey-corrections'), …].includes(url.pathname)` dentro do bloco que retorna employeeApi.handle) antes de server.mjs:3457; src/server/employee-api.mjs:947 encaminha o caminho ao timeClock; `empPortalApi.handleJourneyCorrections` aparece uma única vez em server.mjs (a própria linha 3458)"
+   "efeito": "Executada nesta fatia: regra/alias removido do despacho; decisão histórica preservada.",
+   "prova": "server.mjs:2636 (`[('/api/admin/hr/journey-corrections'), …].includes(url.pathname)` dentro do bloco que retorna employeeApi.handle) antes de server.mjs:3457; src/server/employee-api.mjs:947 encaminha o caminho ao timeClock; `empPortalApi.handleJourneyCorrections` aparece uma única vez em server.mjs (a própria linha 3458)",
+   "executada_nesta_fatia": true
   },
   {
    "caminho": "/api/crm/hr/journey-corrections",
@@ -85,8 +90,9 @@
    "classe_real": "sombreada",
    "decisao": "remover_regra",
    "motivo": "Mesma regra da linha 3457: o alias /api/crm/hr é casado pela fronteira L03 na linha 2636 antes.",
-   "efeito": "nenhum no comportamento HTTP; remoção exige fatia autorizada",
-   "prova": "server.mjs:2636 antes de server.mjs:3457; src/server/employee-api.mjs:947"
+   "efeito": "Executada nesta fatia: regra/alias removido do despacho; decisão histórica preservada.",
+   "prova": "server.mjs:2636 antes de server.mjs:3457; src/server/employee-api.mjs:947",
+   "executada_nesta_fatia": true
   },
   {
    "caminho": "/api/hr/journey-corrections",
@@ -98,8 +104,9 @@
    "classe_real": "sombreada",
    "decisao": "remover_regra",
    "motivo": "Mesma regra da linha 3457: o alias /api/hr é casado pela fronteira L03 na linha 2636 antes.",
-   "efeito": "nenhum no comportamento HTTP; remoção exige fatia autorizada",
-   "prova": "server.mjs:2636 antes de server.mjs:3457; src/server/employee-api.mjs:947"
+   "efeito": "Executada nesta fatia: regra/alias removido do despacho; decisão histórica preservada.",
+   "prova": "server.mjs:2636 antes de server.mjs:3457; src/server/employee-api.mjs:947",
+   "executada_nesta_fatia": true
   },
   {
    "caminho": "/api/faq-assisted",
@@ -111,8 +118,9 @@
    "classe_real": "sombreada",
    "decisao": "remover_alias",
    "motivo": "Sombra parcial: a linha 2612 casa o caminho exato e retorna `faqAnswerApi` sem guarda, antes da linha 4580. Remover o ALIAS (não o handler): `pubFaqAssistedApi.handleSessions` continua alcançável pelos outros três caminhos da mesma condição.",
-   "efeito": "nenhum no comportamento HTTP; remoção exige fatia autorizada e toca a condição da linha 4580, não o handler",
-   "prova": "server.mjs:2612 (`[\"/api/faq-assisted\",\"/api/public/faq-assisted\"].includes(url.pathname)`) antes de server.mjs:4580; tests/l04-delivery.integration.test.mjs sobe o server real e exercita POST /api/faq-assisted, respondido por faqAnswerApi — o mesmo handler usado por src/components/FaqAssistedWidget.tsx"
+   "efeito": "Executada nesta fatia: regra/alias removido do despacho; decisão histórica preservada.",
+   "prova": "server.mjs:2612 (`[\"/api/faq-assisted\",\"/api/public/faq-assisted\"].includes(url.pathname)`) antes de server.mjs:4580; tests/l04-delivery.integration.test.mjs sobe o server real e exercita POST /api/faq-assisted, respondido por faqAnswerApi — o mesmo handler usado por src/components/FaqAssistedWidget.tsx",
+   "executada_nesta_fatia": true
   },
   {
    "caminho": "/api/public/faq-assisted",
@@ -124,8 +132,9 @@
    "classe_real": "sombreada",
    "decisao": "remover_alias",
    "motivo": "Mesma condição da linha 4580: o alias /api/public/faq-assisted é casado pela linha 2612 antes. Handler permanece vivo pelos outros três caminhos.",
-   "efeito": "nenhum no comportamento HTTP; remoção exige fatia autorizada",
-   "prova": "server.mjs:2612 antes de server.mjs:4580"
+   "efeito": "Executada nesta fatia: regra/alias removido do despacho; decisão histórica preservada.",
+   "prova": "server.mjs:2612 antes de server.mjs:4580",
+   "executada_nesta_fatia": true
   }
  ]
 }

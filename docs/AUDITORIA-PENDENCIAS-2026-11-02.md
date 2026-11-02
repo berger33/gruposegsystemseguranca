@@ -7,7 +7,7 @@
 
 > Antecessor imediato: [`AUDITORIA-FATIAS-PENDENTES-2026-10-28.md`](AUDITORIA-FATIAS-PENDENTES-2026-10-28.md) (fotografia de 28/10). Este documento **reconcilia** aquela fila com o HEAD de hoje: o que fechou, o que continua, o que apareceu.
 
-> **Atualização de 02/11 (fatia C+D+E, sobre o `main` `14da00c`):** **N8 fechado** com causa medida e harness corrigido, e **#321/#310 fechadas como superseded** com prova por blob. O corpo deste documento continua sendo o retrato da data dele; as linhas vivas (`§1` tabela de PRs, `§5` N8, `§8` e `§13`) foram reconciliadas abaixo.
+> **Atualização de 02/11 (fatia E15 A, sobre `main` `1f32604`):** executadas as cinco remoções E15 autorizadas (três regras `journey-corrections` e dois aliases FAQ). `server.mjs` passa a 6.307 linhas; catálogo: 1.735 despachos, 3 inalcançáveis, 7 sombreadas (3 intencionais + 4). A decisão JSON preserva as nove entradas históricas e marca cinco como executadas. Sem mudança de migrações, produção NO-GO e aceite humano 0/222. O registro C+D+E e o restante do corpo abaixo permanecem como retrato histórico.
 
 > **Reconciliação de 02/11 (depois do E16):** a **#318** foi integrada ao `main` pelo merge commit **`1f6c0ea`** (pais `e1b3303` + `3ea54e3`), porque a base dela (`6303213`, #317) estava 40 commits atrás e `PUT /pulls/318/update-branch` respondia **422 merge conflict**. Com isso a **migração 182** (`durable_jobs`, E16) está aplicada — **001–181 intocadas** — e a **próxima livre é 183**. As linhas abaixo marcadas como "fechado na integração de 02/11" refletem esse estado; as contagens físicas foram **re-medidas** (246/178 no `tests`/`test:unit`, 139 módulos, `server.mjs` 6.310 linhas, 50 workflows, 414 `.md` na raiz de `docs/`).
 

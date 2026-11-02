@@ -1,6 +1,10 @@
 # Status vigente — Grupo SEG System
 
-**Última reconciliação:** 02/11/2026 · **Base:** `14da00cca213cc15336a2d05676446fb944ec391` (`main`, merge da **PR #338** — docs de não reprodução do N8 + §8 das PRs; sucedeu `1c62745`, merge da #337) · **Branch de trabalho:** `arena/f4b30c9a-gruposegsystemseguranca` (esta sessão).
+**Última reconciliação:** 02/11/2026 · **Base:** `1f32604b1b25c1f3d4c8c3d12d6f9e52af1016e7` (`main`, merge da PR #339) · **Branch de trabalho:** `arena/7991314e-gruposegsystemseguranca` (esta sessão).
+
+### Atualização corrente — execução autorizada das cinco remoções do E15 (02/11/2026)
+
+Autorizada a fatia A: removidas do despacho as três regras `journey-corrections` sombreadas e os dois aliases `/api/faq-assisted` e `/api/public/faq-assisted`; o handler FAQ continua vivo pelos três caminhos restantes. O catálogo foi regenerado: `server.mjs` tem 6.307 linhas (sha256 `04653b746a06d95d…`), despacho 1.735 regras em 128 módulos, 3 inalcançáveis, 7 sombreadas (3 intencionais + 4 medidas), zero borda sem despacho. O JSON mantém as nove decisões como registro, marcando cinco executadas; os testes da decisão agora tratam o registro histórico e congelam o retrato atual. Migrações permanecem 001–183; próxima livre 184. Sem mudança na política de aceite (0/222) ou produção (NO-GO).
 
 ### Atualização corrente — N8 fechado com causa medida e #321/#310 fechadas como superseded (02/11/2026)
 
