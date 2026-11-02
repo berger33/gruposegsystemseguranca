@@ -3,7 +3,7 @@
 **Data:** 02/11/2026 (America/Sao_Paulo)
 **Base do trabalho:** `565206ab4742e04b5a6b4614694b6f27d1ae518d` (`main`, merge da PR #331 — a sessão anterior a esta fatia)
 **Branch da sessão:** `arena/5bb53afc-gruposegsystemseguranca`
-**Natureza:** fatia aditiva de jornada/RBAC/evidência de gate. **Não** promove aba, **não** abre a borda legada de RH (`authorizeLegacyHrRequest` / `employees.read`), **não** substitui superfície viva, **não** cria migração (001–181 imutáveis, próxima livre **182**), **não** publica política de privacidade real, **não** registra aceite humano, UAT, homologação nem reauditoria integral. **Produção continua NO-GO.**
+**Natureza:** fatia aditiva de jornada/RBAC/evidência de gate. **Não** promove aba, **não** abre a borda legada de RH (`authorizeLegacyHrRequest` / `employees.read`), **não** substitui superfície viva, **não** cria migração (001–181 imutáveis; a **182** chegou depois, pela fatia E16 — `durable_jobs` — e a próxima livre é **183**), **não** publica política de privacidade real, **não** registra aceite humano, UAT, homologação nem reauditoria integral. **Produção continua NO-GO.**
 
 ---
 
@@ -97,7 +97,7 @@ Contrato determinístico, sem banco, sessão, relógio, ambiente ou rede. Espelh
 | RED do gate (mesma reversão) | **13/28, exit 1** — `PLT09_GATE_REJECTED` |
 | `npm test` | **1442/1442, exit 0** (177 arquivos no `test:unit`) |
 | `npm run typecheck` / `npm run build` | exit 0 / exit 0 |
-| `node scripts/qa-wave0-static.mjs` | **5/5** — migrações 001–181 contínuas, próxima livre 182 |
+| `node scripts/qa-wave0-static.mjs` | **5/5** — migrações 001–181 contínuas, próxima livre 182 (medição desta fatia; depois do E16 o gate roda **001–182** e a próxima livre é **183**) |
 | `npm run reaudit:sec` | **35/35**, exit 0 |
 | Quatro inventários `--check` (222, UX-PRO-00, UX-PRO-03, E18) | todos **exit 0** |
 | Gates irmãos `test:plt01-…`, `test:plt06-…`, `test:plt12-…` | **12/12**, **23/23**, **20/20**, todos exit 0 |
@@ -118,7 +118,7 @@ Contrato determinístico, sem banco, sessão, relógio, ambiente ou rede. Espelh
 
 - **Sem parecer jurídico.** Nenhuma política foi publicada de verdade: o gate prova a máquina de estados (`aprovado` antes de `publicado`, `is_published` derivado) e que o texto da migração 047 continua **rascunho**. Aprovar/publicar exige decisão do dono e revisão competente.
 - **Sem exercício das três abas em navegador (Chromium).** A prova é HTTP + PostgreSQL; a aba `retencao` já tinha prova de UI própria (`ux-pro-03-ti-retention-ui`) e continua com ela.
-- **Sem migração.** A trilha de `privacy_*`/`lgpd_*` passou a usar `audit_log` (ação como TEXTO) porque o `CHECK` de `auth_access_audit` foi reconstruído sem essas ações nas migrações 100/103 e o `catch {}` as descartava. A correção definitiva — ampliar o `CHECK` — exigiria a migração 182, que esta fatia **não** cria.
+- **Sem migração.** A trilha de `privacy_*`/`lgpd_*` passou a usar `audit_log` (ação como TEXTO) porque o `CHECK` de `auth_access_audit` foi reconstruído sem essas ações nas migrações 100/103 e o `catch {}` as descartava. A correção definitiva — ampliar o `CHECK` — exigiria uma migração nova: o número **182** foi consumido pelo E16 (fila `durable_jobs`), então a ampliação do `CHECK`, **se autorizada**, será a **183**. Esta fatia não cria nenhuma das duas.
 - **Descarte continua declarativo.** O job expira exceções vencidas e grava `disposal_logs`; **não** apaga dado pessoal de tabela real. Os contadores agora são medidos, mas a superfície continua declarando que é simulação.
 - **Prazo de 15 dias é declarado, não validado.** `LGPD_DECLARED_DUE_DAYS` existe para impedir que alguém transforme "prazo padrão da tela" em obrigação legal cumprida.
 - **Sem envio e sem upload.** Nenhum e-mail/WhatsApp/SMS/push é disparado por estas rotas; o documento do titular vira hash e não é armazenado. A fila de notificações do console (**N7**: `mailer: null` em `server.mjs`) **não** foi tocada — segue como decisão pendente do dono.

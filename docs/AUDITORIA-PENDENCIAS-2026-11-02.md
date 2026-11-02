@@ -7,11 +7,13 @@
 
 > Antecessor imediato: [`AUDITORIA-FATIAS-PENDENTES-2026-10-28.md`](AUDITORIA-FATIAS-PENDENTES-2026-10-28.md) (fotografia de 28/10). Este documento **reconcilia** aquela fila com o HEAD de hoje: o que fechou, o que continua, o que apareceu.
 
+> **Reconciliação de 02/11 (depois do E16):** a **#318** foi integrada ao `main` pelo merge commit **`1f6c0ea`** (pais `e1b3303` + `3ea54e3`), porque a base dela (`6303213`, #317) estava 40 commits atrás e `PUT /pulls/318/update-branch` respondia **422 merge conflict**. Com isso a **migração 182** (`durable_jobs`, E16) está aplicada — **001–181 intocadas** — e a **próxima livre é 183**. As linhas abaixo marcadas como "fechado na integração de 02/11" refletem esse estado; as contagens físicas foram **re-medidas** (246/178 no `tests`/`test:unit`, 139 módulos, `server.mjs` 6.310 linhas, 50 workflows, 414 `.md` na raiz de `docs/`).
+
 ---
 
 ## 0. Veredito em uma linha
 
-**Produção: NO-GO.** O repositório compila, tipa e passa **1.415/1.415** asserções com árvore limpa, mas **0 dos 222 requisitos tem aceite humano**, **0 tem reauditoria integral**, **nenhuma rota tem estados exercitados em navegador**, o **backup é 503 por construção** e **5 PRs estão abertas esperando decisão** (duas delas verdes).
+**Produção: NO-GO.** O repositório compila, tipa e passa **1.488/1.488** asserções com árvore limpa (as **1.442** do `main` pós-#332 **+ 46** da fatia E16; a fotografia desta auditoria, sobre `a46bd88`, media 1.415/1.415), mas **0 dos 222 requisitos tem aceite humano**, **0 tem reauditoria integral**, **nenhuma rota tem estados exercitados em navegador**, o **backup é 503 por construção** e **4 PRs seguem abertas esperando decisão** (uma delas verde).
 
 ---
 
@@ -39,14 +41,14 @@
 | Item | Valor |
 |---|---|
 | Rotas (`page.tsx`) | **101** (14 públicas · 44 staff · 14 entrada do cliente · 16 portal do cliente · 1 portal do funcionário · 11 prévias · 1 homologação) |
-| Migrações | **001–181** imutáveis · próxima livre **182** |
-| Módulos de API (`src/server/`) | **137** |
-| `server.mjs` | **6.272 linhas** (despacho manual) |
-| Testes | **241** arquivos em `tests/` · **175** listados no `test:unit` |
-| Workflows | **49** (só `ci.yml` roda a bateria base) |
-| Documentos | **411** `.md` na raiz de `docs/` (**434** contando subpastas) |
+| Migrações | **001–182** — 001–181 imutáveis e a **182** (`durable_jobs`, E16) aditiva · próxima livre **183** |
+| Módulos de API (`src/server/`) | **139** |
+| `server.mjs` | **6.310 linhas** (despacho manual) |
+| Testes | **246** arquivos em `tests/` · **178** listados no `test:unit` · `npm test` **1.488/1.488** |
+| Workflows | **50** (só `ci.yml` roda a bateria base; `plt-jornadas-delivery.yml` roda os gates PLT-01/06/12) |
+| Documentos | **414** `.md` na raiz de `docs/` |
 | ZIPs versionados (`downloads/` + `dist/`) | **16 arquivos, 171 MB** |
-| PRs abertas / issues abertas | **5 / 0** |
+| PRs abertas / issues abertas | **4 / 0** (a #318 foi integrada e fechada como superseded) |
 
 ---
 
@@ -90,7 +92,7 @@
 | **C1** | **D7** — inline dinâmico do Layout 09 e foco do atalho público | **Bloqueado** por decisão do proprietário |
 | **C2** | **C11** — escopo financeiro + os 2 hits de dados em `FiscalWorkspace.tsx` e `ExpenseWorkspace.tsx` (as linhas citadas na auditoria de 28/10 já não correspondem ao HEAD) | **Bloqueado** por decisão do proprietário |
 | **C3** | **E15** — `server.mjs` monolítico | **Aberto e piorando**: 6.208 → **6.272** linhas, **137** módulos, despacho em dois lugares |
-| **C4** | **E16** — worker/scheduler durável | **Aberto, com PR pronta**: **#318** verde **46/46**, cria a **migração 182**; não mergeada (esperando decisão). EXT-07 é o único agendador, in-process, desligado por padrão |
+| **C4** | **E16** — worker/scheduler durável | **Fechado na integração de 02/11**: a **#318** (`22b9b29` + `3ea54e3`) entrou pelo merge commit **`1f6c0ea`**, com a **migração 182** (`durable_jobs`) aditiva e 001–181 intocadas. `EXT07_SCHEDULER_MODE=in-process` segue sendo o padrão (comportamento preservado) e `durable` **recusa ligar** sem a 182 (`durable_jobs_schema_missing`). PR #318 fechada como **superseded** |
 | **C5** | **E13** — pacotes obsoletos versionados | **Aberto**: **16 arquivos / 171 MB** em `downloads/` + `dist/`, com ~65 migrações de defasagem. Só o aviso foi resolvido (E21) |
 | **C6** | **E7** — demo PGlite com schema real | **Fechado em 30/10**: PGlite aplica **001–181** (581 tabelas), fail-closed, legado recusado |
 | **C7** | **E12/E20** — deriva do ledger | **Reincidiu**, ver achado **N1** |
@@ -110,7 +112,7 @@
 | **E13** | **Aberto** — 171 MB de ZIPs ainda no índice |
 | **E14** | **Parcial** — 27 órfãos, todos bloqueados por decisão/borda |
 | **E15** | **Aberto** — `server.mjs` 6.272 linhas |
-| **E16** | **Aberto** — PR #318 pronta e não mergeada |
+| **E16** | **Fechado** — integrado em `1f6c0ea` (migração 182, `durable_jobs`); PR #318 fechada como superseded |
 | **E18 residual** | **Aberto** — 196 indeterminadas + 108 `<option>`; sem revisão WCAG manual |
 | E20, E21, E22, E23, E25 | **Fechados** |
 | **E24** | **Aberto** — 101/101 rotas sem estados exercitados |
@@ -167,7 +169,7 @@
 
 | PR | Título | Checks | Situação |
 |---|---|---|---|
-| **#318** | `feat(e16)`: worker durável EXT-07, fila com lease, retomada exactly-once (**migração 182**) | **46/46 verdes** | Pronta há 3 dias. Se mergear, **182 deixa de ser “próxima livre”** e o ledger muda |
+| **#318** | `feat(e16)`: worker durável EXT-07, fila com lease, retomada exactly-once (**migração 182**) | **45/45 checks medidos em 30/10** (o ledger dizia 46/46), mas sobre a base antiga (`6303213`, #317) e **CONFLITANTE** com o `main` pós-#332 | **Integrada e fechada como superseded** em 02/11: o conteúdo entrou por `1f6c0ea` (merge de `3ea54e3`), com os 4 conflitos resolvidos — inventários **regenerados por script**, `package.json` em união, `STATUS-VIGENTE.md` à mão. `PUT /pulls/318/update-branch` respondia **422**. Migração **182** aplicada; próxima livre **183** |
 | **#321** | `feat(ux-pro-06)`: estado de leitura honesto da Vistoria em `/admin/comercial` | **91/92** — falha `ux-portal-postgres-browser` | Travada por 1 check |
 | **#308** | `feat(ux-pro-03)`: jornada do RH em reclamações compartilhadas | **46/47** — falha `ux-hr-postgres-browser` | Travada por 1 check |
 | **#310** | `docs`: apresentação do ERP, lacunas vs. Omie, relatório semanal | **0/2** — `static-and-smoke` falha | Travada |
@@ -196,7 +198,7 @@ Dos **80 scripts de teste** do `package.json`, **23 não são referenciados por 
 | **N3** | **Os gates nomeados novos não estavam no CI** (`test:plt01…:pg`, `test:plt06…:pg`, `test:plt12-incidents:pg`) → **corrigido em 02/11 pela PR #330** | `grep -rn "plt12" .github/workflows/` → vazio antes; depois, job `plt-gates-postgres` verde (20/20) | Gate que não roda sozinho não protege contra regressão |
 | **N4** | **Cobertura real de rotas continua rasa**: 101/101 sem estados, **81** sem teclado, **46** sem captura, **16** com captura parcial | `docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv` (101 linhas) | “101/101 com gate” significa só *a rota carrega* |
 | **N5** | **171 MB de ZIPs obsoletos** seguem versionados (16 arquivos), com ~65 migrações de defasagem | `du -ch $(git ls-files downloads dist)` → **171 MB** | Clone inchado; risco de instalar versão morta |
-| **N6** | **3 PRs paradas por 1 check** (#321, #308, #310) e **1 PR verde não mergeada** (#318) | `gh pr view … --json statusCheckRollup` | Trabalho pronto parado; #318 ainda altera o ledger de migrações |
+| **N6** | **3 PRs paradas por 1 check** (#321, #308, #310); a **#318** saiu da fila — integrada em `1f6c0ea` e fechada como superseded | `gh pr view … --json statusCheckRollup` | Trabalho pronto parado. O ledger de migrações já foi reconciliado: **182 aplicada, próxima livre 183** |
 | **N7** | **A fila de notificações do console nunca pode enviar e-mail: `mailer` está literalmente `null`.** `server.mjs:1229` cria `createAdminNotificationsApi({ …, mailer: null })` com o comentário “will be set if nodemailer configured; for now null”. `admin-notifications-api.mjs:140` repassa `mailer: ctx.mailer` ao `processNext`, e `notification-queue.mjs` marca `not_configured` quando não há mailer — o item reteima até `dead`. Configurar `MAIL_HOST` **não** muda esse caminho. (O e-mail de **lead** é outro caminho: `sendLeadEmail` cria o transporte do `nodemailer` a partir do env) | Leitura de `server.mjs:1229`, `src/server/admin-notifications-api.mjs:140`, `src/server/notification-queue.mjs:182-206` | Fila administrativa nasce morta: não é “provedor não escolhido”, é ausência de ligação no servidor. Qualquer tela que prometa aviso por e-mail está prometendo o que o código não faz |
 
 ---
@@ -212,7 +214,7 @@ Dos **80 scripts de teste** do `package.json`, **23 não são referenciados por 
 7. **RPO/RTO**, teto de hospedagem (referência R$ 200/mês), domínio, CNPJ, logotipo, política de privacidade aprovada, textos e FAQ.
 8. Modo de acesso remoto (historicamente Tailscale Funnel, opção B) — **não ativar** sem autorização.
 9. **Matriz papel × ação × escopo** do CLI-02 (B8).
-10. Destino das **5 PRs abertas** (§8), especialmente a **#318** (migração 182).
+10. Destino das **PRs abertas** (§8): a **#318** (migração 182) já foi integrada e fechada como superseded em 02/11; restam **#321, #308, #310 e #324**.
 11. Autorização **explícita e por escrito** para publicar em produção.
 
 ---
@@ -233,8 +235,8 @@ Homologação RAG beta com 5 perfis · `is_beta_mode=false` · remoção do `noi
 
 **Depois, uma PR por fatia:**
 4. **N7** — ligar o `mailer` da fila administrativa quando o SMTP estiver configurado (fail-closed: sem provedor, continua `not_configured` e a tela declara isso), **ou** registrar por escrito a decisão de manter a fila declarativa.
-5. **#318 (E16)** — decidir mergear; se sim, reconcilia o ledger de migrações para 182.
-6. **B10** — próxima família sem gate: **PLT-09** (a menor da lista), depois **EXT-16/17**, depois **AI-01..10** (só após decisão de provedor).
+5. **#318 (E16)** — **feito em 02/11**: integrada ao `main` pelo merge commit `1f6c0ea` (era conflitante); migração **182** aplicada, **próxima livre 183**.
+6. **B10** — **PLT-09 saiu da fila** (entregue em 02/11 pela PR #332). Restam apenas **EXT-16/EXT-17** (exigem ator externo + provedor + LGPD — não simular) e **AI-01..AI-10** (só após a decisão de provedor): as duas famílias estão **bloqueadas**.
 7. **B3/B4/B5** — UX-PRO-04/05/06 por superfície, na ordem de menor risco.
 8. **B11/B12** — WCAG manual e estados por família de rotas.
 9. **A1–A6** — só com as decisões 5, 6, 7 e 11 respondidas.

@@ -12,6 +12,10 @@ const CRITICALITIES = ["baixa", "media", "alta", "critica"];
 const CURRENT_DOC_STATUSES = ["vigente", "a_vencer", "em_renovacao"];
 const EXPIRY_RULE = "expiry_at_or_before_evaluation_date";
 const MAX_BODY_BYTES = 128 * 1024;
+// E16: chave do job recorrente do EXT-07 na fila durável (mesma constante do
+// agendador; declarada aqui para a rota de observação não importar um módulo
+// que importa este).
+export const EXT07_EVALUATION_JOB_KEY = "ext07:expiry-evaluation";
 
 const json = (res, status, body) => {
   res.writeHead(status, { "content-type": "application/json" });
@@ -571,14 +575,41 @@ export function createExtComplianceApi({ pool, sameOrigin, requireSession, sched
           ORDER BY r.started_at DESC LIMIT 200`,
       )
     ).rows;
+    // E16: quando o executor é durável, o estado da FILA é parte da resposta —
+    // a cadência mora em durable_jobs (migração 182), não no relógio do
+    // processo. Banco ainda não migrado devolve `null`, nunca 500: observação
+    // de fila não pode derrubar a rota de leitura.
+    let queue = null;
+    if (state?.mode === "durable") {
+      try {
+        const { rows } = await pool.query(
+          `SELECT job_key, status, slot, last_completed_slot, due_at, lease_until, lease_seconds,
+                  attempts, consecutive_failures, max_backoff_seconds, last_error,
+                  last_started_at, last_finished_at
+             FROM durable_jobs WHERE job_key = $1`,
+          [EXT07_EVALUATION_JOB_KEY],
+        );
+        queue = rows[0] ?? null;
+      } catch {
+        queue = null;
+      }
+    }
     return json(res, 200, {
       enabled: Boolean(state?.enabled),
+      mode: state?.mode ?? "in-process",
       interval_seconds: state?.intervalSeconds ?? null,
       actor,
-      activation: "ambiente: EXT07_EVALUATE_INTERVAL_SECONDS com EXT07_EVALUATE_IDENTITY (staff admin/ti ativa)",
+      queue,
+      queue_source: state?.mode === "durable" ? "durable_jobs" : null,
+      activation:
+        "ambiente: EXT07_EVALUATE_INTERVAL_SECONDS com EXT07_EVALUATE_IDENTITY (staff admin/ti ativa); " +
+        "executor: EXT07_SCHEDULER_MODE=in-process (padrão, timer do processo) | durable (fila migração 182)",
       runs,
       source: "ext_compliance_evaluation_runs",
-      note: "execução agendada é in-process e opt-in; cada execução registra uma linha (concluida ou falha); enabled reflete este processo do servidor",
+      note:
+        "execução agendada é opt-in; cada execução registra uma linha (concluida ou falha); enabled reflete este processo do servidor. " +
+        "No modo durable a reivindicação tem lease e a conclusão do intervalo é atômica com o efeito, então uma queda no meio do trabalho " +
+        "é retomada por outro processo sem duplicar o evento do dia.",
     });
   }
 

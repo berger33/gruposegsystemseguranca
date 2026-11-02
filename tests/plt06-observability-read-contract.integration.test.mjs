@@ -38,14 +38,14 @@ test('PLT-06 gate exige PostgreSQL real e não aceita skip silencioso', () => {
   if (REQUIRE) assert.ok(RUN);
 });
 
-test('PLT-06 gate: o cluster descartável aplicou as migrações 001–181', opt, async () => {
+test('PLT-06 gate: o cluster descartável aplicou as migrações 001–182', opt, async () => {
   const ledger = (await pool.query(
     `SELECT count(*)::int AS n, min(filename) AS primeira, max(filename) AS ultima
      FROM __migrations WHERE filename LIKE '___-%'`,
   )).rows[0];
-  assert.equal(ledger.n, 181);
+  assert.equal(ledger.n, 182);
   assert.match(ledger.primeira, /^001-/);
-  assert.match(ledger.ultima, /^181-/);
+  assert.match(ledger.ultima, /^182-/);
 });
 
 const freeLoopbackPort = () => new Promise((resolve, reject) => {
@@ -350,7 +350,7 @@ test('PLT-06 HTTP+DB: acknowledge grava status, autor e auditoria própria', opt
   assert.equal(row.acknowledged_by, 'ti');
   assert.ok(row.acknowledged_at);
   // O handler ainda TENTA gravar `observability_alert_ack` (focal prova a SQL),
-  // mas o CHECK vigente de 001–181 recusa essa ação em silêncio. Esta fatia não
+  // mas o CHECK vigente (001–182) recusa essa ação em silêncio. Esta fatia não
   // adiciona migração 182: prova o ESTADO real do alerta, não uma trilha que o
   // banco não aceita. A dívida é medida em teste próprio abaixo.
 });
