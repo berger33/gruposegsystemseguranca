@@ -1,7 +1,7 @@
 // E16 — prova de RETOMADA do worker durável em PostgreSQL real.
 //
 // Executado pelo gate `npm run test:durable-scheduler:pg` (cluster descartável,
-// migrações 001–182). Nada aqui é simulado: o processo que executa o job é
+// migrações 001–183). Nada aqui é simulado: o processo que executa o job é
 // OUTRO processo (node filho), morto com SIGKILL no meio do lease, e o que se
 // confere são as linhas escritas no banco.
 //

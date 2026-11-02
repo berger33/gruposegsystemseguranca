@@ -38,14 +38,14 @@ test('PLT-06 gate exige PostgreSQL real e não aceita skip silencioso', () => {
   if (REQUIRE) assert.ok(RUN);
 });
 
-test('PLT-06 gate: o cluster descartável aplicou as migrações 001–182', opt, async () => {
+test('PLT-06 gate: o cluster descartável aplicou as migrações 001–183', opt, async () => {
   const ledger = (await pool.query(
     `SELECT count(*)::int AS n, min(filename) AS primeira, max(filename) AS ultima
      FROM __migrations WHERE filename LIKE '___-%'`,
   )).rows[0];
-  assert.equal(ledger.n, 182);
+  assert.equal(ledger.n, 183);
   assert.match(ledger.primeira, /^001-/);
-  assert.match(ledger.ultima, /^182-/);
+  assert.match(ledger.ultima, /^183-/);
 });
 
 const freeLoopbackPort = () => new Promise((resolve, reject) => {
@@ -349,13 +349,18 @@ test('PLT-06 HTTP+DB: acknowledge grava status, autor e auditoria própria', opt
   assert.equal(row.status, 'acknowledged');
   assert.equal(row.acknowledged_by, 'ti');
   assert.ok(row.acknowledged_at);
-  // O handler ainda TENTA gravar `observability_alert_ack` (focal prova a SQL),
-  // mas o CHECK vigente (001–182) recusa essa ação em silêncio. Esta fatia não
-  // adiciona migração 182: prova o ESTADO real do alerta, não uma trilha que o
-  // banco não aceita. A dívida é medida em teste próprio abaixo.
+  // Desde a migração 183 a trilha chega à tabela: o handler grava
+  // `observability_alert_ack` e o `CHECK` a aceita. O `try {} catch {}` do
+  // gravador continua no lugar como rede de segurança, mas deixa de ter do que
+  // proteger nesta jornada — a prova é o teste de trilha abaixo.
+  const ackTrilha = (await pool.query(
+    `SELECT count(*)::int AS n FROM auth_access_audit
+     WHERE action = 'observability_alert_ack' AND target = $1`, [alertIds.cycle],
+  )).rows[0].n;
+  assert.ok(ackTrilha >= 1, 'a 183 faz a ação do ciclo de alerta chegar à tabela');
 });
 
-test('PLT-06 HTTP+DB: resolve grava status/data e auditoria própria', opt, async () => {
+test('PLT-06 HTTP+DB: resolve grava status/data e a trilha de auditoria', opt, async () => {
   const { response, body } = await call(`/api/admin/observability/alerts/${alertIds.cycle}`, {
     method: 'POST', body: { action: 'resolve' }, headers: { origin: base },
   });
@@ -365,23 +370,56 @@ test('PLT-06 HTTP+DB: resolve grava status/data e auditoria própria', opt, asyn
   assert.equal(row.status, 'resolved');
   assert.equal(row.acknowledged_by, 'ti', 'resolve não apaga o reconhecimento anterior');
   assert.ok(row.resolved_at);
+  const resolveTrilha = (await pool.query(
+    `SELECT count(*)::int AS n FROM auth_access_audit
+     WHERE action = 'observability_alert_resolve' AND target = $1`, [alertIds.cycle],
+  )).rows[0].n;
+  assert.ok(resolveTrilha >= 1, 'a 183 faz o resolve chegar à tabela');
 });
 
-test('PLT-06 HTTP+DB: auditoria auxiliar do alerta não é promovida sem migração', opt, async () => {
-  const events = (await pool.query(
-    `SELECT count(*)::int AS n FROM auth_access_audit
-     WHERE action IN ('observability_alert_ack','observability_alert_resolve')`,
-  )).rows[0].n;
+test('PLT-06 HTTP+DB: a migração 183 devolve as cinco ações ao CHECK e as duas do alerta chegam à tabela', opt, async () => {
   const constraint = (await pool.query(
     `SELECT pg_get_expr(conbin, conrelid) AS definition FROM pg_constraint
      WHERE conrelid='auth_access_audit'::regclass
        AND conname='auth_access_audit_action_check' AND contype='c'`,
   )).rows[0];
-  assert.equal(events, 0, 'o CHECK atual recusa silenciosamente as ações de auditoria do alerta');
   assert.ok(constraint?.definition);
-  assert.doesNotMatch(constraint.definition, /observability_alert_ack/);
-  assert.doesNotMatch(constraint.definition, /observability_alert_resolve/);
+  for (const action of [
+    'observability_alert_ack', 'observability_alert_resolve',
+    'healthcheck_query', 'backup_status', 'backup_retention_update',
+  ]) {
+    assert.ok(constraint.definition.includes(`'${action}'`),
+      `a 183 precisa aceitar ${action} no banco real do gate`);
+  }
+  // As duas do ciclo de alerta não são só aceitas pelo CHECK: os POST reais de
+  // acknowledge/resolve acima as gravaram, uma por evento, com o alvo correto.
+  const trilhas = (await pool.query(
+    `SELECT action, count(*)::int AS n FROM auth_access_audit
+     WHERE action IN ('observability_alert_ack','observability_alert_resolve')
+     GROUP BY action`,
+  )).rows;
+  assert.equal(trilhas.length, 2, 'ack e resolve deixam de ser descartados em silêncio');
+  for (const trilha of trilhas) assert.ok(trilha.n >= 1, `${trilha.action} não gravou linha alguma`);
 });
+
+test('PLT-06 HTTP+DB: a 183 é aditiva — o que a 103 já aceitava continua, o resto continua recusado', opt, async () => {
+  // Provar aditividade pelo constraint, não pela trilha: os gravadores têm
+  // `try {} catch {}`, então um `DROP CONSTRAINT` (cheque em branco) NÃO seria
+  // visível em nenhuma contagem de eventos. É esta asserção que a impede.
+  const constraint = (await pool.query(
+    `SELECT pg_get_expr(conbin, conrelid) AS definition FROM pg_constraint
+     WHERE conrelid='auth_access_audit'::regclass
+       AND conname='auth_access_audit_action_check' AND contype='c'`,
+  )).rows[0].definition;
+  assert.ok(constraint.includes(`'login'`), 'a 183 não pode ter derrubado ação aceita desde a 103');
+  assert.ok(constraint.includes(`'audit_query'`), 'a 183 não pode ter derrubado ação aceita desde a 103');
+  // Uma ação fora das 425 continua recusada no banco real.
+  await assert.rejects(() => pool.query(
+    `INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category)
+     VALUES ('ti','plt06','acao_fora_do_ledger_183','x','allowed','none')`,
+  ), /violates check constraint/, 'ampliação aditiva não é constraint removida');
+});
+
 
 test('PLT-06 HTTP+DB: rh é recusado no ciclo de alerta e não altera o alerta', opt, async () => {
   for (const action of ['acknowledge', 'resolve']) {

@@ -192,13 +192,14 @@ const files = [
   '179-employee-here-end-user-consent.sql',
   '180-marcelo-rh-access.sql',
   '181-cli02-client-contact-delegation-audit.sql',
-  '182-plat-durable-jobs-ledger.sql'
+  '182-plat-durable-jobs-ledger.sql',
+  '183-plt-audit-actions-check-widening.sql'
 ];
 
 async function main() {
   const actual = (await readdir(dir)).filter(f => /^\d{3}-.*\.sql$/.test(f)).sort();
-  if (files.length !== 182 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
-    throw new Error('migration_manifest_mismatch: compare 001–182 with db/migrations before connecting');
+  if (files.length !== 183 || files.some((file, i) => actual[i] !== file) || actual.length !== files.length) {
+    throw new Error('migration_manifest_mismatch: compare 001–183 with db/migrations before connecting');
   }
   const urlText = process.env.DATABASE_MIGRATION_URL || process.env.DATABASE_URL;
   if (!urlText) throw new Error('DATABASE_MIGRATION_URL or DATABASE_URL is required');
@@ -252,7 +253,7 @@ async function main() {
         throw error;
       }
     }
-    console.log('Migration ledger verified: 001–182 (PostgreSQL only)');
+    console.log('Migration ledger verified: 001–183 (PostgreSQL only)');
   } finally {
     client?.release();
     await pool.end();

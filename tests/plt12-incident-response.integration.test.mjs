@@ -147,14 +147,14 @@ test('PLT-12 gate exige PostgreSQL real e não aceita skip silencioso', () => {
   if (REQUIRE) assert.ok(RUN);
 });
 
-test('PLT-12 gate: o cluster descartável aplicou as migrações 001–182', opt, async () => {
+test('PLT-12 gate: o cluster descartável aplicou as migrações 001–183', opt, async () => {
   const ledger = (await pool.query(
     `SELECT count(*)::int AS n, min(filename) AS primeira, max(filename) AS ultima
      FROM __migrations WHERE filename LIKE '___-%'`,
   )).rows[0];
-  assert.equal(ledger.n, 182);
+  assert.equal(ledger.n, 183);
   assert.match(ledger.primeira, /^001-/);
-  assert.match(ledger.ultima, /^182-/);
+  assert.match(ledger.ultima, /^183-/);
 });
 
 test('PLT-12 HTTP: anônimo recebe 401 na leitura e na criação', opt, async () => {
