@@ -3152,8 +3152,6 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/incidents" || url.pathname === "/api/crm/incidents" || url.pathname === "/api/security/incidents") {
     return incidentApi.handleIncidents(req, res);
   }
-  const incidentByIdMatch = url.pathname.match(/^\/api\/admin\/incidents\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/incidents\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/security\/incidents\/([0-9a-f-]{36})$/i);
-  if (incidentByIdMatch) return incidentApi.handleIncidentById(req, res, incidentByIdMatch[1]);
   if (url.pathname === "/api/admin/incidents/evidences" || url.pathname === "/api/crm/incidents/evidences" || url.pathname === "/api/security/incidents/evidences") {
     return incidentApi.handleEvidences(req, res);
   }
@@ -3163,6 +3161,8 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/incidents/communications" || url.pathname === "/api/crm/incidents/communications" || url.pathname === "/api/security/incidents/communications") {
     return incidentApi.handleCommunications(req, res);
   }
+  const incidentByIdMatch = url.pathname.match(/^\/api\/admin\/incidents\/([^/]+)$/i) || url.pathname.match(/^\/api\/crm\/incidents\/([^/]+)$/i) || url.pathname.match(/^\/api\/security\/incidents\/([^/]+)$/i);
+  if (incidentByIdMatch) return incidentApi.handleIncidentById(req, res, incidentByIdMatch[1]);
   // PLT-13 config flags maintenance rollout
   if (url.pathname === "/api/admin/config/flags" || url.pathname === "/api/crm/config/flags" || url.pathname === "/api/config/flags") {
     return configApi.handleFlags(req, res);

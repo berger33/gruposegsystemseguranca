@@ -67,7 +67,7 @@ test('reauditoria 222: 46 a_revalidar, contagem atual de IDs sem menção em gat
   // fatia PLT-06 criou mais dois testes nomeados, um gate e um relatório, e
   // PLT-06 saiu do núcleo (15 → 14). Isso reduz a contagem sem gate, mas não
   // reaudita nem fecha os requisitos.
-  assert.equal(resumo.aRevalidarSemGate, 14);
+  assert.equal(resumo.aRevalidarSemGate, 13);
   // IDs com mapa/prova textual nomeada ou mencionada; nenhum recebe aceite por isso.
   for (const id of ['SEC-03', 'CLI-02', 'CLI-03', 'CLI-05', 'CLI-06', 'CLI-07', 'CLI-08', 'PLT-01', 'PLT-02', 'PLT-03', 'PLT-06', 'PLT-07', 'PLT-10', 'PLT-15']) {
     assert.ok(!resumo.idsARevalidarSemGate.includes(id), `${id} tem evidência técnica focal`);
@@ -123,9 +123,13 @@ test('reauditoria 222: nenhum ID inventa aceite humano ou reauditoria integral',
   // 24/124/74 → 25/124/73 também em 02/11: PLT-06 ganhou testes nomeados, gate
   // PostgreSQL dedicado e relatório de jornada/RBAC. Mesma natureza: onde
   // procurar a prova, não aceite humano.
-  assert.equal(data.resumo.porClasseEvidencia.gate_nomeado, 25);
+  // 25/124/73 → 26/124/72 ainda em 02/11: PLT-12 (resposta a incidente) ganhou
+  // testes focais com o ID no nome e gate dedicado em PostgreSQL 17 descartável,
+  // então saiu de somente_documento para gate_nomeado e do núcleo sem gate
+  // (14 → 13). Sem borda RH, sem upload, sem envio externo e sem aceite humano.
+  assert.equal(data.resumo.porClasseEvidencia.gate_nomeado, 26);
   assert.equal(data.resumo.porClasseEvidencia.mencionado_em_gate, 124);
-  assert.equal(data.resumo.porClasseEvidencia.somente_documento, 73);
+  assert.equal(data.resumo.porClasseEvidencia.somente_documento, 72);
   assert.ok(data.requisitos.filter(row => row.prefixo === 'SEC')
     .every(row => row.classe_evidencia_atual === 'mencionado_em_gate'),
   'os 15 IDs SEC devem apontar para o mapa técnico de âncoras, sem inferir aceite');
