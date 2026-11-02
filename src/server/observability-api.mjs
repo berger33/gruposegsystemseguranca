@@ -1,12 +1,26 @@
+import {
+  isObservabilityReadMethod,
+  parseObservabilityReadType,
+  parseObservabilityAlertStatus,
+  parseObservabilityAlertAction,
+  sanitizeDependencyError,
+} from './observability-read-contract.mjs';
+
 export function createObservabilityApi({ json, sameOrigin, getPool, readAdminSession, observability }) {
   async function handleMetrics(req, res) {
     if (!sameOrigin(req)) return json(res, 403, { error: 'same_origin_required' });
     const session = await readAdminSession(req);
     if (!session) return json(res, 401, { error: 'admin_session_required' });
     if (!['admin','ti'].includes(session.role)) return json(res, 403, { error: 'observability_restricted_admin_ti' });
+    // PLT-06: as cinco visões são leitura de estado. Um método de escrita nesta
+    // rota não pode consultar, auditar nem alterar alertas.
+    if (!isObservabilityReadMethod(req.method)) {
+      return json(res, 405, { error: 'method_not_allowed' }, { Allow: 'GET' });
+    }
 
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
-    const type = url.searchParams.get('type') || 'summary';
+    const type = parseObservabilityReadType(url.searchParams.get('type'));
+    if (!type) return json(res, 400, { error: 'invalid_type' });
 
     try {
       const pool = getPool();
@@ -49,8 +63,8 @@ export function createObservabilityApi({ json, sameOrigin, getPool, readAdminSes
           };
         } catch {}
 
-        try { await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'observability_query',$3,'allowed','none')", [session.role, session.identityId || session.role, 'summary']); } catch {}
-
+        // PLT-06: consultar métricas não cria evento de acesso. A trilha
+        // pertence apenas às ações explícitas de acknowledge/resolve.
         return json(res, 200, { memory: mem, db_aggregates: dbAgg, note: 'Métricas HTTP/jobs/DB com correlação request/event ID, sem segredos' });
       }
 
@@ -80,15 +94,19 @@ export function createObservabilityApi({ json, sameOrigin, getPool, readAdminSes
       }
 
       if (type === 'alerts') {
-        const status = url.searchParams.get('status') || 'firing';
+        // O filtro precisa pertencer ao enum da migração 044: erro do operador
+        // não pode virar 22P02/503 de dependência.
+        const status = parseObservabilityAlertStatus(url.searchParams.get('status'));
+        if (!status) return json(res, 400, { error: 'invalid_status' });
         const r = await pool.query('SELECT * FROM observability_alerts WHERE status = $1 ORDER BY created_at DESC LIMIT 200', [status]);
         return json(res, 200, { alerts: r.rows, memory_firing: observability.getAlerts().filter(a => a.status === status).slice(0, 50) });
       }
 
       return json(res, 400, { error: 'invalid_type' });
     } catch (e) {
-      console.error('observability metrics failed', e);
-      return json(res, 503, { error: 'observability_unavailable' });
+      const reason = sanitizeDependencyError(e);
+      console.error('observability metrics failed', reason);
+      return json(res, 503, { error: 'observability_unavailable', error_sanitized: reason });
     }
   }
 
@@ -111,7 +129,8 @@ export function createObservabilityApi({ json, sameOrigin, getPool, readAdminSes
       if (text) body = JSON.parse(text);
     } catch {}
 
-    const action = body?.action || 'acknowledge';
+    const action = parseObservabilityAlertAction(body?.action);
+    if (!action) return json(res, 400, { error: 'invalid_action' });
     try {
       const pool = getPool();
       if (action === 'acknowledge') {
@@ -135,8 +154,9 @@ export function createObservabilityApi({ json, sameOrigin, getPool, readAdminSes
       }
       return json(res, 400, { error: 'invalid_action' });
     } catch (e) {
-      console.error('alert action failed', e);
-      return json(res, 503, { error: 'alert_action_failed' });
+      const reason = sanitizeDependencyError(e);
+      console.error('alert action failed', reason);
+      return json(res, 503, { error: 'alert_action_failed', error_sanitized: reason });
     }
   }
 
