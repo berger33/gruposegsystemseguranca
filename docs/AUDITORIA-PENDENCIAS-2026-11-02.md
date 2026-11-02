@@ -41,7 +41,7 @@
 | Item | Valor |
 |---|---|
 | Rotas (`page.tsx`) | **101** (14 públicas · 44 staff · 14 entrada do cliente · 16 portal do cliente · 1 portal do funcionário · 11 prévias · 1 homologação) |
-| Migrações | **001–182** — 001–181 imutáveis e a **182** (`durable_jobs`, E16) aditiva · próxima livre **183** |
+| Migrações | **001–183** — 001–181 imutáveis, a **182** (`durable_jobs`, E16) e a **183** (ampliação aditiva do `CHECK` de `auth_access_audit`) aditivas · próxima livre **184** |
 | Módulos de API (`src/server/`) | **139** |
 | `server.mjs` | **6.310 linhas** (despacho manual) |
 | Testes | **246** arquivos em `tests/` · **178** listados no `test:unit` · `npm test` **1.488/1.488** |
@@ -198,7 +198,7 @@ Dos **80 scripts de teste** do `package.json`, **23 não são referenciados por 
 | **N3** | **Os gates nomeados novos não estavam no CI** (`test:plt01…:pg`, `test:plt06…:pg`, `test:plt12-incidents:pg`) → **corrigido em 02/11 pela PR #330** | `grep -rn "plt12" .github/workflows/` → vazio antes; depois, job `plt-gates-postgres` verde (20/20) | Gate que não roda sozinho não protege contra regressão |
 | **N4** | **Cobertura real de rotas continua rasa**: 101/101 sem estados, **81** sem teclado, **46** sem captura, **16** com captura parcial | `docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv` (101 linhas) | “101/101 com gate” significa só *a rota carrega* |
 | **N5** | **171 MB de ZIPs obsoletos** seguem versionados (16 arquivos), com ~65 migrações de defasagem | `du -ch $(git ls-files downloads dist)` → **171 MB** | Clone inchado; risco de instalar versão morta |
-| **N6** | **3 PRs paradas por 1 check** (#321, #308, #310); a **#318** saiu da fila — integrada em `1f6c0ea` e fechada como superseded | `gh pr view … --json statusCheckRollup` | Trabalho pronto parado. O ledger de migrações já foi reconciliado: **182 aplicada, próxima livre 183** |
+| **N6** | **FECHADO na fatia da 183 (02/11):** as 4 PRs abertas foram triadas com execução local e sortidas — **#321** e **#310** portadas para `arena/2d86e921-…`, **#308** e **#324** fechadas como superseded (a jornada da #308 já estava no `main` pela #319). A **#318** tinha saído da fila em `1f6c0ea`. | `gh pr checks`, `gh pr diff --name-only`, `git merge-tree` e gate reproduzido em `embedded-postgres` + Chromium | O que travava as quatro era (a) inventário do 222 não regenerado, (b) implementação paralela a uma já mergeada, (c) base obsoleta. Nenhum merge foi feito: as três que entraram entraram por **porte**, não por merge. |
 | **N7** | **A fila de notificações do console nunca pode enviar e-mail: `mailer` está literalmente `null`.** `server.mjs:1229` cria `createAdminNotificationsApi({ …, mailer: null })` com o comentário “will be set if nodemailer configured; for now null”. `admin-notifications-api.mjs:140` repassa `mailer: ctx.mailer` ao `processNext`, e `notification-queue.mjs` marca `not_configured` quando não há mailer — o item reteima até `dead`. Configurar `MAIL_HOST` **não** muda esse caminho. (O e-mail de **lead** é outro caminho: `sendLeadEmail` cria o transporte do `nodemailer` a partir do env) | Leitura de `server.mjs:1229`, `src/server/admin-notifications-api.mjs:140`, `src/server/notification-queue.mjs:182-206` | Fila administrativa nasce morta: não é “provedor não escolhido”, é ausência de ligação no servidor. Qualquer tela que prometa aviso por e-mail está prometendo o que o código não faz |
 
 ---

@@ -57,7 +57,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1719,
+    "arquivosVarridos": 1725,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -2547,12 +2547,12 @@
       "arquivos_documento": [
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
+        "docs/LACUNAS-ERP-VS-OMIE-2026-10-30.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
         "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
         "docs/UX-PRO-03-PROMOCAO-APP-FUNCIONARIO-PWA-FAQ-2026-11-01.md",
-        "docs/auditoria-2026-10-04/AUDITORIA.md",
-        "docs/ux-pro-03-emp-pwa-evidencias/resumo.json"
+        "docs/auditoria-2026-10-04/AUDITORIA.md"
       ],
       "arquivos_codigo": [
         "scripts/ux-pro-03-ti-inventory.mjs",
@@ -2562,7 +2562,7 @@
         "src/server/emp-pwa-api.mjs"
       ],
       "ocorrencias_gate": 13,
-      "ocorrencias_documento": 12,
+      "ocorrencias_documento": 13,
       "ocorrencias_codigo": 8,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -4470,7 +4470,7 @@
         "src/lib/finance-vocabulary.mjs"
       ],
       "ocorrencias_gate": 13,
-      "ocorrencias_documento": 55,
+      "ocorrencias_documento": 56,
       "ocorrencias_codigo": 13,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -4676,7 +4676,7 @@
         "src/server/fin-management-api.mjs"
       ],
       "ocorrencias_gate": 12,
-      "ocorrencias_documento": 46,
+      "ocorrencias_documento": 48,
       "ocorrencias_codigo": 4,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -4710,7 +4710,7 @@
         "src/server/fin-management-api.mjs"
       ],
       "ocorrencias_gate": 6,
-      "ocorrencias_documento": 78,
+      "ocorrencias_documento": 79,
       "ocorrencias_codigo": 4,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -4782,7 +4782,7 @@
         "src/server/fin-budget-api.mjs"
       ],
       "ocorrencias_gate": 12,
-      "ocorrencias_documento": 77,
+      "ocorrencias_documento": 78,
       "ocorrencias_codigo": 5,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -4806,16 +4806,16 @@
         "docs/ENTREGA-L07-ACEITE-E-AUDITORIA-L08.md",
         "docs/ENTREGA-L07-FIN14-15-16.md",
         "docs/ESTADO-EXECUCAO-LOCAL.md",
+        "docs/LACUNAS-ERP-VS-OMIE-2026-10-30.md",
         "docs/MATRIZ-FECHAMENTO-L07.md",
-        "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
-        "docs/PROMPT-CONTINUACAO-L07-FINANCEIRO-MARCELO.md"
+        "docs/PLANO-MESTRE-IMPLEMENTACAO.md"
       ],
       "arquivos_codigo": [
         "scripts/qa-l07-delivery-postgres.mjs",
         "src/app/admin/ti/FinBudgetClient.tsx"
       ],
       "ocorrencias_gate": 17,
-      "ocorrencias_documento": 35,
+      "ocorrencias_documento": 36,
       "ocorrencias_codigo": 6,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -5027,6 +5027,7 @@
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/ENTREGA-L06.md",
+        "docs/LACUNAS-ERP-VS-OMIE-2026-10-30.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/PROMPT-CONTINUACAO-L06-OPERACAO-PATRIMONIO.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
@@ -5037,7 +5038,7 @@
         "src/server/ast-api.mjs"
       ],
       "ocorrencias_gate": 1,
-      "ocorrencias_documento": 9,
+      "ocorrencias_documento": 10,
       "ocorrencias_codigo": 4,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -5799,12 +5800,12 @@
       "arquivos_documento": [
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
+        "docs/LACUNAS-ERP-VS-OMIE-2026-10-30.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
         "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
         "docs/UX-PRO-03-PROMOCAO-CLIENTE-V2-2026-10-28.md",
-        "docs/UX-PRO-03-PROMOCAO-PAINEL-ADM-2026-10-30.md",
-        "docs/UX-PRO-03-PROMOCAO-PREFERENCIAS-NOTIFICACAO-2026-11-01.md"
+        "docs/UX-PRO-03-PROMOCAO-PAINEL-ADM-2026-10-30.md"
       ],
       "arquivos_codigo": [
         "scripts/ux-pro-03-ti-inventory.mjs",
@@ -5814,7 +5815,7 @@
         "src/server/notification-preferences-api.mjs"
       ],
       "ocorrencias_gate": 23,
-      "ocorrencias_documento": 14,
+      "ocorrencias_documento": 15,
       "ocorrencias_codigo": 15,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -5854,7 +5855,7 @@
         "src/server/observability-read-contract.mjs",
         "src/server/observability.mjs"
       ],
-      "ocorrencias_gate": 44,
+      "ocorrencias_gate": 46,
       "ocorrencias_documento": 18,
       "ocorrencias_codigo": 6,
       "aceite_humano": "nao_registrado",
@@ -6157,17 +6158,17 @@
         "docs/CHECKLIST-ENTREGA-LOCAL.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/E15-ROTAS-CATALOGO-2026-11-02.json",
+        "docs/LACUNAS-ERP-VS-OMIE-2026-10-30.md",
         "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
         "docs/RELATORIO-PENDENCIAS-COMPLETO.md",
         "docs/UX-PRO-03-PROMOCAO-INTEGRACOES-CATALOGO-2026-11-01.md",
-        "docs/auditoria-2026-10-04/AUDITORIA.md",
-        "docs/ux-pro-03-integracacoes-catalogo-evidencias/resumo.json"
+        "docs/auditoria-2026-10-04/AUDITORIA.md"
       ],
       "arquivos_codigo": [
         "src/app/admin/ti/IntegrationsClient.tsx"
       ],
       "ocorrencias_gate": 1,
-      "ocorrencias_documento": 10,
+      "ocorrencias_documento": 11,
       "ocorrencias_codigo": 1,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -6317,7 +6318,7 @@
         "src/lib/third-party-vocabulary.mjs"
       ],
       "ocorrencias_gate": 28,
-      "ocorrencias_documento": 130,
+      "ocorrencias_documento": 131,
       "ocorrencias_codigo": 25,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -6364,7 +6365,7 @@
         "src/server/access-review-coverage.mjs"
       ],
       "ocorrencias_gate": 89,
-      "ocorrencias_documento": 81,
+      "ocorrencias_documento": 82,
       "ocorrencias_codigo": 22,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -6456,7 +6457,7 @@
         "src/lib/supplier-vocabulary.mjs"
       ],
       "ocorrencias_gate": 87,
-      "ocorrencias_documento": 107,
+      "ocorrencias_documento": 108,
       "ocorrencias_codigo": 20,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -6928,9 +6929,9 @@
         "docs/CONTINUACAO-ARENA.md",
         "docs/CONTROLE-IMPLEMENTACAO.md",
         "docs/CRONOGRAMA-COMPLETO-UX-E-SISTEMA-2026-10-15.md",
+        "docs/LACUNAS-ERP-VS-OMIE-2026-10-30.md",
         "docs/PLANO-CONCLUSAO-ARENA.md",
-        "docs/PLANO-MESTRE-IMPLEMENTACAO.md",
-        "docs/RELATORIO-PENDENCIAS-COMPLETO.md"
+        "docs/PLANO-MESTRE-IMPLEMENTACAO.md"
       ],
       "arquivos_codigo": [
         "scripts/qa-ext15-emergency-postgres.mjs",
@@ -6941,7 +6942,7 @@
         "src/server/ext-reporting-api.mjs"
       ],
       "ocorrencias_gate": 33,
-      "ocorrencias_documento": 37,
+      "ocorrencias_documento": 38,
       "ocorrencias_codigo": 11,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -6964,13 +6965,13 @@
         "docs/E15-SOMBREADAS-DECISAO-2026-11-02.md",
         "docs/EXECUCAO-ENTREGA-LOCAL.md",
         "docs/INTEGRACAO-E16-2026-11-02.md",
-        "docs/PLANO-CONCLUSAO-ARENA.md"
+        "docs/LACUNAS-ERP-VS-OMIE-2026-10-30.md"
       ],
       "arquivos_codigo": [
         "src/server/ext-reporting-api.mjs"
       ],
       "ocorrencias_gate": 0,
-      "ocorrencias_documento": 19,
+      "ocorrencias_documento": 20,
       "ocorrencias_codigo": 1,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
@@ -7022,13 +7023,13 @@
         "docs/E3-E4-CANONICALIZACAO-IA-LEGADA-2026-10-27.md",
         "docs/EXECUCAO-ENTREGA-LOCAL.md",
         "docs/INTEGRACAO-E16-2026-11-02.md",
-        "docs/PLANO-CONCLUSAO-ARENA.md"
+        "docs/LACUNAS-ERP-VS-OMIE-2026-10-30.md"
       ],
       "arquivos_codigo": [
         "src/server/ext-reporting-api.mjs"
       ],
       "ocorrencias_gate": 0,
-      "ocorrencias_documento": 31,
+      "ocorrencias_documento": 32,
       "ocorrencias_codigo": 2,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
