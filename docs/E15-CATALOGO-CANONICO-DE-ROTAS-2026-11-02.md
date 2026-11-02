@@ -33,7 +33,7 @@ parece correta.
 | `src/server/route-catalog.mjs` | Parser determinístico (texto, sem AST, sem I/O de banco/rede/Next) que extrai as três resoluções de caminho e classifica cada regra. |
 | `scripts/e15-route-catalog.mjs` | Gerador (`--check` para CI, `--relatorio` para o bloco medido). Mesmo padrão dos outros inventários. |
 | `docs/E15-ROTAS-CATALOGO-2026-11-02.json` | Tabela canônica versionada (colunas `tipo, caminho, modulo, linha, provedor`), com as divergências nomeadas. |
-| `tests/e15-route-catalog.test.mjs` | **15 testes**: paridade com o código, controle negativo (divergência sintética tem de ser detectada), prova **executável** da borda e congelamento dos números. |
+| `tests/e15-route-catalog.test.mjs` | **19 testes**: paridade com o código, controle negativo (divergência sintética tem de ser detectada), prova **executável** da borda, congelamento dos números e — desde 02/11 — a decisão das 9 sombreadas, uma por uma. |
 
 **Limites declarados, para não virar aceite falso:** o catálogo **não** decide método HTTP (a cadeia de `if`
 casa só o caminho; declarar `GET`/`POST` seria inferência); **não** executa rota real (alcance é calculado por
@@ -89,24 +89,28 @@ mexer no roteador vivo e exige decisão do dono.
 | `/api/crm/contracts/from-proposal` | 3065 | 2980 (`contractL05Api`) | **intencional** — o código diz "remain for historical code references but are not reachable through HTTP" |
 | `/api/crm/contracts` | 3074 | 2980 (`contractL05Api`) | **intencional** — idem |
 | `/api/client/visits` | 3832 | 2702 (`clientSpaceApi`) | **intencional** — nota de CLI-07 no código |
-| `/api/admin/integrations/jobs` | 3192 | 2808 (`integrationsApi`) | **a revisar** |
-| `/api/admin/integrations/logs` | 3195 | 2808 | **a revisar** |
-| `/api/admin/integrations/webhooks` | 3198 | 2808 | **a revisar** |
-| `/api/admin/integrations/reconciliation` | 3204 | 2808 | **a revisar** |
-| `/api/admin/hr/journey-corrections` | 3457 | 2636 (`employeeApi` pré-auth) | **a revisar** |
-| `/api/crm/hr/journey-corrections` | 3457 | 2636 | **a revisar** |
-| `/api/hr/journey-corrections` | 3457 | 2636 | **a revisar** |
-| `/api/faq-assisted` | 4580 | 2612 (`faqAnswerApi`) | **a revisar** |
-| `/api/public/faq-assisted` | 4580 | 2612 | **a revisar** |
+| `/api/admin/integrations/jobs` | 3192 | 2808 (`integrationsApi`) | **decidida — manter**: falso positivo (o guard `!INTEGRATION_ROUTE_SUBPATHS.has` desvia 2808) |
+| `/api/admin/integrations/logs` | 3195 | 2808 | **decidida — manter**: falso positivo, idem |
+| `/api/admin/integrations/webhooks` | 3198 | 2808 | **decidida — manter**: falso positivo, idem |
+| `/api/admin/integrations/reconciliation` | 3204 | 2808 | **decidida — manter**: falso positivo, idem |
+| `/api/admin/hr/journey-corrections` | 3457 | 2636 (`employeeApi` pré-auth) | **decidida — remover regra**: sombra real |
+| `/api/crm/hr/journey-corrections` | 3457 | 2636 | **decidida — remover regra**: sombra real |
+| `/api/hr/journey-corrections` | 3457 | 2636 | **decidida — remover regra**: sombra real |
+| `/api/faq-assisted` | 4580 | 2612 (`faqAnswerApi`) | **decidida — remover alias**: sombra parcial (handler vivo) |
+| `/api/public/faq-assisted` | 4580 | 2612 | **decidida — remover alias**: sombra parcial (idem) |
 
 "Intencional" aqui **não** é opinião do autor da fatia: é a classificação que só existe quando o **próprio código**
-declara, em comentário imediatamente acima, que a rota é histórica/inalcançável. As 9 restantes ficam registradas
-como pendência aberta — o teste exige que toda divergência esteja nomeada neste relatório.
+declara, em comentário imediatamente acima, que a rota é histórica/inalcançável. As 9 restantes foram decididas caso
+a caso em 02/11 ([`E15-SOMBREADAS-DECISAO-2026-11-02.md`](E15-SOMBREADAS-DECISAO-2026-11-02.md)): **4 manter**
+(falso positivo do modelo de cobertura, que não modela guarda de negação) e **5 remover** (3 regras da linha 3457 e
+2 aliases da linha 4580). A decisão está congelada em JSON e em teste; a **remoção não foi executada** — mexer no
+despacho vivo exige autorização própria. O teste exige que toda divergência esteja nomeada neste relatório.
 
 ## 4. GREEN desta fatia
 
 - `node --test tests/e15-route-catalog.test.mjs` — **15/15** (inclui controle negativo sintético nas duas direções:
   rota injetada só no despacho vira `inalcançável +1`; caminho injetado só na borda vira `borda sem despacho +1`).
+  A fatia da decisão das sombreadas (02/11) acrescentou 4 testes ao mesmo arquivo: hoje **19/19**.
 - `node scripts/e15-route-catalog.mjs --check` — **OK**, catálogo confere com `server.mjs`.
 - Guarda contra "verde no vazio": o teste exige >1000 regras na borda, >1000 no despacho, >50 módulos e >100
   caminhos presentes nas duas camadas. Se o recorte de função quebrar, o teste **falha**, não passa.
@@ -130,8 +134,9 @@ como número, com nome e linha, antes de virar incidente.
 ## 6. O que fica em aberto (não foi feito de propósito)
 
 - **As 3 rotas inalcançáveis** continuam inalcançáveis: corrigir exige editar `API_PATH_MATCH` (roteador vivo).
-- **As 9 sombreadas "a revisar"** continuam como estão: decidir se são código morto a remover ou alias a manter é
-  decisão do dono, e remover handler é mudança de comportamento.
+- **As 9 sombreadas "a revisar"** foram **decididas** em 02/11 (4 manter, 5 remover — ver
+  [`E15-SOMBREADAS-DECISAO-2026-11-02.md`](E15-SOMBREADAS-DECISAO-2026-11-02.md)), mas **continuam no lugar**:
+  remover regra do despacho vivo é mudança de comportamento e exige autorização própria.
 - **Método HTTP por rota** não está no catálogo: exigiria ler o corpo do handler, não a condição de despacho.
 - **Reescrita do despacho em tabela**: não autorizada nesta sessão.
 
