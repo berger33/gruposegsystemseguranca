@@ -103,6 +103,7 @@ const SKIP = [
   'docs/STATUS-VIGENTE.md',
   'docs/AUDITORIA-FATIAS-PENDENTES-E-ERROS-2026-10-26.md',
   'docs/AUDITORIA-FATIAS-PENDENTES-2026-10-28.md',
+  'docs/AUDITORIA-PENDENCIAS-2026-11-02.md',
 ];
 
 async function readWorkspace() {

@@ -26,13 +26,13 @@ Um **índice reproduzível**, não um veredito:
 
 **Não foi criado workflow novo**: a guarda já roda em todos os workflows que
 executam `test:unit`. Isso evita inflar a matriz de rotas com um gate que não
-prova rota alguma. Workflows seguem **49**.
+prova rota alguma. Workflows seguem **50** (o `plt-jornadas-delivery.yml` foi criado em 02/11 para tirar PLT-01/06/12 da orfandade de gate).
 
 ### Método
 
-Uma única passada por **1.699 arquivos** de `tests/`, `.github/workflows/`,
-`docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, a auditoria de 26/10, a
-fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
+Uma única passada por **1.702 arquivos** de `tests/`, `.github/workflows/`,
+`docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, as auditorias de 26/10, 28/10 e
+02/11, a fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
 meta-estado, não prova de requisito, e evitam auto-referência. De cada arquivo o gerador extrai todos os IDs com
 `/\b([A-Z][A-Z0-9-]*-\d+)\b/gi` e cruza com os 222 IDs da matriz. A própria
 fonte, os artefatos gerados, o gerador e esta guarda são **excluídos** da

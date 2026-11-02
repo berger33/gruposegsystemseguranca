@@ -1,0 +1,62 @@
+name: PLT jornadas delivery
+# PLT-01 (revisão periódica de acessos), PLT-06 (observabilidade) e PLT-12
+# (resposta a incidente) ganharam gates nomeados em PostgreSQL 17 descartável
+# entre 01 e 02/11/2026, mas nenhum era chamado por workflow: a prova só
+# existia quando alguém rodava o script na mão. Este workflow fecha essa
+# orfandade e é exigido por tests/plt-gates-wired.test.mjs.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/server/access-review-coverage.mjs'
+      - 'src/server/admin-rbac-api.mjs'
+      - 'src/server/observability-api.mjs'
+      - 'src/server/observability-read-contract.mjs'
+      - 'src/server/observability.mjs'
+      - 'src/server/incident-api.mjs'
+      - 'src/server/incident-read-contract.mjs'
+      - 'server.mjs'
+      - 'tests/plt01-access-review-coverage.test.mjs'
+      - 'tests/plt06-observability-read-contract.test.mjs'
+      - 'tests/plt12-incident-response.test.mjs'
+      - 'tests/plt01-access-review-coverage.integration.test.mjs'
+      - 'tests/plt06-observability.integration.test.mjs'
+      - 'tests/plt12-incident-response.integration.test.mjs'
+      - 'scripts/qa-plt01-access-review-coverage-postgres.mjs'
+      - 'scripts/qa-plt06-observability-postgres.mjs'
+      - 'scripts/qa-plt12-incidents-postgres.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/plt-jornadas-delivery.yml'
+concurrency:
+  group: plt-jornadas-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  plt-gates-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      # Os runners recusam execução com DATABASE_URL definida (QA_PG_REFUSED):
+      # cada um sobe o seu próprio cluster descartável via embedded-postgres.
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: PLT-01 cobertura da revisão periódica de acessos (PostgreSQL 17 descartável)
+        run: npm run test:plt01-access-review-coverage:pg
+      - name: PLT-06 jornada, RBAC e correlação da observabilidade (PostgreSQL 17 descartável)
+        run: npm run test:plt06-observability:pg
+      - name: PLT-12 resposta a incidente (PostgreSQL 17 descartável)
+        run: npm run test:plt12-incidents:pg

@@ -48,7 +48,7 @@
           "prova": "inventário de 222 requisitos com classe de evidência",
           "encontrado": true,
           "ancora": "conteudo",
-          "linha_atual": 207,
+          "linha_atual": 208,
           "trecho": "porClasseEvidencia: countBy('classe_evidencia_atual'),"
         }
       ],
