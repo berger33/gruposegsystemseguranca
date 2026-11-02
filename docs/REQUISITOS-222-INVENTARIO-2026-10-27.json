@@ -58,7 +58,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1700,
+    "arquivosVarridos": 1702,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -5658,6 +5658,8 @@
         "tests/plt01-access-review-coverage.test.mjs"
       ],
       "arquivos_gate": [
+        ".github/workflows/plt-jornadas-delivery.yml",
+        "tests/plt-gates-wired.test.mjs",
         "tests/plt01-access-review-coverage.integration.test.mjs",
         "tests/plt01-access-review-coverage.test.mjs"
       ],
@@ -5677,7 +5679,7 @@
         "src/server/access-review-coverage.mjs",
         "src/server/admin-rbac-api.mjs"
       ],
-      "ocorrencias_gate": 25,
+      "ocorrencias_gate": 30,
       "ocorrencias_documento": 45,
       "ocorrencias_codigo": 4,
       "aceite_humano": "nao_registrado",
@@ -5830,6 +5832,8 @@
         "tests/plt06-observability-read-contract.test.mjs"
       ],
       "arquivos_gate": [
+        ".github/workflows/plt-jornadas-delivery.yml",
+        "tests/plt-gates-wired.test.mjs",
         "tests/plt06-observability-read-contract.integration.test.mjs",
         "tests/plt06-observability-read-contract.test.mjs"
       ],
@@ -5850,7 +5854,7 @@
         "src/server/observability-read-contract.mjs",
         "src/server/observability.mjs"
       ],
-      "ocorrencias_gate": 39,
+      "ocorrencias_gate": 44,
       "ocorrencias_documento": 16,
       "ocorrencias_codigo": 6,
       "aceite_humano": "nao_registrado",
@@ -6028,6 +6032,8 @@
         "tests/plt12-incident-response.test.mjs"
       ],
       "arquivos_gate": [
+        ".github/workflows/plt-jornadas-delivery.yml",
+        "tests/plt-gates-wired.test.mjs",
         "tests/plt12-incident-response.integration.test.mjs",
         "tests/plt12-incident-response.test.mjs"
       ],
@@ -6043,7 +6049,7 @@
         "scripts/qa-plt12-incidents-postgres.mjs",
         "src/server/incident-read-contract.mjs"
       ],
-      "ocorrencias_gate": 43,
+      "ocorrencias_gate": 48,
       "ocorrencias_documento": 10,
       "ocorrencias_codigo": 2,
       "aceite_humano": "nao_registrado",
