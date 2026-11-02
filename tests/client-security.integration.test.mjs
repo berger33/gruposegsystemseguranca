@@ -14,6 +14,16 @@ const projectRoot = process.cwd();
 // biblioteca) e `dbUrl.replace("postgres", ...)`, que corrompia "postgresql://".
 // A limpeza acontece em t.after inclusive quando uma asserção falha, para que
 // o processo não fique pendurado com o cluster de teste ativo.
+//
+// N8 (02/11): este gate é sensível a carga e já derrubou o `QA baseline` do
+// `main` sem defeito de conteúdo. Causa medida com trace síncrono sob carga:
+// `pg.stop()` envia SIGINT ao cluster e o backend devolve
+// `FATAL: terminating connection due to administrator command` para as conexões
+// do pool que o `pool.end()` ainda não fechou. `pg.Pool` entrega isso como
+// evento `error`; sem listener, o Node converte em `uncaughtException` e o
+// subteste cai com `failureType: 'uncaughtException'` (não com asserção). O
+// listener abaixo ignora **apenas** o desligamento que este teardown provoca —
+// qualquer outro erro do pool continua estourando.
 const skipReason = process.env.RUN_DATABASE_INTEGRATION === "1"
   ? false
   : "requer RUN_DATABASE_INTEGRATION=1 (PostgreSQL embutido descartável)";
@@ -39,7 +49,17 @@ async function withDatabase(t, prefix, port, work) {
   });
   let setupPool;
   let pool;
+  let shuttingDown = false;
+  const onPoolError = err => {
+    // Só o desligamento provido por este teardown é esperado. Um erro real do
+    // pool (inclusive durante o teardown) continua sendo propagado.
+    if (shuttingDown && /terminating connection due to administrator command/i.test(err?.message || "")) {
+      return;
+    }
+    throw err;
+  };
   t.after(async () => {
+    shuttingDown = true;
     await pool?.end().catch(() => {});
     await setupPool?.end().catch(() => {});
     await pg.stop().catch(() => {});
@@ -53,6 +73,7 @@ async function withDatabase(t, prefix, port, work) {
   await setupPool.end();
   setupPool = null;
   pool = new Pool({ connectionString: `${base}grupo_seg_system`, max: 2 });
+  pool.on("error", onPoolError);
   await applyMigrations(pool);
   return work(pool);
 }
