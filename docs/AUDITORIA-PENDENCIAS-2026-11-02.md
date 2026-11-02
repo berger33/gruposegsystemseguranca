@@ -169,7 +169,7 @@
 
 | PR | Título | Checks | Situação |
 |---|---|---|---|
-| **#318** | `feat(e16)`: worker durável EXT-07, fila com lease, retomada exactly-once (**migração 182**) | **45/45 checks medidos em 30/10** (o ledger dizia 46/46), mas sobre a base antiga (`6303213`, #317) e **CONFLITANTE** com o `main` pós-#332 | **Integrada e fechada como superseded** em 02/11: o conteúdo entrou por `1f6c0ea` (merge de `3ea54e3`), com os 4 conflitos resolvidos — inventários **regenerados por script**, `package.json` em união, `STATUS-VIGENTE.md` à mão. `PUT /pulls/318/update-branch` respondia **422**. Migração **182** aplicada; próxima livre **183** |
+| **#318** | `feat(e16)`: worker durável EXT-07, fila com lease, retomada exactly-once (**migração 182**) | **45/45 checks medidos em 30/10** (o ledger dizia 46/46), mas sobre a base antiga (`6303213`, #317) e **CONFLITANTE** com o `main` pós-#332 | **Integrada e fechada como superseded** em 02/11: o conteúdo entrou por `1f6c0ea` (merge de `3ea54e3`), com os 4 conflitos resolvidos — inventários **regenerados por script**, `package.json` em união, `STATUS-VIGENTE.md` à mão. `PUT /pulls/318/update-branch` respondia **422**. Migração **182** aplicada; próxima livre **183**. O merge entrou no `main` pela **PR #333** (`ad49440`, 47 checks verdes), que também fechou a #318 |
 | **#321** | `feat(ux-pro-06)`: estado de leitura honesto da Vistoria em `/admin/comercial` | **91/92** — falha `ux-portal-postgres-browser` | Travada por 1 check |
 | **#308** | `feat(ux-pro-03)`: jornada do RH em reclamações compartilhadas | **46/47** — falha `ux-hr-postgres-browser` | Travada por 1 check |
 | **#310** | `docs`: apresentação do ERP, lacunas vs. Omie, relatório semanal | **0/2** — `static-and-smoke` falha | Travada |
