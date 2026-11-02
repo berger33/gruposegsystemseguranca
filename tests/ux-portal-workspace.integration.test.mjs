@@ -10691,6 +10691,145 @@ test("browser UX-PRO-03 PUB-02/05: FAQ assistida, transferência humana e segmen
   }
 });
 
+// --- PLT-02: consulta e exportação da trilha de auditoria ------------------
+test("browser UX-PRO-03 PLT-02: filtra autor e objeto, exporta de forma auditada e restringe por papel", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const tiCookie = await loginStaffHttp(ti.email);
+  const target = `qa-plt02-${randomUUID()}`;
+  const action = "audit_query";
+  await pool.query(
+    `INSERT INTO auth_access_audit (actor_kind,actor_id,action,target,result,detail_category)
+     VALUES ('staff',$1,$2,$3,'allowed','none')`,
+    [ti.id, action, target],
+  );
+  try {
+    assert.equal((await api("/api/admin/audit?limit=10")).status, 401, "anônimo não consulta auditoria");
+    assert.equal((await api("/api/admin/audit?limit=10", { cookie: rhCookie })).status, 403, "RH não consulta auditoria restrita");
+    assert.equal((await api("/api/admin/audit/export", { method: "POST", cookie: rhCookie, body: { filters: {}, format: "json" } })).status, 403,
+      "RH não exporta auditoria restrita");
+
+    const params = new URLSearchParams({ actorKind: "staff", actorId: ti.id, action, target, result: "allowed", limit: "10" });
+    const list = await api(`/api/admin/audit?${params}`, { cookie: tiCookie });
+    assert.equal(list.status, 200);
+    assert.equal(list.body.total, 1, "a consulta por autor/ação/objeto/resultado encontra só o evento sintético");
+    assert.equal(list.body.audits[0].actor_id, ti.id);
+    assert.equal(list.body.audits[0].target, target);
+
+    const exported = await api("/api/admin/audit/export", { method: "POST", cookie: tiCookie, body: {
+      filters: { actorKind: "staff", actorId: ti.id, action, target, result: "allowed" }, format: "json",
+    } });
+    assert.equal(exported.status, 200);
+    assert.equal(exported.body.exported, 1);
+    assert.equal(exported.body.audits[0].target, target);
+    const auditLog = await pool.query("SELECT count(*)::int AS n FROM auth_access_audit WHERE actor_id=$1 AND action='audit_export' AND target LIKE 'export:%'", [ti.id]);
+    assert.equal(auditLog.rows[0].n, 1, "exportação precisa deixar evento de auditoria");
+
+    const browser = await launchBrowser();
+    try {
+      const { context, page } = await openPage(browser, "/admin/ti", tiCookie, { width: 390 });
+      await page.getByRole("button", { name: "Auditoria" }).click();
+      await page.getByRole("heading", { name: "Auditoria de ações" }).waitFor();
+      await page.getByLabel("ID do responsável").fill(ti.id);
+      await page.getByLabel("Objeto / alvo").fill(target);
+      await page.getByLabel("Ação").fill(action);
+      await page.getByLabel("Resultado").selectOption("allowed");
+      await page.getByRole("button", { name: "Aplicar filtros" }).click();
+      await page.getByRole("cell", { name: target, exact: true }).waitFor();
+      await page.waitForFunction(() => document.querySelectorAll('tbody tr').length === 1, null, { timeout: 45_000 });
+      assert.equal(await page.getByRole("row").count(), 2, "cabeçalho + exatamente um evento filtrado");
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.ok(overflow <= 1, `auditoria transborda ${overflow}px em 390px`);
+      await capture(page, "plt02-390-audit-filtrada");
+      const downloadWait = page.waitForEvent("download");
+      await page.getByRole("button", { name: "Baixar JSON auditado" }).click();
+      const download = await downloadWait;
+      assert.match(download.suggestedFilename(), /^auditoria-\d{4}-\d{2}-\d{2}\.json$/);
+      await page.getByRole("status").filter({ hasText: /Exportação preparada/ }).waitFor();
+      await context.close();
+    } finally { await browser.close(); }
+
+    if (evidenceDir) {
+      await mkdir(evidenceDir, { recursive: true });
+      await writeFile(path.join(evidenceDir, "resumo.json"), JSON.stringify({
+        stage: "PLT-02 · auditoria por autor/ação/objeto/período/resultado e exportação auditada",
+        generatedBy: "tests/ux-portal-workspace.integration.test.mjs (PostgreSQL 17 descartável + Chromium)",
+        route: "/admin/ti",
+        entries: [{ viewport: 390, theme: "day", estado: "consulta-filtrada-e-exportacao-ti", screenshot: "plt02-390-audit-filtrada.png", sobraDocumentoPx: 0, problems: [] }],
+        limits: ["Eventos sintéticos; não contêm dados reais.", "RH recebe 403 na API de consulta e exportação; TI realiza o fluxo.", "Sem aceite humano, UAT ou reauditoria integral; PLT-02 permanece a_revalidar e produção NO-GO."],
+      }, null, 2));
+    }
+  } finally {
+    await pool.query("DELETE FROM auth_access_audit WHERE target=$1 OR (actor_id=$2 AND action='audit_export' AND target LIKE 'export:%')", [target, ti.id]).catch(() => {});
+  }
+});
+
+// --- PLT-07: liveness, readiness e painel operacional por papel -----------
+test("browser UX-PRO-03 PLT-07: health, prontidão e fronteiras de papel", { skip: !RUN }, async () => {
+  const ti = await provisionStaff(pool, { role: "ti" });
+  const tiCookie = await loginStaffHttp(ti.email);
+
+  assert.equal((await api("/api/health/live")).status, 200, "liveness é público e não exige sessão");
+  const ready = await api("/api/health/ready");
+  assert.ok([200, 503].includes(ready.status), "readiness usa 503 somente quando o banco crítico não está pronto");
+  assert.equal(ready.body.ready, ready.status === 200);
+  assert.ok(Array.isArray(ready.body.checks));
+  assert.equal((await api("/api/admin/operational")).status, 401, "painel completo não é anônimo");
+  assert.equal((await api("/api/admin/operational", { cookie: rhCookie })).status, 403, "RH não acessa painel operacional");
+  assert.equal((await api("/api/admin/operational", { cookie: tiCookie })).status, 200, "TI acessa painel operacional");
+  assert.equal((await api("/api/admin/operational/history?limit=50")).status, 401, "histórico não é anônimo");
+  assert.equal((await api("/api/admin/operational/history?limit=50", { cookie: rhCookie })).status, 403, "RH não acessa histórico");
+  const history = await api("/api/admin/operational/history?limit=50", { cookie: tiCookie });
+  assert.equal(history.status, 200, "TI acessa histórico");
+
+  const evidenceEntries = [];
+  const recordEvidence = async (page, state, screenshot) => {
+    await capture(page, screenshot);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    evidenceEntries.push({ viewport: 390, theme: "day", estado: state, screenshot: evidenceDir ? `${screenshot}.png` : null, sobraDocumentoPx: overflow, problems: [] });
+    assert.ok(overflow <= 1, `PLT-07 transborda ${overflow}px em 390px (${state})`);
+  };
+  const browser = await launchBrowser();
+  try {
+    const { context, page } = await openPage(browser, "/admin/ti", tiCookie, { width: 390 });
+    await page.getByRole("button", { name: "Saúde do sistema" }).click();
+    await page.getByRole("heading", { name: "Saúde do sistema" }).waitFor();
+    await page.getByLabel("Tipo de consulta").selectOption("ready");
+    await page.getByRole("button", { name: "Consultar agora" }).click();
+    await page.getByRole("status").filter({ hasText: "Estado do serviço consultado." }).waitFor();
+    await page.getByText(/Saudável|Degradado/).first().waitFor();
+    await recordEvidence(page, "readiness-pronto-ou-degradado", "pl07-390-ready-day");
+    await page.getByRole("button", { name: "Consultar histórico" }).click();
+    await page.getByRole("status").filter({ hasText: "Histórico consultado." }).waitFor();
+    await recordEvidence(page, "historico-autorizado-ti", "pl07-390-history-day");
+    await context.close();
+  } finally { await browser.close(); }
+
+  const deniedBrowser = await launchBrowser();
+  try {
+    const { context, page } = await openPage(deniedBrowser, "/admin/ti", rhCookie, { width: 390 });
+    await page.locator('[data-admin-gate="forbidden"]').waitFor();
+    assert.equal(await page.getByRole("button", { name: "Saúde do sistema" }).count(), 0,
+      "RH não recebe navegação da área restrita de TI");
+    await recordEvidence(page, "rh-negado", "pl07-390-rh-denied");
+    await context.close();
+  } finally { await deniedBrowser.close(); }
+
+  if (evidenceDir) {
+    await mkdir(evidenceDir, { recursive: true });
+    await writeFile(path.join(evidenceDir, "resumo.json"), JSON.stringify({
+      stage: "PLT-07 · liveness, readiness, health operacional e histórico",
+      generatedBy: "tests/ux-portal-workspace.integration.test.mjs (PostgreSQL 17 descartável + Chromium)",
+      route: "/admin/ti",
+      entries: evidenceEntries,
+      limits: [
+        "Prontidão verificada contra banco descartável migrado; não simula falha real de infraestrutura neste cenário HTTP/browser.",
+        "A degradação sintética de fila/integrações/observabilidade é coberta pelo focal unitário, não pelo banco real.",
+        "Sem aceite humano, UAT ou reauditoria integral; PLT-07 permanece a_revalidar e produção NO-GO.",
+      ],
+    }, null, 2));
+  }
+});
+
 // --- 19ª promoção (PLT-03): catálogo de integrações e teste de conexão ------
 // Injeta negação SOMENTE na leitura do catálogo; o resto do tráfego é real.
 function plt03Injecao(cfg) {

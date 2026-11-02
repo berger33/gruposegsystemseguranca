@@ -1,0 +1,20 @@
+{
+  "stage": "PLT-02 · auditoria por autor/ação/objeto/período/resultado e exportação auditada",
+  "generatedBy": "tests/ux-portal-workspace.integration.test.mjs (PostgreSQL 17 descartável + Chromium)",
+  "route": "/admin/ti",
+  "entries": [
+    {
+      "viewport": 390,
+      "theme": "day",
+      "estado": "consulta-filtrada-e-exportacao-ti",
+      "screenshot": "plt02-390-audit-filtrada.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    }
+  ],
+  "limits": [
+    "Eventos sintéticos; não contêm dados reais.",
+    "RH recebe 403 na API de consulta e exportação; TI realiza o fluxo.",
+    "Sem aceite humano, UAT ou reauditoria integral; PLT-02 permanece a_revalidar e produção NO-GO."
+  ]
+}

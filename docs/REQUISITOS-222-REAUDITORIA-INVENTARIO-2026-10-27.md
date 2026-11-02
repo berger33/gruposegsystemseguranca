@@ -30,7 +30,7 @@ prova rota alguma. Workflows seguem **49**.
 
 ### Método
 
-Uma única passada por **1.681 arquivos** de `tests/`, `.github/workflows/`,
+Uma única passada por **1.685 arquivos** de `tests/`, `.github/workflows/`,
 `docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, a auditoria de 26/10, a
 fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
 meta-estado, não prova de requisito, e evitam auto-referência. De cada arquivo o gerador extrai todos os IDs com
@@ -43,8 +43,8 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 | Classe | Significado | IDs |
 |---|---|---|
 | `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **23** |
-| `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **122** |
-| `somente_documento` | só há citação em documentos | **77** |
+| `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **124** |
+| `somente_documento` | só há citação em documentos | **75** |
 | `somente_codigo` / `sem_evidencia_legivel` | — | **0** |
 
 > **Recontagem E23 (30/10/2026):** a tabela acima já não é a fotografia de 27/10
@@ -80,6 +80,13 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 > sem menção em gate cai de 20 para **18**. Aceite humano e reauditoria integral
 > seguem **0/222**.
 
+> **Recontagem E23 (01/11/2026, provas PLT-07 e PLT-02):** 23/124/75. O cenário
+> `browser UX-PRO-03 PLT-07` e a prova focal PLT-02 movem essas duas famílias de
+> `somente_documento` para `mencionado_em_gate`; ambas continuam `a_revalidar` e
+> com aceite/reauditoria `nao_registrado`/`nao_executada`. Dos 18 itens do núcleo
+> duro, 16 seguem sem menção em gate. O núcleo permanece 18 itens porque a
+> evidência citada não fecha requisito.
+>
 > **Aviso central:** "mencionado em gate" **não é prova de jornada**. Um ID pode
 > ser citado num assert de vocabulário e ainda assim não ter jornada, RBAC,
 > A/B, erro/vazio ou aceite. A classe só diz **onde procurar**.
@@ -93,7 +100,7 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 | `a_revalidar` (estado confirmado, 04/10) | **45** — a diferença de 1 é explícita, não corrigida |
 | `pronto_local` declarado | **164** |
 | `em_execucao` / `entregue` declarados | **6 / 6** |
-| **`a_revalidar` sem nenhuma menção em gate** | **18** |
+| **`a_revalidar` sem nenhuma menção em gate** | **16** |
 | Com aceite humano registrado | **0** |
 | Com reauditoria integral executada | **0** |
 
@@ -117,7 +124,7 @@ requisitos foram implementados/revalidados: o relatório SEC marca
 `aceite_humano=nao_registrado` e `reauditoria_integral=nao_executada` em todos os
 15. A classe textual indica somente que há evidência técnica mapeada.
 
-Entre os 46 `a_revalidar`, **28 têm alguma menção em gate**: `SEC-03`, `SEC-07`,
+Entre os 46 `a_revalidar`, **30 têm alguma menção em gate**: `PLT-02`, `PLT-07`, `SEC-03`, `SEC-07`,
 `SEC-10`…`SEC-15`, `CLI-01`, `CLI-02` e `CLI-03` (`gate_nomeado`), `CLI-05`…`CLI-10`,
 `PLT-03`, `PLT-10`, `PLT-11`, `PLT-13`, `PLT-14`, `PLT-15`, `PLT-16`…`PLT-18`,
 `EXT-06` e `EXT-09` (`gate_nomeado`). Isso **não** os torna revalidados: a menção é um ponto de

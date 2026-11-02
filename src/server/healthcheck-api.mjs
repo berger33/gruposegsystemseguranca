@@ -3,9 +3,9 @@ export function createHealthcheckApi({ json, getPool, readAdminSession, sameOrig
   function sanitizeError(err) {
     if (!err) return null;
     let msg = err instanceof Error ? err.message : String(err);
-    msg = msg.replace(/password[=:]\s*\S+/gi, 'password=[REDACTED]');
-    msg = msg.replace(/token[=:]\s*\S+/gi, 'token=[REDACTED]');
-    msg = msg.replace(/secret[=:]\s*\S+/gi, 'secret=[REDACTED]');
+    msg = msg.replace(/([a-z][a-z\d+.-]*:\/\/[^\s:/?#]+):[^\s/@?#]*@/gi, '$1:[REDACTED]@');
+    msg = msg.replace(/([?&](?:password|token|secret)=)[^&#\s]*/gi, '$1[REDACTED]');
+    msg = msg.replace(/\b(password|token|secret)[=:]\s*[^\s&]+/gi, '$1=[REDACTED]');
     return msg.slice(0, 1000);
   }
 
