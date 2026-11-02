@@ -25,7 +25,7 @@
 // Fronteiras deliberadas:
 //   - não é ator externo, integração regulatória nem SMTP: é um timer local;
 //   - exige `DATABASE_URL` (PostgreSQL real). Depois do E7 o modo PGlite da
-//     demo TEM o schema EXT-07 (migrações 001–182): o que falta lá não é
+//     demo TEM o schema EXT-07 (migrações 001–183): o que falta lá não é
 //     schema, é o executor — o PGlite é um banco embutido de escritor único por
 //     diretório, de modo que não há segundo processo para reivindicar o lease,
 //     e a demo não tem supervisor de processo para reiniciar o worker. Ligar o

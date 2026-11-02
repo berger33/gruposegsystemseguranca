@@ -308,3 +308,67 @@ test('PLT-06 superfície: gate nomeado sem promoção de tela nem borda legada d
   assert.ok(pkg.scripts['test:unit'].includes('tests/plt06-observability-read-contract.test.mjs'));
   assert.equal(pkg.scripts['test:plt06-observability:pg'], 'node scripts/qa-plt06-observability-postgres.mjs');
 });
+
+// A dívida medida pelo gate (a 103 reescreveu o CHECK a partir de uma cópia
+// literal e deixou cair as ações de 044/045/046) foi autorizada como fatia
+// própria e entrou como migração 183 aditiva. Esta guarda é hermética: prova a
+// forma do SQL e o encaixe no ledger, sem tocar em banco. A recusa e a aceitação
+// reais são medidas no gate de PostgreSQL (plt06-…integration.test.mjs).
+test('PLT-06/07/08: a migração 183 devolve as cinco ações que o CHECK da 103 recusava', async () => {
+  const ACOES = [
+    'observability_alert_ack', 'observability_alert_resolve',
+    'healthcheck_query', 'backup_status', 'backup_retention_update',
+  ];
+  const migration = await readFile(
+    new URL('../db/migrations/183-plt-audit-actions-check-widening.sql', import.meta.url), 'utf8');
+
+  for (const action of ACOES) {
+    assert.ok(migration.includes(`'${action}'`), `a 183 precisa nomear ${action}`);
+    assert.match(migration, new RegExp(`position\\(quote_literal\\('${action}'\\) IN previous_check\\) = 0`),
+      `${action} precisa estar na guarda de idempotência, para reexecutar sem duplicar`);
+  }
+  assert.equal(migration.split("NOT VALID'").length - 1, 1,
+    'o apêndice entra validado uma única vez, no EXECUTE — não pode haver segunda constraint');
+  assert.match(migration, /SELECT pg_get_expr\(conbin, conrelid\) INTO previous_check/,
+    'a ampliação parte da definição vigente, lida do catálogo');
+  assert.match(migration, /CHECK \(\(%s\) OR action IN \(%L,%L,%L,%L,%L\)\)/,
+    'a definição anterior é preservada por referência, não copiada');
+  // O defeito da 103 foi reescrever a lista a partir de uma cópia. Reeditar assim
+  // reintroduziria a perda, então a forma é afirmada em teste. As asserções de
+  // estrutura correm sobre o SQL sem prosa: comentário não é fato executável.
+  const sqlOnly = migration.split('\n').filter(line => !line.trim().startsWith('--')).join('\n');
+  assert.doesNotMatch(migration, /CHECK \(action IN \(/,
+    'a 183 não pode reescrever a lista literalmente — foi assim que a 103 perdeu as ações');
+  assert.doesNotMatch(sqlOnly, /\bCREATE\s+(TABLE|INDEX|TYPE|VIEW|TRIGGER|FUNCTION)\b/i,
+    'a 183 é só constraint: nenhuma tabela, índice ou tipo nasce aqui');
+  assert.doesNotMatch(sqlOnly, /\bDROP\s+(TABLE|INDEX|COLUMN|SCHEMA)\b/i,
+    'a 183 não pode derrubar estrutura nem dado');
+  assert.doesNotMatch(sqlOnly, /\bDELETE\s+FROM\b/i, 'a 183 não reescreve linhas existentes');
+  assert.equal(sqlOnly.split('ADD CONSTRAINT auth_access_audit_action_check').length - 1, 1,
+    'exatamente uma constraint reinstalada');
+  assert.equal(sqlOnly.split('DROP CONSTRAINT auth_access_audit_action_check').length - 1, 1,
+    'exatamente a constraint vigente substituída, nada além');
+
+  // Os cinco nomes são exatamente os que o código tenta gravar — a fatia não
+  // inventa ação nova nem promoce escrita: os gravadores continuam engolindo o
+  // erro, só que agora não há erro a engolir.
+  const healthSource = await readFile(new URL('../src/server/healthcheck-api.mjs', import.meta.url), 'utf8');
+  const backupSource = await readFile(new URL('../src/server/backup-api.mjs', import.meta.url), 'utf8');
+  const attempted = [
+    ...apiSource.matchAll(/INSERT INTO auth_access_audit[^;]*?'([a-z0-9_]+)'/g),
+    ...healthSource.matchAll(/INSERT INTO auth_access_audit[^;]*?'([a-z0-9_]+)'/g),
+    ...backupSource.matchAll(/INSERT INTO auth_access_audit[^;]*?'([a-z0-9_]+)'/g),
+  ].map(match => match[1]);
+  for (const action of ACOES) {
+    assert.ok(attempted.includes(action), `${action} precisa continuar sendo tentada pelo código`);
+  }
+
+  const migrator = await readFile(new URL('../scripts/migrate-site-visual.mjs', import.meta.url), 'utf8');
+  assert.match(migrator, /'183-plt-audit-actions-check-widening\.sql'/);
+  assert.match(migrator, /files\.length !== 183/);
+  assert.match(migrator, /001–183/);
+  const wave0 = await readFile(new URL('../scripts/qa-wave0-static.mjs', import.meta.url), 'utf8');
+  assert.match(wave0, /const latestMigration = 183;/);
+  const pglite = await readFile(new URL('../src/server/pglite-pool.mjs', import.meta.url), 'utf8');
+  assert.match(pglite, /001–183/, 'a demo PGlite não pode ficar declarando ledger velho');
+});

@@ -874,11 +874,11 @@ test("E16 gate do worker durável está declarado no package.json", async () => 
 test("E16 migração 182 entra no migrador PG, no wave0 e na demo PGlite", async () => {
   const migrator = await readRepo("scripts/migrate-site-visual.mjs");
   assert.match(migrator, /'182-plat-durable-jobs-ledger\.sql'/);
-  assert.match(migrator, /files\.length !== 182/);
-  assert.match(migrator, /001–182/);
+  assert.match(migrator, /files\.length !== 183/);
+  assert.match(migrator, /001–183/);
   const wave0 = await readRepo("scripts/qa-wave0-static.mjs");
-  assert.match(wave0, /const latestMigration = 182;/);
+  assert.match(wave0, /const latestMigration = 183;/);
   const pool = await readRepo("src/server/pglite-pool.mjs");
   assert.match(pool, /readdirSync\(directory\)/, "a demo aplica 182 sem lista à mão (herança do E7)");
-  assert.match(pool, /001–182/);
+  assert.match(pool, /001–183/);
 });

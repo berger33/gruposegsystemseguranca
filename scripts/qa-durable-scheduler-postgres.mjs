@@ -13,7 +13,7 @@
 //   4. falha permanente vira retry no teto do backoff, sem storm de erro.
 //
 // Nada de banco do operador: cluster `embedded-postgres` temporário, base
-// `seg_qa_e16…`, migrações oficiais 001–182, dados sintéticos `.invalid`.
+// `seg_qa_e16…`, migrações oficiais 001–183, dados sintéticos `.invalid`.
 // Saída: TAP do arquivo de integração + autoaudit (zero skip, zero fail).
 import EmbeddedPostgres from "embedded-postgres";
 import { spawn } from "node:child_process";

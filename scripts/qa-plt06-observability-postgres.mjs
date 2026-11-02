@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // PLT-06 — gate autoauditável de jornada/RBAC/evidência da observabilidade.
-// Cluster PostgreSQL 17 descartável (embedded-postgres), migrações 001–182,
+// Cluster PostgreSQL 17 descartável (embedded-postgres), migrações 001–183,
 // `server.mjs --dev` real, sessões staff reais ti/rh/admin e resumo TAP com
 // MINIMUM_CASES e zero skip/todo. Não toca banco do operador. Não prova aceite
 // humano, UAT, homologação integral nem produção.
