@@ -1,97 +1,325 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  CHANGEFREQ,
+  REDIRECT_TYPES,
+  REGRA_DESTINO,
+  VERIFICATION_METHODS,
+  classificarLista,
+  classificarPreviaSitemap,
+  situacaoPublicacao,
+  traduzirErroSeo,
+  validarConfig,
+  validarDominio,
+  validarRedirect,
+  type ResultadoLista,
+  type PreviaSitemap,
+} from "./seo-console-state";
+import styles from "./SeoClient.module.css";
+
+type Item = Record<string, any>;
+
+const FORM_CONFIG = { path: "", title: "", description: "", keywords: "", canonical_url: "", robots: "noindex, nofollow", sitemap_priority: "0.5", changefreq: "weekly", is_noindex: true };
+const FORM_REDIRECT = { old_path: "", new_path: "", redirect_type: "301", reason: "", is_active: true };
+const FORM_DOMINIO = { domain: "", verification_method: "dns_txt", verification_token: "" };
 
 export default function SeoClient() {
-  const [configs, setConfigs] = useState<any[]>([]);
-  const [redirects, setRedirects] = useState<any[]>([]);
-  const [sitemap, setSitemap] = useState<any[]>([]);
-  const [domains, setDomains] = useState<any[]>([]);
-  const [msg, setMsg] = useState("");
-  const [cfgForm, setCfgForm] = useState({ path:"", title:"", description:"", keywords:"", canonical_url:"", robots:"noindex, nofollow", sitemap_priority:0.5, changefreq:"weekly", is_noindex:true });
-  const [redirForm, setRedirForm] = useState({ old_path:"", new_path:"", redirect_type:"301", reason:"", is_active:true });
-  const [siteForm, setSiteForm] = useState({ url:"", priority:0.5, changefreq:"weekly", is_included:false, source:"manual" });
-  const [domForm, setDomForm] = useState({ domain:"", verification_method:"dns_txt", verification_token:"" });
+  const [configs, setConfigs] = useState<ResultadoLista | null>(null);
+  const [redirects, setRedirects] = useState<ResultadoLista | null>(null);
+  const [dominios, setDominios] = useState<ResultadoLista | null>(null);
+  const [sitemap, setSitemap] = useState<PreviaSitemap | null>(null);
+  const [hora, setHora] = useState("");
+  const [lendo, setLendo] = useState(true);
+  const [cfgForm, setCfgForm] = useState(FORM_CONFIG);
+  const [redForm, setRedForm] = useState(FORM_REDIRECT);
+  const [domForm, setDomForm] = useState(FORM_DOMINIO);
+  const [erros, setErros] = useState<Record<string, string>>({});
+  const [ok, setOk] = useState("");
+  const [erro, setErro] = useState("");
+  const [gravando, setGravando] = useState("");
+  const sequencia = useRef(0);
 
-  const load = async () => {
-    try{
-      const [cR, rR, sR, dR] = await Promise.all([
-        fetch("/api/admin/seo-configs").then(r=>r.json()).catch(()=>({items:[]})),
-        fetch("/api/admin/seo-redirects").then(r=>r.json()).catch(()=>({items:[]})),
-        fetch("/api/admin/seo-sitemap").then(r=>r.json()).catch(()=>({items:[]})),
-        fetch("/api/admin/domain-verifications").then(r=>r.json()).catch(()=>({items:[]})),
-      ]);
-      setConfigs(cR.items||[]); setRedirects(rR.items||[]); setSitemap(sR.items||[]); setDomains(dR.items||[]);
-    } catch(e:any){ setMsg(String(e.message||e)); }
-  };
-  useEffect(()=>{ load(); },[]);
+  async function carregar() {
+    const atual = ++sequencia.current;
+    setLendo(true);
+    const ler = async (rota: string, rotulo: string) => {
+      try {
+        const resposta = await fetch(rota, { headers: { Accept: "application/json" } });
+        const corpo = await resposta.json().catch(() => undefined);
+        return classificarLista(resposta.status, corpo, rotulo);
+      } catch {
+        return classificarLista(0, undefined, rotulo);
+      }
+    };
+    const [configsLidas, redirectsLidos, dominiosLidos, previa] = await Promise.all([
+      ler("/api/admin/seo-configs", "configurações de SEO"),
+      ler("/api/admin/seo-redirects", "redirecionamentos"),
+      ler("/api/admin/domain-verifications", "domínios"),
+      (async () => {
+        try {
+          const resposta = await fetch("/api/admin/seo-sitemap", { headers: { Accept: "application/json" } });
+          const corpo = await resposta.json().catch(() => undefined);
+          return classificarPreviaSitemap(resposta.status, corpo);
+        } catch {
+          return classificarPreviaSitemap(0, undefined);
+        }
+      })(),
+    ]);
+    if (atual !== sequencia.current) return;
+    setConfigs(configsLidas);
+    setRedirects(redirectsLidos);
+    setDominios(dominiosLidos);
+    setSitemap(previa);
+    const agora = new Date();
+    setHora(`${String(agora.getHours()).padStart(2, "0")}:${String(agora.getMinutes()).padStart(2, "0")}`);
+    setLendo(false);
+  }
+  useEffect(() => { void carregar(); }, []);
 
-  const post = async (url:string, body:any, method="POST") => {
-    const r = await fetch(url, { method, headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
-    const j = await r.json();
-    if(!r.ok) throw new Error(j.error||"erro");
-    return j;
+  async function gravar(rotulo: string, url: string, method: string, body: unknown, sucesso: string) {
+    setGravando(rotulo); setOk(""); setErro("");
+    try {
+      const resposta = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const dados = await resposta.json().catch(() => ({}));
+      if (!resposta.ok) {
+        setErro(traduzirErroSeo(resposta.status, typeof dados?.error === "string" ? dados.error : ""));
+        return false;
+      }
+      setOk(sucesso);
+      await carregar();
+      return true;
+    } catch {
+      setErro("Falha de comunicação: nada foi confirmado. Tente novamente.");
+      return false;
+    } finally {
+      setGravando("");
+    }
+  }
+
+  function criarConfig() {
+    const validado = validarConfig(cfgForm);
+    setErros(validado.erros);
+    if (!validado.ok || !validado.payload) { setOk(""); setErro(""); return; }
+    void gravar("config", "/api/admin/seo-configs", "POST", validado.payload,
+      `Configuração de ${String(validado.payload.path)} criada com noindex preservado — nada foi publicado.`)
+      .then(criado => { if (criado) setCfgForm(FORM_CONFIG); });
+  }
+
+  function criarRedirect() {
+    const validado = validarRedirect(redForm);
+    setErros(validado.erros);
+    if (!validado.ok || !validado.payload) { setOk(""); setErro(""); return; }
+    void gravar("redirect", "/api/admin/seo-redirects", "POST", validado.payload,
+      `Redirecionamento ${String(validado.payload.old_path)} → ${String(validado.payload.new_path)} registrado.`)
+      .then(criado => { if (criado) setRedForm(FORM_REDIRECT); });
+  }
+
+  function criarDominio() {
+    const validado = validarDominio(domForm);
+    setErros(validado.erros);
+    if (!validado.ok || !validado.payload) { setOk(""); setErro(""); return; }
+    void gravar("dominio", "/api/admin/domain-verifications", "POST", validado.payload,
+      `Domínio ${String(validado.payload.domain)} registrado como pendente. Verificação real não é executável nesta entrega.`)
+      .then(criado => { if (criado) setDomForm(FORM_DOMINIO); });
+  }
+
+  const publicacao = situacaoPublicacao(dominios?.itens ?? []);
+  const itensConfigs = configs?.itens ?? [];
+  const itensRedirects = redirects?.itens ?? [];
+  const itensDominios = dominios?.itens ?? [];
+  const bloqueado = gravando !== "";
+
+  const estado = (resultado: ResultadoLista | null, chave: string) => {
+    if (!resultado || resultado.situacao === "ok") return null;
+    return (
+      <p className={styles.stateNote} data-testid={`seo-estado-${chave}`} data-situacao={resultado.situacao}>
+        {resultado.mensagem}
+      </p>
+    );
   };
 
   return (
-    <section style={{marginTop:32, padding:16, border:"1px solid #ccc", borderRadius:8}}>
-      <h2>PUB-08 SEO técnico títulos sitemap redirects verificação domínio noindex preservado não produtivo</h2>
-      {msg && <p style={{color:"red"}}>{msg}</p>}
+    <section className={styles.page} data-testid="seo">
+      <header className={styles.head}>
+        <div>
+          <span className={styles.eyebrow}>PUB-08 · SEO TÉCNICO E DOMÍNIOS</span>
+          <h2>SEO e domínios</h2>
+          <p className={styles.lead}>
+            Títulos, descrição, canônica, robots, prioridade de sitemap, redirecionamentos e verificação de domínio.
+            <strong> Noindex é preservado</strong>: nesta entrega nada é publicado — a verificação real de domínio exige
+            DNS/HTTP, que não são executáveis localmente, e o servidor recusa declarar um domínio como verificado.
+          </p>
+        </div>
+        <div className={styles.readBox}>
+          <span className={styles.stamp} data-testid="seo-hora">{hora ? `Lido às ${hora}` : "Lendo…"}</span>
+          <button type="button" className={styles.retry} onClick={() => void carregar()} disabled={lendo} aria-busy={lendo}>
+            {lendo ? "Atualizando…" : "Atualizar"}
+          </button>
+        </div>
+      </header>
 
-      <h3>SEO configs (path 1..500 UNIQUE, title 5..200, desc 10..500, keywords, robots 5..200, og, priority 0..1, changefreq, is_noindex true por padrão preservar noindex não produtivo, is_published — publicar só após verificação domínio aprovação)</h3>
-      <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
-        <input placeholder="path 1..500 ex /servicos" value={cfgForm.path} onChange={e=>setCfgForm({...cfgForm, path:e.target.value})} />
-        <input placeholder="title 5..200" value={cfgForm.title} onChange={e=>setCfgForm({...cfgForm, title:e.target.value})} />
-        <input placeholder="description 10..500" value={cfgForm.description} onChange={e=>setCfgForm({...cfgForm, description:e.target.value})} />
-        <input placeholder="keywords vírgula" value={cfgForm.keywords} onChange={e=>setCfgForm({...cfgForm, keywords:e.target.value})} />
-        <input placeholder="canonical_url 5..1000" value={cfgForm.canonical_url} onChange={e=>setCfgForm({...cfgForm, canonical_url:e.target.value})} />
-        <input placeholder="robots 5..200 ex noindex, nofollow" value={cfgForm.robots} onChange={e=>setCfgForm({...cfgForm, robots:e.target.value})} />
-        <input type="number" step="0.1" min="0" max="1" placeholder="priority 0..1" value={cfgForm.sitemap_priority} onChange={e=>setCfgForm({...cfgForm, sitemap_priority:Number(e.target.value)})} />
-        <select value={cfgForm.changefreq} onChange={e=>setCfgForm({...cfgForm, changefreq:e.target.value})}>
-          <option value="always">always</option><option value="hourly">hourly</option><option value="daily">daily</option><option value="weekly">weekly</option><option value="monthly">monthly</option><option value="yearly">yearly</option><option value="never">never</option>
-        </select>
-        <label><input type="checkbox" checked={cfgForm.is_noindex} onChange={e=>setCfgForm({...cfgForm, is_noindex:e.target.checked})} /> noindex (preservar não produtivo)</label>
-        <button onClick={async()=>{ try{ const keywords=cfgForm.keywords.split(",").map((k:string)=>k.trim()).filter(Boolean); await post("/api/admin/seo-configs", {...cfgForm, keywords}); setMsg("SEO config criado noindex preservado"); load(); } catch(e:any){ setMsg(e.message);} }}>Criar SEO config</button>
-      </div>
-      <ul>{configs.map((c:any)=><li key={c.id}>{c.path} title:{c.title} robots:{c.robots} noindex:{String(c.is_noindex)} pub:{String(c.is_published)} prio:{c.sitemap_priority} freq:{c.changefreq} v{c.version} <button onClick={async()=>{ try{ await post("/api/admin/seo-configs", {id:c.id, title:c.title, description:c.description, robots:c.robots, is_noindex:c.is_noindex, is_published:false}, "PATCH"); setMsg("mantido noindex não produtivo"); load(); } catch(e:any){ setMsg(e.message);} }}>Manter noindex</button> <button onClick={async()=>{ try{ const domain=domains.find((d:any)=>d.status==="verificado"); if(!domain){ setMsg("verificação domínio pendente — não pode publicar com noindex false até verificado"); return; } await post("/api/admin/seo-configs", {id:c.id, is_noindex:false, is_published:true}, "PATCH"); setMsg("publicado após verificação domínio"); load(); } catch(e:any){ setMsg(e.message);} }}>Publicar (requer domínio verificado)</button></li>)}</ul>
+      <p className={styles.notice} data-testid="seo-publicacao" data-permitido={publicacao.permitido ? "sim" : "nao"}>
+        {publicacao.permitido ? "Há domínio verificado: publicar continua exigindo aprovação." : publicacao.motivo}
+      </p>
 
-      <h3>Redirects (old_path 1..500 UNIQUE, new_path 1..500, type 301/302/307/308, is_active, hits, reason 10..1000, old≠new)</h3>
-      <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
-        <input placeholder="old_path" value={redirForm.old_path} onChange={e=>setRedirForm({...redirForm, old_path:e.target.value})} />
-        <input placeholder="new_path" value={redirForm.new_path} onChange={e=>setRedirForm({...redirForm, new_path:e.target.value})} />
-        <select value={redirForm.redirect_type} onChange={e=>setRedirForm({...redirForm, redirect_type:e.target.value})}>
-          <option value="301">301</option><option value="302">302</option><option value="307">307</option><option value="308">308</option>
-        </select>
-        <input placeholder="reason 10..1000" value={redirForm.reason} onChange={e=>setRedirForm({...redirForm, reason:e.target.value})} />
-        <label><input type="checkbox" checked={redirForm.is_active} onChange={e=>setRedirForm({...redirForm, is_active:e.target.checked})} /> ativo</label>
-        <button onClick={async()=>{ try{ await post("/api/admin/seo-redirects", redirForm); setMsg("redirect criado"); load(); } catch(e:any){ setMsg(e.message);} }}>Criar redirect</button>
-      </div>
-      <ul>{redirects.map((r:any)=><li key={r.id}>{r.old_path} → {r.new_path} {r.redirect_type} ativo:{String(r.is_active)} hits:{r.hits} reason:{r.reason?.slice(0,60)}</li>)}</ul>
+      {ok && <p className={styles.ok} role="status" data-testid="seo-ok">{ok}</p>}
+      {erro && (
+        <p className={styles.alert} role="alert" data-testid="seo-erro">
+          {erro} <button type="button" className={styles.link} onClick={() => setErro("")}>Fechar</button>
+        </p>
+      )}
 
-      <h3>Sitemap entries (url 5..1000 UNIQUE, lastmod, priority 0..1, changefreq, is_included bool — só incluir quando publicado e noindex false, rebuild a partir de seo_configs)</h3>
-      <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
-        <input placeholder="url 5..1000" value={siteForm.url} onChange={e=>setSiteForm({...siteForm, url:e.target.value})} />
-        <input type="number" step="0.1" min="0" max="1" placeholder="priority" value={siteForm.priority} onChange={e=>setSiteForm({...siteForm, priority:Number(e.target.value)})} />
-        <select value={siteForm.changefreq} onChange={e=>setSiteForm({...siteForm, changefreq:e.target.value})}>
-          <option value="always">always</option><option value="hourly">hourly</option><option value="daily">daily</option><option value="weekly">weekly</option><option value="monthly">monthly</option><option value="yearly">yearly</option><option value="never">never</option>
-        </select>
-        <label><input type="checkbox" checked={siteForm.is_included} onChange={e=>setSiteForm({...siteForm, is_included:e.target.checked})} /> incluir (só se noindex false)</label>
-        <input placeholder="source" value={siteForm.source} onChange={e=>setSiteForm({...siteForm, source:e.target.value})} />
-        <button onClick={async()=>{ try{ await post("/api/admin/seo-sitemap", siteForm); setMsg("sitemap entry criado"); load(); } catch(e:any){ setMsg(e.message);} }}>Criar sitemap entry</button>
-        <button onClick={async()=>{ try{ const j=await post("/api/admin/seo-sitemap", {action:"rebuild"}); setMsg(`sitemap rebuild ${j.rebuilt} a partir de seo_configs publicados noindex false`); load(); } catch(e:any){ setMsg(e.message);} }}>Rebuild a partir de configs publicados</button>
-        <button onClick={async()=>{ try{ window.open("/api/seo-sitemap?format=xml","_blank"); } catch(e:any){ setMsg(e.message);} }}>Ver sitemap.xml público (só incluídos)</button>
-      </div>
-      <ul>{sitemap.map((s:any)=><li key={s.id}>{s.url} prio:{s.priority} freq:{s.changefreq} inc:{String(s.is_included)} src:{s.source} lastmod:{s.lastmod}</li>)}</ul>
+      <div className={styles.grid}>
+        <article className={styles.card} data-testid="seo-card-configs">
+          <h3>Configurações por caminho</h3>
+          {estado(configs, "configs")}
+          <div className={styles.form}>
+            <label className={styles.field}>Caminho
+              <input aria-label="caminho" value={cfgForm.path} placeholder="/servicos" onChange={e => setCfgForm({ ...cfgForm, path: e.target.value })} />
+              {erros.path && <small className={styles.err}>{erros.path}</small>}
+            </label>
+            <label className={styles.field}>Título (5..200)
+              <input aria-label="título SEO" value={cfgForm.title} onChange={e => setCfgForm({ ...cfgForm, title: e.target.value })} />
+              {erros.title && <small className={styles.err}>{erros.title}</small>}
+            </label>
+            <label className={styles.field}>Descrição (10..500)
+              <input aria-label="descrição SEO" value={cfgForm.description} onChange={e => setCfgForm({ ...cfgForm, description: e.target.value })} />
+              {erros.description && <small className={styles.err}>{erros.description}</small>}
+            </label>
+            <label className={styles.field}>Palavras-chave (vírgula)
+              <input aria-label="palavras-chave" value={cfgForm.keywords} onChange={e => setCfgForm({ ...cfgForm, keywords: e.target.value })} />
+            </label>
+            <label className={styles.field}>URL canônica
+              <input aria-label="URL canônica" value={cfgForm.canonical_url} onChange={e => setCfgForm({ ...cfgForm, canonical_url: e.target.value })} />
+              {erros.canonical_url && <small className={styles.err}>{erros.canonical_url}</small>}
+            </label>
+            <label className={styles.field}>Robots
+              <input aria-label="robots" value={cfgForm.robots} onChange={e => setCfgForm({ ...cfgForm, robots: e.target.value })} />
+              {erros.robots && <small className={styles.err}>{erros.robots}</small>}
+            </label>
+            <label className={styles.field}>Prioridade (0..1)
+              <input aria-label="prioridade" value={cfgForm.sitemap_priority} onChange={e => setCfgForm({ ...cfgForm, sitemap_priority: e.target.value })} />
+              {erros.sitemap_priority && <small className={styles.err}>{erros.sitemap_priority}</small>}
+            </label>
+            <label className={styles.field}>Frequência
+              <select aria-label="frequência" value={cfgForm.changefreq} onChange={e => setCfgForm({ ...cfgForm, changefreq: e.target.value })}>
+                {CHANGEFREQ.map(item => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </label>
+            <button type="button" onClick={criarConfig} disabled={bloqueado}>{gravando === "config" ? "Gravando…" : "Criar configuração (noindex)"}</button>
+          </div>
+          <ul className={styles.list} data-testid="seo-lista-configs">
+            {itensConfigs.map((item: Item) => (
+              <li key={item.id} data-testid={`seo-config-${item.path}`}>
+                <strong>{item.path}</strong>
+                <span>{item.title}</span>
+                <span>robots: {item.robots}</span>
+                <span className={styles.badge} data-noindex={String(Boolean(item.is_noindex))}>
+                  {item.is_noindex ? "noindex" : "indexável"}
+                </span>
+                <span>{item.is_published ? "publicado" : "não publicado"}</span>
+                <button
+                  type="button"
+                  className={styles.link}
+                  data-testid={`seo-manter-${item.path}`}
+                  disabled={bloqueado}
+                  onClick={() => void gravar(`noindex-${item.id}`, "/api/admin/seo-configs", "PATCH",
+                    { id: item.id, title: item.title, description: item.description, robots: item.robots, is_noindex: true, is_published: false },
+                    `${item.path} mantido com noindex e não publicado.`)}
+                >
+                  manter noindex
+                </button>
+              </li>
+            ))}
+          </ul>
+        </article>
 
-      <h3>Domínio verificação (domain 3..200 UNIQUE, método dns_txt/file/meta_tag/outro, token 10..500, status pendente/verificado/falha/expirado, verified_at, na liberação)</h3>
-      <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
-        <input placeholder="domain ex gruposegsystem.com.br" value={domForm.domain} onChange={e=>setDomForm({...domForm, domain:e.target.value})} />
-        <select value={domForm.verification_method} onChange={e=>setDomForm({...domForm, verification_method:e.target.value})}>
-          <option value="dns_txt">dns_txt</option><option value="file">file</option><option value="meta_tag">meta_tag</option><option value="outro">outro</option>
-        </select>
-        <input placeholder="token 10..500" value={domForm.verification_token} onChange={e=>setDomForm({...domForm, verification_token:e.target.value})} />
-        <button onClick={async()=>{ try{ await post("/api/admin/domain-verifications", domForm); setMsg("domínio verificação criado pendente"); load(); } catch(e:any){ setMsg(e.message);} }}>Criar verificação domínio</button>
+        <article className={styles.card} data-testid="seo-card-redirects">
+          <h3>Redirecionamentos</h3>
+          {estado(redirects, "redirects")}
+          <div className={styles.form}>
+            <label className={styles.field}>De
+              <input aria-label="origem" value={redForm.old_path} placeholder="/servico-antigo" onChange={e => setRedForm({ ...redForm, old_path: e.target.value })} />
+              {erros.old_path && <small className={styles.err}>{erros.old_path}</small>}
+            </label>
+            <label className={styles.field}>Para
+              <input aria-label="destino" value={redForm.new_path} placeholder="/servicos" onChange={e => setRedForm({ ...redForm, new_path: e.target.value })} />
+              {erros.new_path && <small className={styles.err}>{erros.new_path}</small>}
+            </label>
+            <label className={styles.field}>Tipo
+              <select aria-label="tipo de redirecionamento" value={redForm.redirect_type} onChange={e => setRedForm({ ...redForm, redirect_type: e.target.value })}>
+                {REDIRECT_TYPES.map(item => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </label>
+            <label className={styles.field}>Motivo (10..1000)
+              <input aria-label="motivo do redirecionamento" value={redForm.reason} onChange={e => setRedForm({ ...redForm, reason: e.target.value })} />
+              {erros.reason && <small className={styles.err}>{erros.reason}</small>}
+            </label>
+            <p className={styles.hint} data-testid="seo-regra-destino">{REGRA_DESTINO}</p>
+            <button type="button" onClick={criarRedirect} disabled={bloqueado}>{gravando === "redirect" ? "Gravando…" : "Criar redirecionamento"}</button>
+          </div>
+          <ul className={styles.list} data-testid="seo-lista-redirects">
+            {itensRedirects.map((item: Item) => (
+              <li key={item.id}>
+                <strong>{item.old_path}</strong> → <span>{item.new_path}</span>
+                <span>{item.redirect_type}</span>
+                <span>{item.is_active ? "ativo" : "inativo"}</span>
+                <span>{item.hits ?? 0} hit(s)</span>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article className={styles.card} data-testid="seo-card-sitemap">
+          <h3>Prévia do sitemap</h3>
+          <p className={styles.hint}>Leitura derivada do catálogo público. Não há loja de linhas: POST nesta rota devolve 405.</p>
+          {sitemap && sitemap.situacao !== "ok" && (
+            <p className={styles.stateNote} data-testid="seo-estado-sitemap" data-situacao={sitemap.situacao}>{sitemap.mensagem}</p>
+          )}
+          {sitemap && sitemap.situacao === "ok" && (
+            <div data-testid="seo-sitemap" data-liberado={sitemap.liberado ? "sim" : "nao"}>
+              <p className={styles.detailHead}>{sitemap.mensagem}</p>
+              <p className={styles.hint}>origem: {sitemap.origem || "—"} · {sitemap.caminhos.length} caminho(s)</p>
+              <pre className={styles.pre} aria-label="prévia do robots.txt">{sitemap.robots}</pre>
+              <p className={styles.hint}>{sitemap.nota}</p>
+            </div>
+          )}
+        </article>
+
+        <article className={styles.card} data-testid="seo-card-dominios">
+          <h3>Verificação de domínio</h3>
+          <p className={styles.hint}>Cadastrar deixa o domínio <strong>pendente</strong>. Declarar verificado é recusado pelo servidor nesta entrega.</p>
+          {estado(dominios, "dominios")}
+          <div className={styles.form}>
+            <label className={styles.field}>Domínio
+              <input aria-label="domínio" value={domForm.domain} placeholder="www.exemplo.com.br" onChange={e => setDomForm({ ...domForm, domain: e.target.value })} />
+              {erros.domain && <small className={styles.err}>{erros.domain}</small>}
+            </label>
+            <label className={styles.field}>Método
+              <select aria-label="método de verificação" value={domForm.verification_method} onChange={e => setDomForm({ ...domForm, verification_method: e.target.value })}>
+                {VERIFICATION_METHODS.map(item => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </label>
+            <label className={styles.field}>Token (10..500)
+              <input aria-label="token de verificação" value={domForm.verification_token} onChange={e => setDomForm({ ...domForm, verification_token: e.target.value })} />
+              {erros.verification_token && <small className={styles.err}>{erros.verification_token}</small>}
+            </label>
+            <button type="button" onClick={criarDominio} disabled={bloqueado}>{gravando === "dominio" ? "Gravando…" : "Registrar domínio pendente"}</button>
+          </div>
+          <ul className={styles.list} data-testid="seo-lista-dominios">
+            {itensDominios.map((item: Item) => (
+              <li key={item.id}>
+                <strong>{item.domain}</strong>
+                <span>{item.verification_method}</span>
+                <span className={styles.badge} data-status={item.status}>{item.status}</span>
+              </li>
+            ))}
+          </ul>
+        </article>
       </div>
-      <ul>{domains.map((d:any)=><li key={d.id}>{d.domain} método:{d.verification_method} status:{d.status} token:{d.verification_token?.substring(0,20)} verif:{d.verified_at} <button onClick={async()=>{ try{ await post("/api/admin/domain-verifications", {id:d.id, status:"verificado"}, "PATCH"); setMsg("domínio verificado — pode liberar produção remover noindex"); load(); } catch(e:any){ setMsg(e.message);} }}>Marcar verificado</button></li>)}</ul>
+      <p className={styles.foot}>
+        {lendo ? "Lendo…" : `Configurações ${itensConfigs.length} · redirecionamentos ${itensRedirects.length} · domínios ${itensDominios.length}. Nenhuma publicação é confirmada sem resposta do servidor.`}
+      </p>
     </section>
   );
 }

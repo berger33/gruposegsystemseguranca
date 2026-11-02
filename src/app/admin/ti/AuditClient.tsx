@@ -19,10 +19,13 @@ type Audit = {
 
 const ERROR_LABELS: Record<string, string> = {
   admin_session_required: "Entre novamente para consultar a auditoria.",
+  audit_access_restricted: "A consulta e a exportação estão restritas aos perfis TI e Administração.",
   same_origin_required: "A solicitação foi recusada pela proteção de origem.",
   audit_unavailable: "A auditoria está temporariamente indisponível. Tente novamente.",
   audit_export_unavailable: "Não foi possível preparar a exportação. Tente novamente.",
   database_not_configured: "O banco de dados não está configurado neste ambiente.",
+  invalid_actor_id: "Informe um identificador de responsável válido (até 200 caracteres).",
+  invalid_target: "Informe um objeto ou alvo válido (até 500 caracteres).",
 };
 
 function errorLabel(error: unknown) {
@@ -38,7 +41,7 @@ function dateLabel(value: string) {
 export default function AuditClient() {
   const [audits, setAudits] = useState<Audit[]>([]);
   const [total, setTotal] = useState<number | null>(null);
-  const [filters, setFilters] = useState({ action: "", result: "", actorKind: "", from: "", to: "" });
+  const [filters, setFilters] = useState({ action: "", result: "", actorKind: "", actorId: "", target: "", from: "", to: "" });
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState("");
@@ -54,6 +57,8 @@ export default function AuditClient() {
       if (filters.action) params.set("action", filters.action);
       if (filters.result) params.set("result", filters.result);
       if (filters.actorKind) params.set("actorKind", filters.actorKind);
+      if (filters.actorId) params.set("actorId", filters.actorId);
+      if (filters.target) params.set("target", filters.target);
       if (filters.from) params.set("from", filters.from);
       if (filters.to) params.set("to", filters.to);
       params.set("limit", "100");
@@ -126,6 +131,8 @@ export default function AuditClient() {
           </select>
         </label>
         <UiField id="audit-actor" label="Tipo de responsável" hint="Ex.: staff, ti, rh" value={filters.actorKind} onChange={e => setFilters({ ...filters, actorKind: e.target.value })} />
+        <UiField id="audit-actor-id" label="ID do responsável" hint="Identidade que originou o evento" value={filters.actorId} onChange={e => setFilters({ ...filters, actorId: e.target.value })} />
+        <UiField id="audit-target" label="Objeto / alvo" hint="ID ou referência exata do recurso" value={filters.target} onChange={e => setFilters({ ...filters, target: e.target.value })} />
         <UiField id="audit-from" label="Data inicial" type="date" value={filters.from} onChange={e => setFilters({ ...filters, from: e.target.value })} />
         <UiField id="audit-to" label="Data final" type="date" value={filters.to} onChange={e => setFilters({ ...filters, to: e.target.value })} />
         <div className={styles.actions}>

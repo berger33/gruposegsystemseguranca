@@ -1,0 +1,98 @@
+{
+  "stage": "ux-pro-06-metricas-origem",
+  "generatedBy": "npm run test:ux-crm:pg; UX_METRICS_EVIDENCE_DIR; massa sintética; sem aceite humano",
+  "route": "/admin/leads",
+  "fatia": "UX-PRO-06 — mensuração de origem (PUB-10)",
+  "entries": [
+    {
+      "stage": "ux-pro-06-metricas-origem",
+      "route": "/admin/leads",
+      "role": "comercial/admin (sintéticos)",
+      "viewport": "1440x900",
+      "theme": "dia",
+      "estado": "releitura-503-preservada",
+      "screenshot": "docs/ux-pro-06-metricas-origem-evidencias/metricas-1440-desatualizada.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-metricas-origem",
+      "route": "/admin/leads",
+      "role": "comercial/admin (sintéticos)",
+      "viewport": "320x844",
+      "theme": "dia",
+      "estado": "leitura-concluida",
+      "screenshot": "docs/ux-pro-06-metricas-origem-evidencias/metricas-320.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-metricas-origem",
+      "route": "/admin/leads",
+      "role": "comercial/admin (sintéticos)",
+      "viewport": "390x844",
+      "theme": "dia",
+      "estado": "leitura-concluida",
+      "screenshot": "docs/ux-pro-06-metricas-origem-evidencias/metricas-390.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-metricas-origem",
+      "route": "/admin/leads",
+      "role": "comercial/admin (sintéticos)",
+      "viewport": "768x1024",
+      "theme": "dia",
+      "estado": "leitura-concluida",
+      "screenshot": "docs/ux-pro-06-metricas-origem-evidencias/metricas-768.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-metricas-origem",
+      "route": "/admin/leads",
+      "role": "comercial/admin (sintéticos)",
+      "viewport": "1440x900",
+      "theme": "dia",
+      "estado": "leitura-concluida",
+      "screenshot": "docs/ux-pro-06-metricas-origem-evidencias/metricas-1440.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-metricas-origem",
+      "route": "/admin/leads",
+      "role": "comercial/admin (sintéticos)",
+      "viewport": "1440x900",
+      "theme": "noite",
+      "estado": "leitura-concluida",
+      "screenshot": "docs/ux-pro-06-metricas-origem-evidencias/metricas-1440-noite.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-metricas-origem",
+      "route": "/admin/leads",
+      "role": "admin (sintético)",
+      "viewport": "1440x900",
+      "theme": "dia",
+      "estado": "teclado",
+      "screenshot": null,
+      "problems": [],
+      "firstFocus": true,
+      "percursoTeclado": [
+        "metrics-from",
+        "metrics-to",
+        "metrics-to",
+        "metrics-to",
+        "metrics-to",
+        "Recalcular mensuração de origem",
+        "origin-metrics-retry"
+      ]
+    }
+  ],
+  "limites": [
+    "Medição automatizada por Chromium em cluster descartável; não é aceite humano, UAT nem homologação.",
+    "O agregado do servidor continua provado pelo gate L04 (PUB-10); esta fatia prova o estado de leitura da tela."
+  ]
+}

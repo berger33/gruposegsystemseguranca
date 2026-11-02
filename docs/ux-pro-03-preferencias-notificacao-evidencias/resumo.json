@@ -1,0 +1,95 @@
+{
+  "stage": "UX-PRO-03 · PLT-05 · Preferências e modelos de notificação na aba do TiConsole (/admin/ti)",
+  "generatedBy": "tests/ux-portal-workspace.integration.test.mjs (gate do portal, PostgreSQL 17 descartável + Chromium)",
+  "route": "/admin/ti",
+  "fatia": "16ª promoção com prova — NotificationPreferencesClient deixa de ser órfão",
+  "entries": [
+    {
+      "viewport": 320,
+      "theme": "day",
+      "estado": "autorizado",
+      "screenshot": "plt-320-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 390,
+      "theme": "day",
+      "estado": "autorizado",
+      "screenshot": "plt-390-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "autorizado",
+      "screenshot": "plt-1440-day.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "night",
+      "estado": "autorizado",
+      "screenshot": "plt-1440-night.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "modelo-criado",
+      "screenshot": "plt-1440-day-modelo.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "modelo-recusado",
+      "screenshot": "plt-1440-day-modelo-recusado.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "modelo-rejeitado",
+      "screenshot": "plt-1440-day-modelo-rejeitado.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "preferencia-gravada",
+      "screenshot": "plt-1440-day-preferencia.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "negado",
+      "screenshot": "plt-1440-day-negado.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    },
+    {
+      "viewport": 1440,
+      "theme": "day",
+      "estado": "papel-negado",
+      "screenshot": "plt-1440-day-rh.png",
+      "sobraDocumentoPx": 0,
+      "problems": []
+    }
+  ],
+  "limites": [
+    "A aba exige sessão administrativa; papel rh abre o console mas não escreve aprovação — o servidor responde 403 e a tela declara.",
+    "Aprovar modelo com informação médica é recusado com 409: o conteúdo continua gravado, apenas não pode ser aprovado.",
+    "Sem envio real de e-mail, WhatsApp, SMS ou push: esta fatia promove preferências e modelos, não a entrega.",
+    "Sem aceite humano, sem homologação e sem UAT: produção NO-GO e 0/222.",
+    "Sem leitor de tela e sem Windows: teclado, foco e contraste medidos só no Chromium empacotado."
+  ]
+}

@@ -1,3 +1,5 @@
+import { sanitizeDependencyError } from './observability-read-contract.mjs';
+
 export function createObservability({ getPool } = {}) {
   const metrics = {
     http_requests_total: 0,
@@ -18,9 +20,9 @@ export function createObservability({ getPool } = {}) {
   const alerts = [];
 
   function sanitizeError(err) {
-    if (!err) return null;
-    const s = String(err).slice(0, 500);
-    return s.replace(/password|secret|token|key/gi, '[redacted]');
+    // PLT-06: a mesma sanitização usada nas respostas de dependência do
+    // readiness/API; não basta trocar palavras soltas e deixar a senha da URI.
+    return sanitizeDependencyError(err);
   }
   function parseQueryType(q) {
     if (!q) return 'unknown';

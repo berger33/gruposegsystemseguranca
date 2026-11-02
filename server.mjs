@@ -33,7 +33,7 @@ import { createAdminRbacApi } from "./src/server/admin-rbac-api.mjs";
 import { createAdminAuditApi } from "./src/server/admin-audit-api.mjs";
 import { createNotificationQueue } from "./src/server/notification-queue.mjs";
 import { createAdminNotificationsApi } from "./src/server/admin-notifications-api.mjs";
-import { createIntegrationsApi } from "./src/server/integrations-api.mjs";
+import { createIntegrationsApi, INTEGRATION_ROUTE_SUBPATHS } from "./src/server/integrations-api.mjs";
 import { createServiceCatalogApi } from "./src/server/service-catalog-api.mjs";
 import { createFaqApi } from "./src/server/faq-api.mjs";
 import { createCrmApi } from "./src/server/crm-api.mjs";
@@ -1675,6 +1675,22 @@ function hrPermissionCompat(session, roles) {
   );
 }
 
+// `hrPermissionCompat` traduz a lista de papéis do handler em permissão granular
+// de RH — e, para listas SEM `rh`, em permissão de COMPENSAÇÃO. Era por isso que
+// `admin` e `ti`, os papéis que o handler do PWA autoriza explicitamente,
+// recebiam 403 mesmo com sessão válida. Em EMP-18/EMP-19 os aliases de RH
+// continuam exatamente como estavam (borda legada + este adaptador); só os dois
+// caminhos canônicos de administração, que não passam pela borda de RH, usam a
+// checagem de papel que o próprio módulo declara — mesmo critério dos módulos que
+// nunca foram publicados sob `/api/hr/*`.
+const EMP_CANONICAL_ADMIN_PATHS = new Set(["/api/admin/pwa-configs", "/api/admin/faq-internal"]);
+function empPwaRequireRole(session, roles) {
+  if (session?.requestPath && EMP_CANONICAL_ADMIN_PATHS.has(session.requestPath)) {
+    return Array.isArray(roles) && roles.includes(session.role);
+  }
+  return hrPermissionCompat(session, roles);
+}
+
 async function readHrSession(req) {
   const session = await readSession(req);
   const requestPath = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`).pathname;
@@ -1905,7 +1921,7 @@ const empPwaApi = createEmpPwaApi({
   },
   sameOrigin,
   requireSession: readHrSession,
-  requireRole: hrPermissionCompat,
+  requireRole: empPwaRequireRole,
 });
 
 const opsApi = createOpsApi({
@@ -2790,7 +2806,15 @@ async function routeApi(req, res) {
   const integrationTestMatch = url.pathname.match(/^\/api\/admin\/integrations\/([^\/]+)\/test$/i);
   if (integrationTestMatch) return integrationsApi.handleTest(req, res, integrationTestMatch[1]);
   const integrationMatch = url.pathname.match(/^\/api\/admin\/integrations\/([^\/]+)$/i);
-  if (integrationMatch) return integrationsApi.handleUpdate(req, res, integrationMatch[1]);
+  // PLT-03: os subcaminhos da aba viva "Registros de integração" são literais
+  // (`/jobs`, `/logs`, `/webhooks`, `/reconciliation`) e ficam declarados mais
+  // abaixo neste mesmo roteador. Como o padrão `/:id` casa primeiro, os quatro
+  // caíam em `handleUpdate` (que só aceita PUT/PATCH) e respondiam **405** —
+  // quatro painéis de uma aba já montada estavam mortos. O `Set` é o mesmo do
+  // módulo, para que um `id` reservado não possa ser criado por PATCH.
+  if (integrationMatch && !INTEGRATION_ROUTE_SUBPATHS.has(integrationMatch[1].toLowerCase())) {
+    return integrationsApi.handleUpdate(req, res, integrationMatch[1]);
+  }
   if (url.pathname === "/api/catalog" || url.pathname === "/api/services") return serviceCatalogApi.handleList(req, res, url);
   const catalogMatch = url.pathname.match(/^\/api\/catalog\/([^\/]+)$/i) || url.pathname.match(/^\/api\/services\/([^\/]+)$/i);
   if (catalogMatch) return serviceCatalogApi.handleGet(req, res, catalogMatch[1]);
@@ -3054,7 +3078,9 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/observability" || url.pathname === "/api/crm/observability") {
     return observabilityApi.handleMetrics(req, res);
   }
-  const obsAlertMatch = url.pathname.match(/^\/api\/admin\/observability\/alerts\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/observability\/alerts\/([0-9a-f-]{36})$/i);
+  // PLT-06: um id fora do formato UUID precisa CHEGAR ao handler para ser
+  // recusado com 400 invalid_alert_id; o handler mantém a validação canônica.
+  const obsAlertMatch = url.pathname.match(/^\/api\/admin\/observability\/alerts\/([^/]+)$/i) || url.pathname.match(/^\/api\/crm\/observability\/alerts\/([^/]+)$/i);
   if (obsAlertMatch) return observabilityApi.handleAlertAction(req, res, obsAlertMatch[1]);
   if (url.pathname === "/api/admin/observability/metrics" || url.pathname === "/api/crm/observability/metrics") {
     return observabilityApi.handleMetrics(req, res);
@@ -3094,7 +3120,7 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/privacy/inventory" || url.pathname === "/api/crm/privacy/inventory" || url.pathname === "/api/privacy/inventory") {
     return privacyApi.handleInventory(req, res);
   }
-  const privacyPolicyByIdMatch = url.pathname.match(/^\/api\/admin\/privacy\/policies\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/privacy\/policies\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/privacy\/policies\/([0-9a-f-]{36})$/i);
+  const privacyPolicyByIdMatch = url.pathname.match(/^\/api\/admin\/privacy\/policies\/([^/]+)$/i) || url.pathname.match(/^\/api\/crm\/privacy\/policies\/([^/]+)$/i) || url.pathname.match(/^\/api\/privacy\/policies\/([^/]+)$/i);
   if (privacyPolicyByIdMatch) return privacyApi.handlePolicyById(req, res, privacyPolicyByIdMatch[1]);
   if (url.pathname === "/api/admin/privacy/policies" || url.pathname === "/api/crm/privacy/policies" || url.pathname === "/api/privacy/policies" || url.pathname === "/api/privacy") {
     return privacyApi.handlePolicies(req, res);
@@ -3103,7 +3129,7 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/lgpd/requests" || url.pathname === "/api/privacy/requests" || url.pathname === "/api/public/lgpd" || url.pathname === "/api/admin/lgpd/requests" || url.pathname === "/api/crm/lgpd/requests" || url.pathname === "/api/admin/privacy/requests") {
     return lgpdRequestApi.handleRequests(req, res);
   }
-  const lgpdByIdMatch = url.pathname.match(/^\/api\/admin\/lgpd\/requests\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/lgpd\/requests\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/admin\/privacy\/requests\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/lgpd\/requests\/([0-9a-f-]{36})$/i);
+  const lgpdByIdMatch = url.pathname.match(/^\/api\/admin\/lgpd\/requests\/([^/]+)$/i) || url.pathname.match(/^\/api\/crm\/lgpd\/requests\/([^/]+)$/i) || url.pathname.match(/^\/api\/admin\/privacy\/requests\/([^/]+)$/i) || url.pathname.match(/^\/api\/lgpd\/requests\/([^/]+)$/i);
   if (lgpdByIdMatch) return lgpdRequestApi.handleRequestById(req, res, lgpdByIdMatch[1]);
   // PLT-11 retention
   if (url.pathname === "/api/admin/retention/policies" || url.pathname === "/api/crm/retention/policies" || url.pathname === "/api/privacy/retention/policies" || url.pathname === "/api/admin/privacy/retention") {
@@ -3112,12 +3138,12 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/retention/exceptions" || url.pathname === "/api/crm/retention/exceptions" || url.pathname === "/api/privacy/retention/exceptions") {
     return retentionApi.handleExceptions(req, res);
   }
-  const retentionExcByIdMatch = url.pathname.match(/^\/api\/admin\/retention\/exceptions\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/retention\/exceptions\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/privacy\/retention\/exceptions\/([0-9a-f-]{36})$/i);
+  const retentionExcByIdMatch = url.pathname.match(/^\/api\/admin\/retention\/exceptions\/([^/]+)$/i) || url.pathname.match(/^\/api\/crm\/retention\/exceptions\/([^/]+)$/i) || url.pathname.match(/^\/api\/privacy\/retention\/exceptions\/([^/]+)$/i);
   if (retentionExcByIdMatch) return retentionApi.handleExceptionById(req, res, retentionExcByIdMatch[1]);
   if (url.pathname === "/api/admin/retention/disposal/jobs" || url.pathname === "/api/crm/retention/disposal/jobs" || url.pathname === "/api/admin/disposal/jobs" || url.pathname === "/api/privacy/disposal/jobs") {
     return retentionApi.handleJobs(req, res);
   }
-  const disposalJobByIdMatch = url.pathname.match(/^\/api\/admin\/retention\/disposal\/jobs\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/retention\/disposal\/jobs\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/admin\/disposal\/jobs\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/privacy\/disposal\/jobs\/([0-9a-f-]{36})$/i);
+  const disposalJobByIdMatch = url.pathname.match(/^\/api\/admin\/retention\/disposal\/jobs\/([^/]+)$/i) || url.pathname.match(/^\/api\/crm\/retention\/disposal\/jobs\/([^/]+)$/i) || url.pathname.match(/^\/api\/admin\/disposal\/jobs\/([^/]+)$/i) || url.pathname.match(/^\/api\/privacy\/disposal\/jobs\/([^/]+)$/i);
   if (disposalJobByIdMatch) return retentionApi.handleJobById(req, res, disposalJobByIdMatch[1]);
   if (url.pathname === "/api/admin/retention/disposal/logs" || url.pathname === "/api/crm/retention/disposal/logs" || url.pathname === "/api/admin/disposal/logs" || url.pathname === "/api/privacy/disposal/logs") {
     return retentionApi.handleLogs(req, res);
@@ -3126,8 +3152,6 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/incidents" || url.pathname === "/api/crm/incidents" || url.pathname === "/api/security/incidents") {
     return incidentApi.handleIncidents(req, res);
   }
-  const incidentByIdMatch = url.pathname.match(/^\/api\/admin\/incidents\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/crm\/incidents\/([0-9a-f-]{36})$/i) || url.pathname.match(/^\/api\/security\/incidents\/([0-9a-f-]{36})$/i);
-  if (incidentByIdMatch) return incidentApi.handleIncidentById(req, res, incidentByIdMatch[1]);
   if (url.pathname === "/api/admin/incidents/evidences" || url.pathname === "/api/crm/incidents/evidences" || url.pathname === "/api/security/incidents/evidences") {
     return incidentApi.handleEvidences(req, res);
   }
@@ -3137,6 +3161,8 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/incidents/communications" || url.pathname === "/api/crm/incidents/communications" || url.pathname === "/api/security/incidents/communications") {
     return incidentApi.handleCommunications(req, res);
   }
+  const incidentByIdMatch = url.pathname.match(/^\/api\/admin\/incidents\/([^/]+)$/i) || url.pathname.match(/^\/api\/crm\/incidents\/([^/]+)$/i) || url.pathname.match(/^\/api\/security\/incidents\/([^/]+)$/i);
+  if (incidentByIdMatch) return incidentApi.handleIncidentById(req, res, incidentByIdMatch[1]);
   // PLT-13 config flags maintenance rollout
   if (url.pathname === "/api/admin/config/flags" || url.pathname === "/api/crm/config/flags" || url.pathname === "/api/config/flags") {
     return configApi.handleFlags(req, res);
@@ -3544,7 +3570,15 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/pwa/offline" || url.pathname === "/offline.html") {
     return empPwaApi.handleOfflinePage(req, res);
   }
-  if (url.pathname === "/api/admin/hr/pwa-configs" || url.pathname === "/api/crm/hr/pwa-configs" || url.pathname === "/api/hr/pwa-configs") {
+  // Alias canônico de ADMINISTRAÇÃO da configuração do PWA. Os três aliases de
+  // RH continuam existindo e continuam passando pela borda legada
+  // (`authorizeLegacyHrRequest`), que exige `employees.read` — permissão que só
+  // os papéis `rh` e `marcelo` recebem automática (migrações 102 e 180). O
+  // handler, por sua vez, só exige sessão de equipe na leitura e `admin`/`ti` na
+  // escrita: eram justamente os papéis barrados na borda. Configuração de PWA
+  // não é dado de funcionário, então este caminho é o canônico da tela — mesmo
+  // precedente de `/api/admin/portal-access-requests`.
+  if (url.pathname === "/api/admin/pwa-configs" || url.pathname === "/api/admin/hr/pwa-configs" || url.pathname === "/api/crm/hr/pwa-configs" || url.pathname === "/api/hr/pwa-configs") {
     return empPwaApi.handlePwaConfigs(req, res);
   }
   if (url.pathname === "/api/admin/hr/offline-queue" || url.pathname === "/api/crm/hr/offline-queue" || url.pathname === "/api/hr/offline-queue") {
@@ -3554,7 +3588,10 @@ async function routeApi(req, res) {
     return empPwaApi.handleOfflineConflicts(req, res);
   }
   // EMP-19 FAQ interna acessível
-  if (url.pathname === "/api/admin/hr/faq-internal" || url.pathname === "/api/crm/hr/faq-internal" || url.pathname === "/api/hr/faq-internal" || url.pathname === "/api/employee/faq") {
+  // Idem FAQ interna: o conteúdo é da empresa, não dado pessoal do funcionário.
+  // O alias canônico de administração fica fora da borda de RH; os aliases de
+  // RH e o caminho do funcionário continuam exatamente como estavam.
+  if (url.pathname === "/api/admin/faq-internal" || url.pathname === "/api/admin/hr/faq-internal" || url.pathname === "/api/crm/hr/faq-internal" || url.pathname === "/api/hr/faq-internal" || url.pathname === "/api/employee/faq") {
     return empPwaApi.handleFaqInternal(req, res);
   }
   if (url.pathname === "/api/admin/hr/faq-access-logs" || url.pathname === "/api/crm/hr/faq-access-logs" || url.pathname === "/api/hr/faq-access-logs") {
@@ -3835,7 +3872,7 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/cli-portal-mode-configs" || url.pathname === "/api/crm/hr/cli-portal-mode-configs" || url.pathname === "/api/hr/cli-portal-mode-configs" || url.pathname === "/api/cli/portal-mode-configs") {
     return cliFinanceApi.handlePortalModeConfigs(req, res);
   }
-  if (url.pathname === "/api/admin/hr/cli-portal-access-requests" || url.pathname === "/api/crm/hr/cli-portal-access-requests" || url.pathname === "/api/hr/cli-portal-access-requests" || url.pathname === "/api/cli/portal-access-requests" || url.pathname === "/api/client/portal-access-requests" || url.pathname === "/api/public/portal-access-requests") {
+  if (url.pathname === "/api/admin/hr/cli-portal-access-requests" || url.pathname === "/api/crm/hr/cli-portal-access-requests" || url.pathname === "/api/hr/cli-portal-access-requests" || url.pathname === "/api/cli/portal-access-requests" || url.pathname === "/api/client/portal-access-requests" || url.pathname === "/api/public/portal-access-requests" || url.pathname === "/api/admin/portal-access-requests") {
     return cliFinanceApi.handlePortalAccessRequests(req, res);
   }
   // CLI-14 segurança conta MFA opcional gestão sessões troca e-mail concluída fluxos backend real
@@ -5217,6 +5254,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/admin/hr/pwa-configs"
   || pathname === "/api/crm/hr/pwa-configs"
   || pathname === "/api/hr/pwa-configs"
+  || pathname === "/api/admin/pwa-configs"
   || pathname === "/api/admin/hr/offline-queue"
   || pathname === "/api/crm/hr/offline-queue"
   || pathname === "/api/hr/offline-queue"
@@ -5226,6 +5264,7 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/admin/hr/faq-internal"
   || pathname === "/api/crm/hr/faq-internal"
   || pathname === "/api/hr/faq-internal"
+  || pathname === "/api/admin/faq-internal"
   || pathname === "/api/employee/faq"
   || pathname === "/api/admin/hr/faq-access-logs"
   || pathname === "/api/crm/hr/faq-access-logs"
@@ -5567,6 +5606,20 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/hr/cli-portal-access-requests"
   || pathname === "/api/cli/portal-access-requests"
   || pathname === "/api/client/portal-access-requests"
+  // Faltava aqui: o alias público estava despachado em `routeApi` e é o que a
+  // tela `/cliente/acesso` usa, mas nunca entrou na lista de caminhos de API —
+  // toda requisição caía no Next e voltava 404.
+  || pathname === "/api/public/portal-access-requests"
+  // Alias canônico de ADMINISTRAÇÃO da jornada CLI-13. Os aliases
+  // `/api/{admin/,crm/}*hr/cli-portal-access-requests` continuam existindo, mas
+  // passam antes pela borda legada de RH (`authorizeLegacyHrRequest`), que exige
+  // a permissão `employees.read` e devolve 403 justamente para `ti`/`admin` —
+  // os papéis que o próprio handler autoriza via `ensureAuth`. Medido no gate:
+  // `ti` recebia 403 nos três aliases de RH. Este caminho não é público
+  // (`handlePortalAccessRequests` só trata como público `/api/client/`,
+  // `/api/public/` e `/api/cli/`), então chega em `ensureAuth(["admin","ti"])`
+  // com sessão individual e origem conferida no servidor.
+  || pathname === "/api/admin/portal-access-requests"
   || pathname === "/api/admin/hr/cli-security-events"
   || pathname === "/api/crm/hr/cli-security-events"
   || pathname === "/api/hr/cli-security-events"

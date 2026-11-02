@@ -1,0 +1,57 @@
+{
+  "stage": "ux-pro-06-fila-estados",
+  "generatedBy": "npm run test:ux-crm:pg; UX_LEADS_STATE_EVIDENCE_DIR; massa sintética; sem aceite humano",
+  "entries": [
+    {
+      "stage": "ux-pro-06-fila-estados",
+      "route": "/admin/leads",
+      "role": "comercial",
+      "viewport": "320x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-fila-estados-evidencias/fila-320.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-fila-estados",
+      "route": "/admin/leads",
+      "role": "comercial",
+      "viewport": "390x844",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-fila-estados-evidencias/fila-390.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-fila-estados",
+      "route": "/admin/leads",
+      "role": "comercial",
+      "viewport": "768x1024",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-fila-estados-evidencias/fila-768.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-fila-estados",
+      "route": "/admin/leads",
+      "role": "comercial",
+      "viewport": "1440x900",
+      "theme": "day",
+      "screenshot": "docs/ux-pro-06-fila-estados-evidencias/fila-1440.png",
+      "problems": []
+    },
+    {
+      "stage": "ux-pro-06-fila-estados",
+      "route": "/admin/leads",
+      "role": "comercial",
+      "viewport": "390x844",
+      "theme": "night",
+      "screenshot": "docs/ux-pro-06-fila-estados-evidencias/fila-390-noite.png",
+      "problems": [],
+      "firstFocus": true,
+      "percursoTeclado": [
+        "lead-filter",
+        "Atualizar pedidos",
+        "lead-order"
+      ]
+    }
+  ]
+}

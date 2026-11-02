@@ -1,124 +1,343 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  AVISO_APROVACAO,
+  AVISO_MEDICO,
+  AVISO_ORDEM,
+  AVISO_PREFERENCIA,
+  AVISO_QUIET_HOURS,
+  AVISO_REJEICAO,
+  AVISO_SESSAO,
+  CANAIS,
+  STATUS_MODELO,
+  STATUS_NA_CRIACAO,
+  TIPOS_DESTINATARIO,
+  chaveModelo,
+  chavePreferencia,
+  classificarLista,
+  contemInfoMedica,
+  janelaSilencio,
+  proximosEstados,
+  simNao,
+  traduzirErroPlt,
+  validarModelo,
+  validarPreferencia,
+  validarTransicao,
+  type ResultadoLista,
+} from "./notification-prefs-state";
+import styles from "./NotificationPreferencesClient.module.css";
+
+type Item = Record<string, unknown>;
+
+const FORM_PREFERENCIA = {
+  recipient_kind: "staff",
+  channel: "email",
+  recipient_id: "",
+  recipient_email: "",
+  is_enabled: true,
+  is_email_enabled: true,
+  is_push_enabled: false,
+  is_whatsapp_enabled: false,
+  is_sms_enabled: false,
+  is_internal_enabled: true,
+  quiet_hours_start: "",
+  quiet_hours_end: "",
+};
+
+const FORM_MODELO = {
+  template_key: "",
+  channel: "email",
+  subject: "",
+  body: "",
+  status: "rascunho",
+  medical_review_note: "",
+};
 
 export default function NotificationPreferencesClient() {
-  const [prefs, setPrefs] = useState<any[]>([]);
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [msg, setMsg] = useState("");
-  const [form, setForm] = useState({ recipient_kind: "staff", recipient_id: "", channel: "email", is_enabled: true });
-  const [tForm, setTForm] = useState({ template_key: "", channel: "email", subject: "", body: "", status: "rascunho" });
+  const [preferencias, setPreferencias] = useState<ResultadoLista | null>(null);
+  const [modelos, setModelos] = useState<ResultadoLista | null>(null);
+  const [hora, setHora] = useState("");
+  const [lendo, setLendo] = useState(true);
+  const [gravando, setGravando] = useState("");
+  const [ok, setOk] = useState("");
+  const [erro, setErro] = useState("");
+  const [erros, setErros] = useState<Record<string, string>>({});
+  const [preferencia, setPreferencia] = useState(FORM_PREFERENCIA);
+  const [modelo, setModelo] = useState(FORM_MODELO);
+  const [motivo, setMotivo] = useState("");
+  const sequencia = useRef(0);
 
-  async function loadPrefs() {
-    const r = await fetch('/api/crm/notification-preferences');
-    const j = await r.json();
-    if (!r.ok) { setMsg(`Erro prefs: ${j.error}`); return; }
-    setPrefs(j.preferences || []);
-    setMsg(`Preferências ${j.preferences?.length || 0} — ${j.note}`);
+  const ler = async (rota: string, chave: "preferences" | "templates", rotulo: string) => {
+    try {
+      const resposta = await fetch(rota, { headers: { Accept: "application/json" } });
+      const corpo = await resposta.json().catch(() => undefined);
+      return classificarLista(resposta.status, corpo, chave, rotulo);
+    } catch {
+      return classificarLista(0, undefined, chave, rotulo);
+    }
+  };
+
+  async function carregar() {
+    const atual = ++sequencia.current;
+    setLendo(true);
+    const [lidasPreferencias, lidosModelos] = await Promise.all([
+      ler("/api/crm/notification-preferences", "preferences", "preferências de notificação"),
+      ler("/api/crm/notification-templates", "templates", "modelos de mensagem"),
+    ]);
+    if (atual !== sequencia.current) return;
+    setPreferencias(lidasPreferencias);
+    setModelos(lidosModelos);
+    const agora = new Date();
+    setHora(`${String(agora.getHours()).padStart(2, "0")}:${String(agora.getMinutes()).padStart(2, "0")}`);
+    setLendo(false);
+  }
+  useEffect(() => { void carregar(); }, []);
+
+  async function gravar(rotulo: string, url: string, method: string, body: unknown, sucesso: string | ((corpo: Record<string, unknown>) => string)) {
+    setGravando(rotulo); setOk(""); setErro("");
+    try {
+      const resposta = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const dados = await resposta.json().catch(() => ({}));
+      if (!resposta.ok) {
+        setErro(traduzirErroPlt(resposta.status, typeof dados?.error === "string" ? dados.error : ""));
+        return false;
+      }
+      setOk(typeof sucesso === "function" ? sucesso(dados ?? {}) : sucesso);
+      await carregar();
+      return true;
+    } catch {
+      setErro("Falha de comunicação: nada foi confirmado. Tente novamente.");
+      return false;
+    } finally {
+      setGravando("");
+    }
   }
 
-  async function loadTemplates() {
-    const r = await fetch('/api/crm/notification-templates');
-    const j = await r.json();
-    if (!r.ok) { setMsg(`Erro templates: ${j.error}`); return; }
-    setTemplates(j.templates || []);
-    setMsg(`Templates ${j.templates?.length || 0} — ${j.note}`);
+  function salvarPreferencia() {
+    const validado = validarPreferencia(preferencia);
+    setErros(validado.erros); setOk(""); setErro("");
+    if (!validado.ok || !validado.payload) return;
+    const global = !validado.payload.recipient_id;
+    void gravar("preferencia", "/api/crm/notification-preferences", "POST", validado.payload,
+      `Preferência de ${String(validado.payload.recipient_kind)} em ${String(validado.payload.channel)} ` +
+      `${global ? "gravada como global do tipo (atualizada, não duplicada)" : "gravada para o destinatário informado"}.`)
+      .then(salvo => { if (salvo) setPreferencia(FORM_PREFERENCIA); });
   }
 
-  async function savePref() {
-    const r = await fetch('/api/crm/notification-preferences', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
-    const j = await r.json();
-    if (!r.ok) { setMsg(`Erro save pref: ${j.error} ${j.detail || ''}`); return; }
-    setMsg(`Pref salva ${j.preference?.id}`);
-    await loadPrefs();
+  function criarModelo() {
+    const validado = validarModelo(modelo);
+    setErros(validado.erros); setOk(""); setErro("");
+    if (!validado.ok || !validado.payload) return;
+    const medical = contemInfoMedica(validado.payload.body);
+    void gravar("modelo", "/api/crm/notification-templates", "POST", validado.payload,
+      corpo => {
+        const modelo = (corpo.template as Item | undefined) ?? {};
+        const seguro = modelo.is_medical_safe === true;
+        return `Modelo ${String(modelo.template_key)} v${String(modelo.version)} criado em ${String(modelo.status)}; ` +
+          (seguro
+            ? "o servidor marcou o conteúdo como sem informação médica."
+            : "o servidor marcou o conteúdo como NÃO seguro para informação médica e ele não pode ser aprovado enquanto isso.");
+      })
+      .then(criado => { if (criado) { setModelo(FORM_MODELO); void medical; } });
   }
 
-  async function createTemplate() {
-    if (!tForm.template_key.trim() || !tForm.body.trim()) { setMsg("template_key e body obrigatórios"); return; }
-    const r = await fetch('/api/crm/notification-templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tForm) });
-    const j = await r.json();
-    if (!r.ok) { setMsg(`Erro template: ${j.error} ${j.detail || ''}`); return; }
-    setMsg(`Template criado ${j.template?.id} medical_safe=${j.template?.is_medical_safe}`);
-    setTForm({ template_key: "", channel: "email", subject: "", body: "", status: "rascunho" });
-    await loadTemplates();
+  function avancar(item: Item, destino: string) {
+    const validado = validarTransicao(String(item.id ?? ""), destino, motivo, item.status);
+    setErros(validado.erros); setOk(""); setErro("");
+    if (!validado.ok || !validado.payload) return;
+    void gravar("transicao", `/api/crm/notification-templates/${String(item.id)}`, "PATCH", validado.payload,
+      `Modelo ${String(item.template_key)} movido para ${destino}${destino === "rejeitado" ? " com o motivo digitado" : ""}.`)
+      .then(movido => { if (movido) setMotivo(""); });
   }
 
-  async function updateTemplateStatus(id: string, status: string) {
-    const body: any = { status };
-    if (status === 'rejeitado') body.rejection_reason = 'Conteúdo não conforme PLT-05';
-    const r = await fetch(`/api/crm/notification-templates/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const j = await r.json();
-    if (!r.ok) { setMsg(`Erro status: ${j.error}`); return; }
-    await loadTemplates();
-  }
+  const bloqueado = gravando !== "";
+  const estado = (resultado: ResultadoLista | null, chave: string) => {
+    if (!resultado || resultado.situacao === "ok") return null;
+    return (
+      <p className={styles.stateNote} data-testid={`plt-estado-${chave}`} data-situacao={resultado.situacao}>
+        {resultado.mensagem}
+      </p>
+    );
+  };
 
   return (
-    <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16, marginTop: 16 }}>
-      <h3 style={{ fontSize: 16, fontWeight: 700 }}>PLT-05 Notificações — painel, e-mail, canais externos, preferências, templates</h3>
-      <p style={{ fontSize: 12, color: '#6b7280' }}>Preferências por canal (painel/internal, e-mail, whatsapp, sms, push, webhook). Templates revisados: <strong>nenhuma informação médica em assunto/push</strong> (prontuário, diagnóstico, CID bloqueados).</p>
-      {msg && <div style={{ background: '#f3f4f6', padding: 8, borderRadius: 8, fontSize: 11, marginTop: 8, whiteSpace: 'pre-wrap' }}>{msg}</div>}
-      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-        <button onClick={loadPrefs} style={{ padding: '6px 12px', borderRadius: 6, background: '#111827', color: '#fff', fontSize: 12 }}>Carregar preferências</button>
-        <button onClick={loadTemplates} style={{ padding: '6px 12px', borderRadius: 6, background: '#111827', color: '#fff', fontSize: 12 }}>Carregar templates</button>
-      </div>
+    <section className={styles.wrap} data-testid="plt-notificacoes" aria-busy={lendo}>
+      <header className={styles.head}>
+        <div>
+          <h2>Preferências de notificação e modelos de mensagem</h2>
+          <p className={styles.lead}>
+            PLT-05: cada pessoa escolhe canal e janela de silêncio; cada mensagem nasce como modelo versionado,
+            revisado e sem informação médica em assunto ou push. Aprovar e rejeitar ficam registrados com quem agiu.
+          </p>
+        </div>
+        <div className={styles.headActions}>
+          <span className={styles.stamp} data-testid="plt-hora">{lendo ? "Lendo…" : `Lido às ${hora}`}</span>
+          <button type="button" onClick={() => void carregar()} disabled={lendo}>Atualizar</button>
+        </div>
+      </header>
 
-      <div style={{ display: 'flex', gap: 16, marginTop: 12 }}>
-        <div style={{ flex: 1 }}>
-          <h4 style={{ fontSize: 13, fontWeight: 600 }}>Preferências ({prefs.length})</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 300, overflowY: 'auto', marginTop: 6 }}>
-            {prefs.map((p: any) => (
-              <div key={p.id} style={{ padding: 6, border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 11 }}>
-                <div style={{ fontWeight: 600 }}>{p.recipient_kind} • {p.channel} • {p.is_enabled ? 'enabled' : 'disabled'}</div>
-                <div style={{ color: '#6b7280' }}>email:{String(p.is_email_enabled)} push:{String(p.is_push_enabled)} wa:{String(p.is_whatsapp_enabled)} sms:{String(p.is_sms_enabled)} internal:{String(p.is_internal_enabled)} {p.quiet_hours_start ? `quiet ${p.quiet_hours_start}-${p.quiet_hours_end}` : ''}</div>
-              </div>
+      {ok && <p className={styles.ok} role="status" data-testid="plt-ok">{ok}</p>}
+      {erro && <p className={styles.alert} role="alert" data-testid="plt-erro">{erro}</p>}
+
+      <article className={styles.card} data-testid="plt-card-preferencias">
+        <h3>Preferências por destinatário e canal</h3>
+        <p className={styles.hint} data-testid="plt-aviso-preferencia">{AVISO_PREFERENCIA}</p>
+        <p className={styles.hint} data-testid="plt-aviso-quiet">{AVISO_QUIET_HOURS}</p>
+        <p className={styles.hint} data-testid="plt-aviso-sessao">{AVISO_SESSAO}</p>
+        {estado(preferencias, "preferencias")}
+        <div className={styles.form}>
+          <label className={styles.field}>Tipo de destinatário
+            <select aria-label="tipo de destinatário" value={preferencia.recipient_kind}
+              onChange={e => setPreferencia({ ...preferencia, recipient_kind: e.target.value })}>
+              {TIPOS_DESTINATARIO.map(kind => <option key={kind} value={kind}>{kind}</option>)}
+            </select>
+            {erros.recipient_kind && <small className={styles.err}>{erros.recipient_kind}</small>}
+          </label>
+          <label className={styles.field}>Canal
+            <select aria-label="canal da preferência" value={preferencia.channel}
+              onChange={e => setPreferencia({ ...preferencia, channel: e.target.value })}>
+              {CANAIS.map(canal => <option key={canal} value={canal}>{canal}</option>)}
+            </select>
+            {erros.channel && <small className={styles.err}>{erros.channel}</small>}
+          </label>
+          <label className={styles.field}>Destinatário (UUID, opcional)
+            <input aria-label="destinatário da preferência" value={preferencia.recipient_id} maxLength={36}
+              onChange={e => setPreferencia({ ...preferencia, recipient_id: e.target.value })} />
+            {erros.recipient_id && <small className={styles.err}>{erros.recipient_id}</small>}
+          </label>
+          <label className={styles.field}>E-mail do destinatário (opcional)
+            <input aria-label="e-mail do destinatário" value={preferencia.recipient_email} maxLength={320}
+              onChange={e => setPreferencia({ ...preferencia, recipient_email: e.target.value })} />
+            {erros.recipient_email && <small className={styles.err}>{erros.recipient_email}</small>}
+          </label>
+          <label className={styles.field}>Silêncio — início
+            <input aria-label="início do silêncio" placeholder="22:00" value={preferencia.quiet_hours_start} maxLength={5}
+              onChange={e => setPreferencia({ ...preferencia, quiet_hours_start: e.target.value })} />
+          </label>
+          <label className={styles.field}>Silêncio — fim
+            <input aria-label="fim do silêncio" placeholder="07:00" value={preferencia.quiet_hours_end} maxLength={5}
+              onChange={e => setPreferencia({ ...preferencia, quiet_hours_end: e.target.value })} />
+            {erros.quiet_hours && <small className={styles.err} data-testid="plt-erro-quiet">{erros.quiet_hours}</small>}
+          </label>
+          <div className={styles.toggles}>
+            {([
+              ["is_enabled", "canal ligado"],
+              ["is_email_enabled", "e-mail ligado"],
+              ["is_push_enabled", "push ligado"],
+              ["is_whatsapp_enabled", "whatsapp ligado"],
+              ["is_sms_enabled", "sms ligado"],
+              ["is_internal_enabled", "painel ligado"],
+            ] as const).map(([campo, rotulo]) => (
+              <label key={campo} className={styles.check}>
+                <input type="checkbox" aria-label={rotulo} checked={preferencia[campo]}
+                  onChange={e => setPreferencia({ ...preferencia, [campo]: e.target.checked })} />
+                {rotulo}
+              </label>
             ))}
           </div>
-          <div style={{ marginTop: 10, padding: 8, border: '1px dashed #d1d5db', borderRadius: 6 }}>
-            <div style={{ fontSize: 12, fontWeight: 600 }}>Nova/atualizar preferência</div>
-            <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
-              <select value={form.recipient_kind} onChange={e => setForm({ ...form, recipient_kind: e.target.value })} style={{ flex: 1, padding: 4, borderRadius: 4, border: '1px solid #d1d5db', fontSize: 11 }}>
-                <option value="staff">staff</option><option value="admin">admin</option><option value="ti">ti</option><option value="rh">rh</option><option value="client">client</option><option value="lead">lead</option>
-              </select>
-              <select value={form.channel} onChange={e => setForm({ ...form, channel: e.target.value })} style={{ flex: 1, padding: 4, borderRadius: 4, border: '1px solid #d1d5db', fontSize: 11 }}>
-                <option value="email">email</option><option value="internal">internal</option><option value="push">push</option><option value="whatsapp">whatsapp</option><option value="sms">sms</option><option value="webhook">webhook</option><option value="sistema">sistema</option>
-              </select>
-            </div>
-            <input value={form.recipient_id} onChange={e => setForm({ ...form, recipient_id: e.target.value })} placeholder="recipient_id UUID opcional" style={{ width: '100%', marginTop: 4, padding: 4, borderRadius: 4, border: '1px solid #d1d5db', fontSize: 11 }} />
-            <label style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}><input type="checkbox" checked={form.is_enabled} onChange={e => setForm({ ...form, is_enabled: e.target.checked })} /> enabled</label>
-            <button onClick={savePref} style={{ marginTop: 6, padding: '4px 10px', borderRadius: 6, background: '#111827', color: '#fff', fontSize: 11 }}>Salvar preferência</button>
-          </div>
+          <button type="button" onClick={salvarPreferencia} disabled={bloqueado}>
+            {gravando === "preferencia" ? "Gravando…" : "Salvar preferência"}
+          </button>
         </div>
+        <ul className={styles.list} data-testid="plt-lista-preferencias">
+          {(preferencias?.itens ?? []).map((item: Item) => (
+            <li key={String(item.id)} data-testid={`plt-pref-${chavePreferencia(item)}`}>
+              <strong>{String(item.recipient_kind)}</strong>{" "}
+              <span>{String(item.channel)}</span>{" "}
+              <span>{item.recipient_id ? "destinatário informado" : "global do tipo"}</span>{" "}
+              <span>canal {simNao(item.is_enabled)}</span>{" "}
+              <span>e-mail {simNao(item.is_email_enabled)}</span>{" "}
+              <span>push {simNao(item.is_push_enabled)}</span>{" "}
+              <span>whatsapp {simNao(item.is_whatsapp_enabled)}</span>{" "}
+              <span>sms {simNao(item.is_sms_enabled)}</span>{" "}
+              <span>painel {simNao(item.is_internal_enabled)}</span>{" "}
+              <span>{janelaSilencio(item)}</span>
+            </li>
+          ))}
+        </ul>
+      </article>
 
-        <div style={{ flex: 1.2 }}>
-          <h4 style={{ fontSize: 13, fontWeight: 600 }}>Templates ({templates.length})</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 300, overflowY: 'auto', marginTop: 6 }}>
-            {templates.map((t: any) => (
-              <div key={t.id} style={{ padding: 6, border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 11, background: t.is_medical_safe ? '#fff' : '#fef2f2' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontWeight: 600 }}>{t.template_key} • {t.channel} • v{t.version}</span><span style={{ background: t.status === 'aprovado' ? '#dcfce7' : '#f3f4f6', padding: '1px 6px', borderRadius: 8 }}>{t.status}</span></div>
-                <div style={{ color: '#6b7280' }}>subject: {t.subject || '—'} • safe:{String(t.is_medical_safe)}</div>
-                <div style={{ marginTop: 2, whiteSpace: 'pre-wrap' }}>{t.body.slice(0, 200)}</div>
-                <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-                  {['aprovado','em_revisao','arquivado','rejeitado'].map(s => (<button key={s} onClick={() => updateTemplateStatus(t.id, s)} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, border: '1px solid #d1d5db' }}>{s}</button>))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ marginTop: 10, padding: 8, border: '1px dashed #d1d5db', borderRadius: 6 }}>
-            <div style={{ fontSize: 12, fontWeight: 600 }}>Novo template (PLT-05 sem info médica em assunto/push)</div>
-            <input value={tForm.template_key} onChange={e => setTForm({ ...tForm, template_key: e.target.value })} placeholder="template_key ex: lead_new" style={{ width: '100%', marginTop: 4, padding: 4, borderRadius: 4, border: '1px solid #d1d5db', fontSize: 11 }} />
-            <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-              <select value={tForm.channel} onChange={e => setTForm({ ...tForm, channel: e.target.value })} style={{ flex: 1, padding: 4, borderRadius: 4, border: '1px solid #d1d5db', fontSize: 11 }}>
-                <option value="email">email</option><option value="internal">internal</option><option value="push">push</option><option value="whatsapp">whatsapp</option><option value="sms">sms</option><option value="sistema">sistema</option>
-              </select>
-              <select value={tForm.status} onChange={e => setTForm({ ...tForm, status: e.target.value })} style={{ flex: 1, padding: 4, borderRadius: 4, border: '1px solid #d1d5db', fontSize: 11 }}>
-                <option value="rascunho">rascunho</option><option value="em_revisao">em_revisao</option><option value="aprovado">aprovado</option>
-              </select>
-            </div>
-            <input value={tForm.subject} onChange={e => setTForm({ ...tForm, subject: e.target.value })} placeholder="subject (max 200) — NÃO incluir prontuário/diagnóstico" style={{ width: '100%', marginTop: 4, padding: 4, borderRadius: 4, border: '1px solid #d1d5db', fontSize: 11 }} />
-            <textarea value={tForm.body} onChange={e => setTForm({ ...tForm, body: e.target.value })} placeholder="body (max 5000) — sem info médica em push" style={{ width: '100%', marginTop: 4, padding: 4, borderRadius: 4, border: '1px solid #d1d5db', fontSize: 11, minHeight: 60 }} />
-            <button onClick={createTemplate} style={{ marginTop: 6, padding: '4px 10px', borderRadius: 6, background: '#111827', color: '#fff', fontSize: 11 }}>Criar template</button>
-          </div>
+      <article className={styles.card} data-testid="plt-card-modelos">
+        <h3>Modelos de mensagem versionados</h3>
+        <p className={styles.hint} data-testid="plt-aviso-medico">{AVISO_MEDICO}</p>
+        <p className={styles.hint} data-testid="plt-aviso-ordem">{AVISO_ORDEM}</p>
+        <p className={styles.hint} data-testid="plt-aviso-aprovacao">{AVISO_APROVACAO}</p>
+        <p className={styles.hint} data-testid="plt-aviso-rejeicao">{AVISO_REJEICAO}</p>
+        {estado(modelos, "modelos")}
+        <div className={styles.form}>
+          <label className={styles.field}>Chave do modelo
+            <input aria-label="chave do modelo" value={modelo.template_key} maxLength={100}
+              onChange={e => setModelo({ ...modelo, template_key: e.target.value })} />
+            {erros.template_key && <small className={styles.err}>{erros.template_key}</small>}
+          </label>
+          <label className={styles.field}>Canal do modelo
+            <select aria-label="canal do modelo" value={modelo.channel}
+              onChange={e => setModelo({ ...modelo, channel: e.target.value })}>
+              {CANAIS.map(canal => <option key={canal} value={canal}>{canal}</option>)}
+            </select>
+            {erros.channel && <small className={styles.err}>{erros.channel}</small>}
+          </label>
+          <label className={styles.field}>Assunto (opcional)
+            <input aria-label="assunto do modelo" value={modelo.subject} maxLength={200}
+              onChange={e => setModelo({ ...modelo, subject: e.target.value })} />
+            {erros.subject && <small className={styles.err} data-testid="plt-erro-assunto">{erros.subject}</small>}
+          </label>
+          <label className={styles.field}>Situação inicial
+            <select aria-label="situação inicial do modelo" value={modelo.status}
+              onChange={e => setModelo({ ...modelo, status: e.target.value })}>
+              {STATUS_NA_CRIACAO.map(status => <option key={status} value={status}>{status}</option>)}
+            </select>
+            {erros.status && <small className={styles.err}>{erros.status}</small>}
+          </label>
+          <label className={styles.field}>Observação de revisão (opcional)
+            <input aria-label="observação de revisão" value={modelo.medical_review_note} maxLength={1000}
+              onChange={e => setModelo({ ...modelo, medical_review_note: e.target.value })} />
+            {erros.medical_review_note && <small className={styles.err}>{erros.medical_review_note}</small>}
+          </label>
+          <label className={styles.field}>Corpo do modelo
+            <textarea aria-label="corpo do modelo" value={modelo.body} maxLength={5000} rows={3}
+              onChange={e => setModelo({ ...modelo, body: e.target.value })} />
+            {erros.body && <small className={styles.err} data-testid="plt-erro-corpo">{erros.body}</small>}
+          </label>
+          <label className={styles.field}>Motivo da rejeição (para rejeitar)
+            <input aria-label="motivo da rejeição" value={motivo} maxLength={1000}
+              onChange={e => setMotivo(e.target.value)} />
+            {erros.reason && <small className={styles.err} data-testid="plt-erro-motivo">{erros.reason}</small>}
+          </label>
+          <button type="button" onClick={criarModelo} disabled={bloqueado}>
+            {gravando === "modelo" ? "Gravando…" : "Criar modelo"}
+          </button>
         </div>
-      </div>
-    </div>
+        <ul className={styles.list} data-testid="plt-lista-modelos">
+          {(modelos?.itens ?? []).map((item: Item) => {
+            const chave = chaveModelo(item);
+            const seguro = item.is_medical_safe === true;
+            const proximos = proximosEstados(item.status);
+            return (
+              <li key={String(item.id)} data-testid={`plt-modelo-${chave}`} data-situacao={String(item.status ?? "desconhecida")}>
+                <strong>{String(item.template_key)}</strong>{" "}
+                <span>{String(item.channel)} v{String(item.version)}</span>{" "}
+                <span>situação {String(item.status)}</span>{" "}
+                <span>{seguro ? "sem info médica" : "contém info médica: não aprovável"}</span>{" "}
+                {item.subject ? <span>assunto {String(item.subject)}</span> : <span>sem assunto</span>}{" "}
+                {item.rejection_reason ? <span>motivo gravado: {String(item.rejection_reason)}</span> : null}{" "}
+                {proximos.map(destino => (
+                  <button key={destino} type="button" disabled={bloqueado}
+                    data-testid={`plt-avancar-${chave}-${destino}`}
+                    onClick={() => avancar(item, destino)}>
+                    {destino}
+                  </button>
+                ))}
+              </li>
+            );
+          })}
+        </ul>
+      </article>
+
+      <p className={styles.foot}>
+        Situações conhecidas pelo banco: {STATUS_MODELO.join(", ")}. Canais: {CANAIS.join(", ")}.
+        Modelos aprovados não guardam informação médica; o servidor recusa o assunto e o push com esses termos.
+      </p>
+    </section>
   );
 }

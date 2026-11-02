@@ -26,13 +26,13 @@ Um **índice reproduzível**, não um veredito:
 
 **Não foi criado workflow novo**: a guarda já roda em todos os workflows que
 executam `test:unit`. Isso evita inflar a matriz de rotas com um gate que não
-prova rota alguma. Workflows seguem **49**.
+prova rota alguma. Workflows seguem **50** (o `plt-jornadas-delivery.yml` foi criado em 02/11 para tirar PLT-01/06/12 da orfandade de gate).
 
 ### Método
 
-Uma única passada por **1.632 arquivos** de `tests/`, `.github/workflows/`,
-`docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, a auditoria de 26/10, a
-fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
+Uma única passada por **1.711 arquivos** de `tests/`, `.github/workflows/`,
+`docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, as auditorias de 26/10, 28/10 e
+02/11, a fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
 meta-estado, não prova de requisito, e evitam auto-referência. De cada arquivo o gerador extrai todos os IDs com
 `/\b([A-Z][A-Z0-9-]*-\d+)\b/gi` e cruza com os 222 IDs da matriz. A própria
 fonte, os artefatos gerados, o gerador e esta guarda são **excluídos** da
@@ -42,9 +42,9 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 
 | Classe | Significado | IDs |
 |---|---|---|
-| `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **23** |
-| `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **114** |
-| `somente_documento` | só há citação em documentos | **85** |
+| `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **27** |
+| `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **124** |
+| `somente_documento` | só há citação em documentos | **71** |
 | `somente_codigo` / `sem_evidencia_legivel` | — | **0** |
 
 > **Recontagem E23 (30/10/2026):** a tabela acima já não é a fotografia de 27/10
@@ -52,9 +52,85 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 > `docs/REQUISITOS-222-INVENTARIO-2026-10-27.json` e reproduzíveis por
 > `node scripts/requisitos-222-inventory.mjs --check`. A diferença vem do mapa SEC
 > (28/10) e das fatias de UI do CLI-02/03/05–10 e do PLT-10, cada uma com relatório
-> próprio. `somente_codigo` e `sem_evidencia_legivel` seguem em **0**. Este texto
-> **não** é ajustado à mão: `tests/requisitos-222-inventory.test.mjs` compara as
-> contagens e o núcleo duro abaixo com o JSON e falha na primeira divergência.
+> próprio. `somente_codigo` e `sem_evidencia_legivel` seguem em **0**.
+>
+> **Recontagem E23 (01/11/2026):** 23/118/81 depois de **duas** promoções do
+> console de TI no mesmo dia — a 16ª (PLT-05, preferências e modelos de
+> notificação) e a 17ª (EMP-18/EMP-19, app do funcionário: PWA e FAQ interna),
+> cujos cenários de gate citam os IDs no conteúdo do teste. Os três IDs passam de
+> `somente_documento` para `mencionado_em_gate` — o que **não** é aceite humano,
+> homologação nem UAT: os requisitos continuam em `pronto_local`, e o aceite
+> permanece **0/222**. Este texto **não** é ajustado à mão:
+> `tests/requisitos-222-inventory.test.mjs` compara as contagens, o núcleo duro e
+> o número de arquivos varridos com o JSON e falha na primeira divergência.
+>
+> **Recontagem E23 (01/11/2026, 18ª promoção):** 23/120/79 depois da promoção
+> de `PubFaqAssistedClient` (PUB-02/PUB-05, FAQ assistida e segmentos no
+> console de TI). `PUB-02` e `PUB-05` passam de `somente_documento` para
+> `mencionado_em_gate` porque o relatório e o cenário `browser UX-PRO-03
+> PUB-02/05` citam os dois IDs. Continua sendo **evidência textual**: os dois
+> requisitos seguem `pronto_local`, com `aceite_humano=nao_registrado` e
+> `reauditoria_integral=nao_executada`; 0/222 aceito.
+>
+> **Recontagem E23 (01/11/2026, 19ª promoção):** 23/122/77 depois da promoção de
+> `IntegrationsClient` (PLT-03, catálogo de integrações e teste de conexão).
+> `PLT-03` sai do núcleo duro (o relatório e o cenário `browser UX-PRO-03 PLT-03`
+> o citam) e `PLT-15` também, por ser citado no rodapé da mesma tela como dono
+> dos registros — **sem** tela nova para ele. Evidência textual; `a_revalidar`
+> sem menção em gate cai de 20 para **18**. Aceite humano e reauditoria integral
+> seguem **0/222**.
+
+> **Recontagem E23 (01/11/2026, provas PLT-07 e PLT-02):** 23/124/75. O cenário
+> `browser UX-PRO-03 PLT-07` e a prova focal PLT-02 movem essas duas famílias de
+> `somente_documento` para `mencionado_em_gate`; ambas continuam `a_revalidar` e
+> com aceite/reauditoria `nao_registrado`/`nao_executada`. Dos 18 itens do núcleo
+> duro, 16 seguem sem menção em gate. O núcleo permanece 18 itens porque a
+> evidência citada não fecha requisito.
+>
+> **Recontagem E23 (02/11/2026, PLT-01):** 24/124/74. A fatia de cobertura da
+> revisão periódica de acessos criou dois arquivos de teste com o ID no nome
+> (`tests/plt01-access-review-coverage.test.mjs` e
+> `tests/plt01-access-review-coverage.integration.test.mjs`) e um gate dedicado,
+> então `PLT-01` sai de `somente_documento` para `gate_nomeado` e do núcleo sem
+> gate (**16 → 15**), que passa a ter 17 IDs. O requisito **continua**
+> `a_revalidar`, com `aceite_humano=nao_registrado` e
+> `reauditoria_integral=nao_executada`: gate nomeado é onde procurar a prova, não
+> aceite. 0/222 aceito.
+
+> **Recontagem E23 (02/11/2026, PLT-12):** 26/124/72. A fatia de resposta a
+> incidente criou testes focais com o ID no nome
+> (`tests/plt12-incident-response.test.mjs` e
+> `tests/plt12-incident-response.integration.test.mjs`), o gate
+> `scripts/qa-plt12-incidents-postgres.mjs` e o contrato de leitura puro em
+> `src/server/incident-read-contract.mjs`. `PLT-12` sai de `somente_documento`
+> para `gate_nomeado`, o núcleo sem gate cai de **14 → 13**. É contrato e prova
+> de leitura/RBAC/evidência, **não** fechamento do requisito: `PLT-12` permanece
+> `a_revalidar`, aceite humano **0/222**, reauditoria integral **não executada**
+> e produção **NO-GO**.
+>
+> **Recontagem E23 (02/11/2026, PLT-06):** 25/124/73. A fatia de jornada/RBAC/
+> evidência da observabilidade criou dois arquivos de teste com o ID no nome
+> (`tests/plt06-observability-read-contract.test.mjs` e
+> `tests/plt06-observability-read-contract.integration.test.mjs`), o gate
+> `scripts/qa-plt06-observability-postgres.mjs` e o relatório datado. `PLT-06`
+> sai de `somente_documento` para `gate_nomeado`, o núcleo sem gate cai de
+> **15 → 14** e o núcleo duro passa a listar **16** IDs. É evidência técnica de
+> leitura/RBAC/correlação/ciclo de alerta, **não** fechamento do requisito:
+> `PLT-06` permanece `a_revalidar`, aceite humano **0/222**, reauditoria integral
+> **não executada** e produção **NO-GO**.
+
+> **Recontagem E23 (02/11/2026, PLT-09):** 26/124/72 → **27/124/71**. A fatia de
+> privacidade criou dois arquivos de teste com o ID no nome
+> (`tests/plt09-privacy-contract.test.mjs` e
+> `tests/plt09-privacy.integration.test.mjs`), o gate
+> `scripts/qa-plt09-privacy-postgres.mjs` e o contrato puro em
+> `src/server/privacy-read-contract.mjs`. `PLT-09` sai de `somente_documento`
+> para `gate_nomeado`, o núcleo sem gate cai de **13 → 12** e o núcleo duro
+> passa a listar **15** IDs. É contrato e prova de leitura/RBAC/evidência de
+> inventário, política, pedidos LGPD e retenção — **não** é parecer jurídico,
+> não publica política de privacidade real e não fecha o requisito: `PLT-09`
+> permanece `a_revalidar`, aceite humano **0/222**, reauditoria integral **não
+> executada** e produção **NO-GO**.
 
 > **Aviso central:** "mencionado em gate" **não é prova de jornada**. Um ID pode
 > ser citado num assert de vocabulário e ainda assim não ter jornada, RBAC,
@@ -69,30 +145,37 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 | `a_revalidar` (estado confirmado, 04/10) | **45** — a diferença de 1 é explícita, não corrigida |
 | `pronto_local` declarado | **164** |
 | `em_execucao` / `entregue` declarados | **6 / 6** |
-| **`a_revalidar` sem nenhuma menção em gate** | **20** |
+| **`a_revalidar` sem nenhuma menção em gate** | **12** |
 | Com aceite humano registrado | **0** |
 | Com reauditoria integral executada | **0** |
 
-### O núcleo duro (20 IDs)
+### O núcleo duro (15 IDs)
 
-`PLT-01`, `PLT-02`, `PLT-03`, `PLT-06`, `PLT-07`, `PLT-09`, `PLT-12`, `PLT-15`,
+`PLT-02`, `PLT-07`, `PLT-12`,
 `EXT-16`, `EXT-17`, `AI-01`…`AI-10`.
 
 São exatamente as famílias que a auditoria já apontava como bloqueadas:
 segurança/escopo de documentos, plataforma, EXT-16/17 (biometria e central,
 bloqueadas por privacidade) e **toda a frente de IA real** (F14).
 
-**Saíram do núcleo desde 27/10 (7 IDs, todos com relatório próprio):** `CLI-02` e
+**Saíram do núcleo desde 27/10 (10 IDs, todos com relatório próprio):** `PLT-01`
+(02/11, cobertura da revisão periódica de acessos: módulo
+`src/server/access-review-coverage.mjs`, visão `?view=coverage` e o gate
+`test:plt01-access-review-coverage:pg`, com prova focal nomeada pelo ID), `PLT-03`
+(19ª promoção do console de TI, catálogo de integrações) e `PLT-15` (citado no
+rodapé da mesma tela como dono dos registros/jobs/webhooks) passaram a
+`mencionado_em_gate` — `PLT-15` **não** ganhou tela nova aqui, só a fronteira
+declarada. `CLI-02` e
 `CLI-03` passaram a `gate_nomeado`; `CLI-05`…`CLI-08` e `PLT-10` passaram a
 `mencionado_em_gate`. A família SEC recebeu um **mapa de reauditoria técnica com 35 âncoras em 5 execuções de gates** (`docs/REQUISITOS-SEC-REAUDITORIA-2026-10-28.md`), levando os 15 IDs SEC de `somente_documento` para `mencionado_em_gate`. Isso **não** significa que os
 requisitos foram implementados/revalidados: o relatório SEC marca
 `aceite_humano=nao_registrado` e `reauditoria_integral=nao_executada` em todos os
 15. A classe textual indica somente que há evidência técnica mapeada.
 
-Entre os 46 `a_revalidar`, **26 têm alguma menção em gate**: `SEC-03`, `SEC-07`,
+Entre os 46 `a_revalidar`, **32 têm alguma menção em gate**: `PLT-01` (`gate_nomeado`, 02/11), `PLT-02`, `PLT-07`, `PLT-12` (`gate_nomeado`, 02/11), `SEC-03`, `SEC-07`,
 `SEC-10`…`SEC-15`, `CLI-01`, `CLI-02` e `CLI-03` (`gate_nomeado`), `CLI-05`…`CLI-10`,
-`PLT-10`, `PLT-11`, `PLT-13`, `PLT-14`, `PLT-16`…`PLT-18`, `EXT-06` e `EXT-09`
-(`gate_nomeado`). Isso **não** os torna revalidados: a menção é um ponto de
+`PLT-03`, `PLT-10`, `PLT-11`, `PLT-13`, `PLT-14`, `PLT-15`, `PLT-16`…`PLT-18`,
+`EXT-06` e `EXT-09` (`gate_nomeado`). Isso **não** os torna revalidados: a menção é um ponto de
 partida, não um aceite.
 
 ## 4. RED → GREEN

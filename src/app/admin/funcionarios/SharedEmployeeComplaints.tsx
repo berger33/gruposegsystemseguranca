@@ -104,6 +104,10 @@ export default function SharedEmployeeComplaints() {
   const [writeError, setWriteError] = useState('');
   const listSequence = useRef(0);
   const detailSequence = useRef(0);
+  // Sequência própria da escrita: uma resposta de PATCH que chega depois de o
+  // RH abrir outro relato (ou reler a lista) é descartada, mas o formulário
+  // novo não pode ficar preso em "Salvando situação…" até recarregar a página.
+  const writeSequence = useRef(0);
   const listHeading = useRef<HTMLHeadingElement>(null);
 
   const loadList = useCallback(async (initial = false) => {
@@ -113,6 +117,8 @@ export default function SharedEmployeeComplaints() {
       setDetail(null);
       setDetailState('idle');
       detailSequence.current += 1;
+      writeSequence.current += 1;
+      setBusy(false);
     }
     setListState('loading');
     setListError('');
@@ -149,6 +155,8 @@ export default function SharedEmployeeComplaints() {
 
   const openDetail = useCallback(async (id: string) => {
     const sequence = ++detailSequence.current;
+    writeSequence.current += 1;
+    setBusy(false);
     setSelectedId(id);
     setDetail(null);
     setDetailState('loading');
@@ -192,6 +200,7 @@ export default function SharedEmployeeComplaints() {
       return;
     }
     const requestSequence = detailSequence.current;
+    const write = ++writeSequence.current;
     setBusy(true);
     setWriteError('');
     setNotice('');
@@ -225,7 +234,10 @@ export default function SharedEmployeeComplaints() {
     } catch {
       if (requestSequence === detailSequence.current) setWriteError('Não foi possível confirmar a atualização. Confira o serviço e tente novamente.');
     } finally {
-      if (requestSequence === detailSequence.current) setBusy(false);
+      // Só o envio mais recente libera o formulário: se o RH trocou de relato
+      // (ou releu a lista) enquanto este PATCH estava em voo, a abertura do
+      // relato novo já liberou o formulário e esta resposta é apenas ignorada.
+      if (write === writeSequence.current) setBusy(false);
     }
   }
 

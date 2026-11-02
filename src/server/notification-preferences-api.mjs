@@ -1,7 +1,14 @@
+import { randomUUID } from 'node:crypto';
+
 export function createNotificationPreferencesApi({ json, readJson, sameOrigin, getPool, readAdminSession }) {
   const CHANNELS = ['email','whatsapp','sms','push','webhook','internal','sistema'];
   const RECIPIENT_KINDS = ['client','staff','lead','system','marcelo','ti','admin','rh'];
   const TEMPLATE_STATUSES = ['rascunho','em_revisao','aprovado','arquivado','rejeitado'];
+  // Hora cheia no formato HH:MM. Sem esta validação, silêncio inválido chegava
+  // ao Postgres e voltava como 503 "preference_update_failed" — erro do
+  // operador apresentado como falha do servidor.
+  const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   function sanitizeText(s, max) {
     if (s == null) return null;
@@ -72,28 +79,39 @@ export function createNotificationPreferencesApi({ json, readJson, sameOrigin, g
 
       if (!RECIPIENT_KINDS.includes(recipient_kind)) return json(res, 400, { error: 'invalid_recipient_kind' });
       if (!CHANNELS.includes(channel)) return json(res, 400, { error: 'invalid_channel' });
-      if (recipient_id && typeof recipient_id !== 'string') return json(res, 400, { error: 'invalid_recipient_id' });
+      if (recipient_id && (typeof recipient_id !== 'string' || !UUID_RE.test(recipient_id))) {
+        // Antes: qualquer string passava e o Postgres recusava na coluna uuid.
+        return json(res, 400, { error: 'invalid_recipient_id' });
+      }
+      const silencioInicio = quiet_start == null ? null : String(quiet_start).trim();
+      const silencioFim = quiet_end == null ? null : String(quiet_end).trim();
+      if (Boolean(silencioInicio) !== Boolean(silencioFim)
+        || (silencioInicio && (!HORA.test(silencioInicio) || !HORA.test(silencioFim)))) {
+        return json(res, 400, { error: 'invalid_quiet_hours', note: 'silêncio em HH:MM, com início e fim juntos' });
+      }
 
       try {
         const pool = getPool();
-        const id = crypto.randomUUID();
-        const up = await pool.query(
+        // O UNIQUE do banco é (recipient_kind, recipient_id, channel) com
+        // recipient_id ANULÁVEL: NULL nunca colide com NULL, então `ON CONFLICT`
+        // não disparava para preferência global e cada gravação criava uma
+        // linha nova. Atualizar com IS NOT DISTINCT FROM trata NULL como valor.
+        const atualizada = await pool.query(
+          `UPDATE crm_notification_preferences SET
+             recipient_email = COALESCE($4, recipient_email),
+             is_enabled = $5, is_email_enabled = $6, is_push_enabled = $7,
+             is_whatsapp_enabled = $8, is_sms_enabled = $9, is_internal_enabled = $10,
+             quiet_hours_start = $11, quiet_hours_end = $12, updated_at = NOW()
+           WHERE recipient_kind=$1 AND recipient_id IS NOT DISTINCT FROM $2 AND channel=$3
+           RETURNING *`,
+          [recipient_kind, recipient_id, channel, recipient_email, !!is_enabled, !!is_email_enabled, !!is_push_enabled, !!is_whatsapp_enabled, !!is_sms_enabled, !!is_internal_enabled, silencioInicio, silencioFim]
+        );
+        const up = atualizada.rows[0] ? atualizada : await pool.query(
           `INSERT INTO crm_notification_preferences
             (id, recipient_kind, recipient_id, recipient_email, channel, is_enabled, is_email_enabled, is_push_enabled, is_whatsapp_enabled, is_sms_enabled, is_internal_enabled, quiet_hours_start, quiet_hours_end, created_by, created_by_id)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
-           ON CONFLICT (recipient_kind, recipient_id, channel) DO UPDATE SET
-             recipient_email = COALESCE(EXCLUDED.recipient_email, crm_notification_preferences.recipient_email),
-             is_enabled = EXCLUDED.is_enabled,
-             is_email_enabled = EXCLUDED.is_email_enabled,
-             is_push_enabled = EXCLUDED.is_push_enabled,
-             is_whatsapp_enabled = EXCLUDED.is_whatsapp_enabled,
-             is_sms_enabled = EXCLUDED.is_sms_enabled,
-             is_internal_enabled = EXCLUDED.is_internal_enabled,
-             quiet_hours_start = EXCLUDED.quiet_hours_start,
-             quiet_hours_end = EXCLUDED.quiet_hours_end,
-             updated_at = NOW()
            RETURNING *`,
-          [id, recipient_kind, recipient_id, recipient_email, channel, !!is_enabled, !!is_email_enabled, !!is_push_enabled, !!is_whatsapp_enabled, !!is_sms_enabled, !!is_internal_enabled, quiet_start, quiet_end, session.role, session.identityId || null]
+          [randomUUID(), recipient_kind, recipient_id, recipient_email, channel, !!is_enabled, !!is_email_enabled, !!is_push_enabled, !!is_whatsapp_enabled, !!is_sms_enabled, !!is_internal_enabled, silencioInicio, silencioFim, session.role, session.identityId || null]
         );
         try { await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'crm_notification_preference_update',$3,'allowed','none')", [session.role, session.identityId || session.role, up.rows[0].id]); } catch {}
         return json(res, 200, { preference: up.rows[0], note: 'Preferência atualizada por canal sem info médica' });
@@ -162,6 +180,17 @@ export function createNotificationPreferencesApi({ json, readJson, sameOrigin, g
       if (!bodyText) return json(res, 400, { error: 'invalid_body' });
       if (!TEMPLATE_STATUSES.includes(status)) return json(res, 400, { error: 'invalid_status' });
 
+      // Criar já aprovado (ou já rejeitado) pulava a revisão: a linha nascia
+      // com status terminal e SEM approved_by/approved_at — aprovação sem
+      // trilha. Agora exige o mesmo papel da transição e grava quem aprovou.
+      const criaAprovado = status === 'aprovado';
+      const criaRejeitado = status === 'rejeitado';
+      const motivoRejeicao = criaRejeitado ? sanitizeText(body?.rejection_reason || body?.rejectionReason, 1000) : null;
+      if ((criaAprovado || criaRejeitado) && !['admin','ti'].includes(session.role)) {
+        return json(res, 403, { error: 'approval_requires_admin_ti' });
+      }
+      if (criaRejeitado && !motivoRejeicao) return json(res, 400, { error: 'rejection_reason_required' });
+
       // Validação crítica PLT-05: nenhuma informação médica em assunto/push
       const isMedicalSafe = !containsMedicalInfo(subject) && !containsMedicalInfo(bodyText);
       if (!isMedicalSafe) {
@@ -176,12 +205,15 @@ export function createNotificationPreferencesApi({ json, readJson, sameOrigin, g
         // version increment
         const verRes = await pool.query('SELECT COALESCE(MAX(version),0)::int AS maxv FROM crm_notification_templates WHERE template_key = $1 AND channel = $2', [template_key, channel]);
         const nextVersion = (verRes.rows[0]?.maxv || 0) + 1;
-        const id = crypto.randomUUID();
+        const id = randomUUID();
         const ins = await pool.query(
           `INSERT INTO crm_notification_templates
-            (id, template_key, channel, subject, body, is_medical_safe, status, version, medical_review_note, created_by, created_by_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-          [id, template_key, channel, subject, bodyText, isMedicalSafe, status, nextVersion, medical_review_note, session.role, session.identityId || null]
+            (id, template_key, channel, subject, body, is_medical_safe, status, version, medical_review_note, created_by, created_by_id,
+             approved_by, approved_by_id, approved_at, rejection_reason)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,
+             CASE WHEN $14 THEN NOW() ELSE NULL END, $15) RETURNING *`,
+          [id, template_key, channel, subject, bodyText, isMedicalSafe, status, nextVersion, medical_review_note, session.role, session.identityId || null,
+            criaAprovado ? session.role : null, criaAprovado ? (session.identityId || null) : null, criaAprovado, motivoRejeicao]
         );
         try { await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,'crm_notification_template_create',$3,'allowed','none')", [session.role, session.identityId || session.role, id]); } catch {}
         return json(res, 201, { template: ins.rows[0], note: 'Template criado com verificação médica segura, sem info médica em assunto/push' });
@@ -215,7 +247,13 @@ export function createNotificationPreferencesApi({ json, readJson, sameOrigin, g
     if (req.method === 'PATCH') {
       let body;
       try { body = await readJson(req, 10 * 1024); } catch { return json(res, 400, { error: 'invalid_json' }); }
+      let atual;
+      try {
+        atual = (await getPool().query('SELECT * FROM crm_notification_templates WHERE id = $1', [templateId])).rows[0];
+      } catch { return json(res, 503, { error: 'template_unavailable' }); }
+      if (!atual) return json(res, 404, { error: 'not_found' });
       const fields = []; const vals = []; let idx = 1;
+      let seguroFinal = atual.is_medical_safe === true;
       if (body?.subject !== undefined) {
         const s = sanitizeText(body.subject, 200);
         if (s !== null && containsMedicalInfo(s)) return json(res, 400, { error: 'medical_info_not_allowed_in_subject' });
@@ -228,6 +266,7 @@ export function createNotificationPreferencesApi({ json, readJson, sameOrigin, g
           return json(res, 400, { error: 'medical_info_not_allowed_in_push' });
         }
         const safe = !containsMedicalInfo(b);
+        seguroFinal = safe;
         fields.push(`body = $${idx++}`); vals.push(b);
         fields.push(`is_medical_safe = $${idx++}`); vals.push(safe);
       }
@@ -237,6 +276,11 @@ export function createNotificationPreferencesApi({ json, readJson, sameOrigin, g
         // Aprovação exige admin/ti
         if ((st === 'aprovado' || st === 'rejeitado') && !['admin','ti'].includes(session.role)) {
           return json(res, 403, { error: 'approval_requires_admin_ti' });
+        }
+        // PLT-05: aprovar um modelo que o próprio servidor marcou como NÃO
+        // seguro para informação médica contradiz o motivo do bloqueio.
+        if (st === 'aprovado' && !seguroFinal) {
+          return json(res, 409, { error: 'medical_safety_required', note: 'conteúdo com informação médica não pode ser aprovado' });
         }
         fields.push(`status = $${idx++}`); vals.push(st);
         if (st === 'aprovado') {

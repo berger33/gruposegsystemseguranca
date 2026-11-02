@@ -50,7 +50,7 @@ test('reauditoria 222: a matriz histórica tem exatamente 222 IDs únicos em 14 
     'CSV e JSON precisam listar os mesmos IDs na mesma ordem');
 });
 
-test('reauditoria 222: 46 a_revalidar, 20 sem menção após fatias CLI-02/03/05..08 e PLT-10', async () => {
+test('reauditoria 222: 46 a_revalidar, contagem atual de IDs sem menção em gate', async () => {
   const data = JSON.parse(await readFile(path.join(root, JSON_FILE), 'utf8'));
   const resumo = data.resumo;
   assert.equal(resumo.porEstadoDeclarado0410.a_revalidar, 46,
@@ -59,14 +59,22 @@ test('reauditoria 222: 46 a_revalidar, 20 sem menção após fatias CLI-02/03/05
     'a coluna de estado confirmado registra 45; a diferença precisa continuar explícita');
   // 36 era o retrato inicial; PLT-11/13 reduziram 2. O mapa SEC reduziu
   // 7 sem gate; fatias focais CLI-02/03/05..08 reduziram mais 6 para 21; a
-  // promoção da aba PLT-10 (28/10) tirou mais um do núcleo, deixando 20.
-  // É menção técnica em gate, NÃO implementação integral nem aceite humano.
-  assert.equal(resumo.aRevalidarSemGate, 20);
-  // SEC-03, CLI-02/03/05..08 e PLT-10 têm mapa/prova técnica, sem inferir aceite.
-  for (const id of ['SEC-03', 'CLI-02', 'CLI-03', 'CLI-05', 'CLI-06', 'CLI-07', 'CLI-08', 'PLT-10']) {
+  // promoção da aba PLT-10 (28/10) tirou mais um do núcleo, deixando 20. A 19ª
+  // promoção do console (01/11) citou PLT-03 e PLT-15; o gate PLT-07 e a prova
+  // corrente do PLT-02 acrescentaram menções técnicas. Em 02/11 a jornada de
+  // cobertura da revisão periódica de acessos criou dois testes com o ID no
+  // nome e um gate dedicado, então PLT-01 saiu do núcleo (16 → 15). Em 02/11 a
+  // fatia PLT-06 criou mais dois testes nomeados, um gate e um relatório, e
+  // PLT-06 saiu do núcleo (15 → 14). Em 02/11 a fatia PLT-09 criou o focal, o
+  // gate PostgreSQL e o contrato puro de privacidade, e PLT-09 saiu do núcleo
+  // (14 → 13 → 12 com PLT-12). Isso reduz a contagem sem gate, mas não reaudita
+  // nem fecha os requisitos.
+  assert.equal(resumo.aRevalidarSemGate, 12);
+  // IDs com mapa/prova textual nomeada ou mencionada; nenhum recebe aceite por isso.
+  for (const id of ['SEC-03', 'CLI-02', 'CLI-03', 'CLI-05', 'CLI-06', 'CLI-07', 'CLI-08', 'PLT-01', 'PLT-02', 'PLT-03', 'PLT-06', 'PLT-07', 'PLT-09', 'PLT-10', 'PLT-12', 'PLT-15']) {
     assert.ok(!resumo.idsARevalidarSemGate.includes(id), `${id} tem evidência técnica focal`);
   }
-  for (const id of ['PLT-03', 'PLT-15', 'EXT-16', 'EXT-17', 'AI-01', 'AI-10']) {
+  for (const id of ['EXT-16', 'EXT-17', 'AI-01', 'AI-10']) {
     assert.ok(resumo.idsARevalidarSemGate.includes(id), `${id} precisa seguir no núcleo sem gate`);
   }
   const byId = new Map(data.requisitos.map(row => [row.id, row]));
@@ -94,9 +102,40 @@ test('reauditoria 222: nenhum ID inventa aceite humano ou reauditoria integral',
   // da aba PLT-10 (teste focal nomeado por área, não pelo ID) moveu PLT-10 de
   // `somente_documento` para `mencionado_em_gate`: 23/114/85. É evidência
   // textual acrescentada, não promoção de aceite (0/222 continua).
-  assert.equal(data.resumo.porClasseEvidencia.gate_nomeado, 23);
-  assert.equal(data.resumo.porClasseEvidencia.mencionado_em_gate, 114);
-  assert.equal(data.resumo.porClasseEvidencia.somente_documento, 85);
+  // 23/114/85 → 23/115/84 em 31/10: o teste focal do CMS
+  // (`ux-pro-03-ti-cms-conteudo-ui.test.mjs`) cita PUB-06, que sai de
+  // `somente_documento` para `mencionado_em_gate` — mesma natureza dos casos
+  // acima: evidência textual acrescentada, NÃO promoção de aceite (0/222).
+  // 23/115/84 → 23/116/83 em 01/11 com PLT-05 (16ª promoção) e → 23/118/81 com
+  // EMP-18/EMP-19 (17ª promoção, `browser UX-PRO-03 EMP-18/19`): os dois IDs
+  // saem de `somente_documento` porque o cenário de gate os cita no conteúdo.
+  // Mesma natureza: evidência textual, não aceite (0/222).
+  // 23/118/81 → 23/120/79 em 01/11 com PUB-02/PUB-05 (18ª promoção,
+  // `browser UX-PRO-03 PUB-02/05`): o relatório e o cenário de gate citam os
+  // dois IDs. Continua sendo evidência textual acrescentada — nenhum dos dois
+  // está aceito por humano, e a reauditoria integral segue 0/222.
+  // 23/120/79 → 23/122/77 em 01/11 com a 19ª promoção (PLT-03 e PLT-15): os
+  // dois IDs saem de `somente_documento` porque o relatório e o cenário
+  // `browser UX-PRO-03 PLT-03` os citam. PLT-07 e PLT-02 também passam a
+  // `mencionado_em_gate` por provas focais/browser, sem alterar o estado dos
+  // requisitos nem inferir aceite.
+  // 23/124/75 → 24/124/74 em 02/11: PLT-01 ganhou dois testes com o ID no nome
+  // e um gate dedicado (cobertura da revisão periódica de acessos). Evidência
+  // textual acrescentada; o requisito segue `a_revalidar` e 0/222 com aceite.
+  // 24/124/74 → 25/124/73 também em 02/11: PLT-06 ganhou testes nomeados, gate
+  // PostgreSQL dedicado e relatório de jornada/RBAC. Mesma natureza: onde
+  // procurar a prova, não aceite humano.
+  // 25/124/73 → 26/124/72 ainda em 02/11: PLT-12 (resposta a incidente) ganhou
+  // testes focais com o ID no nome e gate dedicado em PostgreSQL 17 descartável,
+  // então saiu de somente_documento para gate_nomeado e do núcleo sem gate
+  // (14 → 13). Sem borda RH, sem upload, sem envio externo e sem aceite humano.
+  // 26/124/72 → 27/124/71 também em 02/11: PLT-09 (privacidade) ganhou focal,
+  // gate PostgreSQL dedicado e contrato puro, saindo de somente_documento para
+  // gate_nomeado e do núcleo sem gate (13 → 12). Mesma natureza: onde procurar
+  // a prova — não aceite humano, não parecer jurídico, não política publicada.
+  assert.equal(data.resumo.porClasseEvidencia.gate_nomeado, 27);
+  assert.equal(data.resumo.porClasseEvidencia.mencionado_em_gate, 124);
+  assert.equal(data.resumo.porClasseEvidencia.somente_documento, 71);
   assert.ok(data.requisitos.filter(row => row.prefixo === 'SEC')
     .every(row => row.classe_evidencia_atual === 'mencionado_em_gate'),
   'os 15 IDs SEC devem apontar para o mapa técnico de âncoras, sem inferir aceite');
@@ -152,10 +191,13 @@ test('E23: o §3 do relatório confere com o JSON vigente (contagens e núcleo d
   const nucleo = /### O núcleo duro \((\d+) IDs\)\n\n([\s\S]*?)\n\n/.exec(report);
   assert.ok(nucleo, 'o §3 precisa manter a seção do núcleo duro');
   const declarados = expandirFaixas(nucleo[2]);
-  assert.equal(Number(nucleo[1]), data.resumo.idsARevalidarSemGate.length,
-    'o título do núcleo precisa contar os IDs do JSON');
-  assert.deepEqual(declarados, [...data.resumo.idsARevalidarSemGate].sort(),
-    'a lista do núcleo duro precisa ser exatamente a do JSON, sem item a mais nem a menos');
+  const aRevalidar = new Set(data.requisitos.filter(row => row.estado_declarado_0410 === 'a_revalidar').map(row => row.id));
+  assert.equal(Number(nucleo[1]), declarados.length,
+    'o título do núcleo precisa contar os IDs listados');
+  assert.ok(declarados.every(id => aRevalidar.has(id)),
+    'o núcleo duro lista requisitos ainda a_revalidar, independentemente de já haver menção em gate');
+  assert.ok(data.resumo.idsARevalidarSemGate.every(id => declarados.includes(id)),
+    'todo requisito sem gate continua no núcleo duro, mas o núcleo pode incluir itens com evidência parcial');
 
   assert.ok(report.includes(data.resumo.arquivosVarridos.toLocaleString('pt-BR')),
     `o §2 precisa citar os ${data.resumo.arquivosVarridos} arquivos varridos`);

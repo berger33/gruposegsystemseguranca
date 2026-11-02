@@ -1,10 +1,18 @@
 // PLT-10 pedidos acesso/correção/eliminação verificação identidade responsável prazo impedimentos legais documentados
 import { createHash } from 'node:crypto';
+import {
+  LGPD_REQUEST_TYPES,
+  LGPD_REQUEST_STATUSES,
+  LGPD_VERIFICATION_METHODS,
+  LGPD_ALLOWED_TRANSITIONS,
+  LGPD_DECLARED_DUE_DAYS,
+  requesterEmailProblem,
+} from './privacy-read-contract.mjs';
 
 export function createLgpdRequestApi({ json, readJson, sameOrigin, getPool, readAdminSession }) {
-  const REQUEST_TYPES = ['acesso','correcao','eliminacao','portabilidade','oposicao','revogacao_consentimento','informacao','outro'];
-  const STATUSES = ['recebido','em_verificacao','em_analise','aguardando_titular','aprovado','atendido','rejeitado','cancelado','expirado'];
-  const VERIFICATION_METHODS = ['email','documento','presencial','video','outro'];
+  const REQUEST_TYPES = [...LGPD_REQUEST_TYPES];
+  const STATUSES = [...LGPD_REQUEST_STATUSES];
+  const VERIFICATION_METHODS = [...LGPD_VERIFICATION_METHODS];
 
   function sanitizeText(s, max) {
     if (s == null) return null;
@@ -22,17 +30,7 @@ export function createLgpdRequestApi({ json, readJson, sameOrigin, getPool, read
     } catch { return null; }
   }
 
-  const ALLOWED_TRANSITIONS = {
-    recebido: ['em_verificacao','cancelado'],
-    em_verificacao: ['em_analise','aguardando_titular','rejeitado','cancelado'],
-    em_analise: ['aprovado','rejeitado','aguardando_titular','cancelado'],
-    aguardando_titular: ['em_analise','rejeitado','expirado','cancelado'],
-    aprovado: ['atendido','rejeitado','cancelado'],
-    atendido: [],
-    rejeitado: [],
-    cancelado: [],
-    expirado: [],
-  };
+  const ALLOWED_TRANSITIONS = LGPD_ALLOWED_TRANSITIONS;
 
   async function handleRequests(req, res) {
     // Public endpoint for creating request does NOT require admin session, but requires sameOrigin and rate limit
@@ -49,20 +47,27 @@ export function createLgpdRequestApi({ json, readJson, sameOrigin, getPool, read
 
       if (!REQUEST_TYPES.includes(request_type)) return json(res, 400, { error: 'invalid_request_type' });
       if (!requester_name) return json(res, 400, { error: 'invalid_requester_name' });
-      if (!requester_email || !requester_email.includes('@')) return json(res, 400, { error: 'invalid_requester_email' });
+      // A migração 048 exige 5..320 caracteres: `a@b` passava pelo handler e
+      // derrubava o INSERT em 503 `lgpd_create_failed` (medido em 02/11).
+      if (requesterEmailProblem(requester_email)) return json(res, 400, { error: 'invalid_requester_email' });
       if (!description || description.length < 10) return json(res, 400, { error: 'description_min_10' });
 
       try {
         const pool = getPool();
         const id = crypto.randomUUID();
-        const dueDate = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().slice(0,10); // 15 dias LGPD
+        // Prazo DECLARADO de 15 dias (constante do contrato, não parecer jurídico).
+        const dueDate = new Date(Date.now() + LGPD_DECLARED_DUE_DAYS * 24 * 60 * 60 * 1000).toISOString().slice(0,10);
         const docHash = requester_document ? hashDocument(requester_document) : null;
         const ins = await pool.query(
           `INSERT INTO lgpd_requests (id, request_type, status, requester_name, requester_email, requester_document_hash, description, due_date)
            VALUES ($1,$2,'recebido',$3,$4,$5,$6,$7) RETURNING *`,
           [id, request_type, requester_name, requester_email, docHash, description, dueDate]
         );
-        try { await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ('public',$1,'lgpd_request_create',$2,'allowed','none')", [requester_email, id]); } catch {}
+        // A trilha ia para `auth_access_audit` com actor_kind='public', valor que o
+        // CHECK das migrações 003/006/103 não aceita — a auditoria era descartada
+        // em silêncio (medido em 02/11). Aqui ela vai para `audit_log`, a mesma
+        // tabela usada pelo resto do domínio, sem armazenar o e-mail do titular.
+        try { await pool.query("INSERT INTO audit_log (action, actor, target, meta) VALUES ('lgpd_request_create','public',$1,$2)", [id, JSON.stringify({ request_type })]); } catch {}
         return json(res, 201, { request: ins.rows[0], note: 'Pedido LGPD recebido, verificação identidade necessária, prazo 15 dias, responsável será atribuído, impedimentos legais documentados se houver' });
       } catch (e) {
         console.error('lgpd create failed', e);
@@ -216,7 +221,16 @@ export function createLgpdRequestApi({ json, readJson, sameOrigin, getPool, read
         }
 
         const auditAction = next_status === 'atendido' ? 'lgpd_request_respond' : next_status === 'rejeitado' ? 'lgpd_request_reject' : is_identity_verified ? 'lgpd_request_verify' : 'lgpd_request_update';
-        try { await pool.query("INSERT INTO auth_access_audit (actor_kind, actor_id, action, target, result, detail_category) VALUES ($1,$2,$3,$4,'allowed','none')", [session.role, session.identityId || session.role, auditAction, requestId]); } catch {}
+        // Mesmo motivo do lado público: as ações `lgpd_*` não estão no CHECK de
+        // `auth_access_audit` (migrações 100/103) e a trilha era engolida pelo
+        // `catch {}`. `audit_log` aceita a ação como TEXTO.
+        try {
+          await pool.query('INSERT INTO audit_log (action, actor, target, meta) VALUES ($1,$2,$3,$4)', [
+            auditAction, session.role, requestId, JSON.stringify({ actor_id: session.identityId || null, previous: cur.status, next: next_status || null }),
+          ]);
+        } catch (error) {
+          console.error('lgpd audit unavailable', error?.message || error);
+        }
 
         return json(res, 200, { request: upd.rows[0], note: 'Pedido LGPD atualizado com verificação identidade, responsável, prazo e impedimentos documentados' });
       } catch (e) {

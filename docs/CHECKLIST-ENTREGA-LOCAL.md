@@ -1,3 +1,18 @@
+## Atualização corrente — PLT-06: jornada, RBAC e evidência de gate (02/11/2026)
+
+**Base:** `5fde81d` (`main`, merge da PR #328); branch `arena/f9020140-gruposegsystemseguranca`. **Não** é promoção de tela: a aba `observacao` já estava montada e foi preservada.
+
+- [x] RED medido antes das correções: sonda sem editar código (leitura `summary` emitindo `INSERT INTO auth_access_audit`, `POST` de leitura em 200, `status` inválido em 503 e 503 sem `error_sanitized`); focal **6/12, exit 1** e gate PostgreSQL **20/23, exit 1**.
+- [x] Cinco leituras `summary|requests|jobs|db|alerts` provadas em HTTP real: anônimo **401**, `rh` **403**, `admin`/`ti` **200**, `same_origin_required` nas escritas cross-site e GET seguro preservado.
+- [x] Correlação por requisição: `X-Request-Id`/`X-Correlation-Id` no cabeçalho e o **mesmo** par persistido em `observability_http_requests`, com correlação gerada, enviada pelo cliente e truncada em 100 caracteres.
+- [x] Ciclo de alerta: acknowledge/resolve com estado lido do banco, id inválido **400**, inexistente **404**, ação inválida **400**, `rh` **403**, `PATCH` e aliases preservados.
+- [x] Leitura de estado: nenhum evento novo em `auth_access_audit`, nenhuma alteração em `observability_alerts`; dez leituras medidas e telemetria da própria requisição preservada.
+- [x] Correções pontuais: 405 com `Allow: GET` nas rotas de leitura, `invalid_status` antes do PostgreSQL, `error_sanitized` sanitizado nas falhas de dependência e na telemetria, e roteamento de id inválido para o handler.
+- [x] Focal **12/12, exit 0** com **6 mutações detectadas e revertidas**; gate `npm run test:plt06-observability:pg` **23/23, exit 0** (`MINIMUM_CASES=20`, 0 skip/todo) em PostgreSQL 17 descartável + 001–181 + `server.mjs --dev` + sessões reais `ti`/`rh`/`admin`.
+- [x] `npm test` **1398/1398, exit 0**; `typecheck` **exit 0**; `build` **exit 0** com **106 páginas**; três inventários oficiais regenerados e com `--check` verde (222: **25/124/73**, **14** sem gate, **1.695** arquivos).
+- [ ] Aceite humano, UAT, Chromium na aba, Windows/EPERM, banco de destino, reauditoria integral e produção. PLT-06 segue **`a_revalidar`**; PLT-02 não foi fechado; produção **NO-GO**.
+- [ ] Dívida declarada: o `CHECK` vigente de `auth_access_audit` recusa silenciosamente `observability_alert_ack`/`observability_alert_resolve`; sem migração 182 nesta fatia. Relatório: `docs/PLT-06-OBSERVABILIDADE-JORNADA-RBAC-GATE-2026-11-02.md`.
+
 ## Atualização corrente — F15 / EXT-05 isolamento A/B por `client_account_id`
 
 **Base:** commit `9612f26`; branch Arena fixa da sessão.
@@ -1531,9 +1546,9 @@ análises de expansão, qualidade e oportunidades adicionais alimentadas pelos m
 ## PLT-01
 diretório de usuários, papéis, escopos, convites, suspensão/revogação e revisão periódica de acesso.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: aba **Acessos** de `/admin/ti` (`RbacClient.tsx`): lista de concessões ativas até 200 com filtro visível, concessão com motivo obrigatório, revogação com motivo obrigatório e as duas ações invalidando as sessões da identidade; seção “Revisão periódica de acessos” que registra decisão `keep|revoke|adjust` **sem** alterar permissões; e a nova seção **“Cobertura da revisão periódica”** — `GET /api/admin/access-reviews?view=coverage`, derivada de `auth_access_reviews` para identidades `staff` ativas, com `admin.access_review` (anônimo 401, `rh` 403), 405 no `POST` dessa visão, sem escrita alguma, mantendo `{ reviews }` na visão padrão. A periodicidade é declarada por `ACCESS_REVIEW_INTERVAL_DAYS` (1..730; vazio = **regra não declarada**, sem atraso calculado). Ordenação coloca pendentes primeiro; datas inválidas são ignoradas; `limit` 1..500 (padrão 200) com `truncado` explícito.
+- Integração e evidência (teste, resultado, commit): focal `tests/plt01-access-review-coverage.test.mjs` **10/10** no `test:unit`, com **3 mutações detectadas** (regra inventada; escrita antes da leitura; guarda de 405 removida); gate dedicado `npm run test:plt01-access-review-coverage:pg` **12/12, exit 0** em PostgreSQL 17 descartável (001–181) + `server.mjs --dev` real + sessões `ti`/`rh` reais (401 anônimo, 403 rh, sem regra sem pendência, `limit`/truncamento, 405 sem gravar revisão, revisão registrada virando fato com auditoria preservada, três leituras sem alterar revisões/auditoria/permissões, segunda instância com 180 dias classificando `em_dia`/`nunca_revisada`, revisão de 400 dias virando `vencida`, contrato antigo intacto, `/admin/ti` servido); `npm test` **1386/1386**, typecheck e build limpos; inventários regenerados pelos scripts oficiais (`requisitos-222` → PLT-01 `gate_nomeado`, 24/124/74; 15 sem gate). Relatório: `docs/PLT-01-COBERTURA-REVISAO-ACESSOS-2026-11-02.md`.
+- Pendência / fronteira externa / aceite humano: **não** há campanha formal de revisão (lote/período por identidade, atribuição de revisores, notificação, escalonamento) nem revisor designado por área; a decisão `revoke` continua sendo registro e **não** revoga sozinha. A auditoria de concessão/revogação/revisão segue **auxiliar** (`.catch()` silencioso), como a tela declara — torná-la transacional é fatia separada. Sem prova em navegador (Chromium) da nova seção e sem histórico “antes”. Nenhum usuário real, nenhum dado real e nenhuma migração nova (usa `auth_permissions`/`auth_access_reviews` da 010). Aceite humano **não registrado**, reauditoria integral **não executada**, produção **NO-GO**.
 
 ## PLT-02
 auditoria consultável por autor/ação/objeto/período/resultado, com acesso restrito e exportação auditada.
@@ -1566,9 +1581,9 @@ notificações no painel, e-mail e canais externos configurados, preferências e
 ## PLT-06
 observabilidade de HTTP/jobs/DB, correlação por request/event ID, métricas e alertas acionáveis, sem segredos.
 - Estado: a_revalidar
-- Tela / API / dados / autorização: preencher
-- Integração e evidência (teste, resultado, commit): preencher
-- Pendência / fronteira externa / aceite humano: preencher
+- Tela / API / dados / autorização: aba `observacao` de `/admin/ti` já montada e preservada (sem 20ª promoção). `GET /api/admin/observability` e `/metrics` com `type=summary|requests|jobs|db|alerts`, sessão `admin`/`ti` (anônimo 401, `rh` 403), `same_origin_required` nas escritas, 405 com `Allow: GET` nos métodos de escrita, `invalid_status` para filtro fora do enum, `error_sanitized` sanitizado nas falhas de dependência. `POST`/`PATCH /api/admin/observability/alerts/:id` só com acknowledge/resolve; id inválido 400, inexistente 404, ação inválida 400 e `rh` 403. Correlação `X-Request-Id`/`X-Correlation-Id` persistida em `observability_http_requests`.
+- Integração e evidência (teste, resultado, commit): focal `tests/plt06-observability-read-contract.test.mjs` **12/12, exit 0** no `test:unit` (RED **6/12** e **6 mutações detectadas**); gate `npm run test:plt06-observability:pg` **23/23, exit 0** (RED **20/23, exit 1**) em PostgreSQL 17 descartável, migrações 001–181, `server.mjs --dev` real, sessões `ti`/`rh`/`admin` reais e TAP autoauditado (`MINIMUM_CASES=20`, 0 skip/todo); `npm test`, `typecheck`, `build` e inventários oficiais reconciliados em `STATUS-VIGENTE.md`. Relatório: `docs/PLT-06-OBSERVABILIDADE-JORNADA-RBAC-GATE-2026-11-02.md`.
+- Pendência / fronteira externa / aceite humano: **não** é aceite nem reauditoria integral; PLT-06 segue `a_revalidar`, PLT-02 não foi fechado e produção segue **NO-GO** (0/222 aceite humano). Sem prova em Chromium da aba, sem worker durável, provedor externo, SMTP ou dados reais. Dívida medida: o `CHECK` atual de `auth_access_audit` recusa em silêncio as ações de auditoria do ciclo de alerta; não foi criada migração 182. A leitura grava apenas a telemetria da própria requisição, sem evento de auditoria nem alteração de alertas.
 
 ## PLT-07
 healthcheck/liveness/readiness, degradação explícita de dependências e painel operacional restrito.

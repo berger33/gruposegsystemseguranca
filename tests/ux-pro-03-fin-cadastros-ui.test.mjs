@@ -74,8 +74,12 @@ test('UX-PRO-03 FIN cadastros: a lacuna ganha aba real no console, com papel e g
   assert.match(consoleClient, /\['financeiro_cadastros','Cadastros financeiros'\]/);
   assert.match(consoleClient, /const FinRegistryClient=dynamic\(\(\)=>import\('\.\/FinRegistryClient'\)\)/);
   assert.match(consoleClient, /active==='financeiro_cadastros'&&<FinRegistryClient\/>/);
-  // Sem grupo, a aba existe mas não é alcançável.
-  assert.match(consoleClient, /name:'Financeiro e cadastros',keys:\['financeiro_cadastros'\]/);
+  // Sem grupo, a aba existe mas não é alcançável. O grupo pode receber outras
+  // abas da mesma família (a 12ª promoção montou `cli_financeiro` nele): o que
+  // esta guarda exige é que `financeiro_cadastros` esteja DENTRO do grupo.
+  const grupoFinanceiro = consoleClient.match(/name:'Financeiro e cadastros',keys:\[([^\]]*)\]/)?.[1] ?? '';
+  assert.ok(grupoFinanceiro.includes("'financeiro_cadastros'"),
+    "a aba financeiro_cadastros precisa estar no grupo 'Financeiro e cadastros'");
   assert.match(page, /allowedRoles=\{\['ti','admin'\]\}/);
 });
 

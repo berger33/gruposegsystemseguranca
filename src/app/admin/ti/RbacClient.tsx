@@ -10,6 +10,27 @@ type Permission = {
   scope_type: string; scope_id: string | null; reason: string; granted_by_role: string | null; created_at: string;
 };
 type Notice = { kind: "success" | "error"; text: string } | null;
+type AccessReview = { id: string; target_identity_id: string; target_email: string; reviewer_email: string; decision: "keep" | "revoke" | "adjust"; notes: string | null; created_at: string };
+const REVIEW_DECISIONS: Record<AccessReview["decision"], string> = { keep: "Manter", revoke: "Reavaliar revogação", adjust: "Ajustar" };
+
+type CoverageSituation = "em_dia" | "vencida" | "nunca_revisada" | "revisado_sem_regra";
+type CoverageRow = {
+  identity_id: string; email: string | null; status: string | null; papel: string | null;
+  ultima_revisao_em: string | null; dias_desde_ultima_revisao: number | null;
+  revisoes_registradas: number; situacao: CoverageSituation; pendente: boolean;
+};
+type Coverage = {
+  regra: { declarada: boolean; intervalo_dias: number | null; fonte: string; motivo: string | null; variavel: string; limite_maximo_dias: number };
+  as_of: string; escopo: string; limite: number; truncado: boolean;
+  resumo: { total: number; em_dia: number; vencida: number; nunca_revisada: number; revisado_sem_regra: number; pendentes: number };
+  identidades: CoverageRow[];
+};
+const COVERAGE_SITUATIONS: Record<CoverageSituation, string> = {
+  em_dia: "Em dia", vencida: "Revisão vencida", nunca_revisada: "Nunca revisada", revisado_sem_regra: "Revisada sem regra",
+};
+const COVERAGE_RULE_PROBLEMS: Record<string, string> = {
+  nao_informada: "variável ausente", nao_inteira: "valor não inteiro", fora_do_limite: "valor fora do intervalo aceito",
+};
 
 const PERMISSION_AREAS: Record<string, string> = {
   admin: "Administração e acessos", client: "Clientes e portal", leads: "Comercial",
@@ -55,6 +76,14 @@ export default function RbacClient() {
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ identityId: "", permission: "leads.read", scopeType: "global", scopeId: "", reason: "" });
   const [session, setSession] = useState<{ role: string; identityId?: string } | null>(null);
+  const [reviews, setReviews] = useState<AccessReview[]>([]);
+  const [reviewForm, setReviewForm] = useState({ targetIdentityId: "", decision: "keep" as AccessReview["decision"], notes: "" });
+  const [reviewQuery, setReviewQuery] = useState("");
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState("");
+  const [coverage, setCoverage] = useState<Coverage | null>(null);
+  const [coverageLoading, setCoverageLoading] = useState(false);
+  const [coverageError, setCoverageError] = useState("");
   const scopeNeedsId = ["unit", "account", "contract"].includes(form.scopeType);
 
   async function load() {
@@ -73,11 +102,57 @@ export default function RbacClient() {
     void load();
   }, []);
 
+  async function loadReviews() {
+    setReviewLoading(true); setReviewError("");
+    try {
+      const response = await fetch("/api/admin/access-reviews");
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "rbac_unavailable");
+      setReviews(data.reviews || []);
+    } catch (cause) { setReviewError(errorMessage(cause instanceof Error ? cause.message : "")); }
+    finally { setReviewLoading(false); }
+  }
+
+  async function loadCoverage() {
+    setCoverageLoading(true); setCoverageError("");
+    try {
+      const response = await fetch("/api/admin/access-reviews?view=coverage");
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "rbac_unavailable");
+      setCoverage(data as Coverage);
+    } catch (cause) {
+      setCoverageError(errorMessage(cause instanceof Error ? cause.message : ""));
+      setCoverage(null);
+    } finally { setCoverageLoading(false); }
+  }
+
+  async function submitReview(event: React.FormEvent) {
+    event.preventDefault(); if (busy) return;
+    setBusy(true); setNotice(null);
+    try {
+      const response = await fetch("/api/admin/access-reviews", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ targetIdentityId: reviewForm.targetIdentityId.trim(), decision: reviewForm.decision, notes: reviewForm.notes.trim() }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "rbac_unavailable");
+      setReviewForm({ targetIdentityId: "", decision: "keep", notes: "" });
+      setNotice({ kind: "success", text: "Decisão de revisão registrada. Ela não altera nem revoga permissões automaticamente; faça a mudança necessária separadamente no painel de acessos ativos." });
+      await loadReviews();
+    } catch (cause) { setNotice({ kind: "error", text: errorMessage(cause instanceof Error ? cause.message : "") }); }
+    finally { setBusy(false); }
+  }
+
+  useEffect(() => { if (session?.role) void loadReviews(); }, [session]);
+
   const filtered = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("pt-BR");
     if (!normalized) return perms;
     return perms.filter(permission => [permission.email, permission.kind, permissionName(permission.permission), permission.permission, SCOPES[permission.scope_type] || permission.scope_type, permission.reason].some(value => value.toLocaleLowerCase("pt-BR").includes(normalized)));
   }, [perms, query]);
+
+  const filteredReviews = useMemo(() => {
+    const normalized = reviewQuery.trim().toLocaleLowerCase("pt-BR");
+    if (!normalized) return reviews;
+    return reviews.filter(review => [review.target_email, review.target_identity_id, review.reviewer_email, REVIEW_DECISIONS[review.decision] || review.decision, review.notes || ""].some(value => value.toLocaleLowerCase("pt-BR").includes(normalized)));
+  }, [reviews, reviewQuery]);
 
   async function grant(event: React.FormEvent) {
     event.preventDefault(); if (busy) return;
@@ -129,6 +204,39 @@ export default function RbacClient() {
     </form>
 
     {notice && <p className={`${styles.notice} ${notice.kind === "error" ? styles.error : styles.success}`} role={notice.kind === "error" ? "alert" : "status"}>{notice.text}</p>}
+
+    <section className={styles.list} aria-labelledby="access-review-title">
+      <div className={styles.sectionTitle}><div><h3 id="access-review-title">Revisão periódica de acessos</h3><p>Registre a decisão e a justificativa para uma identidade; isso cria um registro de revisão, mas não muda permissões.</p></div><button type="button" className={styles.secondary} disabled={reviewLoading} onClick={() => void loadReviews()}>Atualizar revisões</button></div>
+      <aside className={styles.warning}><strong>A decisão não executa a mudança</strong><p>“Reavaliar revogação” e “Ajustar” são registros de decisão, não comandos. Para revogar, use a ação correspondente em Acessos ativos; alterações continuam sujeitas às verificações e auditoria próprias.</p></aside>
+      <form className={styles.form} onSubmit={submitReview}>
+        <div className={styles.fields}>
+          <label>UUID da identidade revisada <span className={styles.required}>Obrigatório</span><input value={reviewForm.targetIdentityId} onChange={event => setReviewForm({ ...reviewForm, targetIdentityId: event.target.value })} required pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}" title="Informe o UUID completo da identidade." autoComplete="off" /></label>
+          <label>Decisão <select value={reviewForm.decision} onChange={event => setReviewForm({ ...reviewForm, decision: event.target.value as AccessReview["decision"] })}>{Object.entries(REVIEW_DECISIONS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          <label className={styles.full}>Notas da revisão <span className={styles.optional}>Opcional · até 1000 caracteres</span><textarea value={reviewForm.notes} onChange={event => setReviewForm({ ...reviewForm, notes: event.target.value })} maxLength={1000} rows={3} /></label>
+        </div>
+        <button type="submit" disabled={busy}>Registrar decisão</button>
+      </form>
+      <label className={styles.filter}>Filtrar revisões carregadas por identidade, revisor, decisão ou notas<input type="search" value={reviewQuery} onChange={event => setReviewQuery(event.target.value)} placeholder="Digite para filtrar até 100 revisões recentes" /></label>
+      {reviewLoading ? <UiState variant="loading" title="Carregando revisões" /> : reviewError ? <UiState variant="error" title="Não foi possível consultar as revisões" detail={reviewError} onRetry={() => void loadReviews()} retryLabel="Tentar novamente" /> : filteredReviews.length === 0 ? <UiState variant="empty" title={reviews.length ? "Nenhuma revisão corresponde ao filtro" : "Nenhuma revisão registrada"} detail={reviews.length ? "Altere ou limpe o termo para ver outras revisões carregadas." : "As últimas 100 decisões registradas aparecerão aqui."} /> : <UiTableScroll><table className={styles.table}><thead><tr><th scope="col">Identidade revisada</th><th scope="col">Decisão</th><th scope="col">Notas</th><th scope="col">Revisor</th><th scope="col">Data</th></tr></thead><tbody>{filteredReviews.map(review => <tr key={review.id}><td><strong>{review.target_email}</strong><small><code>{review.target_identity_id}</code></small></td><td>{REVIEW_DECISIONS[review.decision] || review.decision}</td><td className={styles.reason}>{review.notes || "Sem notas"}</td><td>{review.reviewer_email}</td><td>{dateTime(review.created_at)}</td></tr>)}</tbody></table></UiTableScroll>}
+    </section>
+    <section className={styles.list} aria-labelledby="access-coverage-title" aria-busy={coverageLoading}>
+      <div className={styles.sectionTitle}><div><h3 id="access-coverage-title">Cobertura da revisão periódica</h3><p>Somente leitura: derivada das decisões registradas em <code>auth_access_reviews</code> para as identidades de equipe ativas. Não altera permissões nem substitui a revisão humana.</p></div><button type="button" className={styles.secondary} disabled={coverageLoading} onClick={() => void loadCoverage()}>{coverageLoading ? "Consultando…" : "Consultar cobertura"}</button></div>
+      <aside className={styles.warning}><strong>Sem regra declarada não existe atraso</strong><p>O atraso só é calculado quando a periodicidade é declarada explicitamente em <code>{coverage?.regra.variavel || "ACCESS_REVIEW_INTERVAL_DAYS"}</code> (inteiro de 1 a {coverage?.regra.limite_maximo_dias || 730} dias). Sem essa declaração, o relatório mostra apenas o fato registrado e não classifica ninguém como vencido.</p></aside>
+      {coverageLoading && !coverage ? <UiState variant="loading" title="Calculando a cobertura da revisão" /> : coverageError ? <UiState variant="error" title="Não foi possível calcular a cobertura" detail={coverageError} onRetry={() => void loadCoverage()} retryLabel="Tentar novamente" /> : !coverage ? <UiState variant="empty" title="Cobertura ainda não consultada" detail="Use “Consultar cobertura” para derivar a situação de cada identidade de equipe ativa." /> : <>
+        <p className={styles.notice} role="status">{coverage.regra.declarada
+          ? `Regra declarada: revisar a cada ${coverage.regra.intervalo_dias} dias (fonte ${coverage.regra.fonte}). Situação em ${dateTime(coverage.as_of)}.`
+          : `Regra de periodicidade não declarada (${COVERAGE_RULE_PROBLEMS[coverage.regra.motivo || ""] || "motivo não informado"}). Situação em ${dateTime(coverage.as_of)}; nenhum atraso é calculado.`}</p>
+        <p className={styles.coverageSummary}>Identidades ativas: <strong>{coverage.resumo.total}</strong> · Em dia: <strong>{coverage.resumo.em_dia}</strong> · Vencidas: <strong>{coverage.resumo.vencida}</strong> · Nunca revisadas: <strong>{coverage.resumo.nunca_revisada}</strong> · Revisadas sem regra: <strong>{coverage.resumo.revisado_sem_regra}</strong> · Pendentes: <strong>{coverage.resumo.pendentes}</strong>{coverage.truncado ? ` · Exibindo as ${coverage.limite} primeiras` : ""}</p>
+        {coverage.identidades.length === 0 ? <UiState variant="empty" title="Nenhuma identidade de equipe ativa" detail="Cadastre ou reative uma conta de equipe para acompanhar a revisão periódica." /> : <UiTableScroll><table className={styles.table}><thead><tr><th scope="col">Identidade</th><th scope="col">Papel</th><th scope="col">Última revisão</th><th scope="col">Dias</th><th scope="col">Situação</th></tr></thead><tbody>{coverage.identidades.map(row => <tr key={row.identity_id}>
+          <td><strong>{row.email || "E-mail não informado"}</strong><small><code>{row.identity_id}</code></small></td>
+          <td>{row.papel || "Sem perfil de equipe"}</td>
+          <td>{row.ultima_revisao_em ? dateTime(row.ultima_revisao_em) : "Sem revisão registrada"}{row.revisoes_registradas > 0 && <small>{row.revisoes_registradas} revisão(ões) registrada(s)</small>}</td>
+          <td>{row.dias_desde_ultima_revisao === null ? "—" : row.dias_desde_ultima_revisao}</td>
+          <td><span className={row.pendente ? styles.coveragePendente : styles.coverageNeutra}>{COVERAGE_SITUATIONS[row.situacao] || row.situacao}</span></td>
+        </tr>)}</tbody></table></UiTableScroll>}
+      </>}
+    </section>
+
     {error && <UiState variant="error" title="Não foi possível consultar as permissões" detail={error} onRetry={() => void load()} retryLabel="Tentar novamente" />}
 
     <section className={styles.list} aria-labelledby="active-permissions-title">

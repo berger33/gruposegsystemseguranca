@@ -101,13 +101,75 @@ export function createEmpPwaApi({ pool, auditLog, sameOrigin, requireSession, re
       const fields = [];
       const vals = [];
       let idx = 1;
-      if (body.name !== undefined) { fields.push(`name=$${idx++}`); vals.push(String(body.name).trim()); }
-      if (body.short_name !== undefined || body.shortName !== undefined) { fields.push(`short_name=$${idx++}`); vals.push(String(body.short_name || body.shortName).trim()); }
-      if (body.description !== undefined) { fields.push(`description=$${idx++}`); vals.push(String(body.description).trim()); }
+      // O POST valida cada campo; o PATCH não validava nada e o CHECK do banco
+      // respondia por ele — erro do operador (0 na fila, cor fora do padrão,
+      // texto curto) voltava como 500 `internal_error`. Validação espelhada:
+      if (body.name !== undefined) {
+        const name = String(body.name).trim();
+        if (name.length < 3 || name.length > 100) return sendJson(res, 400, { error: 'invalid_name', detail: '3-100' });
+        fields.push(`name=$${idx++}`); vals.push(name);
+      }
+      if (body.short_name !== undefined || body.shortName !== undefined) {
+        const shortName = String(body.short_name || body.shortName).trim();
+        if (shortName.length < 2 || shortName.length > 20) return sendJson(res, 400, { error: 'invalid_short_name', detail: '2-20' });
+        fields.push(`short_name=$${idx++}`); vals.push(shortName);
+      }
+      if (body.description !== undefined) {
+        const description = String(body.description).trim();
+        if (description.length < 10 || description.length > 500) return sendJson(res, 400, { error: 'invalid_description', detail: '10-500' });
+        fields.push(`description=$${idx++}`); vals.push(description);
+      }
+      if (body.theme_color !== undefined || body.themeColor !== undefined) {
+        const theme_color = String(body.theme_color || body.themeColor).trim();
+        if (!/^#[0-9a-f]{6}$/i.test(theme_color)) return sendJson(res, 400, { error: 'invalid_theme_color' });
+        fields.push(`theme_color=$${idx++}`); vals.push(theme_color);
+      }
+      if (body.background_color !== undefined || body.backgroundColor !== undefined) {
+        const background_color = String(body.background_color || body.backgroundColor).trim();
+        if (!/^#[0-9a-f]{6}$/i.test(background_color)) return sendJson(res, 400, { error: 'invalid_background_color' });
+        fields.push(`background_color=$${idx++}`); vals.push(background_color);
+      }
+      if (body.display !== undefined) {
+        const display = String(body.display);
+        if (!['standalone','minimal-ui','browser','fullscreen'].includes(display)) return sendJson(res, 400, { error: 'invalid_display' });
+        fields.push(`display=$${idx++}`); vals.push(display);
+      }
+      if (body.scope !== undefined) {
+        const scope = String(body.scope).trim();
+        if (scope.length < 1 || scope.length > 200) return sendJson(res, 400, { error: 'invalid_scope', detail: '1-200' });
+        fields.push(`scope=$${idx++}`); vals.push(scope);
+      }
+      if (body.start_url !== undefined || body.startUrl !== undefined) {
+        const start_url = String(body.start_url || body.startUrl).trim();
+        if (start_url.length < 1 || start_url.length > 500) return sendJson(res, 400, { error: 'invalid_start_url', detail: '1-500' });
+        fields.push(`start_url=$${idx++}`); vals.push(start_url);
+      }
       if (body.is_active !== undefined) { fields.push(`is_active=$${idx++}`); vals.push(!!body.is_active); }
-      if (body.approved_offline_tasks !== undefined || body.approvedOfflineTasks !== undefined) { fields.push(`approved_offline_tasks=$${idx++}`); vals.push(body.approved_offline_tasks || body.approvedOfflineTasks); }
-      if (body.max_queue_size !== undefined || body.maxQueueSize !== undefined) { fields.push(`max_queue_size=$${idx++}`); vals.push(Number(body.max_queue_size || body.maxQueueSize)); }
-      if (body.do_not_cache_patterns !== undefined || body.doNotCachePatterns !== undefined) { fields.push(`do_not_cache_patterns=$${idx++}`); vals.push(body.do_not_cache_patterns || body.doNotCachePatterns); }
+      if (body.approved_offline_tasks !== undefined || body.approvedOfflineTasks !== undefined) {
+        const tarefas = body.approved_offline_tasks || body.approvedOfflineTasks;
+        const TIPOS = ['occurrence','handover','absence_notice','shift_swap','procedure_ack','journey_proof','absence_followup','occurrence_action'];
+        if (!Array.isArray(tarefas) || tarefas.length > TIPOS.length || tarefas.some(item => !TIPOS.includes(String(item)))) {
+          return sendJson(res, 400, { error: 'invalid_approved_offline_tasks' });
+        }
+        fields.push(`approved_offline_tasks=$${idx++}`); vals.push(tarefas);
+      }
+      if (body.max_queue_size !== undefined || body.maxQueueSize !== undefined) {
+        const maxQueue = Number(body.max_queue_size !== undefined ? body.max_queue_size : body.maxQueueSize);
+        if (!Number.isInteger(maxQueue) || maxQueue < 1 || maxQueue > 200) return sendJson(res, 400, { error: 'invalid_max_queue_size', detail: '1-200' });
+        fields.push(`max_queue_size=$${idx++}`); vals.push(maxQueue);
+      }
+      if (body.max_retries !== undefined || body.maxRetries !== undefined) {
+        const maxRetries = Number(body.max_retries !== undefined ? body.max_retries : body.maxRetries);
+        if (!Number.isInteger(maxRetries) || maxRetries < 1 || maxRetries > 20) return sendJson(res, 400, { error: 'invalid_max_retries', detail: '1-20' });
+        fields.push(`max_retries=$${idx++}`); vals.push(maxRetries);
+      }
+      if (body.do_not_cache_patterns !== undefined || body.doNotCachePatterns !== undefined) {
+        const padroes = body.do_not_cache_patterns || body.doNotCachePatterns;
+        if (!Array.isArray(padroes) || padroes.length > 50 || padroes.some(item => String(item).length > 200)) {
+          return sendJson(res, 400, { error: 'invalid_do_not_cache_patterns' });
+        }
+        fields.push(`do_not_cache_patterns=$${idx++}`); vals.push(padroes);
+      }
       if (fields.length === 0) return sendJson(res, 400, { error: 'no_fields' });
       vals.push(id);
       try {
@@ -418,7 +480,12 @@ export function createEmpPwaApi({ pool, auditLog, sameOrigin, requireSession, re
       let idx = 1;
       if (body.question !== undefined) { const q = String(body.question).trim(); if (q.length < 10 || q.length > 500) return sendJson(res, 400, { error: 'invalid_question' }); fields.push(`question=$${idx++}`); vals.push(q); }
       if (body.answer !== undefined) { const a = String(body.answer).trim(); if (a.length < 20 || a.length > 5000) return sendJson(res, 400, { error: 'invalid_answer' }); fields.push(`answer=$${idx++}`); vals.push(a); }
-      if (body.category !== undefined) { fields.push(`category=$${idx++}`); vals.push(body.category); }
+      if (body.category !== undefined) {
+        if (!['geral','escala','ponto','beneficios','uniformes','seguranca','procedimentos','rh','tecnico','outro'].includes(body.category)) {
+          return sendJson(res, 400, { error: 'invalid_category' });
+        }
+        fields.push(`category=$${idx++}`); vals.push(body.category);
+      }
       if (body.status !== undefined) {
         if (!['rascunho','em_revisao','publicado','arquivado'].includes(body.status)) return sendJson(res, 400, { error: 'invalid_status' });
         fields.push(`status=$${idx++}`); vals.push(body.status);
@@ -426,11 +493,19 @@ export function createEmpPwaApi({ pool, auditLog, sameOrigin, requireSession, re
         else { fields.push(`is_published=$${idx++}`); vals.push(false); }
       }
       if (body.is_simple_language !== undefined) { fields.push(`is_simple_language=$${idx++}`); vals.push(!!body.is_simple_language); }
-      if (body.reading_level !== undefined) { fields.push(`reading_level=$${idx++}`); vals.push(body.reading_level); }
+      if (body.reading_level !== undefined) {
+        if (!['simples','medio','tecnico'].includes(body.reading_level)) return sendJson(res, 400, { error: 'invalid_reading_level' });
+        fields.push(`reading_level=$${idx++}`); vals.push(body.reading_level);
+      }
       if (body.is_low_data !== undefined) { fields.push(`is_low_data=$${idx++}`); vals.push(!!body.is_low_data); }
       if (body.has_keyboard_support !== undefined) { fields.push(`has_keyboard_support=$${idx++}`); vals.push(!!body.has_keyboard_support); }
       if (body.has_screen_reader_support !== undefined) { fields.push(`has_screen_reader_support=$${idx++}`); vals.push(!!body.has_screen_reader_support); }
-      if (body.tags !== undefined) { fields.push(`tags=$${idx++}`); vals.push(body.tags); }
+      if (body.tags !== undefined) {
+        if (!Array.isArray(body.tags) || body.tags.length > 20 || body.tags.some(t => String(t).length > 50)) {
+          return sendJson(res, 400, { error: 'invalid_tags' });
+        }
+        fields.push(`tags=$${idx++}`); vals.push(body.tags);
+      }
       if (fields.length === 0) return sendJson(res, 400, { error: 'no_fields' });
       vals.push(id);
       try {

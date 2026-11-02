@@ -3,25 +3,25 @@
   "resumo": "docs/UX-PRO-03-INVENTARIO-TI-2026-10-27.json",
   "data": "2026-10-27",
   "criterio": "promover por area somente com prova (decisao de 02/10); prova estatica nao substitui gate de navegador nem aceite humano",
-  "tiConsoleSha256": "985ca1ee41963eed8e87e5ef76a65aab930352910c027d49b5b623e2532ab20b",
+  "tiConsoleSha256": "251cd37c147cce676982ac698cc2a639df7fb0f20cf1ca9d230b814676ec927f",
   "pageSha256": "360bf2564469679a4cc7c0b6b9274f05557188f701a3f3b89649ce4d70d56313",
   "total": 84,
-  "abas": 24,
-  "importsDinamicos": 24,
+  "abas": 32,
+  "importsDinamicos": 32,
   "console": {
-    "total": 24,
-    "comProva": 24,
+    "total": 32,
+    "comProva": 32,
     "lacunas": []
   },
   "workspace": {
     "total": 25
   },
   "orfos": {
-    "total": 35,
+    "total": 27,
     "promovidosSemSairDaClassificacao": 0
   },
   "promocoesComProva": {
-    "total": 11,
+    "total": 19,
     "todasMontadas": true,
     "detalhes": [
       {
@@ -89,11 +89,59 @@
         "aba": "adm",
         "familia": "ADM-01..06 pauta do dia, retratos comercial/operacional/financeiro, risco de renovação e aprovação unificada com alçada (ADM-07..12 descartado: /api/adm/panel/* já escreve as mesmas tabelas em /admin/marcelo)",
         "relatorio": "docs/UX-PRO-03-PROMOCAO-PAINEL-ADM-2026-10-30.md"
+      },
+      {
+        "componente": "CliFinanceClient.tsx",
+        "aba": "cli_financeiro",
+        "familia": "CLI-09..14 cobranças fiscais, serviço adicional, satisfação, renovação, modos de entrada, pedidos de acesso, segurança da conta e troca de e-mail — migrado de /api/hr/cli-* (403 para ti) para os aliases canônicos /api/cli/* e /api/admin/portal-access-requests, com leitura por bloco que declara negado/falha/inválido em vez de lista vazia",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-CLI-FINANCEIRO-2026-10-31.md"
+      },
+      {
+        "componente": "CmsClient.tsx",
+        "aba": "cms",
+        "familia": "PUB-06 CMS do site: rascunho, revisão, aprovação, publicação, arquivamento, versões por snapshot, histórico imutável e reversão — com as transições migradas para PATCH /api/admin/cms-contents/:id (o protótipo chamava a coleção e recebia 405) e o detalhe lido no formato plano que a API devolve",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-CMS-CONTEUDO-2026-10-31.md"
+      },
+      {
+        "componente": "SeoClient.tsx",
+        "aba": "seo",
+        "familia": "PUB-08 SEO técnico: configurações por caminho com noindex preservado, redirecionamentos, prévia derivada de sitemap (a rota deixou de aceitar POST) e verificação de domínio — declarando que publicar é inalcançável nesta entrega porque o servidor recusa marcar domínio como verificado sem DNS/HTTP real",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-SEO-DOMINIOS-2026-10-31.md"
+      },
+      {
+        "componente": "OriginMetricsClient.tsx",
+        "aba": "pub_metricas",
+        "familia": "PUB-10 mensuração de origem, conversão e testes A/B: métricas com minimização e canal do enum do banco, eventos de conversão (ingestão pública, lead com FK e hash que o servidor NÃO produz nesta entrega) e ciclo de A/B com motivo real no histórico — a transição voltou a funcionar depois de corrigir o 42P08 que fazia todo PATCH responder 500",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-MENSURACAO-ORIGEM-AB-2026-10-31.md"
+      },
+      {
+        "componente": "NotificationPreferencesClient.tsx",
+        "aba": "plt_notificacoes",
+        "familia": "PLT-05 preferências de notificação por destinatário/canal com silêncio em HH:MM e modelos versionados sem informação médica em assunto/push — depois de DESCARTAR FinClient (duplicado por /admin/financeiro e pela aba financeiro_cadastros) e OpsClient (duplicado por /admin/operacao); o servidor passou a atualizar preferência global (NULL não colide no UNIQUE), validar silêncio com 400 e recusar aprovação de modelo inseguro (409)",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-PREFERENCIAS-NOTIFICACAO-2026-11-01.md"
+      },
+      {
+        "componente": "EmpPwaClient.tsx",
+        "aba": "emp_pwa",
+        "familia": "EMP-18/EMP-19 app do funcionário: configuração do PWA versionada (nome, cores, exibição e tarefas offline do enum do banco) e FAQ interna com ciclo de revisão e linguagem simples/baixo consumo — depois de DESCARTAR EmpAdvanced2Client, cujas 11 rotas /api/admin/hr/* passam pela borda legada de RH que nega admin/ti; os aliases /api/hr/pwa-configs e /api/hr/faq-internal continuam 403 de propósito e a tela usa o caminho canônico de administração; o PATCH passou a validar fila 1..200, tentativas 1..20, cores #rrggbb, display/categoria/nível de leitura do enum, devolvendo 400 em vez de 500",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-APP-FUNCIONARIO-PWA-FAQ-2026-11-01.md"
+      },
+      {
+        "componente": "PubFaqAssistedClient.tsx",
+        "aba": "pub_faq",
+        "familia": "PUB-02/PUB-05 segmentos do site e FAQ assistida com transferência humana — depois de DESCARTAR os órfãos de dado de funcionário presos na borda legada de RH (EmpOpsClient, EmpPortalClient, EmpSelfClient, EmpProfileClient, EmpAdvanced2Client) e os que já têm superfície viva (/admin/operacao, /admin/financeiro, /admin/patrimonio, /admin/contratos/[id], /admin/publicacao); aqui nenhuma das quatro rotas /api/admin/{faq-assisted-rules,pub-faq-sessions,faq-handoff,pub-segments} tem outro consumidor em src/app. O servidor passou a gerar token de sessão com randomBytes importado (eram ~11 caracteres de Math.random e a criação de sessão respondia 500), a recusar publicação sem aprovação (409), situação publicado sem is_published (400), segmento publicado sem validação (409), transferência concluída sem resposta escrita (400) e id que não é UUID (400)",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-PUB-FAQ-ASSISTIDA-2026-11-01.md"
+      },
+      {
+        "componente": "IntegrationsClient.tsx",
+        "aba": "integracao_catalogo",
+        "familia": "PLT-03 catálogo de integrações, status configurado/não configurado/falha, erro sanitizado e teste de conexão — último órfão sem segunda superfície depois de medir os 27 restantes (11 presos na borda legada de RH e 16 já cobertos por /admin/operacao, /admin/financeiro, /admin/patrimonio, /admin/contratos/[id], /admin/publicacao, /admin/marcelo, /admin/frota, /admin/terceiros, /admin/satisfacao, /admin/qualidade, /admin/analytics e /admin/compliance). O roteador devolvia 405 em quatro subcaminhos da aba viva \"Registros de integração\" porque o padrão /:id casava antes; o PATCH aceitava nome em branco e corpo vazio com 200; e rh podia testar conexão e renomear integração",
+        "relatorio": "docs/UX-PRO-03-PROMOCAO-INTEGRACOES-CATALOGO-2026-11-01.md"
       }
     ]
   },
   "apis": {
-    "literais": 403,
+    "literais": 398,
     "semDispatch": 0
   }
 }
