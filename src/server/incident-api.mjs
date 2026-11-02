@@ -198,7 +198,8 @@ export function createIncidentApi({ pool, auditLog, sameOrigin, requireSession, 
       if(!uuidRe().test(id)){ res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_id'})); return; }
       if(!ACTION_STATUS.includes(status)){ res.writeHead(400,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'invalid_status'})); return; }
       const by=sess.username||sess.user||'unknown';
-      const r=await pool.query(`UPDATE incident_actions SET status=$1, completed_at=CASE WHEN $1='concluida' THEN now() ELSE completed_at END, updated_at=now() WHERE id=$2 RETURNING *`, [status, id]);
+      const completedAtSql = status === 'concluida' ? 'now()' : 'completed_at';
+      const r=await pool.query(`UPDATE incident_actions SET status=$1, completed_at=${completedAtSql}, updated_at=now() WHERE id=$2 RETURNING *`, [status, id]);
       if(!r.rows.length){ res.writeHead(404,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:'not_found'})); return; }
       if(status==='concluida') await auditLog({ action:'incident_action_complete', actor: by, target: r.rows[0].incident_id, meta:{ action_id: id } });
       res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({action:r.rows[0]})); return;

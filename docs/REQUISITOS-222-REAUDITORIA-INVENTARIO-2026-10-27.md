@@ -30,7 +30,7 @@ prova rota alguma. Workflows seguem **49**.
 
 ### Método
 
-Uma única passada por **1.695 arquivos** de `tests/`, `.github/workflows/`,
+Uma única passada por **1.699 arquivos** de `tests/`, `.github/workflows/`,
 `docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, a auditoria de 26/10, a
 fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
 meta-estado, não prova de requisito, e evitam auto-referência. De cada arquivo o gerador extrai todos os IDs com
@@ -42,9 +42,9 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 
 | Classe | Significado | IDs |
 |---|---|---|
-| `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **25** |
+| `gate_nomeado` | o ID aparece no **nome** de um teste/workflow | **26** |
 | `mencionado_em_gate` | o ID é citado no **conteúdo** de um teste/workflow | **124** |
-| `somente_documento` | só há citação em documentos | **73** |
+| `somente_documento` | só há citação em documentos | **72** |
 | `somente_codigo` / `sem_evidencia_legivel` | — | **0** |
 
 > **Recontagem E23 (30/10/2026):** a tabela acima já não é a fotografia de 27/10
@@ -97,6 +97,17 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 > `reauditoria_integral=nao_executada`: gate nomeado é onde procurar a prova, não
 > aceite. 0/222 aceito.
 
+> **Recontagem E23 (02/11/2026, PLT-12):** 26/124/72. A fatia de resposta a
+> incidente criou testes focais com o ID no nome
+> (`tests/plt12-incident-response.test.mjs` e
+> `tests/plt12-incident-response.integration.test.mjs`), o gate
+> `scripts/qa-plt12-incidents-postgres.mjs` e o contrato de leitura puro em
+> `src/server/incident-read-contract.mjs`. `PLT-12` sai de `somente_documento`
+> para `gate_nomeado`, o núcleo sem gate cai de **14 → 13**. É contrato e prova
+> de leitura/RBAC/evidência, **não** fechamento do requisito: `PLT-12` permanece
+> `a_revalidar`, aceite humano **0/222**, reauditoria integral **não executada**
+> e produção **NO-GO**.
+>
 > **Recontagem E23 (02/11/2026, PLT-06):** 25/124/73. A fatia de jornada/RBAC/
 > evidência da observabilidade criou dois arquivos de teste com o ID no nome
 > (`tests/plt06-observability-read-contract.test.mjs` e
@@ -121,7 +132,7 @@ Cada ID recebe uma `classe_evidencia_atual` **conservadora**:
 | `a_revalidar` (estado confirmado, 04/10) | **45** — a diferença de 1 é explícita, não corrigida |
 | `pronto_local` declarado | **164** |
 | `em_execucao` / `entregue` declarados | **6 / 6** |
-| **`a_revalidar` sem nenhuma menção em gate** | **14** |
+| **`a_revalidar` sem nenhuma menção em gate** | **13** |
 | Com aceite humano registrado | **0** |
 | Com reauditoria integral executada | **0** |
 
@@ -148,7 +159,7 @@ requisitos foram implementados/revalidados: o relatório SEC marca
 `aceite_humano=nao_registrado` e `reauditoria_integral=nao_executada` em todos os
 15. A classe textual indica somente que há evidência técnica mapeada.
 
-Entre os 46 `a_revalidar`, **31 têm alguma menção em gate**: `PLT-01` (`gate_nomeado`, 02/11), `PLT-02`, `PLT-07`, `SEC-03`, `SEC-07`,
+Entre os 46 `a_revalidar`, **32 têm alguma menção em gate**: `PLT-01` (`gate_nomeado`, 02/11), `PLT-02`, `PLT-07`, `PLT-12` (`gate_nomeado`, 02/11), `SEC-03`, `SEC-07`,
 `SEC-10`…`SEC-15`, `CLI-01`, `CLI-02` e `CLI-03` (`gate_nomeado`), `CLI-05`…`CLI-10`,
 `PLT-03`, `PLT-10`, `PLT-11`, `PLT-13`, `PLT-14`, `PLT-15`, `PLT-16`…`PLT-18`,
 `EXT-06` e `EXT-09` (`gate_nomeado`). Isso **não** os torna revalidados: a menção é um ponto de
