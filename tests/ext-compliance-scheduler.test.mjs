@@ -90,10 +90,10 @@ test("Migrações 156–168 preservadas e ledger corrente registrado nos pontos 
   assert.match(migrator, /'173-ai-rag-client-account-scope\.sql'/);
   assert.match(migrator, /'174-auth-permissions-id-default\.sql'/);
   assert.match(migrator, /ALTER TABLE auth_permissions ALTER COLUMN id SET DEFAULT gen_random_uuid\(\)/);
-  assert.match(migrator, /files\.length !== 181/);
-  assert.match(migrator, /001–181/);
+  assert.match(migrator, /files\.length !== 182/);
+  assert.match(migrator, /001–182/);
   const wave0 = await readRepo("scripts/qa-wave0-static.mjs");
-  assert.match(wave0, /const latestMigration = 181;/);
+  assert.match(wave0, /const latestMigration = 182;/);
 });
 
 // ---------------------------------------------------------------------------
@@ -361,11 +361,13 @@ test("EXT-07 server.mjs liga o agendador somente depois da rede de segurança", 
   assert.ok(posSafetyNet !== -1, "installProcessSafetyNet deve ser chamado");
   assert.ok(posSchedulerStart !== -1, "o agendador deve ser ligado em server.mjs");
   assert.ok(posSafetyNet < posSchedulerStart, "a rede de segurança vem antes do agendador");
-  assert.match(source, /import \{ parseSchedulerConfig, startExtComplianceScheduler \} from "\.\/src\/server\/ext-compliance-scheduler\.mjs";/);
+  assert.match(source, /import \{ parseSchedulerConfig, startExt07DurableWorker, startExtComplianceScheduler \} from "\.\/src\/server\/ext-compliance-scheduler\.mjs";/);
   // A rota de observação recebe o estado deste processo.
   assert.match(source, /schedulerState: extComplianceSchedulerState/);
-  // Modo PGlite beta (sem DATABASE_URL) não pode ligar o agendador.
+  // E16: o motivo declarado deixou de ser o schema (o PGlite da demo tem as
+  // migrações desde o E7) e passou a ser a ausência de executor durável.
   assert.match(source, /\[ext07-scheduler\] desativado: requer DATABASE_URL/);
+  assert.doesNotMatch(source, /não possui o schema EXT-07/);
 });
 
 test("EXT-07 agendador usa o MESMO núcleo da rota explícita e nunca relança para o timer", async () => {
