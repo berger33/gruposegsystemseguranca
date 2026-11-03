@@ -1,16 +1,10 @@
-# E15 — decisão das 9 regras sombreadas “a revisar” (02/11/2026)
+# E15 — decisão e execução autorizada das sombreadas (02/11/2026)
 
-**Fatia:** decisão documental, aditiva. **Base:** `e8fefe967970c024247c3713d926f8e405d3c48a` (`main`, merge da PR #335) ·
-**Branch:** `arena/ec0b32aa-gruposegsystemseguranca` · **Migrações:** `001–182` intactas (nenhuma criada) ·
-**`server.mjs`:** **não** foi tocado (6.310 linhas, sha256 `c42a7ef6757014d8…`, o mesmo do catálogo do E15).
+**Registro histórico da decisão:** base `e8fefe9` (PR #335) · **Execução autorizada:** sobre `main` `1f32604` · **Branch:** `arena/7991314e-gruposegsystemseguranca` · **Migrações:** `001–183` intactas (nenhuma criada) · **`server.mjs`:** alterado nesta execução, 6.307 linhas, sha256 `04653b746a06d95d…`.
 
-**O que esta fatia é:** a decisão caso a caso das **9** regras que o catálogo do E15 registrou como sombreadas e
-“a revisar”. **O que esta fatia não é:** execução. Nenhuma das 9 foi removida, nenhum handler foi apagado, nenhuma
-migração foi criada. As duas decisões que implicam remoção (`remover_regra`, `remover_alias`) descrevem o que uma
-**fatia autorizada** deve fazer — e continuam bloqueadas até essa autorização, porque removem linha do despacho vivo.
+**Registro histórico:** a decisão caso a caso das **9** regras foi tomada na fatia anterior. Nesta fatia, com autorização expressa, foram executadas as cinco remoções decididas (três regras e dois aliases). Nenhuma migração foi criada; os quatro falsos positivos permanecem.
 
-O retrato medido não mudou: **12** sombreadas, das quais **3** o próprio código declara intencionais
-(`/api/crm/contracts/from-proposal`, `/api/crm/contracts`, `/api/client/visits`) e **9** entram nesta decisão.
+Após a execução: **7** sombreadas, das quais **3** intencionais e **4** falsos positivos do modelo. As cinco decisões executadas permanecem no JSON como registro histórico; a tabela abaixo identifica a situação original.
 
 ---
 
@@ -31,8 +25,7 @@ Decisão por caminho, com a regra que cobre e a prova. O arquivo [`E15-SOMBREADA
 | 8 | `/api/faq-assisted` | 4580 | `pubFaqAssistedApi.handleSessions` | 2612 `faqAnswerApi` | sombra real (parcial) | **remover alias** |
 | 9 | `/api/public/faq-assisted` | 4580 | `pubFaqAssistedApi.handleSessions` | 2612 `faqAnswerApi` | sombra real (parcial) | **remover alias** |
 
-Resumo da decisão: **4 manter · 5 remover** (3 regras + 2 aliases). A regra da linha 3457 tem três caminhos e sai
-inteira; a da linha 4580 tem cinco e perde **dois** — o handler continua vivo pelos outros três.
+Resumo histórico: **4 manter · 5 remover** (3 regras + 2 aliases), todas as cinco remoções executadas. O catálogo atual mede **7** sombreadas (3 intencionais + 4 falso positivos), sem as cinco removidas.
 
 ---
 
@@ -69,7 +62,7 @@ protege o efeito pelo lado da tela: `tests/ux-pro-03-ti-integration-logs-ui.test
 
 ---
 
-## 3. Por que 5 são sombra real
+## 3. Por que as cinco regras removidas eram sombra real (decisão executada)
 
 ### 3.1 `journey-corrections` (linha 3457, três caminhos)
 

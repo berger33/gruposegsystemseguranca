@@ -1,7 +1,6 @@
 # E15 — catálogo canônico de rotas de `server.mjs` (02/11/2026)
 
-**Base desta fatia:** `8a221a5` (`main`, merge da PR #334) · **Branch:** `arena/c77c821a-gruposegsystemseguranca`
-· **Natureza:** aditiva. Não troca handler, não troca despacho, não muda comportamento, não cria migração,
+**Medição atualizada:** fatia autorizada de execução E15 sobre `main` `1f32604` · **Natureza:** remoção de regras inalcançáveis do despacho; handler público de FAQ mantido; não cria migração,
 não toca `TiConsole.tsx`, não abre a borda legada de RH, não mexe em N7.
 **Produção: NO-GO.** Aceite humano **0/222**. Reauditoria integral **0/222**.
 
@@ -33,22 +32,22 @@ parece correta.
 | `src/server/route-catalog.mjs` | Parser determinístico (texto, sem AST, sem I/O de banco/rede/Next) que extrai as três resoluções de caminho e classifica cada regra. |
 | `scripts/e15-route-catalog.mjs` | Gerador (`--check` para CI, `--relatorio` para o bloco medido). Mesmo padrão dos outros inventários. |
 | `docs/E15-ROTAS-CATALOGO-2026-11-02.json` | Tabela canônica versionada (colunas `tipo, caminho, modulo, linha, provedor`), com as divergências nomeadas. |
-| `tests/e15-route-catalog.test.mjs` | **19 testes**: paridade com o código, controle negativo (divergência sintética tem de ser detectada), prova **executável** da borda, congelamento dos números e — desde 02/11 — a decisão das 9 sombreadas, uma por uma. |
+| `tests/e15-route-catalog.test.mjs` | **19 testes**: paridade com o código, controle negativo, prova executável da borda e reconciliação das nove decisões históricas com as quatro sombras remanescentes após as cinco remoções autorizadas. |
 
 **Limites declarados, para não virar aceite falso:** o catálogo **não** decide método HTTP (a cadeia de `if`
 casa só o caminho; declarar `GET`/`POST` seria inferência); **não** executa rota real (alcance é calculado por
 sobreposição de padrões, não por requisição); **não** substitui teste de integração. Ele prova a existência — ou
 a ausência — da **regra** em cada camada.
 
-## 3. RED medido antes (o número que justifica a fatia)
+## 3. Retrato medido após as remoções autorizadas
 
-Sobre `server.mjs` em `8a221a5` (`wc -l` = **6310** linhas, sha256 `c42a7ef6757014d8…`):
+Sobre `server.mjs` após as remoções autorizadas (`wc -l` = **6307** linhas, sha256 `04653b746a06d95d…`):
 
 | Camada | Regras | Composição | Trecho |
 | --- | --- | --- | --- |
-| Borda `API_PATH_MATCH` | **1514** | 1393 exatas · 121 prefixos · 0 regexes | linhas 4673–6203 (**1531** linhas de cadeia) |
-| Despacho `routeApi` | **1740** | 1492 exatas · 25 prefixos · 223 regexes | linhas 2582–4671 (**2090** linhas) |
-| — das quais **de handler** | **1709** | em **128** módulos | |
+| Borda `API_PATH_MATCH` | **1514** | 1393 exatas · 121 prefixos · 0 regexes | linhas 4670–6200 (**1531** linhas de cadeia) |
+| Despacho `routeApi` | **1735** | 1487 exatas · 25 prefixos · 223 regexes | linhas 2582–4668 (**2087** linhas) |
+| — das quais **de handler** | **1704** | em **128** módulos | |
 | — das quais **pré-autorização** | **31** | bloco `startsWith` de RH que chama `authorizeLegacyHrRequest` | |
 
 **Divergências medidas (o RED):**
@@ -56,7 +55,7 @@ Sobre `server.mjs` em `8a221a5` (`wc -l` = **6310** linhas, sha256 `c42a7ef67570
 | Classe | Antes desta fatia | Significado |
 | --- | --- | --- |
 | **Inalcançáveis** | **3** | rota existe no despacho, a borda não a reconhece |
-| **Sombreadas** | **12** (3 declaradas intencionais no código) | regra posterior nunca é alcançada: uma anterior casa primeiro |
+| **Sombreadas** | **7** (3 declaradas intencionais no código) | regra posterior nunca é alcançada: uma anterior casa primeiro; as cinco remoções autorizadas já foram executadas |
 | **Borda sem despacho** | **0** | caminho passa a borda e não tem handler |
 | **Formas não reconhecidas** | **0** | o parser cobre 100% das comparações de caminho de hoje |
 
@@ -103,7 +102,7 @@ mexer no roteador vivo e exige decisão do dono.
 declara, em comentário imediatamente acima, que a rota é histórica/inalcançável. As 9 restantes foram decididas caso
 a caso em 02/11 ([`E15-SOMBREADAS-DECISAO-2026-11-02.md`](E15-SOMBREADAS-DECISAO-2026-11-02.md)): **4 manter**
 (falso positivo do modelo de cobertura, que não modela guarda de negação) e **5 remover** (3 regras da linha 3457 e
-2 aliases da linha 4580). A decisão está congelada em JSON e em teste; a **remoção não foi executada** — mexer no
+2 aliases da linha 4577). A decisão está congelada em JSON e em teste; a **remoção não foi executada** — mexer no
 despacho vivo exige autorização própria. O teste exige que toda divergência esteja nomeada neste relatório.
 
 ## 4. GREEN desta fatia
@@ -122,7 +121,7 @@ despacho vivo exige autorização própria. O teste exige que toda divergência 
 A proposta registrada do E15 é **tabela canônica + teste de paridade**. Entregues os dois. O passo seguinte —
 **substituir** a cadeia de `if` por busca na tabela — foi deliberadamente **não** feito:
 
-1. trocar o despacho muda o roteador vivo de **1709** regras em **128** módulos; o risco não é proporcional ao ganho
+1. trocar o despacho muda o roteador vivo de **1704** regras em **128** módulos; o risco não é proporcional ao ganho
    de uma fatia docs+gate;
 2. o despacho hoje também **autoriza** (31 regras de pré-autorização misturadas à cadeia), e separar autorização de
    roteamento é decisão de arquitetura, não de manutenção;

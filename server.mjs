@@ -3454,9 +3454,6 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/hr/journey-proofs" || url.pathname === "/api/crm/hr/journey-proofs" || url.pathname === "/api/hr/journey-proofs") {
     return empPortalApi.handleJourneyProofs(req, res);
   }
-  if (url.pathname === "/api/admin/hr/journey-corrections" || url.pathname === "/api/crm/hr/journey-corrections" || url.pathname === "/api/hr/journey-corrections") {
-    return empPortalApi.handleJourneyCorrections(req, res);
-  }
   // EMP-05 aviso ausência/atraso
   if (url.pathname === "/api/admin/hr/absence-notices" || url.pathname === "/api/crm/hr/absence-notices" || url.pathname === "/api/hr/absence-notices") {
     return empPortalApi.handleAbsenceNotices(req, res);
@@ -4577,7 +4574,7 @@ async function routeApi(req, res) {
   if (url.pathname === "/api/admin/faq-assisted-rules" || url.pathname === "/api/faq-assisted-rules" || url.pathname === "/api/pub/faq-rules") {
     return pubFaqAssistedApi.handleRules(req, res);
   }
-  if (url.pathname === "/api/faq-assisted" || url.pathname === "/api/public/faq-assisted" || url.pathname === "/api/pub/faq-sessions" || url.pathname === "/api/admin/faq-assisted-sessions" || url.pathname === "/api/admin/pub-faq-sessions") {
+  if (url.pathname === "/api/pub/faq-sessions" || url.pathname === "/api/admin/faq-assisted-sessions" || url.pathname === "/api/admin/pub-faq-sessions") {
     return pubFaqAssistedApi.handleSessions(req, res);
   }
   if (url.pathname === "/api/faq-assisted-messages" || url.pathname === "/api/pub/faq-messages" || url.pathname === "/api/admin/faq-assisted-messages") {
