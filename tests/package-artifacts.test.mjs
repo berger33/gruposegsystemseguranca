@@ -1,5 +1,6 @@
 import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -114,4 +115,80 @@ test('PLT-DEF-024: todo ZIP versionado continua coberto pelo aviso', async () =>
     const warning = await readFile(path.join(root, dir, 'LEIA-ME.md'), 'utf8');
     assert.match(warning, /\*\.zip/, `${dir}: aviso não cobre os arquivos ZIP`);
   }
+});
+
+// N1 (achado da auditoria de 02/11, docs/AUDITORIA-PENDENCIAS-2026-11-02.md §10):
+// o ledger reincidia porque o cabeçalho declarava uma base um merge atrás do topo
+// do `main` e nenhuma guarda percebia. Esta guarda torna o cabeçalho estructural
+// e hermética (sem rede e sem depender de histórico completo):
+// 1) formato fixo — data real não futura, base como SHA completo de `main`,
+//    branch `arena/...`;
+// 2) a base do cabeçalho precisa ser um dos topos de `main` possíveis neste
+//    ambiente: no CI, o evento do GitHub Actions (GITHUB_EVENT_PATH) traz os
+//    SHAs sem rede (push em main: sha/before; pull_request: base.sha); fora do
+//    CI, os refs locais main/origin/main. Se nenhum topo é determinável, a
+//    guarda cobre só o formato e registra o limite no log do teste.
+const LEDGER = 'docs/STATUS-VIGENTE.md';
+
+function linhaCabecalho(ledger) {
+  const linhas = ledger.split('\n');
+  const idx = linhas.findIndex((linha) => linha.startsWith('**Última reconciliação:**'));
+  assert.ok(idx >= 0 && idx <= 4, 'o cabeçalho do STATUS-VIGENTE.md precisa estar nas primeiras 5 linhas');
+  return linhas[idx];
+}
+
+function toposDeMain() {
+  const topos = new Set();
+  const eventPath = process.env.GITHUB_EVENT_PATH;
+  if (eventPath) {
+    try {
+      const event = JSON.parse(readFileSync(eventPath, 'utf8'));
+      if (process.env.GITHUB_REF === 'refs/heads/main') {
+        if (event.sha) topos.add(event.sha);
+        if (event.before) topos.add(event.before);
+      }
+      const baseSha = event.pull_request?.base?.sha;
+      if (baseSha) topos.add(baseSha);
+    } catch {
+      // evento ilegível: cai nos refs locais abaixo
+    }
+  }
+  for (const ref of ['main', 'origin/main']) {
+    try {
+      topos.add(execFileSync('git', ['rev-parse', '--verify', ref], { cwd: root, encoding: 'utf8' }).trim());
+    } catch {
+      // ref ausente (checkout raso sem o ref): ignora
+    }
+  }
+  return [...topos];
+}
+
+test('N1: o cabeçalho do STATUS-VIGENTE.md está em formato fixo (data real, base SHA completo de main, branch arena/)', async () => {
+  const linha = linhaCabecalho(await readFile(path.join(root, LEDGER), 'utf8'));
+  const m = linha.match(
+    /^\*\*Última reconciliação:\*\* (\d{2})\/(\d{2})\/(\d{4}) · \*\*Base:\*\* `([0-9a-f]{40})` \(`main`, .+\) · \*\*Branch de trabalho:\*\* `(arena\/[^`]+)` \(.+\)\.$/,
+  );
+  assert.ok(m, `cabeçalho fora do formato esperado: ${linha}`);
+  const [, dd, mm, yyyy] = m;
+  const data = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  assert.equal(data.getFullYear(), Number(yyyy), 'ano inválido no cabeçalho');
+  assert.equal(data.getMonth(), Number(mm) - 1, 'mês inválido no cabeçalho');
+  assert.equal(data.getDate(), Number(dd), 'dia inválido no cabeçalho');
+  const hoje = new Date();
+  const meiaNoite = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  assert.ok(data <= meiaNoite, `data do cabeçalho no futuro: ${dd}/${mm}/${yyyy}`);
+});
+
+test('N1: a base do cabeçalho é um topo de main possível neste ambiente (guarda anti-deriva)', async () => {
+  const ledger = await readFile(path.join(root, LEDGER), 'utf8');
+  const base = linhaCabecalho(ledger).match(/\*\*Base:\*\* `([0-9a-f]{40})`/)[1];
+  const topos = toposDeMain();
+  if (topos.length === 0) {
+    console.warn('N1: nenhum topo de main determinável neste ambiente; a guarda cobre só o formato do cabeçalho');
+    return;
+  }
+  assert.ok(
+    topos.includes(base),
+    `base do cabeçalho (${base.slice(0, 7)}…) não é um topo esperado de main (${topos.map((t) => t.slice(0, 7)).join(', ')}): reconciliar o cabeçalho com o topo do main (achado N1)`,
+  );
 });
