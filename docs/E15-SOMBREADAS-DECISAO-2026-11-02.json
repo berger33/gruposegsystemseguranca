@@ -3,12 +3,14 @@
  "data": "2026-11-02",
  "base": "e8fefe967970c024247c3713d926f8e405d3c48a",
  "fonte_catalogo": "docs/E15-ROTAS-CATALOGO-2026-11-02.json",
- "server_sha256_prefixo": "04653b746a06d95d",
+ "server_sha256_prefixo": "5d3d67bee2be463a",
+ "server_sha256_prefixo_anterior": "04653b746a06d95d",
  "total_sombreadas": 7,
  "declaradas_intencionais": 3,
  "a_revisar": 4,
  "executado_nesta_fatia": true,
  "nota": "Execução autorizada nesta fatia: removidas as três regras de journey-corrections e os dois aliases faq-assisted; os quatro falsos positivos permanecem como registro decisório. As cinco decisões executadas ficam preservadas como histórico. server.mjs foi alterado e o catálogo regenerado.",
+ "nota_borda_03_11_2026": "Fatia B autorizada: as três rotas inalcançáveis do achado de 02/11 (/api/crm/management-diary, /api/crm/management-diary/search, /api/admin/ai-rag-directory-sources) foram reconhecidas pela borda API_PATH_MATCH. O despacho não foi tocado (1.735 regras, 128 módulos) e as sete sombreadas continuam as mesmas. server.mjs passou a 6.316 linhas, sha256 5d3d67bee2be463a…, e este campo foi atualizado junto com o catálogo regenerado; nenhuma das nove decisões abaixo mudou.",
  "decisoes": [
   {
    "caminho": "/api/admin/integrations/jobs",

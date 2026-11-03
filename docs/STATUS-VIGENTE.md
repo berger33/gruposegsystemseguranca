@@ -1,8 +1,44 @@
 # Status vigente — Grupo SEG System
 
-**Última reconciliação:** 02/11/2026 · **Base:** `1f32604b1b25c1f3d4c8c3d12d6f9e52af1016e7` (`main`, merge da PR #339) · **Branch de trabalho:** `arena/7991314e-gruposegsystemseguranca` (esta sessão).
+**Última reconciliação:** 03/11/2026 · **Base:** `50d287033c8b51ed0a4b450415f12e0f398f82f4` (`main`, merge da PR #340) · **Branch de trabalho:** `arena/d1123f3a-gruposegsystemseguranca` (esta sessão).
 
-### Atualização corrente — execução autorizada das cinco remoções do E15 (02/11/2026)
+### Atualização corrente — fatia B: as três rotas inalcançáveis passam a borda (03/11/2026)
+
+**Escopo autorizado pelo dono (opção B):** corrigir as **três rotas inalcançáveis** do E15 e o comentário de
+`server.mjs` que dizia `001–182`. Nada além disso: o **despacho não foi tocado** (1.735 regras em 128 módulos), o
+cálculo de `regraCobre` não foi reescrito, nenhuma migração foi criada (`001–183` intactas, próxima livre **184**),
+`TiConsole.tsx` e a borda legada de RH não foram abertos, N7 segue `mailer: null`.
+
+**O que mudou, em três linhas exatas de borda.** `API_PATH_MATCH` passou a reconhecer
+`/api/crm/management-diary`, `/api/crm/management-diary/search` e `/api/admin/ai-rag-directory-sources`. Antes,
+as três existiam no despacho e **nunca** chegavam ao handler: a requisição caía no Next. A escolha por **igualdade
+exata** (e não prefixo) é medida, não estética — um `startsWith` mais largo abriria caminho que o despacho não
+conhece e inverteria a divergência para `borda sem despacho`, que termina em 404 interno. Esse número continua **0**.
+
+**O comentário do ledger, agora devido e feito.** A dívida nomeada no §“`server.mjs:6261` fica dizendo `001–182`”
+(inclusive abaixo, nesta página) venceu nesta fatia: o comentário do bloco EXT-07 passou a dizer **`001–183`**, e o
+catálogo, o relatório e o `server_sha256_prefixo` do JSON de decisão foram **regenerados na mesma alteração** —
+que era exatamente a condição registrada para corrigi-lo.
+
+**Retrato medido (não opinião).** `server.mjs` = **6.316** linhas, sha256 `5d3d67bee2be463a…`; borda **1.517**
+regras (1.396 exatas, 121 prefixos, 0 regexes); despacho **1.735** (1.704 handlers em 128 módulos + 31
+pré-autorização); **3 → 0** inalcançáveis; **7** sombreadas (3 intencionais + 4 falsos positivos); **0** borda sem
+despacho; **0** formas não reconhecidas.
+
+**Prova.** `node --test tests/e15-route-catalog.test.mjs` → **19/19** (o teste das três rotas foi **invertido**:
+hoje falha se qualquer uma voltar a ser barrada, com controle negativo `/api/e15/rota-inventada` → `false`);
+`node scripts/e15-route-catalog.mjs --check` → **OK**; o congelamento de inalcançáveis passou de `≤ 3` para **`= 0`**.
+`npm test` → **1517/1517**; typecheck e build conferidos.
+
+**O que isto NÃO prova.** O catálogo prova que a **regra** existe nas duas camadas. Não prova que a rota responde
+200 em ambiente real — isso continua exigindo teste de integração com banco, e **nenhum foi executado nesta fatia**.
+Não há aceite humano (**0/222**), não há reauditoria integral (**0/222**), produção continua **NO-GO**.
+
+**Pendência registrada, sem minimizar:** o `QA baseline` pós-merge da #340 falhou no step `Client security regras
+005/006` (flip N8 conhecido; reprodução local 4/4 isolado e 4/4 concorrente). **Nada foi alterado** para “consertar”
+esse vermelho nesta fatia, e o workflow não é declarado verde.
+
+### Atualização — execução autorizada das cinco remoções do E15 (02/11/2026)
 
 Autorizada a fatia A: removidas do despacho as três regras `journey-corrections` sombreadas e os dois aliases `/api/faq-assisted` e `/api/public/faq-assisted`; o handler FAQ continua vivo pelos três caminhos restantes. O catálogo foi regenerado: `server.mjs` tem 6.307 linhas (sha256 `04653b746a06d95d…`), despacho 1.735 regras em 128 módulos, 3 inalcançáveis, 7 sombreadas (3 intencionais + 4 medidas), zero borda sem despacho. O JSON mantém as nove decisões como registro, marcando cinco executadas; os testes da decisão agora tratam o registro histórico e congelam o retrato atual. Migrações permanecem 001–183; próxima livre 184. Sem mudança na política de aceite (0/222) ou produção (NO-GO).
 
@@ -161,7 +197,11 @@ o **relatório da #308**, recebido sob cabeçalho que declara que **nenhuma linh
 `main` tem de diferente — registro da decisão de produto, não descrição do sistema; e o parágrafo **Entrega** da #324,
 com os três hashes conferidos antes de copiar.
 
-**`server.mjs:6261` fica dizendo `001–182` — de propósito, e nomeado.** O comentário é o único lugar do código fora de
+> **Resolvido em 03/11/2026 (fatia B).** O comentário passou a dizer `001–183` **na mesma alteração** que regenerou
+> o catálogo, o relatório e o `server_sha256_prefixo` do JSON de decisão — a condição registrada no parágrafo abaixo.
+> Hoje o comentário está na linha 6267. O texto a seguir fica como registro da decisão de adiá-lo.
+
+**`server.mjs:6261` ficava dizendo `001–182` — de propósito, e nomeado.** O comentário é o único lugar do código fora de
 `docs/` com o número do ledger; corrigi-lo mudaria o sha256 e obrigaria a regenerar o catálogo do E15, o relatório e o
 `server_sha256_prefixo` do JSON de decisão — churn de artefato congelado por um dígito de comentário. A dívida é da
 próxima fatia que tiver motivo legítimo para editar `server.mjs` (as fatias A ou B), quando essa regeneração é devida

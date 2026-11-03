@@ -189,10 +189,14 @@ test("E15: as divergências medidas não aumentam sem decisão explícita", asyn
     "caminho na borda sem despacho termina em 404 interno");
   assert.equal(c.resumo.avisos, 0,
     "forma de comparação não reconhecida: o parser precisa cobrir a nova forma antes de o catálogo valer");
-  assert.ok(c.resumo.inalcancaveis <= 3,
-    `inalcançáveis subiu para ${c.resumo.inalcancaveis}: ${c.divergencias.inalcancaveis.map((r) => r.caminho).join(", ")}`);
-  assert.ok(c.resumo.sombreadas <= 12,
-    `sombreadas subiu para ${c.resumo.sombreadas}`);
+  // 03/11: as três rotas do achado de 02/11 foram reconhecidas pela borda na
+  // fatia autorizada (opção B). O teto de inalcançáveis vira ZERO — era 3 e
+  // desceu por correção, não por afrouxamento: qualquer inalcançável nova é
+  // regressão e precisa aparecer aqui, com o nome da rota no relatório.
+  assert.equal(c.resumo.inalcancaveis, 0,
+    `inalcançáveis voltou a ${c.resumo.inalcancaveis}: ${c.divergencias.inalcancaveis.map((r) => r.caminho).join(", ")}`);
+  assert.ok(c.resumo.sombreadas <= 7,
+    `sombreadas subiu para ${c.resumo.sombreadas} (medido: 7 = 3 intencionais + 4 falsos positivos)`);
 });
 
 test("E15: cada divergência nomeada está publicada no relatório datado", async () => {
@@ -297,22 +301,41 @@ test("E15: todo caminho exato do despacho tem o mesmo veredito na borda real", a
     `o catálogo discorda da função real da borda: ${divergentes.slice(0, 5).join(", ")}`);
 });
 
-test("E15: as três rotas medidas como inalcançáveis são de fato barradas pela borda", async () => {
+test("E15: as três rotas do achado de 02/11 passam a borda depois da correção autorizada", async () => {
   const source = await lerServidor(root);
   const naBorda = bordaExecutavel(source);
-  // Achado datado de 02/11: existem no despacho e NÃO passam a borda — a
-  // requisição nunca chega ao handler, cai no Next (página/404), não no roteador.
-  for (const caminho of [
+  const c = await catalogo();
+  // Achado datado de 02/11: estas três existiam no despacho e NÃO passavam a
+  // borda — a requisição nunca chegava ao handler, caía no Next (página/404).
+  // A correção da borda foi autorizada e executada em 03/11 (opção B). O teste
+  // agora guarda o lado oposto: se qualquer uma voltar a ser barrada, é
+  // regressão do defeito, não “achado reavaliado”.
+  const caminhos = [
     "/api/crm/management-diary",
     "/api/crm/management-diary/search",
     "/api/admin/ai-rag-directory-sources",
-  ]) {
-    assert.equal(naBorda(caminho), false,
-      `${caminho} passou a ser reconhecido pela borda: o catálogo precisa ser regenerado e o achado reavaliado`);
+  ];
+  const exatos = new Map(c.despacho.regras.filter((r) => r.tipo === "exato").map((r) => [r.caminho, r]));
+  for (const caminho of caminhos) {
+    assert.equal(naBorda(caminho), true,
+      `${caminho} continua barrado pela borda: o handler segue inalcançável e o defeito de 02/11 voltou`);
+    const regra = exatos.get(caminho);
+    assert.ok(regra, `${caminho} perdeu a regra de despacho: corrigir a borda sem despacho vira 404 interno`);
+    assert.equal(regra.classe, "handler", `${caminho} deixou de ser regra de handler`);
+    assert.equal(regra.alcancavel, true, `${caminho} está na borda mas o catálogo o mede como inalcançável`);
   }
-  // Controle positivo no mesmo teste: a borda NÃO barra tudo — se barrasse,
-  // o teste acima passaria por vacuidade.
-  assert.equal(naBorda("/api/crm/commercial-versions"), true);
+  // Os dois totais que fecham o par: nenhuma inalcançável e nenhuma borda órfã.
+  assert.equal(c.resumo.inalcancaveis, 0);
+  assert.equal(c.resumo.bordaSemDespacho, 0);
+  // Controle negativo no mesmo teste: a borda não passou a aceitar qualquer
+  // coisa — caminho inventado continua barrado, então o teste acima não passa
+  // por vacuidade.
+  assert.equal(naBorda("/api/e15/rota-inventada"), false);
+  // Controle positivo do despacho: as três continuam respondendo pelo mesmo
+  // módulo medido em 02/11 (nada de “corrigir” a borda contra outro handler).
+  assert.equal(exatos.get("/api/crm/management-diary").modulo, "contractManagementDiaryApi");
+  assert.equal(exatos.get("/api/crm/management-diary/search").modulo, "contractManagementDiaryApi");
+  assert.equal(exatos.get("/api/admin/ai-rag-directory-sources").modulo, "aiRagDirectoryApi");
 });
 
 // ---------------------------------------------------------------------------

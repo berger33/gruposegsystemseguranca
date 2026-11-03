@@ -4764,6 +4764,12 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/crm/contracts"
   || pathname.startsWith("/api/crm/contracts/")
   || pathname === "/api/crm/contracts/from-proposal"
+  // E15: as duas raízes do diário de gestão estavam despachadas e nunca entravam
+  // na borda — a requisição caía no Next e o handler não era chamado. O caminho
+  // que a tela usa (`/api/crm/contracts/:id/management-diary`) já era coberto
+  // pelo prefixo acima; estas duas linhas fecham o par que faltava.
+  || pathname === "/api/crm/management-diary"
+  || pathname === "/api/crm/management-diary/search"
   || pathname === "/api/crm/reports"
   || pathname.startsWith("/api/crm/reports/")
   || pathname === "/api/crm/goals"
@@ -6170,6 +6176,9 @@ const API_PATH_MATCH = pathname =>
   || pathname === "/api/admin/faq-handoff"
   || pathname === "/api/admin/human-handoff"
   || pathname === "/api/ai/answer"
+  // E15: `DirectorySourcesClient` (aba `pastas` do TiConsole) chama este caminho,
+  // que estava só no despacho — sem a borda, o fetch caía no Next.
+  || pathname === "/api/admin/ai-rag-directory-sources"
   || pathname === "/api/admin/ai-rag-indexes"
   || pathname === "/api/ai-rag-indexes"
   || pathname === "/api/ai/rag-indexes"
@@ -6255,7 +6264,7 @@ server.listen(port, hostname, () => {
 // executar, a execução é reivindicada com lease e concluída na mesma
 // transação do efeito; queda no meio do lease é RETOMADA, e falha ganha retry
 // com backoff. O motivo de o modo durável também exigir `DATABASE_URL` não é o
-// schema — depois do E7 a demo PGlite tem as migrações 001–182 — e sim o
+// schema — depois do E7 a demo PGlite tem as migrações 001–183 — e sim o
 // executor: o PGlite é um banco embutido de escritor único por diretório, sem
 // segundo processo para reivindicar o lease e sem supervisor para religar o
 // worker. Ligar fila durável ali seria teatro de disponibilidade.
