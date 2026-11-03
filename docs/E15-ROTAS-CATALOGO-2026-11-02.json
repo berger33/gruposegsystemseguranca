@@ -14,140 +14,140 @@
     "exato",
     "/api/ab-tests",
     "borda",
-    6129,
+    6135,
     null
    ],
    [
     "exato",
     "/api/accessibility-checks",
     "borda",
-    6156,
+    6162,
     null
    ],
    [
     "exato",
     "/api/adm/approval-history",
     "borda",
-    5831,
+    5837,
     null
    ],
    [
     "exato",
     "/api/adm/approvals",
     "borda",
-    5827,
+    5833,
     null
    ],
    [
     "exato",
     "/api/adm/business-configs",
     "borda",
-    5855,
+    5861,
     null
    ],
    [
     "exato",
     "/api/adm/commercial-snapshots",
     "borda",
-    5811,
+    5817,
     null
    ],
    [
     "exato",
     "/api/adm/expansion-analyses",
     "borda",
-    5867,
+    5873,
     null
    ],
    [
     "exato",
     "/api/adm/financial-snapshots",
     "borda",
-    5819,
+    5825,
     null
    ],
    [
     "exato",
     "/api/adm/goals-comparison",
     "borda",
-    5859,
+    5865,
     null
    ],
    [
     "exato",
     "/api/adm/management-diary-access",
     "borda",
-    5863,
+    5869,
     null
    ],
    [
     "exato",
     "/api/adm/my-day",
     "borda",
-    5807,
+    5813,
     null
    ],
    [
     "exato",
     "/api/adm/operational-snapshots",
     "borda",
-    5815,
+    5821,
     null
    ],
    [
     "prefixo",
     "/api/adm/panel/",
     "borda",
-    5803,
+    5809,
     null
    ],
    [
     "exato",
     "/api/adm/renewal-risks",
     "borda",
-    5823,
+    5829,
     null
    ],
    [
     "exato",
     "/api/adm/report-logs",
     "borda",
-    5851,
+    5857,
     null
    ],
    [
     "exato",
     "/api/adm/reports",
     "borda",
-    5847,
+    5853,
     null
    ],
    [
     "exato",
     "/api/adm/saved-filters",
     "borda",
-    5839,
+    5845,
     null
    ],
    [
     "exato",
     "/api/adm/search-favorites",
     "borda",
-    5835,
+    5841,
     null
    ],
    [
     "exato",
     "/api/adm/shortcuts",
     "borda",
-    5843,
+    5849,
     null
    ],
    [
     "exato",
     "/api/admin/ab-tests",
     "borda",
-    6128,
+    6134,
     null
    ],
    [
@@ -161,56 +161,63 @@
     "exato",
     "/api/admin/ai-bot-config",
     "borda",
-    6190,
+    6199,
     null
    ],
    [
     "exato",
     "/api/admin/ai-bot-sessions",
     "borda",
-    6196,
+    6205,
     null
    ],
    [
     "exato",
     "/api/admin/ai-rag-chunks",
     "borda",
-    6198,
+    6207,
     null
    ],
    [
     "exato",
     "/api/admin/ai-rag-cost",
     "borda",
-    6187,
+    6196,
+    null
+   ],
+   [
+    "exato",
+    "/api/admin/ai-rag-directory-sources",
+    "borda",
+    6181,
     null
    ],
    [
     "exato",
     "/api/admin/ai-rag-documents",
     "borda",
-    6176,
+    6185,
     null
    ],
    [
     "exato",
     "/api/admin/ai-rag-feedback",
     "borda",
-    6186,
+    6195,
     null
    ],
    [
     "exato",
     "/api/admin/ai-rag-indexes",
     "borda",
-    6173,
+    6182,
     null
    ],
    [
     "exato",
     "/api/admin/ai-rag-queries",
     "borda",
-    6179,
+    6188,
     null
    ],
    [
@@ -231,21 +238,21 @@
     "exato",
     "/api/admin/backups",
     "borda",
-    4814,
+    4820,
     null
    ],
    [
     "prefixo",
     "/api/admin/backups/",
     "borda",
-    4816,
+    4822,
     null
    ],
    [
     "exato",
     "/api/admin/budgets",
     "borda",
-    4905,
+    4911,
     null
    ],
    [
@@ -329,42 +336,42 @@
     "exato",
     "/api/admin/cms-contents",
     "borda",
-    6077,
+    6083,
     null
    ],
    [
     "prefixo",
     "/api/admin/cms-contents/",
     "borda",
-    6080,
+    6086,
     null
    ],
    [
     "exato",
     "/api/admin/config/flags",
     "borda",
-    4866,
+    4872,
     null
    ],
    [
     "prefixo",
     "/api/admin/config/flags/",
     "borda",
-    4869,
+    4875,
     null
    ],
    [
     "exato",
     "/api/admin/config/maintenance",
     "borda",
-    4872,
+    4878,
     null
    ],
    [
     "exato",
     "/api/admin/config/rollouts",
     "borda",
-    4875,
+    4881,
     null
    ],
    [
@@ -385,56 +392,56 @@
     "exato",
     "/api/admin/conversion-events",
     "borda",
-    6126,
+    6132,
     null
    ],
    [
     "exato",
     "/api/admin/dependencies/audits",
     "borda",
-    4878,
+    4884,
     null
    ],
    [
     "exato",
     "/api/admin/dependencies/lockfile",
     "borda",
-    4887,
+    4893,
     null
    ],
    [
     "exato",
     "/api/admin/dependencies/updates",
     "borda",
-    4884,
+    4890,
     null
    ],
    [
     "exato",
     "/api/admin/dependencies/vulnerabilities",
     "borda",
-    4881,
+    4887,
     null
    ],
    [
     "exato",
     "/api/admin/disposal/jobs",
     "borda",
-    4850,
+    4856,
     null
    ],
    [
     "prefixo",
     "/api/admin/disposal/jobs/",
     "borda",
-    4854,
+    4860,
     null
    ],
    [
     "exato",
     "/api/admin/disposal/logs",
     "borda",
-    4858,
+    4864,
     null
    ],
    [
@@ -455,105 +462,105 @@
     "exato",
     "/api/admin/domain-verifications",
     "borda",
-    6112,
+    6118,
     null
    ],
    [
     "exato",
     "/api/admin/employee-complaint-evidences",
     "borda",
-    6142,
+    6148,
     null
    ],
    [
     "exato",
     "/api/admin/employee-complaint-hr-shares",
     "borda",
-    6144,
+    6150,
     null
    ],
    [
     "exato",
     "/api/admin/employee-complaint-messages",
     "borda",
-    6140,
+    6146,
     null
    ],
    [
     "exato",
     "/api/admin/employee-complaints",
     "borda",
-    6133,
+    6139,
     null
    ],
    [
     "prefixo",
     "/api/admin/employee-complaints/",
     "borda",
-    6138,
+    6144,
     null
    ],
    [
     "exato",
     "/api/admin/employee/profile",
     "borda",
-    4945,
+    4951,
     null
    ],
    [
     "exato",
     "/api/admin/employee/profile-updates",
     "borda",
-    4951,
+    4957,
     null
    ],
    [
     "exato",
     "/api/admin/environments",
     "borda",
-    4914,
+    4920,
     null
    ],
    [
     "exato",
     "/api/admin/environments/checks",
     "borda",
-    4917,
+    4923,
     null
    ],
    [
     "exato",
     "/api/admin/faq-assisted-messages",
     "borda",
-    6167,
+    6173,
     null
    ],
    [
     "exato",
     "/api/admin/faq-assisted-rules",
     "borda",
-    6157,
+    6163,
     null
    ],
    [
     "exato",
     "/api/admin/faq-assisted-sessions",
     "borda",
-    6163,
+    6169,
     null
    ],
    [
     "exato",
     "/api/admin/faq-handoff",
     "borda",
-    6170,
+    6176,
     null
    ],
    [
     "exato",
     "/api/admin/faq-internal",
     "borda",
-    5264,
+    5270,
     null
    ],
    [
@@ -581,1421 +588,1421 @@
     "exato",
     "/api/admin/health",
     "borda",
-    4810,
+    4816,
     null
    ],
    [
     "exato",
     "/api/admin/hr/absence-followups",
     "borda",
-    5148,
+    5154,
     null
    ],
    [
     "exato",
     "/api/admin/hr/absence-notices",
     "borda",
-    5145,
+    5151,
     null
    ],
    [
     "exato",
     "/api/admin/hr/absences",
     "borda",
-    4986,
+    4992,
     null
    ],
    [
     "exato",
     "/api/admin/hr/accessibility-preferences",
     "borda",
-    5269,
+    5275,
     null
    ],
    [
     "exato",
     "/api/admin/hr/adm-approval-history",
     "borda",
-    5828,
+    5834,
     null
    ],
    [
     "exato",
     "/api/admin/hr/adm-approvals",
     "borda",
-    5824,
+    5830,
     null
    ],
    [
     "exato",
     "/api/admin/hr/adm-business-configs",
     "borda",
-    5852,
+    5858,
     null
    ],
    [
     "exato",
     "/api/admin/hr/adm-commercial-snapshots",
     "borda",
-    5808,
+    5814,
     null
    ],
    [
     "exato",
     "/api/admin/hr/adm-expansion-analyses",
     "borda",
-    5864,
+    5870,
     null
    ],
    [
     "exato",
     "/api/admin/hr/adm-financial-snapshots",
     "borda",
-    5816,
+    5822,
     null
    ],
    [
     "exato",
     "/api/admin/hr/adm-goals-comparison",
     "borda",
-    5856,
+    5862,
     null
    ],
    [
     "exato",
     "/api/admin/hr/adm-management-diary-access",
     "borda",
-    5860,
+    5866,
     null
    ],
    [
     "exato",
     "/api/admin/hr/adm-my-day",
     "borda",
-    5804,
+    5810,
     null
    ],
    [
     "exato",
     "/api/admin/hr/adm-operational-snapshots",
     "borda",
-    5812,
+    5818,
     null
    ],
    [
     "exato",
     "/api/admin/hr/adm-renewal-risks",
     "borda",
-    5820,
+    5826,
     null
    ],
    [
     "exato",
     "/api/admin/hr/adm-report-logs",
     "borda",
-    5848,
+    5854,
     null
    ],
    [
     "exato",
     "/api/admin/hr/adm-reports",
     "borda",
-    5844,
+    5850,
     null
    ],
    [
     "exato",
     "/api/admin/hr/adm-saved-filters",
     "borda",
-    5836,
+    5842,
     null
    ],
    [
     "exato",
     "/api/admin/hr/adm-search-favorites",
     "borda",
-    5832,
+    5838,
     null
    ],
    [
     "exato",
     "/api/admin/hr/adm-shortcuts",
     "borda",
-    5840,
+    5846,
     null
    ],
    [
     "exato",
     "/api/admin/hr/admission-progress",
     "borda",
-    4940,
+    4946,
     null
    ],
    [
     "exato",
     "/api/admin/hr/admissions",
     "borda",
-    4934,
+    4940,
     null
    ],
    [
     "prefixo",
     "/api/admin/hr/admissions/",
     "borda",
-    4937,
+    4943,
     null
    ],
    [
     "exato",
     "/api/admin/hr/advance-policies",
     "borda",
-    5022,
+    5028,
     null
    ],
    [
     "exato",
     "/api/admin/hr/advance-requests",
     "borda",
-    5025,
+    5031,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-cftv-dossiers",
     "borda",
-    5936,
+    5942,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-cleaning-materials",
     "borda",
-    5940,
+    5946,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-deliveries",
     "borda",
-    5888,
+    5894,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-inventories",
     "borda",
-    5912,
+    5918,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-inventory-items",
     "borda",
-    5916,
+    5922,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-maintenance-executions",
     "borda",
-    5932,
+    5938,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-maintenance-plans",
     "borda",
-    5928,
+    5934,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-order-history",
     "borda",
-    5908,
+    5914,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-products",
     "borda",
-    5872,
+    5878,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-purchase-orders",
     "borda",
-    5900,
+    5906,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-quotations",
     "borda",
-    5896,
+    5902,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-requisition-history",
     "borda",
-    5904,
+    5910,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-requisitions",
     "borda",
-    5892,
+    5898,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-reservations",
     "borda",
-    5880,
+    5886,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-serialized-assets",
     "borda",
-    5884,
+    5890,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-service-order-evidences",
     "borda",
-    5924,
+    5930,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-service-orders",
     "borda",
-    5920,
+    5926,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-stock-movements",
     "borda",
-    5876,
+    5882,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ast-suppliers",
     "borda",
-    5868,
+    5874,
     null
    ],
    [
     "exato",
     "/api/admin/hr/benefit-catalog",
     "borda",
-    5007,
+    5013,
     null
    ],
    [
     "exato",
     "/api/admin/hr/benefit-conferences",
     "borda",
-    5016,
+    5022,
     null
    ],
    [
     "exato",
     "/api/admin/hr/benefit-enrollments",
     "borda",
-    5010,
+    5016,
     null
    ],
    [
     "exato",
     "/api/admin/hr/benefit-exports",
     "borda",
-    5019,
+    5025,
     null
    ],
    [
     "exato",
     "/api/admin/hr/benefit-requests",
     "borda",
-    5013,
+    5019,
     null
    ],
    [
     "exato",
     "/api/admin/hr/candidates",
     "borda",
-    4955,
+    4961,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-charges-v2",
     "borda",
-    5573,
+    5579,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-client-contacts",
     "borda",
-    5488,
+    5494,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-client-documents-v2",
     "borda",
-    5516,
+    5522,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-contact-delegate",
     "borda",
-    5496,
+    5502,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-contact-scopes",
     "borda",
-    5492,
+    5498,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-contract-items",
     "borda",
-    5500,
+    5506,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-contract-scopes",
     "borda",
-    5504,
+    5510,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-contract-vigencia",
     "borda",
-    5508,
+    5514,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-document-access-logs",
     "borda",
-    5530,
+    5536,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-document-categories",
     "borda",
-    5512,
+    5518,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-document-download",
     "borda",
-    5525,
+    5531,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-document-versions",
     "borda",
-    5521,
+    5527,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-email-change-requests",
     "borda",
-    5624,
+    5630,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-entry-points",
     "borda",
-    5480,
+    5486,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-old-routes",
     "borda",
-    5484,
+    5490,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-portal-access-requests",
     "borda",
-    5601,
+    5607,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-portal-mode-configs",
     "borda",
-    5597,
+    5603,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-renewal-communications",
     "borda",
-    5593,
+    5599,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-report-history-v2",
     "borda",
-    5569,
+    5575,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-reports-v2",
     "borda",
-    5564,
+    5570,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-satisfaction-action-plans",
     "borda",
-    5589,
+    5595,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-satisfaction-surveys",
     "borda",
-    5584,
+    5590,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-security-events",
     "borda",
-    5620,
+    5626,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-service-requests",
     "borda",
-    5579,
+    5585,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-sessions",
     "borda",
-    5629,
+    5635,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-ticket-attachments",
     "borda",
-    5543,
+    5549,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-ticket-history",
     "borda",
-    5547,
+    5553,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-ticket-messages",
     "borda",
-    5539,
+    5545,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-ticket-sla-pauses",
     "borda",
-    5551,
+    5557,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-tickets-v2",
     "borda",
-    5534,
+    5540,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-visit-history",
     "borda",
-    5560,
+    5566,
     null
    ],
    [
     "exato",
     "/api/admin/hr/cli-visits",
     "borda",
-    5555,
+    5561,
     null
    ],
    [
     "exato",
     "/api/admin/hr/communication-reads",
     "borda",
-    5211,
+    5217,
     null
    ],
    [
     "exato",
     "/api/admin/hr/communications",
     "borda",
-    5208,
+    5214,
     null
    ],
    [
     "exato",
     "/api/admin/hr/competence-closures",
     "borda",
-    4995,
+    5001,
     null
    ],
    [
     "exato",
     "/api/admin/hr/competency-catalog",
     "borda",
-    5058,
+    5064,
     null
    ],
    [
     "exato",
     "/api/admin/hr/competency-evaluations",
     "borda",
-    5067,
+    5073,
     null
    ],
    [
     "exato",
     "/api/admin/hr/competency-requirements",
     "borda",
-    5061,
+    5067,
     null
    ],
    [
     "exato",
     "/api/admin/hr/confidential-attachments",
     "borda",
-    5240,
+    5246,
     null
    ],
    [
     "exato",
     "/api/admin/hr/confidential-messages",
     "borda",
-    5237,
+    5243,
     null
    ],
    [
     "exato",
     "/api/admin/hr/confidential-policies",
     "borda",
-    5231,
+    5237,
     null
    ],
    [
     "exato",
     "/api/admin/hr/confidential-reports",
     "borda",
-    5234,
+    5240,
     null
    ],
    [
     "exato",
     "/api/admin/hr/course-alerts",
     "borda",
-    5202,
+    5208,
     null
    ],
    [
     "exato",
     "/api/admin/hr/course-enrollments",
     "borda",
-    5196,
+    5202,
     null
    ],
    [
     "exato",
     "/api/admin/hr/course-expiry-alerts",
     "borda",
-    5205,
+    5211,
     null
    ],
    [
     "exato",
     "/api/admin/hr/course-proofs",
     "borda",
-    5199,
+    5205,
     null
    ],
    [
     "exato",
     "/api/admin/hr/development-actions",
     "borda",
-    5112,
+    5118,
     null
    ],
    [
     "exato",
     "/api/admin/hr/development-plans",
     "borda",
-    5109,
+    5115,
     null
    ],
    [
     "exato",
     "/api/admin/hr/doc-availability",
     "borda",
-    5181,
+    5187,
     null
    ],
    [
     "exato",
     "/api/admin/hr/document-submissions",
     "borda",
-    5175,
+    5181,
     null
    ],
    [
     "exato",
     "/api/admin/hr/dossiers",
     "borda",
-    4964,
+    4970,
     null
    ],
    [
     "exato",
     "/api/admin/hr/dp-closures",
     "borda",
-    5082,
+    5088,
     null
    ],
    [
     "exato",
     "/api/admin/hr/dp-documents",
     "borda",
-    5088,
+    5094,
     null
    ],
    [
     "exato",
     "/api/admin/hr/dp-exports",
     "borda",
-    5091,
+    5097,
     null
    ],
    [
     "exato",
     "/api/admin/hr/dp-variables",
     "borda",
-    5085,
+    5091,
     null
    ],
    [
     "exato",
     "/api/admin/hr/employee-competencies",
     "borda",
-    5064,
+    5070,
     null
    ],
    [
     "exato",
     "/api/admin/hr/employee-complaints",
     "borda",
-    6131,
+    6137,
     null
    ],
    [
     "prefixo",
     "/api/admin/hr/employee-complaints/",
     "borda",
-    6132,
+    6138,
     null
    ],
    [
     "exato",
     "/api/admin/hr/employee-dossiers",
     "borda",
-    4967,
+    4973,
     null
    ],
    [
     "exato",
     "/api/admin/hr/employee-hr-attachments",
     "borda",
-    5230,
+    5236,
     null
    ],
    [
     "exato",
     "/api/admin/hr/employee-hr-messages",
     "borda",
-    5226,
+    5232,
     null
    ],
    [
     "exato",
     "/api/admin/hr/employee-hr-tickets",
     "borda",
-    5222,
+    5228,
     null
    ],
    [
     "exato",
     "/api/admin/hr/employees",
     "borda",
-    4928,
+    4934,
     null
    ],
    [
     "prefixo",
     "/api/admin/hr/employees/",
     "borda",
-    4931,
+    4937,
     null
    ],
    [
     "exato",
     "/api/admin/hr/evaluation-criteria",
     "borda",
-    5103,
+    5109,
     null
    ],
    [
     "exato",
     "/api/admin/hr/evaluations",
     "borda",
-    5106,
+    5112,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-ai-automation-logs",
     "borda",
-    6072,
+    6078,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-ai-automations",
     "borda",
-    6067,
+    6073,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-analytics-experiments",
     "borda",
-    6031,
+    6037,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-bidding-documents",
     "borda",
-    5991,
+    5997,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-bidding-notices",
     "borda",
-    5970,
+    5976,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-biometry-projects",
     "borda",
-    6063,
+    6069,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-central-projects",
     "borda",
-    6059,
+    6065,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-commercial-intelligence",
     "borda",
-    6047,
+    6053,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-compliance-documents",
     "borda",
-    6011,
+    6017,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-continuity-plans",
     "borda",
-    6027,
+    6033,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-emergency-channels",
     "borda",
-    6051,
+    6057,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-emergency-tests",
     "borda",
-    6055,
+    6061,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-expansion-plans",
     "borda",
-    6019,
+    6025,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-expansion-scenarios",
     "borda",
-    6023,
+    6029,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-fleet-documents",
     "borda",
-    5957,
+    5963,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-fleet-fuel-logs",
     "borda",
-    5949,
+    5955,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-fleet-maintenance-logs",
     "borda",
-    5953,
+    5959,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-fleet-vehicles",
     "borda",
-    5944,
+    5950,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-knowledge-base",
     "borda",
-    6015,
+    6021,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-periodic-reports",
     "borda",
-    6043,
+    6049,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-quality-actions",
     "borda",
-    6003,
+    6009,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-quality-nonconformities",
     "borda",
-    5999,
+    6005,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-satisfaction-surveys",
     "borda",
-    6007,
+    6013,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-supplier-portal-quotations",
     "borda",
-    5995,
+    6001,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-third-parties",
     "borda",
-    5961,
+    5967,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-third-party-documents",
     "borda",
-    5966,
+    5972,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-visual-layouts",
     "borda",
-    6039,
+    6045,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ext-visual-tokens",
     "borda",
-    6035,
+    6041,
     null
    ],
    [
     "exato",
     "/api/admin/hr/faq-access-logs",
     "borda",
-    5266,
+    5272,
     null
    ],
    [
     "exato",
     "/api/admin/hr/faq-internal",
     "borda",
-    5261,
+    5267,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-aging-receivables",
     "borda",
-    5697,
+    5703,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-attachments",
     "borda",
-    5661,
+    5667,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-bank-statements",
     "borda",
-    5669,
+    5675,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-bank-transactions",
     "borda",
-    5673,
+    5679,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-budget-history",
     "borda",
-    5774,
+    5780,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-budget-scenarios",
     "borda",
-    5770,
+    5776,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-budgets",
     "borda",
-    5766,
+    5772,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-cashflow-snapshots",
     "borda",
-    5693,
+    5699,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-collection-history",
     "borda",
-    5689,
+    5695,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-collection-policies",
     "borda",
-    5681,
+    5687,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-collection-reminders",
     "borda",
-    5685,
+    5691,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-commission-provision-history",
     "borda",
-    5799,
+    5805,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-commission-provisions",
     "borda",
-    5795,
+    5801,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-competence-closures",
     "borda",
-    5787,
+    5793,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-conciliations",
     "borda",
-    5677,
+    5683,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-cost-centers",
     "borda",
-    5637,
+    5643,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-cost-imports",
     "borda",
-    5701,
+    5707,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-costs",
     "borda",
-    5705,
+    5711,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-expense-history",
     "borda",
-    5721,
+    5727,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-expenses",
     "borda",
-    5717,
+    5723,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-export-logs",
     "borda",
-    5783,
+    5789,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-exports",
     "borda",
-    5778,
+    5784,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-fiscal-activity-rules",
     "borda",
-    5726,
+    5732,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-fiscal-documents",
     "borda",
-    5742,
+    5748,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-fiscal-history",
     "borda",
-    5730,
+    5736,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-fiscal-obligations",
     "borda",
-    5738,
+    5744,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-fiscal-providers",
     "borda",
-    5734,
+    5740,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-gateway-charges",
     "borda",
-    5754,
+    5760,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-gateway-history",
     "borda",
-    5758,
+    5764,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-gateway-webhook-sign",
     "borda",
-    5762,
+    5768,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-gateway-webhooks",
     "borda",
-    5750,
+    5756,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-generate-recurring",
     "borda",
-    5665,
+    5671,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-management-results",
     "borda",
-    5709,
+    5715,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-payables",
     "borda",
-    5649,
+    5655,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-payment-gateways",
     "borda",
-    5746,
+    5752,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-payment-history",
     "borda",
-    5657,
+    5663,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-payments",
     "borda",
-    5653,
+    5659,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-receivables",
     "borda",
-    5645,
+    5651,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-recurrence-rules",
     "borda",
-    5641,
+    5647,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-report-versions",
     "borda",
-    5791,
+    5797,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-result-history",
     "borda",
-    5713,
+    5719,
     null
    ],
    [
     "exato",
     "/api/admin/hr/fin-suppliers",
     "borda",
-    5633,
+    5639,
     null
    ],
    [
     "exato",
     "/api/admin/hr/handover-records",
     "borda",
-    5154,
+    5160,
     null
    ],
    [
     "exato",
     "/api/admin/hr/hour-bank",
     "borda",
-    5001,
+    5007,
     null
    ],
    [
     "exato",
     "/api/admin/hr/hour-movements",
     "borda",
-    5004,
+    5010,
     null
    ],
    [
     "exato",
     "/api/admin/hr/hr-attachments",
     "borda",
-    5227,
+    5233,
     null
    ],
    [
     "exato",
     "/api/admin/hr/hr-messages",
     "borda",
-    5223,
+    5229,
     null
    ],
    [
     "exato",
     "/api/admin/hr/hr-tickets",
     "borda",
-    5219,
+    5225,
     null
    ],
    [
     "exato",
     "/api/admin/hr/indicator-definitions",
     "borda",
-    5124,
+    5130,
     null
    ],
    [
     "exato",
     "/api/admin/hr/indicator-snapshots",
     "borda",
-    5127,
+    5133,
     null
    ],
    [
     "exato",
     "/api/admin/hr/integration-errors",
     "borda",
-    5043,
+    5049,
     null
    ],
    [
     "exato",
     "/api/admin/hr/integration-exports",
     "borda",
-    5037,
+    5043,
     null
    ],
    [
     "exato",
     "/api/admin/hr/integration-receipts",
     "borda",
-    5040,
+    5046,
     null
    ],
    [
     "exato",
     "/api/admin/hr/interviews",
     "borda",
-    4958,
+    4964,
     null
    ],
    [
     "exato",
     "/api/admin/hr/journey-corrections",
     "borda",
-    5142,
+    5148,
     null
    ],
    [
     "exato",
     "/api/admin/hr/journey-proofs",
     "borda",
-    5139,
+    5145,
     null
    ],
    [
@@ -2009,707 +2016,707 @@
     "exato",
     "/api/admin/hr/my-profile",
     "borda",
-    4947,
+    4953,
     null
    ],
    [
     "exato",
     "/api/admin/hr/notifications-center",
     "borda",
-    5214,
+    5220,
     null
    ],
    [
     "exato",
     "/api/admin/hr/occupational-agenda",
     "borda",
-    5031,
+    5037,
     null
    ],
    [
     "exato",
     "/api/admin/hr/occupational-documents",
     "borda",
-    5034,
+    5040,
     null
    ],
    [
     "exato",
     "/api/admin/hr/occupational-requirements",
     "borda",
-    5028,
+    5034,
     null
    ],
    [
     "exato",
     "/api/admin/hr/occurrence-actions",
     "borda",
-    5163,
+    5169,
     null
    ],
    [
     "exato",
     "/api/admin/hr/occurrence-attachments",
     "borda",
-    5160,
+    5166,
     null
    ],
    [
     "exato",
     "/api/admin/hr/occurrences",
     "borda",
-    5157,
+    5163,
     null
    ],
    [
     "exato",
     "/api/admin/hr/offline-conflicts",
     "borda",
-    5258,
+    5264,
     null
    ],
    [
     "exato",
     "/api/admin/hr/offline-queue",
     "borda",
-    5255,
+    5261,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-allocations",
     "borda",
-    5289,
+    5295,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-assisted-conflicts",
     "borda",
-    5444,
+    5450,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-assisted-entries",
     "borda",
-    5439,
+    5445,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-assisted-proposals",
     "borda",
-    5434,
+    5440,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-checklist-instances",
     "borda",
-    5369,
+    5375,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-checklist-items",
     "borda",
-    5373,
+    5379,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-checklist-templates",
     "borda",
-    5365,
+    5371,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-cleaning-environments",
     "borda",
-    5448,
+    5454,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-cleaning-executions",
     "borda",
-    5456,
+    5462,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-cleaning-nonconformities",
     "borda",
-    5460,
+    5466,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-cleaning-routines",
     "borda",
-    5452,
+    5458,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-client-report-attachments",
     "borda",
-    5414,
+    5420,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-client-report-history",
     "borda",
-    5418,
+    5424,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-client-reports",
     "borda",
-    5410,
+    5416,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-coverage-communications",
     "borda",
-    5337,
+    5343,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-coverage-gaps",
     "borda",
-    5297,
+    5303,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-coverage-requests",
     "borda",
-    5329,
+    5335,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-dimensioning",
     "borda",
-    5293,
+    5299,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-handover-escalations",
     "borda",
-    5345,
+    5351,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-handovers",
     "borda",
-    5341,
+    5347,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-job-roles",
     "borda",
-    5273,
+    5279,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-key-movements",
     "borda",
-    5406,
+    5412,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-keys",
     "borda",
-    5402,
+    5408,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-metrics-definitions",
     "borda",
-    5422,
+    5428,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-metrics-reincidence",
     "borda",
-    5430,
+    5436,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-metrics-snapshots",
     "borda",
-    5426,
+    5432,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-monitoring-connectors",
     "borda",
-    5464,
+    5470,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-monitoring-escalations",
     "borda",
-    5476,
+    5482,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-monitoring-event-history",
     "borda",
-    5472,
+    5478,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-monitoring-events",
     "borda",
-    5468,
+    5474,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-occurrence-actions",
     "borda",
-    5357,
+    5363,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-occurrence-book",
     "borda",
-    5349,
+    5355,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-occurrence-evidences",
     "borda",
-    5353,
+    5359,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-occurrence-history",
     "borda",
-    5361,
+    5367,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-patrol-points",
     "borda",
-    5393,
+    5399,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-patrol-replay-logs",
     "borda",
-    5398,
+    5404,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-patrols",
     "borda",
-    5389,
+    5395,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-post-shift-needs",
     "borda",
-    5285,
+    5291,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-posts",
     "borda",
-    5277,
+    5283,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-qualifications",
     "borda",
-    5321,
+    5327,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-schedule-acks",
     "borda",
-    5309,
+    5315,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-schedule-entries",
     "borda",
-    5305,
+    5311,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-schedule-history",
     "borda",
-    5313,
+    5319,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-schedule-versions",
     "borda",
-    5301,
+    5307,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-shift-templates",
     "borda",
-    5281,
+    5287,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-substitution-candidates",
     "borda",
-    5333,
+    5339,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-supervision-action-plans",
     "borda",
-    5385,
+    5391,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-supervision-inspections",
     "borda",
-    5381,
+    5387,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-supervision-visits",
     "borda",
-    5377,
+    5383,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-validations",
     "borda",
-    5325,
+    5331,
     null
    ],
    [
     "exato",
     "/api/admin/hr/ops-work-rules",
     "borda",
-    5317,
+    5323,
     null
    ],
    [
     "exato",
     "/api/admin/hr/own-doc-access-logs",
     "borda",
-    5178,
+    5184,
     null
    ],
    [
     "exato",
     "/api/admin/hr/payroll-documents",
     "borda",
-    5100,
+    5106,
     null
    ],
    [
     "exato",
     "/api/admin/hr/payroll-imports",
     "borda",
-    5097,
+    5103,
     null
    ],
    [
     "exato",
     "/api/admin/hr/payroll-sources",
     "borda",
-    5094,
+    5100,
     null
    ],
    [
     "exato",
     "/api/admin/hr/post-procedures",
     "borda",
-    5166,
+    5172,
     null
    ],
    [
     "exato",
     "/api/admin/hr/procedure-acks",
     "borda",
-    5169,
+    5175,
     null
    ],
    [
     "exato",
     "/api/admin/hr/profile-updates",
     "borda",
-    4948,
+    4954,
     null
    ],
    [
     "exato",
     "/api/admin/hr/pwa-configs",
     "borda",
-    5251,
+    5257,
     null
    ],
    [
     "exato",
     "/api/admin/hr/schedule-entries",
     "borda",
-    5136,
+    5142,
     null
    ],
    [
     "exato",
     "/api/admin/hr/schedule-versions",
     "borda",
-    5133,
+    5139,
     null
    ],
    [
     "exato",
     "/api/admin/hr/self-request-followups",
     "borda",
-    5187,
+    5193,
     null
    ],
    [
     "exato",
     "/api/admin/hr/self-requests",
     "borda",
-    5184,
+    5190,
     null
    ],
    [
     "exato",
     "/api/admin/hr/shift-assignments",
     "borda",
-    5130,
+    5136,
     null
    ],
    [
     "exato",
     "/api/admin/hr/shift-swaps",
     "borda",
-    5151,
+    5157,
     null
    ],
    [
     "exato",
     "/api/admin/hr/status-policies",
     "borda",
-    4977,
+    4983,
     null
    ],
    [
     "exato",
     "/api/admin/hr/support-attachments",
     "borda",
-    5121,
+    5127,
     null
    ],
    [
     "exato",
     "/api/admin/hr/support-contacts-ops",
     "borda",
-    5172,
+    5178,
     null
    ],
    [
     "exato",
     "/api/admin/hr/support-messages",
     "borda",
-    5118,
+    5124,
     null
    ],
    [
     "exato",
     "/api/admin/hr/support-tickets",
     "borda",
-    5115,
+    5121,
     null
    ],
    [
     "exato",
     "/api/admin/hr/talent-pool",
     "borda",
-    4961,
+    4967,
     null
    ],
    [
     "exato",
     "/api/admin/hr/termination-progress",
     "borda",
-    4974,
+    4980,
     null
    ],
    [
     "exato",
     "/api/admin/hr/terminations",
     "borda",
-    4968,
+    4974,
     null
    ],
    [
     "prefixo",
     "/api/admin/hr/terminations/",
     "borda",
-    4971,
+    4977,
     null
    ],
    [
     "exato",
     "/api/admin/hr/time-corrections",
     "borda",
-    4992,
+    4998,
     null
    ],
    [
     "exato",
     "/api/admin/hr/time-entries",
     "borda",
-    4989,
+    4995,
     null
    ],
    [
     "exato",
     "/api/admin/hr/training-catalog",
     "borda",
-    5046,
+    5052,
     null
    ],
    [
     "exato",
     "/api/admin/hr/training-enrollments",
     "borda",
-    5055,
+    5061,
     null
    ],
    [
     "exato",
     "/api/admin/hr/training-requirements",
     "borda",
-    5049,
+    5055,
     null
    ],
    [
     "exato",
     "/api/admin/hr/training-sessions",
     "borda",
-    5052,
+    5058,
     null
    ],
    [
     "exato",
     "/api/admin/hr/uniform-catalog",
     "borda",
-    5070,
+    5076,
     null
    ],
    [
     "exato",
     "/api/admin/hr/uniform-deliveries",
     "borda",
-    5073,
+    5079,
     null
    ],
    [
     "exato",
     "/api/admin/hr/uniform-receipts",
     "borda",
-    5193,
+    5199,
     null
    ],
    [
     "exato",
     "/api/admin/hr/uniform-requests",
     "borda",
-    5079,
+    5085,
     null
    ],
    [
     "exato",
     "/api/admin/hr/uniform-returns",
     "borda",
-    5076,
+    5082,
     null
    ],
    [
     "exato",
     "/api/admin/hr/uniform-self-requests",
     "borda",
-    5190,
+    5196,
     null
    ],
    [
     "exato",
     "/api/admin/hr/vacancies",
     "borda",
-    4952,
+    4958,
     null
    ],
    [
     "exato",
     "/api/admin/hr/vacation-periods",
     "borda",
-    4980,
+    4986,
     null
    ],
    [
     "exato",
     "/api/admin/hr/vacation-requests",
     "borda",
-    4983,
+    4989,
     null
    ],
    [
     "exato",
     "/api/admin/hr/work-rules",
     "borda",
-    4998,
+    5004,
     null
    ],
    [
     "exato",
     "/api/admin/human-handoff",
     "borda",
-    6171,
+    6177,
     null
    ],
    [
@@ -2723,14 +2730,14 @@
     "exato",
     "/api/admin/incidents",
     "borda",
-    4860,
+    4866,
     null
    ],
    [
     "prefixo",
     "/api/admin/incidents/",
     "borda",
-    4863,
+    4869,
     null
    ],
    [
@@ -2751,35 +2758,35 @@
     "exato",
     "/api/admin/integrations/jobs",
     "borda",
-    4890,
+    4896,
     null
    ],
    [
     "exato",
     "/api/admin/integrations/logs",
     "borda",
-    4893,
+    4899,
     null
    ],
    [
     "exato",
     "/api/admin/integrations/reconciliation",
     "borda",
-    4902,
+    4908,
     null
    ],
    [
     "exato",
     "/api/admin/integrations/webhooks",
     "borda",
-    4896,
+    4902,
     null
    ],
    [
     "exato",
     "/api/admin/integrations/webhooks/deliveries",
     "borda",
-    4899,
+    4905,
     null
    ],
    [
@@ -2814,49 +2821,49 @@
     "exato",
     "/api/admin/lgpd/requests",
     "borda",
-    4831,
+    4837,
     null
    ],
    [
     "prefixo",
     "/api/admin/lgpd/requests/",
     "borda",
-    4834,
+    4840,
     null
    ],
    [
     "exato",
     "/api/admin/maintenance/docs",
     "borda",
-    4920,
+    4926,
     null
    ],
    [
     "prefixo",
     "/api/admin/maintenance/docs/",
     "borda",
-    4924,
+    4930,
     null
    ],
    [
     "exato",
     "/api/admin/notification-preferences",
     "borda",
-    4791,
+    4797,
     null
    ],
    [
     "exato",
     "/api/admin/notification-templates",
     "borda",
-    4794,
+    4800,
     null
    ],
    [
     "prefixo",
     "/api/admin/notification-templates/",
     "borda",
-    4795,
+    4801,
     null
    ],
    [
@@ -2877,35 +2884,35 @@
     "exato",
     "/api/admin/observability",
     "borda",
-    4797,
+    4803,
     null
    ],
    [
     "prefixo",
     "/api/admin/observability/",
     "borda",
-    4799,
+    4805,
     null
    ],
    [
     "exato",
     "/api/admin/operational",
     "borda",
-    4809,
+    4815,
     null
    ],
    [
     "prefixo",
     "/api/admin/operational/",
     "borda",
-    4812,
+    4818,
     null
    ],
    [
     "exato",
     "/api/admin/origin-metrics",
     "borda",
-    6123,
+    6129,
     null
    ],
    [
@@ -2926,14 +2933,14 @@
     "exato",
     "/api/admin/package-comparisons",
     "borda",
-    6121,
+    6127,
     null
    ],
    [
     "exato",
     "/api/admin/package-rules",
     "borda",
-    6115,
+    6121,
     null
    ],
    [
@@ -2954,161 +2961,161 @@
     "exato",
     "/api/admin/portal-access-requests",
     "borda",
-    5619,
+    5625,
     null
    ],
    [
     "exato",
     "/api/admin/privacy/inventory",
     "borda",
-    4818,
+    4824,
     null
    ],
    [
     "exato",
     "/api/admin/privacy/policies",
     "borda",
-    4821,
+    4827,
     null
    ],
    [
     "prefixo",
     "/api/admin/privacy/policies/",
     "borda",
-    4825,
+    4831,
     null
    ],
    [
     "exato",
     "/api/admin/privacy/requests",
     "borda",
-    4833,
+    4839,
     null
    ],
    [
     "prefixo",
     "/api/admin/privacy/requests/",
     "borda",
-    4836,
+    4842,
     null
    ],
    [
     "exato",
     "/api/admin/privacy/retention",
     "borda",
-    4841,
+    4847,
     null
    ],
    [
     "exato",
     "/api/admin/pub-accessibility",
     "borda",
-    6154,
+    6160,
     null
    ],
    [
     "exato",
     "/api/admin/pub-faq-sessions",
     "borda",
-    6164,
+    6170,
     null
    ],
    [
     "exato",
     "/api/admin/pub-performance",
     "borda",
-    6151,
+    6157,
     null
    ],
    [
     "exato",
     "/api/admin/pub-segments",
     "borda",
-    6146,
+    6152,
     null
    ],
    [
     "exato",
     "/api/admin/pwa-configs",
     "borda",
-    5254,
+    5260,
     null
    ],
    [
     "exato",
     "/api/admin/retention/disposal/jobs",
     "borda",
-    4848,
+    4854,
     null
    ],
    [
     "prefixo",
     "/api/admin/retention/disposal/jobs/",
     "borda",
-    4852,
+    4858,
     null
    ],
    [
     "exato",
     "/api/admin/retention/disposal/logs",
     "borda",
-    4856,
+    4862,
     null
    ],
    [
     "exato",
     "/api/admin/retention/exceptions",
     "borda",
-    4842,
+    4848,
     null
    ],
    [
     "prefixo",
     "/api/admin/retention/exceptions/",
     "borda",
-    4845,
+    4851,
     null
    ],
    [
     "exato",
     "/api/admin/retention/policies",
     "borda",
-    4838,
+    4844,
     null
    ],
    [
     "exato",
     "/api/admin/seo-configs",
     "borda",
-    6099,
+    6105,
     null
    ],
    [
     "exato",
     "/api/admin/seo-redirects",
     "borda",
-    6102,
+    6108,
     null
    ],
    [
     "exato",
     "/api/admin/seo-sitemap",
     "borda",
-    6105,
+    6111,
     null
    ],
    [
     "exato",
     "/api/admin/seo/sitemap-preview",
     "borda",
-    6104,
+    6110,
     null
    ],
    [
     "exato",
     "/api/admin/service-packages",
     "borda",
-    6117,
+    6123,
     null
    ],
    [
@@ -3143,35 +3150,35 @@
     "exato",
     "/api/admin/theme-preferences",
     "borda",
-    6094,
+    6100,
     null
    ],
    [
     "exato",
     "/api/admin/theme-previews",
     "borda",
-    6090,
+    6096,
     null
    ],
    [
     "exato",
     "/api/admin/themes",
     "borda",
-    6085,
+    6091,
     null
    ],
    [
     "prefixo",
     "/api/admin/themes/",
     "borda",
-    6088,
+    6094,
     null
    ],
    [
     "exato",
     "/api/admin/themes/rollback",
     "borda",
-    6097,
+    6103,
     null
    ],
    [
@@ -3192,280 +3199,280 @@
     "exato",
     "/api/admin/usage/alerts",
     "borda",
-    4911,
+    4917,
     null
    ],
    [
     "exato",
     "/api/admin/usage/metrics",
     "borda",
-    4908,
+    4914,
     null
    ],
    [
     "exato",
     "/api/ai-bot-config",
     "borda",
-    6191,
+    6200,
     null
    ],
    [
     "exato",
     "/api/ai-rag-chunks",
     "borda",
-    6199,
+    6208,
     null
    ],
    [
     "exato",
     "/api/ai-rag-cost-tracking",
     "borda",
-    6189,
+    6198,
     null
    ],
    [
     "exato",
     "/api/ai-rag-documents",
     "borda",
-    6177,
+    6186,
     null
    ],
    [
     "exato",
     "/api/ai-rag-indexes",
     "borda",
-    6174,
+    6183,
     null
    ],
    [
     "exato",
     "/api/ai-rag-queries",
     "borda",
-    6180,
+    6189,
     null
    ],
    [
     "exato",
     "/api/ai/answer",
     "borda",
-    6172,
+    6178,
     null
    ],
    [
     "exato",
     "/api/ai/automation-logs",
     "borda",
-    6076,
+    6082,
     null
    ],
    [
     "exato",
     "/api/ai/automations",
     "borda",
-    6071,
+    6077,
     null
    ],
    [
     "exato",
     "/api/ai/bot",
     "borda",
-    6193,
+    6202,
     null
    ],
    [
     "exato",
     "/api/ai/bot-config",
     "borda",
-    6192,
+    6201,
     null
    ],
    [
     "exato",
     "/api/ai/bot-sessions",
     "borda",
-    6197,
+    6206,
     null
    ],
    [
     "exato",
     "/api/ai/rag",
     "borda",
-    6181,
+    6190,
     null
    ],
    [
     "exato",
     "/api/ai/rag-chunks",
     "borda",
-    6200,
+    6209,
     null
    ],
    [
     "exato",
     "/api/ai/rag-documents",
     "borda",
-    6178,
+    6187,
     null
    ],
    [
     "exato",
     "/api/ai/rag-indexes",
     "borda",
-    6175,
+    6184,
     null
    ],
    [
     "exato",
     "/api/ai/rag/cost",
     "borda",
-    6188,
+    6197,
     null
    ],
    [
     "exato",
     "/api/ai/rag/feedback",
     "borda",
-    6184,
+    6193,
     null
    ],
    [
     "exato",
     "/api/ai/rag/queries",
     "borda",
-    6183,
+    6192,
     null
    ],
    [
     "exato",
     "/api/ast/cftv-dossiers",
     "borda",
-    5939,
+    5945,
     null
    ],
    [
     "exato",
     "/api/ast/cleaning-materials",
     "borda",
-    5943,
+    5949,
     null
    ],
    [
     "exato",
     "/api/ast/deliveries",
     "borda",
-    5891,
+    5897,
     null
    ],
    [
     "exato",
     "/api/ast/inventories",
     "borda",
-    5915,
+    5921,
     null
    ],
    [
     "exato",
     "/api/ast/inventory-items",
     "borda",
-    5919,
+    5925,
     null
    ],
    [
     "exato",
     "/api/ast/maintenance-executions",
     "borda",
-    5935,
+    5941,
     null
    ],
    [
     "exato",
     "/api/ast/maintenance-plans",
     "borda",
-    5931,
+    5937,
     null
    ],
    [
     "exato",
     "/api/ast/order-history",
     "borda",
-    5911,
+    5917,
     null
    ],
    [
     "exato",
     "/api/ast/products",
     "borda",
-    5875,
+    5881,
     null
    ],
    [
     "exato",
     "/api/ast/purchase-orders",
     "borda",
-    5903,
+    5909,
     null
    ],
    [
     "exato",
     "/api/ast/quotations",
     "borda",
-    5899,
+    5905,
     null
    ],
    [
     "exato",
     "/api/ast/requisition-history",
     "borda",
-    5907,
+    5913,
     null
    ],
    [
     "exato",
     "/api/ast/requisitions",
     "borda",
-    5895,
+    5901,
     null
    ],
    [
     "exato",
     "/api/ast/reservations",
     "borda",
-    5883,
+    5889,
     null
    ],
    [
     "exato",
     "/api/ast/serialized-assets",
     "borda",
-    5887,
+    5893,
     null
    ],
    [
     "exato",
     "/api/ast/service-order-evidences",
     "borda",
-    5927,
+    5933,
     null
    ],
    [
     "exato",
     "/api/ast/service-orders",
     "borda",
-    5923,
+    5929,
     null
    ],
    [
     "exato",
     "/api/ast/stock-movements",
     "borda",
-    5879,
+    5885,
     null
    ],
    [
     "exato",
     "/api/ast/suppliers",
     "borda",
-    5871,
+    5877,
     null
    ],
    [
@@ -3479,14 +3486,14 @@
     "exato",
     "/api/bot",
     "borda",
-    6195,
+    6204,
     null
    ],
    [
     "exato",
     "/api/budgets",
     "borda",
-    4907,
+    4913,
     null
    ],
    [
@@ -3514,231 +3521,231 @@
     "exato",
     "/api/cli/charges-v2",
     "borda",
-    5576,
+    5582,
     null
    ],
    [
     "exato",
     "/api/cli/client-contacts",
     "borda",
-    5491,
+    5497,
     null
    ],
    [
     "exato",
     "/api/cli/client-documents-v2",
     "borda",
-    5519,
+    5525,
     null
    ],
    [
     "exato",
     "/api/cli/contact-delegate",
     "borda",
-    5499,
+    5505,
     null
    ],
    [
     "exato",
     "/api/cli/contact-scopes",
     "borda",
-    5495,
+    5501,
     null
    ],
    [
     "exato",
     "/api/cli/contract-items",
     "borda",
-    5503,
+    5509,
     null
    ],
    [
     "exato",
     "/api/cli/contract-scopes",
     "borda",
-    5507,
+    5513,
     null
    ],
    [
     "exato",
     "/api/cli/contract-vigencia",
     "borda",
-    5511,
+    5517,
     null
    ],
    [
     "exato",
     "/api/cli/document-access-logs",
     "borda",
-    5533,
+    5539,
     null
    ],
    [
     "exato",
     "/api/cli/document-categories",
     "borda",
-    5515,
+    5521,
     null
    ],
    [
     "exato",
     "/api/cli/document-download",
     "borda",
-    5528,
+    5534,
     null
    ],
    [
     "exato",
     "/api/cli/document-versions",
     "borda",
-    5524,
+    5530,
     null
    ],
    [
     "exato",
     "/api/cli/email-change-requests",
     "borda",
-    5627,
+    5633,
     null
    ],
    [
     "exato",
     "/api/cli/employee-complaints",
     "borda",
-    6135,
+    6141,
     null
    ],
    [
     "exato",
     "/api/cli/entry-points",
     "borda",
-    5483,
+    5489,
     null
    ],
    [
     "exato",
     "/api/cli/old-routes",
     "borda",
-    5487,
+    5493,
     null
    ],
    [
     "exato",
     "/api/cli/portal-access-requests",
     "borda",
-    5604,
+    5610,
     null
    ],
    [
     "exato",
     "/api/cli/portal-mode-configs",
     "borda",
-    5600,
+    5606,
     null
    ],
    [
     "exato",
     "/api/cli/renewal-communications",
     "borda",
-    5596,
+    5602,
     null
    ],
    [
     "exato",
     "/api/cli/report-history-v2",
     "borda",
-    5572,
+    5578,
     null
    ],
    [
     "exato",
     "/api/cli/reports-v2",
     "borda",
-    5567,
+    5573,
     null
    ],
    [
     "exato",
     "/api/cli/satisfaction-action-plans",
     "borda",
-    5592,
+    5598,
     null
    ],
    [
     "exato",
     "/api/cli/satisfaction-surveys",
     "borda",
-    5587,
+    5593,
     null
    ],
    [
     "exato",
     "/api/cli/security-events",
     "borda",
-    5623,
+    5629,
     null
    ],
    [
     "exato",
     "/api/cli/service-requests",
     "borda",
-    5582,
+    5588,
     null
    ],
    [
     "exato",
     "/api/cli/sessions",
     "borda",
-    5632,
+    5638,
     null
    ],
    [
     "exato",
     "/api/cli/ticket-attachments",
     "borda",
-    5546,
+    5552,
     null
    ],
    [
     "exato",
     "/api/cli/ticket-history",
     "borda",
-    5550,
+    5556,
     null
    ],
    [
     "exato",
     "/api/cli/ticket-messages",
     "borda",
-    5542,
+    5548,
     null
    ],
    [
     "exato",
     "/api/cli/ticket-sla-pauses",
     "borda",
-    5554,
+    5560,
     null
    ],
    [
     "exato",
     "/api/cli/tickets-v2",
     "borda",
-    5537,
+    5543,
     null
    ],
    [
     "exato",
     "/api/cli/visit-history",
     "borda",
-    5563,
+    5569,
     null
    ],
    [
     "exato",
     "/api/cli/visits",
     "borda",
-    5558,
+    5564,
     null
    ],
    [
@@ -3752,168 +3759,168 @@
     "exato",
     "/api/client/charges-v2",
     "borda",
-    5577,
+    5583,
     null
    ],
    [
     "exato",
     "/api/client/cobrancas",
     "borda",
-    5578,
+    5584,
     null
    ],
    [
     "exato",
     "/api/client/document-download",
     "borda",
-    5529,
+    5535,
     null
    ],
    [
     "exato",
     "/api/client/documents-v2",
     "borda",
-    5520,
+    5526,
     null
    ],
    [
     "exato",
     "/api/client/email-change-requests",
     "borda",
-    5628,
+    5634,
     null
    ],
    [
     "exato",
     "/api/client/employee-complaints",
     "borda",
-    6136,
+    6142,
     null
    ],
    [
     "prefixo",
     "/api/client/employee-complaints/",
     "borda",
-    6137,
+    6143,
     null
    ],
    [
     "exato",
     "/api/client/portal-access-requests",
     "borda",
-    5605,
+    5611,
     null
    ],
    [
     "exato",
     "/api/client/reports-v2",
     "borda",
-    5568,
+    5574,
     null
    ],
    [
     "exato",
     "/api/client/satisfaction-surveys",
     "borda",
-    5588,
+    5594,
     null
    ],
    [
     "exato",
     "/api/client/service-requests",
     "borda",
-    5583,
+    5589,
     null
    ],
    [
     "exato",
     "/api/client/tickets-v2",
     "borda",
-    5538,
+    5544,
     null
    ],
    [
     "exato",
     "/api/client/visits",
     "borda",
-    5559,
+    5565,
     null
    ],
    [
     "exato",
     "/api/cms",
     "borda",
-    6082,
+    6088,
     null
    ],
    [
     "exato",
     "/api/cms-contents",
     "borda",
-    6078,
+    6084,
     null
    ],
    [
     "prefixo",
     "/api/cms-contents/",
     "borda",
-    6081,
+    6087,
     null
    ],
    [
     "exato",
     "/api/config/flags",
     "borda",
-    4868,
+    4874,
     null
    ],
    [
     "prefixo",
     "/api/config/flags/",
     "borda",
-    4871,
+    4877,
     null
    ],
    [
     "exato",
     "/api/config/maintenance",
     "borda",
-    4874,
+    4880,
     null
    ],
    [
     "exato",
     "/api/config/rollouts",
     "borda",
-    4877,
+    4883,
     null
    ],
    [
     "exato",
     "/api/conversion-events",
     "borda",
-    6127,
+    6133,
     null
    ],
    [
     "exato",
     "/api/crm/backups",
     "borda",
-    4815,
+    4821,
     null
    ],
    [
     "prefixo",
     "/api/crm/backups/",
     "borda",
-    4817,
+    4823,
     null
    ],
    [
     "exato",
     "/api/crm/budgets",
     "borda",
-    4906,
+    4912,
     null
    ],
    [
@@ -3934,63 +3941,63 @@
     "exato",
     "/api/crm/campaigns",
     "borda",
-    4777,
+    4783,
     null
    ],
    [
     "prefixo",
     "/api/crm/campaigns/",
     "borda",
-    4778,
+    4784,
     null
    ],
    [
     "exato",
     "/api/crm/commercial-library",
     "borda",
-    4775,
+    4781,
     null
    ],
    [
     "prefixo",
     "/api/crm/commercial-library/",
     "borda",
-    4776,
+    4782,
     null
    ],
    [
     "exato",
     "/api/crm/commercial-versions",
     "borda",
-    4782,
+    4788,
     null
    ],
    [
     "exato",
     "/api/crm/commission-rules",
     "borda",
-    4771,
+    4777,
     null
    ],
    [
     "prefixo",
     "/api/crm/commission-rules/",
     "borda",
-    4772,
+    4778,
     null
    ],
    [
     "exato",
     "/api/crm/commissions",
     "borda",
-    4773,
+    4779,
     null
    ],
    [
     "prefixo",
     "/api/crm/commissions/",
     "borda",
-    4774,
+    4780,
     null
    ],
    [
@@ -4011,28 +4018,28 @@
     "exato",
     "/api/crm/config/flags",
     "borda",
-    4867,
+    4873,
     null
    ],
    [
     "prefixo",
     "/api/crm/config/flags/",
     "borda",
-    4870,
+    4876,
     null
    ],
    [
     "exato",
     "/api/crm/config/maintenance",
     "borda",
-    4873,
+    4879,
     null
    ],
    [
     "exato",
     "/api/crm/config/rollouts",
     "borda",
-    4876,
+    4882,
     null
    ],
    [
@@ -4088,28 +4095,28 @@
     "exato",
     "/api/crm/dependencies/audits",
     "borda",
-    4879,
+    4885,
     null
    ],
    [
     "exato",
     "/api/crm/dependencies/lockfile",
     "borda",
-    4888,
+    4894,
     null
    ],
    [
     "exato",
     "/api/crm/dependencies/updates",
     "borda",
-    4885,
+    4891,
     null
    ],
    [
     "exato",
     "/api/crm/dependencies/vulnerabilities",
     "borda",
-    4882,
+    4888,
     null
    ],
    [
@@ -4144,21 +4151,21 @@
     "exato",
     "/api/crm/employee/profile",
     "borda",
-    4944,
+    4950,
     null
    ],
    [
     "exato",
     "/api/crm/environments",
     "borda",
-    4915,
+    4921,
     null
    ],
    [
     "exato",
     "/api/crm/environments/checks",
     "borda",
-    4918,
+    4924,
     null
    ],
    [
@@ -4179,2079 +4186,2079 @@
     "exato",
     "/api/crm/goals",
     "borda",
-    4769,
+    4775,
     null
    ],
    [
     "prefixo",
     "/api/crm/goals/",
     "borda",
-    4770,
+    4776,
     null
    ],
    [
     "exato",
     "/api/crm/hr/absence-followups",
     "borda",
-    5149,
+    5155,
     null
    ],
    [
     "exato",
     "/api/crm/hr/absence-notices",
     "borda",
-    5146,
+    5152,
     null
    ],
    [
     "exato",
     "/api/crm/hr/absences",
     "borda",
-    4987,
+    4993,
     null
    ],
    [
     "exato",
     "/api/crm/hr/accessibility-preferences",
     "borda",
-    5270,
+    5276,
     null
    ],
    [
     "exato",
     "/api/crm/hr/adm-approval-history",
     "borda",
-    5829,
+    5835,
     null
    ],
    [
     "exato",
     "/api/crm/hr/adm-approvals",
     "borda",
-    5825,
+    5831,
     null
    ],
    [
     "exato",
     "/api/crm/hr/adm-business-configs",
     "borda",
-    5853,
+    5859,
     null
    ],
    [
     "exato",
     "/api/crm/hr/adm-commercial-snapshots",
     "borda",
-    5809,
+    5815,
     null
    ],
    [
     "exato",
     "/api/crm/hr/adm-expansion-analyses",
     "borda",
-    5865,
+    5871,
     null
    ],
    [
     "exato",
     "/api/crm/hr/adm-financial-snapshots",
     "borda",
-    5817,
+    5823,
     null
    ],
    [
     "exato",
     "/api/crm/hr/adm-goals-comparison",
     "borda",
-    5857,
+    5863,
     null
    ],
    [
     "exato",
     "/api/crm/hr/adm-management-diary-access",
     "borda",
-    5861,
+    5867,
     null
    ],
    [
     "exato",
     "/api/crm/hr/adm-my-day",
     "borda",
-    5805,
+    5811,
     null
    ],
    [
     "exato",
     "/api/crm/hr/adm-operational-snapshots",
     "borda",
-    5813,
+    5819,
     null
    ],
    [
     "exato",
     "/api/crm/hr/adm-renewal-risks",
     "borda",
-    5821,
+    5827,
     null
    ],
    [
     "exato",
     "/api/crm/hr/adm-report-logs",
     "borda",
-    5849,
+    5855,
     null
    ],
    [
     "exato",
     "/api/crm/hr/adm-reports",
     "borda",
-    5845,
+    5851,
     null
    ],
    [
     "exato",
     "/api/crm/hr/adm-saved-filters",
     "borda",
-    5837,
+    5843,
     null
    ],
    [
     "exato",
     "/api/crm/hr/adm-search-favorites",
     "borda",
-    5833,
+    5839,
     null
    ],
    [
     "exato",
     "/api/crm/hr/adm-shortcuts",
     "borda",
-    5841,
+    5847,
     null
    ],
    [
     "exato",
     "/api/crm/hr/admission-progress",
     "borda",
-    4941,
+    4947,
     null
    ],
    [
     "exato",
     "/api/crm/hr/admissions",
     "borda",
-    4935,
+    4941,
     null
    ],
    [
     "prefixo",
     "/api/crm/hr/admissions/",
     "borda",
-    4938,
+    4944,
     null
    ],
    [
     "exato",
     "/api/crm/hr/advance-policies",
     "borda",
-    5023,
+    5029,
     null
    ],
    [
     "exato",
     "/api/crm/hr/advance-requests",
     "borda",
-    5026,
+    5032,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-cftv-dossiers",
     "borda",
-    5937,
+    5943,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-cleaning-materials",
     "borda",
-    5941,
+    5947,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-deliveries",
     "borda",
-    5889,
+    5895,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-inventories",
     "borda",
-    5913,
+    5919,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-inventory-items",
     "borda",
-    5917,
+    5923,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-maintenance-executions",
     "borda",
-    5933,
+    5939,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-maintenance-plans",
     "borda",
-    5929,
+    5935,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-order-history",
     "borda",
-    5909,
+    5915,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-products",
     "borda",
-    5873,
+    5879,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-purchase-orders",
     "borda",
-    5901,
+    5907,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-quotations",
     "borda",
-    5897,
+    5903,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-requisition-history",
     "borda",
-    5905,
+    5911,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-requisitions",
     "borda",
-    5893,
+    5899,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-reservations",
     "borda",
-    5881,
+    5887,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-serialized-assets",
     "borda",
-    5885,
+    5891,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-service-order-evidences",
     "borda",
-    5925,
+    5931,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-service-orders",
     "borda",
-    5921,
+    5927,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-stock-movements",
     "borda",
-    5877,
+    5883,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ast-suppliers",
     "borda",
-    5869,
+    5875,
     null
    ],
    [
     "exato",
     "/api/crm/hr/benefit-catalog",
     "borda",
-    5008,
+    5014,
     null
    ],
    [
     "exato",
     "/api/crm/hr/benefit-conferences",
     "borda",
-    5017,
+    5023,
     null
    ],
    [
     "exato",
     "/api/crm/hr/benefit-enrollments",
     "borda",
-    5011,
+    5017,
     null
    ],
    [
     "exato",
     "/api/crm/hr/benefit-exports",
     "borda",
-    5020,
+    5026,
     null
    ],
    [
     "exato",
     "/api/crm/hr/benefit-requests",
     "borda",
-    5014,
+    5020,
     null
    ],
    [
     "exato",
     "/api/crm/hr/candidates",
     "borda",
-    4956,
+    4962,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-charges-v2",
     "borda",
-    5574,
+    5580,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-client-contacts",
     "borda",
-    5489,
+    5495,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-client-documents-v2",
     "borda",
-    5517,
+    5523,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-contact-delegate",
     "borda",
-    5497,
+    5503,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-contact-scopes",
     "borda",
-    5493,
+    5499,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-contract-items",
     "borda",
-    5501,
+    5507,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-contract-scopes",
     "borda",
-    5505,
+    5511,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-contract-vigencia",
     "borda",
-    5509,
+    5515,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-document-access-logs",
     "borda",
-    5531,
+    5537,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-document-categories",
     "borda",
-    5513,
+    5519,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-document-download",
     "borda",
-    5526,
+    5532,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-document-versions",
     "borda",
-    5522,
+    5528,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-email-change-requests",
     "borda",
-    5625,
+    5631,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-entry-points",
     "borda",
-    5481,
+    5487,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-old-routes",
     "borda",
-    5485,
+    5491,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-portal-access-requests",
     "borda",
-    5602,
+    5608,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-portal-mode-configs",
     "borda",
-    5598,
+    5604,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-renewal-communications",
     "borda",
-    5594,
+    5600,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-report-history-v2",
     "borda",
-    5570,
+    5576,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-reports-v2",
     "borda",
-    5565,
+    5571,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-satisfaction-action-plans",
     "borda",
-    5590,
+    5596,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-satisfaction-surveys",
     "borda",
-    5585,
+    5591,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-security-events",
     "borda",
-    5621,
+    5627,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-service-requests",
     "borda",
-    5580,
+    5586,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-sessions",
     "borda",
-    5630,
+    5636,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-ticket-attachments",
     "borda",
-    5544,
+    5550,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-ticket-history",
     "borda",
-    5548,
+    5554,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-ticket-messages",
     "borda",
-    5540,
+    5546,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-ticket-sla-pauses",
     "borda",
-    5552,
+    5558,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-tickets-v2",
     "borda",
-    5535,
+    5541,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-visit-history",
     "borda",
-    5561,
+    5567,
     null
    ],
    [
     "exato",
     "/api/crm/hr/cli-visits",
     "borda",
-    5556,
+    5562,
     null
    ],
    [
     "exato",
     "/api/crm/hr/communication-reads",
     "borda",
-    5212,
+    5218,
     null
    ],
    [
     "exato",
     "/api/crm/hr/communications",
     "borda",
-    5209,
+    5215,
     null
    ],
    [
     "exato",
     "/api/crm/hr/competence-closures",
     "borda",
-    4996,
+    5002,
     null
    ],
    [
     "exato",
     "/api/crm/hr/competency-catalog",
     "borda",
-    5059,
+    5065,
     null
    ],
    [
     "exato",
     "/api/crm/hr/competency-evaluations",
     "borda",
-    5068,
+    5074,
     null
    ],
    [
     "exato",
     "/api/crm/hr/competency-requirements",
     "borda",
-    5062,
+    5068,
     null
    ],
    [
     "exato",
     "/api/crm/hr/confidential-attachments",
     "borda",
-    5241,
+    5247,
     null
    ],
    [
     "exato",
     "/api/crm/hr/confidential-messages",
     "borda",
-    5238,
+    5244,
     null
    ],
    [
     "exato",
     "/api/crm/hr/confidential-policies",
     "borda",
-    5232,
+    5238,
     null
    ],
    [
     "exato",
     "/api/crm/hr/confidential-reports",
     "borda",
-    5235,
+    5241,
     null
    ],
    [
     "exato",
     "/api/crm/hr/course-alerts",
     "borda",
-    5203,
+    5209,
     null
    ],
    [
     "exato",
     "/api/crm/hr/course-enrollments",
     "borda",
-    5197,
+    5203,
     null
    ],
    [
     "exato",
     "/api/crm/hr/course-expiry-alerts",
     "borda",
-    5206,
+    5212,
     null
    ],
    [
     "exato",
     "/api/crm/hr/course-proofs",
     "borda",
-    5200,
+    5206,
     null
    ],
    [
     "exato",
     "/api/crm/hr/development-actions",
     "borda",
-    5113,
+    5119,
     null
    ],
    [
     "exato",
     "/api/crm/hr/development-plans",
     "borda",
-    5110,
+    5116,
     null
    ],
    [
     "exato",
     "/api/crm/hr/doc-availability",
     "borda",
-    5182,
+    5188,
     null
    ],
    [
     "exato",
     "/api/crm/hr/document-submissions",
     "borda",
-    5176,
+    5182,
     null
    ],
    [
     "exato",
     "/api/crm/hr/dossiers",
     "borda",
-    4965,
+    4971,
     null
    ],
    [
     "exato",
     "/api/crm/hr/dp-closures",
     "borda",
-    5083,
+    5089,
     null
    ],
    [
     "exato",
     "/api/crm/hr/dp-documents",
     "borda",
-    5089,
+    5095,
     null
    ],
    [
     "exato",
     "/api/crm/hr/dp-exports",
     "borda",
-    5092,
+    5098,
     null
    ],
    [
     "exato",
     "/api/crm/hr/dp-variables",
     "borda",
-    5086,
+    5092,
     null
    ],
    [
     "exato",
     "/api/crm/hr/employee-competencies",
     "borda",
-    5065,
+    5071,
     null
    ],
    [
     "exato",
     "/api/crm/hr/employees",
     "borda",
-    4929,
+    4935,
     null
    ],
    [
     "prefixo",
     "/api/crm/hr/employees/",
     "borda",
-    4932,
+    4938,
     null
    ],
    [
     "exato",
     "/api/crm/hr/evaluation-criteria",
     "borda",
-    5104,
+    5110,
     null
    ],
    [
     "exato",
     "/api/crm/hr/evaluations",
     "borda",
-    5107,
+    5113,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-ai-automation-logs",
     "borda",
-    6073,
+    6079,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-ai-automations",
     "borda",
-    6068,
+    6074,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-analytics-experiments",
     "borda",
-    6032,
+    6038,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-bidding-documents",
     "borda",
-    5992,
+    5998,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-bidding-notices",
     "borda",
-    5971,
+    5977,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-biometry-projects",
     "borda",
-    6064,
+    6070,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-central-projects",
     "borda",
-    6060,
+    6066,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-commercial-intelligence",
     "borda",
-    6048,
+    6054,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-compliance-documents",
     "borda",
-    6012,
+    6018,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-continuity-plans",
     "borda",
-    6028,
+    6034,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-emergency-channels",
     "borda",
-    6052,
+    6058,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-emergency-tests",
     "borda",
-    6056,
+    6062,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-expansion-plans",
     "borda",
-    6020,
+    6026,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-expansion-scenarios",
     "borda",
-    6024,
+    6030,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-fleet-documents",
     "borda",
-    5958,
+    5964,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-fleet-fuel-logs",
     "borda",
-    5950,
+    5956,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-fleet-maintenance-logs",
     "borda",
-    5954,
+    5960,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-fleet-vehicles",
     "borda",
-    5945,
+    5951,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-knowledge-base",
     "borda",
-    6016,
+    6022,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-periodic-reports",
     "borda",
-    6044,
+    6050,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-quality-actions",
     "borda",
-    6004,
+    6010,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-quality-nonconformities",
     "borda",
-    6000,
+    6006,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-satisfaction-surveys",
     "borda",
-    6008,
+    6014,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-supplier-portal-quotations",
     "borda",
-    5996,
+    6002,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-third-parties",
     "borda",
-    5962,
+    5968,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-third-party-documents",
     "borda",
-    5967,
+    5973,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-visual-layouts",
     "borda",
-    6040,
+    6046,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ext-visual-tokens",
     "borda",
-    6036,
+    6042,
     null
    ],
    [
     "exato",
     "/api/crm/hr/faq-access-logs",
     "borda",
-    5267,
+    5273,
     null
    ],
    [
     "exato",
     "/api/crm/hr/faq-internal",
     "borda",
-    5262,
+    5268,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-aging-receivables",
     "borda",
-    5698,
+    5704,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-attachments",
     "borda",
-    5662,
+    5668,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-bank-statements",
     "borda",
-    5670,
+    5676,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-bank-transactions",
     "borda",
-    5674,
+    5680,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-budget-history",
     "borda",
-    5775,
+    5781,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-budget-scenarios",
     "borda",
-    5771,
+    5777,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-budgets",
     "borda",
-    5767,
+    5773,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-cashflow-snapshots",
     "borda",
-    5694,
+    5700,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-collection-history",
     "borda",
-    5690,
+    5696,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-collection-policies",
     "borda",
-    5682,
+    5688,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-collection-reminders",
     "borda",
-    5686,
+    5692,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-commission-provision-history",
     "borda",
-    5800,
+    5806,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-commission-provisions",
     "borda",
-    5796,
+    5802,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-competence-closures",
     "borda",
-    5788,
+    5794,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-conciliations",
     "borda",
-    5678,
+    5684,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-cost-centers",
     "borda",
-    5638,
+    5644,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-cost-imports",
     "borda",
-    5702,
+    5708,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-costs",
     "borda",
-    5706,
+    5712,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-expense-history",
     "borda",
-    5722,
+    5728,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-expenses",
     "borda",
-    5718,
+    5724,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-export-logs",
     "borda",
-    5784,
+    5790,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-exports",
     "borda",
-    5779,
+    5785,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-fiscal-activity-rules",
     "borda",
-    5727,
+    5733,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-fiscal-documents",
     "borda",
-    5743,
+    5749,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-fiscal-history",
     "borda",
-    5731,
+    5737,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-fiscal-obligations",
     "borda",
-    5739,
+    5745,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-fiscal-providers",
     "borda",
-    5735,
+    5741,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-gateway-charges",
     "borda",
-    5755,
+    5761,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-gateway-history",
     "borda",
-    5759,
+    5765,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-gateway-webhook-sign",
     "borda",
-    5763,
+    5769,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-gateway-webhooks",
     "borda",
-    5751,
+    5757,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-generate-recurring",
     "borda",
-    5666,
+    5672,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-management-results",
     "borda",
-    5710,
+    5716,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-payables",
     "borda",
-    5650,
+    5656,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-payment-gateways",
     "borda",
-    5747,
+    5753,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-payment-history",
     "borda",
-    5658,
+    5664,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-payments",
     "borda",
-    5654,
+    5660,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-receivables",
     "borda",
-    5646,
+    5652,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-recurrence-rules",
     "borda",
-    5642,
+    5648,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-report-versions",
     "borda",
-    5792,
+    5798,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-result-history",
     "borda",
-    5714,
+    5720,
     null
    ],
    [
     "exato",
     "/api/crm/hr/fin-suppliers",
     "borda",
-    5634,
+    5640,
     null
    ],
    [
     "exato",
     "/api/crm/hr/handover-records",
     "borda",
-    5155,
+    5161,
     null
    ],
    [
     "exato",
     "/api/crm/hr/hour-bank",
     "borda",
-    5002,
+    5008,
     null
    ],
    [
     "exato",
     "/api/crm/hr/hour-movements",
     "borda",
-    5005,
+    5011,
     null
    ],
    [
     "exato",
     "/api/crm/hr/hr-attachments",
     "borda",
-    5228,
+    5234,
     null
    ],
    [
     "exato",
     "/api/crm/hr/hr-messages",
     "borda",
-    5224,
+    5230,
     null
    ],
    [
     "exato",
     "/api/crm/hr/hr-tickets",
     "borda",
-    5220,
+    5226,
     null
    ],
    [
     "exato",
     "/api/crm/hr/indicator-definitions",
     "borda",
-    5125,
+    5131,
     null
    ],
    [
     "exato",
     "/api/crm/hr/indicator-snapshots",
     "borda",
-    5128,
+    5134,
     null
    ],
    [
     "exato",
     "/api/crm/hr/integration-errors",
     "borda",
-    5044,
+    5050,
     null
    ],
    [
     "exato",
     "/api/crm/hr/integration-exports",
     "borda",
-    5038,
+    5044,
     null
    ],
    [
     "exato",
     "/api/crm/hr/integration-receipts",
     "borda",
-    5041,
+    5047,
     null
    ],
    [
     "exato",
     "/api/crm/hr/interviews",
     "borda",
-    4959,
+    4965,
     null
    ],
    [
     "exato",
     "/api/crm/hr/journey-corrections",
     "borda",
-    5143,
+    5149,
     null
    ],
    [
     "exato",
     "/api/crm/hr/journey-proofs",
     "borda",
-    5140,
+    5146,
     null
    ],
    [
     "exato",
     "/api/crm/hr/notifications-center",
     "borda",
-    5215,
+    5221,
     null
    ],
    [
     "exato",
     "/api/crm/hr/occupational-agenda",
     "borda",
-    5032,
+    5038,
     null
    ],
    [
     "exato",
     "/api/crm/hr/occupational-documents",
     "borda",
-    5035,
+    5041,
     null
    ],
    [
     "exato",
     "/api/crm/hr/occupational-requirements",
     "borda",
-    5029,
+    5035,
     null
    ],
    [
     "exato",
     "/api/crm/hr/occurrence-actions",
     "borda",
-    5164,
+    5170,
     null
    ],
    [
     "exato",
     "/api/crm/hr/occurrence-attachments",
     "borda",
-    5161,
+    5167,
     null
    ],
    [
     "exato",
     "/api/crm/hr/occurrences",
     "borda",
-    5158,
+    5164,
     null
    ],
    [
     "exato",
     "/api/crm/hr/offline-conflicts",
     "borda",
-    5259,
+    5265,
     null
    ],
    [
     "exato",
     "/api/crm/hr/offline-queue",
     "borda",
-    5256,
+    5262,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-allocations",
     "borda",
-    5290,
+    5296,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-assisted-conflicts",
     "borda",
-    5445,
+    5451,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-assisted-entries",
     "borda",
-    5440,
+    5446,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-assisted-proposals",
     "borda",
-    5435,
+    5441,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-checklist-instances",
     "borda",
-    5370,
+    5376,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-checklist-items",
     "borda",
-    5374,
+    5380,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-checklist-templates",
     "borda",
-    5366,
+    5372,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-cleaning-environments",
     "borda",
-    5449,
+    5455,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-cleaning-executions",
     "borda",
-    5457,
+    5463,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-cleaning-nonconformities",
     "borda",
-    5461,
+    5467,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-cleaning-routines",
     "borda",
-    5453,
+    5459,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-client-report-attachments",
     "borda",
-    5415,
+    5421,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-client-report-history",
     "borda",
-    5419,
+    5425,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-client-reports",
     "borda",
-    5411,
+    5417,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-coverage-communications",
     "borda",
-    5338,
+    5344,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-coverage-gaps",
     "borda",
-    5298,
+    5304,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-coverage-requests",
     "borda",
-    5330,
+    5336,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-dimensioning",
     "borda",
-    5294,
+    5300,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-handover-escalations",
     "borda",
-    5346,
+    5352,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-handovers",
     "borda",
-    5342,
+    5348,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-job-roles",
     "borda",
-    5274,
+    5280,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-key-movements",
     "borda",
-    5407,
+    5413,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-keys",
     "borda",
-    5403,
+    5409,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-metrics-definitions",
     "borda",
-    5423,
+    5429,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-metrics-reincidence",
     "borda",
-    5431,
+    5437,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-metrics-snapshots",
     "borda",
-    5427,
+    5433,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-monitoring-connectors",
     "borda",
-    5465,
+    5471,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-monitoring-escalations",
     "borda",
-    5477,
+    5483,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-monitoring-event-history",
     "borda",
-    5473,
+    5479,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-monitoring-events",
     "borda",
-    5469,
+    5475,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-occurrence-actions",
     "borda",
-    5358,
+    5364,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-occurrence-book",
     "borda",
-    5350,
+    5356,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-occurrence-evidences",
     "borda",
-    5354,
+    5360,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-occurrence-history",
     "borda",
-    5362,
+    5368,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-patrol-points",
     "borda",
-    5394,
+    5400,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-patrol-replay-logs",
     "borda",
-    5399,
+    5405,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-patrols",
     "borda",
-    5390,
+    5396,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-post-shift-needs",
     "borda",
-    5286,
+    5292,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-posts",
     "borda",
-    5278,
+    5284,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-qualifications",
     "borda",
-    5322,
+    5328,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-schedule-acks",
     "borda",
-    5310,
+    5316,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-schedule-entries",
     "borda",
-    5306,
+    5312,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-schedule-history",
     "borda",
-    5314,
+    5320,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-schedule-versions",
     "borda",
-    5302,
+    5308,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-shift-templates",
     "borda",
-    5282,
+    5288,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-substitution-candidates",
     "borda",
-    5334,
+    5340,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-supervision-action-plans",
     "borda",
-    5386,
+    5392,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-supervision-inspections",
     "borda",
-    5382,
+    5388,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-supervision-visits",
     "borda",
-    5378,
+    5384,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-validations",
     "borda",
-    5326,
+    5332,
     null
    ],
    [
     "exato",
     "/api/crm/hr/ops-work-rules",
     "borda",
-    5318,
+    5324,
     null
    ],
    [
     "exato",
     "/api/crm/hr/own-doc-access-logs",
     "borda",
-    5179,
+    5185,
     null
    ],
    [
     "exato",
     "/api/crm/hr/payroll-documents",
     "borda",
-    5101,
+    5107,
     null
    ],
    [
     "exato",
     "/api/crm/hr/payroll-imports",
     "borda",
-    5098,
+    5104,
     null
    ],
    [
     "exato",
     "/api/crm/hr/payroll-sources",
     "borda",
-    5095,
+    5101,
     null
    ],
    [
     "exato",
     "/api/crm/hr/post-procedures",
     "borda",
-    5167,
+    5173,
     null
    ],
    [
     "exato",
     "/api/crm/hr/procedure-acks",
     "borda",
-    5170,
+    5176,
     null
    ],
    [
     "exato",
     "/api/crm/hr/profile-updates",
     "borda",
-    4949,
+    4955,
     null
    ],
    [
     "exato",
     "/api/crm/hr/pwa-configs",
     "borda",
-    5252,
+    5258,
     null
    ],
    [
     "exato",
     "/api/crm/hr/schedule-entries",
     "borda",
-    5137,
+    5143,
     null
    ],
    [
     "exato",
     "/api/crm/hr/schedule-versions",
     "borda",
-    5134,
+    5140,
     null
    ],
    [
     "exato",
     "/api/crm/hr/self-request-followups",
     "borda",
-    5188,
+    5194,
     null
    ],
    [
     "exato",
     "/api/crm/hr/self-requests",
     "borda",
-    5185,
+    5191,
     null
    ],
    [
     "exato",
     "/api/crm/hr/shift-assignments",
     "borda",
-    5131,
+    5137,
     null
    ],
    [
     "exato",
     "/api/crm/hr/shift-swaps",
     "borda",
-    5152,
+    5158,
     null
    ],
    [
     "exato",
     "/api/crm/hr/status-policies",
     "borda",
-    4978,
+    4984,
     null
    ],
    [
     "exato",
     "/api/crm/hr/support-attachments",
     "borda",
-    5122,
+    5128,
     null
    ],
    [
     "exato",
     "/api/crm/hr/support-contacts-ops",
     "borda",
-    5173,
+    5179,
     null
    ],
    [
     "exato",
     "/api/crm/hr/support-messages",
     "borda",
-    5119,
+    5125,
     null
    ],
    [
     "exato",
     "/api/crm/hr/support-tickets",
     "borda",
-    5116,
+    5122,
     null
    ],
    [
     "exato",
     "/api/crm/hr/talent-pool",
     "borda",
-    4962,
+    4968,
     null
    ],
    [
     "exato",
     "/api/crm/hr/termination-progress",
     "borda",
-    4975,
+    4981,
     null
    ],
    [
     "exato",
     "/api/crm/hr/terminations",
     "borda",
-    4969,
+    4975,
     null
    ],
    [
     "prefixo",
     "/api/crm/hr/terminations/",
     "borda",
-    4972,
+    4978,
     null
    ],
    [
     "exato",
     "/api/crm/hr/time-corrections",
     "borda",
-    4993,
+    4999,
     null
    ],
    [
     "exato",
     "/api/crm/hr/time-entries",
     "borda",
-    4990,
+    4996,
     null
    ],
    [
     "exato",
     "/api/crm/hr/training-catalog",
     "borda",
-    5047,
+    5053,
     null
    ],
    [
     "exato",
     "/api/crm/hr/training-enrollments",
     "borda",
-    5056,
+    5062,
     null
    ],
    [
     "exato",
     "/api/crm/hr/training-requirements",
     "borda",
-    5050,
+    5056,
     null
    ],
    [
     "exato",
     "/api/crm/hr/training-sessions",
     "borda",
-    5053,
+    5059,
     null
    ],
    [
     "exato",
     "/api/crm/hr/uniform-catalog",
     "borda",
-    5071,
+    5077,
     null
    ],
    [
     "exato",
     "/api/crm/hr/uniform-deliveries",
     "borda",
-    5074,
+    5080,
     null
    ],
    [
     "exato",
     "/api/crm/hr/uniform-receipts",
     "borda",
-    5194,
+    5200,
     null
    ],
    [
     "exato",
     "/api/crm/hr/uniform-requests",
     "borda",
-    5080,
+    5086,
     null
    ],
    [
     "exato",
     "/api/crm/hr/uniform-returns",
     "borda",
-    5077,
+    5083,
     null
    ],
    [
     "exato",
     "/api/crm/hr/uniform-self-requests",
     "borda",
-    5191,
+    5197,
     null
    ],
    [
     "exato",
     "/api/crm/hr/vacancies",
     "borda",
-    4953,
+    4959,
     null
    ],
    [
     "exato",
     "/api/crm/hr/vacation-periods",
     "borda",
-    4981,
+    4987,
     null
    ],
    [
     "exato",
     "/api/crm/hr/vacation-requests",
     "borda",
-    4984,
+    4990,
     null
    ],
    [
     "exato",
     "/api/crm/hr/work-rules",
     "borda",
-    4999,
+    5005,
     null
    ],
    [
@@ -6279,14 +6286,14 @@
     "exato",
     "/api/crm/incidents",
     "borda",
-    4861,
+    4867,
     null
    ],
    [
     "prefixo",
     "/api/crm/incidents/",
     "borda",
-    4864,
+    4870,
     null
    ],
    [
@@ -6314,35 +6321,35 @@
     "exato",
     "/api/crm/integrations/jobs",
     "borda",
-    4891,
+    4897,
     null
    ],
    [
     "exato",
     "/api/crm/integrations/logs",
     "borda",
-    4894,
+    4900,
     null
    ],
    [
     "exato",
     "/api/crm/integrations/reconciliation",
     "borda",
-    4903,
+    4909,
     null
    ],
    [
     "exato",
     "/api/crm/integrations/webhooks",
     "borda",
-    4897,
+    4903,
     null
    ],
    [
     "exato",
     "/api/crm/integrations/webhooks/deliveries",
     "borda",
-    4900,
+    4906,
     null
    ],
    [
@@ -6370,77 +6377,91 @@
     "exato",
     "/api/crm/lgpd/requests",
     "borda",
-    4832,
+    4838,
     null
    ],
    [
     "prefixo",
     "/api/crm/lgpd/requests/",
     "borda",
-    4835,
+    4841,
     null
    ],
    [
     "exato",
     "/api/crm/maintenance/docs",
     "borda",
-    4921,
+    4927,
     null
    ],
    [
     "prefixo",
     "/api/crm/maintenance/docs/",
     "borda",
-    4925,
+    4931,
+    null
+   ],
+   [
+    "exato",
+    "/api/crm/management-diary",
+    "borda",
+    4771,
+    null
+   ],
+   [
+    "exato",
+    "/api/crm/management-diary/search",
+    "borda",
+    4772,
     null
    ],
    [
     "exato",
     "/api/crm/notification-preferences",
     "borda",
-    4790,
+    4796,
     null
    ],
    [
     "exato",
     "/api/crm/notification-templates",
     "borda",
-    4792,
+    4798,
     null
    ],
    [
     "prefixo",
     "/api/crm/notification-templates/",
     "borda",
-    4793,
+    4799,
     null
    ],
    [
     "exato",
     "/api/crm/observability",
     "borda",
-    4796,
+    4802,
     null
    ],
    [
     "prefixo",
     "/api/crm/observability/",
     "borda",
-    4798,
+    4804,
     null
    ],
    [
     "exato",
     "/api/crm/operational",
     "borda",
-    4811,
+    4817,
     null
    ],
    [
     "prefixo",
     "/api/crm/operational/",
     "borda",
-    4813,
+    4819,
     null
    ],
    [
@@ -6461,28 +6482,28 @@
     "exato",
     "/api/crm/partners",
     "borda",
-    4783,
+    4789,
     null
    ],
    [
     "prefixo",
     "/api/crm/partners/",
     "borda",
-    4784,
+    4790,
     null
    ],
    [
     "exato",
     "/api/crm/partnership-metrics",
     "borda",
-    4789,
+    4795,
     null
    ],
    [
     "exato",
     "/api/crm/portfolio",
     "borda",
-    4781,
+    4787,
     null
    ],
    [
@@ -6503,21 +6524,21 @@
     "exato",
     "/api/crm/privacy/inventory",
     "borda",
-    4819,
+    4825,
     null
    ],
    [
     "exato",
     "/api/crm/privacy/policies",
     "borda",
-    4822,
+    4828,
     null
    ],
    [
     "prefixo",
     "/api/crm/privacy/policies/",
     "borda",
-    4826,
+    4832,
     null
    ],
    [
@@ -6538,14 +6559,14 @@
     "exato",
     "/api/crm/proposal-comparisons",
     "borda",
-    4779,
+    4785,
     null
    ],
    [
     "prefixo",
     "/api/crm/proposal-comparisons/",
     "borda",
-    4780,
+    4786,
     null
    ],
    [
@@ -6587,84 +6608,84 @@
     "exato",
     "/api/crm/referrals",
     "borda",
-    4785,
+    4791,
     null
    ],
    [
     "prefixo",
     "/api/crm/referrals/",
     "borda",
-    4786,
+    4792,
     null
    ],
    [
     "exato",
     "/api/crm/renewals",
     "borda",
-    4787,
+    4793,
     null
    ],
    [
     "prefixo",
     "/api/crm/renewals/",
     "borda",
-    4788,
+    4794,
     null
    ],
    [
     "exato",
     "/api/crm/reports",
     "borda",
-    4767,
+    4773,
     null
    ],
    [
     "prefixo",
     "/api/crm/reports/",
     "borda",
-    4768,
+    4774,
     null
    ],
    [
     "exato",
     "/api/crm/retention/disposal/jobs",
     "borda",
-    4849,
+    4855,
     null
    ],
    [
     "prefixo",
     "/api/crm/retention/disposal/jobs/",
     "borda",
-    4853,
+    4859,
     null
    ],
    [
     "exato",
     "/api/crm/retention/disposal/logs",
     "borda",
-    4857,
+    4863,
     null
    ],
    [
     "exato",
     "/api/crm/retention/exceptions",
     "borda",
-    4843,
+    4849,
     null
    ],
    [
     "prefixo",
     "/api/crm/retention/exceptions/",
     "borda",
-    4846,
+    4852,
     null
    ],
    [
     "exato",
     "/api/crm/retention/policies",
     "borda",
-    4839,
+    4845,
     null
    ],
    [
@@ -6713,14 +6734,14 @@
     "exato",
     "/api/crm/usage/alerts",
     "borda",
-    4912,
+    4918,
     null
    ],
    [
     "exato",
     "/api/crm/usage/metrics",
     "borda",
-    4909,
+    4915,
     null
    ],
    [
@@ -6734,84 +6755,84 @@
     "exato",
     "/api/dependencies/audits",
     "borda",
-    4880,
+    4886,
     null
    ],
    [
     "exato",
     "/api/dependencies/lockfile",
     "borda",
-    4889,
+    4895,
     null
    ],
    [
     "exato",
     "/api/dependencies/updates",
     "borda",
-    4886,
+    4892,
     null
    ],
    [
     "exato",
     "/api/dependencies/vulnerabilities",
     "borda",
-    4883,
+    4889,
     null
    ],
    [
     "exato",
     "/api/docs",
     "borda",
-    4923,
+    4929,
     null
    ],
    [
     "prefixo",
     "/api/docs/",
     "borda",
-    4927,
+    4933,
     null
    ],
    [
     "exato",
     "/api/domain-verifications",
     "borda",
-    6113,
+    6119,
     null
    ],
    [
     "exato",
     "/api/employee-complaint-evidences",
     "borda",
-    6143,
+    6149,
     null
    ],
    [
     "exato",
     "/api/employee-complaint-hr-shares",
     "borda",
-    6145,
+    6151,
     null
    ],
    [
     "exato",
     "/api/employee-complaint-messages",
     "borda",
-    6141,
+    6147,
     null
    ],
    [
     "exato",
     "/api/employee-complaints",
     "borda",
-    6134,
+    6140,
     null
    ],
    [
     "prefixo",
     "/api/employee-complaints/",
     "borda",
-    6139,
+    6145,
     null
    ],
    [
@@ -6825,343 +6846,343 @@
     "exato",
     "/api/employee/accessibility",
     "borda",
-    5272,
+    5278,
     null
    ],
    [
     "exato",
     "/api/employee/faq",
     "borda",
-    5265,
+    5271,
     null
    ],
    [
     "exato",
     "/api/employee/notifications",
     "borda",
-    5217,
+    5223,
     null
    ],
    [
     "exato",
     "/api/employee/profile",
     "borda",
-    4943,
+    4949,
     null
    ],
    [
     "exato",
     "/api/environments",
     "borda",
-    4916,
+    4922,
     null
    ],
    [
     "exato",
     "/api/environments/checks",
     "borda",
-    4919,
+    4925,
     null
    ],
    [
     "exato",
     "/api/ext/ai-automation-logs",
     "borda",
-    6075,
+    6081,
     null
    ],
    [
     "exato",
     "/api/ext/ai-automations",
     "borda",
-    6070,
+    6076,
     null
    ],
    [
     "exato",
     "/api/ext/analytics-experiments",
     "borda",
-    6034,
+    6040,
     null
    ],
    [
     "prefixo",
     "/api/ext/analytics/",
     "borda",
-    5985,
+    5991,
     null
    ],
    [
     "exato",
     "/api/ext/bidding-documents",
     "borda",
-    5994,
+    6000,
     null
    ],
    [
     "exato",
     "/api/ext/bidding-notices",
     "borda",
-    5973,
+    5979,
     null
    ],
    [
     "prefixo",
     "/api/ext/bidding/",
     "borda",
-    5974,
+    5980,
     null
    ],
    [
     "exato",
     "/api/ext/biometry-projects",
     "borda",
-    6066,
+    6072,
     null
    ],
    [
     "exato",
     "/api/ext/central-projects",
     "borda",
-    6062,
+    6068,
     null
    ],
    [
     "exato",
     "/api/ext/commercial-intelligence",
     "borda",
-    6050,
+    6056,
     null
    ],
    [
     "exato",
     "/api/ext/compliance-documents",
     "borda",
-    6014,
+    6020,
     null
    ],
    [
     "prefixo",
     "/api/ext/compliance/",
     "borda",
-    5979,
+    5985,
     null
    ],
    [
     "exato",
     "/api/ext/continuity-plans",
     "borda",
-    6030,
+    6036,
     null
    ],
    [
     "prefixo",
     "/api/ext/continuity/",
     "borda",
-    5982,
+    5988,
     null
    ],
    [
     "exato",
     "/api/ext/emergency-channels",
     "borda",
-    6054,
+    6060,
     null
    ],
    [
     "exato",
     "/api/ext/emergency-tests",
     "borda",
-    6058,
+    6064,
     null
    ],
    [
     "prefixo",
     "/api/ext/emergency/",
     "borda",
-    5989,
+    5995,
     null
    ],
    [
     "exato",
     "/api/ext/expansion-plans",
     "borda",
-    6022,
+    6028,
     null
    ],
    [
     "exato",
     "/api/ext/expansion-scenarios",
     "borda",
-    6026,
+    6032,
     null
    ],
    [
     "prefixo",
     "/api/ext/expansion/",
     "borda",
-    5981,
+    5987,
     null
    ],
    [
     "exato",
     "/api/ext/fleet-documents",
     "borda",
-    5960,
+    5966,
     null
    ],
    [
     "exato",
     "/api/ext/fleet-fuel-logs",
     "borda",
-    5952,
+    5958,
     null
    ],
    [
     "exato",
     "/api/ext/fleet-maintenance-logs",
     "borda",
-    5956,
+    5962,
     null
    ],
    [
     "exato",
     "/api/ext/fleet-vehicles",
     "borda",
-    5947,
+    5953,
     null
    ],
    [
     "prefixo",
     "/api/ext/fleet/",
     "borda",
-    5948,
+    5954,
     null
    ],
    [
     "prefixo",
     "/api/ext/intel/",
     "borda",
-    5988,
+    5994,
     null
    ],
    [
     "exato",
     "/api/ext/knowledge-base",
     "borda",
-    6018,
+    6024,
     null
    ],
    [
     "prefixo",
     "/api/ext/knowledge/",
     "borda",
-    5980,
+    5986,
     null
    ],
    [
     "exato",
     "/api/ext/periodic-reports",
     "borda",
-    6046,
+    6052,
     null
    ],
    [
     "exato",
     "/api/ext/quality-actions",
     "borda",
-    6006,
+    6012,
     null
    ],
    [
     "exato",
     "/api/ext/quality-nonconformities",
     "borda",
-    6002,
+    6008,
     null
    ],
    [
     "prefixo",
     "/api/ext/quality/",
     "borda",
-    5976,
+    5982,
     null
    ],
    [
     "prefixo",
     "/api/ext/reports/",
     "borda",
-    5987,
+    5993,
     null
    ],
    [
     "exato",
     "/api/ext/satisfaction-surveys",
     "borda",
-    6010,
+    6016,
     null
    ],
    [
     "prefixo",
     "/api/ext/satisfaction/",
     "borda",
-    5990,
+    5996,
     null
    ],
    [
     "exato",
     "/api/ext/supplier-portal-quotations",
     "borda",
-    5998,
+    6004,
     null
    ],
    [
     "prefixo",
     "/api/ext/supplier/",
     "borda",
-    5975,
+    5981,
     null
    ],
    [
     "exato",
     "/api/ext/third-parties",
     "borda",
-    5964,
+    5970,
     null
    ],
    [
     "exato",
     "/api/ext/third-party-documents",
     "borda",
-    5969,
+    5975,
     null
    ],
    [
     "prefixo",
     "/api/ext/third-party/",
     "borda",
-    5965,
+    5971,
     null
    ],
    [
     "exato",
     "/api/ext/visual-layouts",
     "borda",
-    6042,
+    6048,
     null
    ],
    [
     "exato",
     "/api/ext/visual-tokens",
     "borda",
-    6038,
+    6044,
     null
    ],
    [
     "prefixo",
     "/api/ext/visual/",
     "borda",
-    5986,
+    5992,
     null
    ],
    [
@@ -7175,2506 +7196,2506 @@
     "exato",
     "/api/faq-assisted",
     "borda",
-    6160,
+    6166,
     null
    ],
    [
     "exato",
     "/api/faq-assisted-handoff",
     "borda",
-    6168,
+    6174,
     null
    ],
    [
     "exato",
     "/api/faq-assisted-messages",
     "borda",
-    6165,
+    6171,
     null
    ],
    [
     "exato",
     "/api/faq-assisted-rules",
     "borda",
-    6158,
+    6164,
     null
    ],
    [
     "exato",
     "/api/fin/aging-receivables",
     "borda",
-    5700,
+    5706,
     null
    ],
    [
     "exato",
     "/api/fin/attachments",
     "borda",
-    5664,
+    5670,
     null
    ],
    [
     "exato",
     "/api/fin/bank-statements",
     "borda",
-    5672,
+    5678,
     null
    ],
    [
     "exato",
     "/api/fin/bank-transactions",
     "borda",
-    5676,
+    5682,
     null
    ],
    [
     "exato",
     "/api/fin/budget-history",
     "borda",
-    5777,
+    5783,
     null
    ],
    [
     "exato",
     "/api/fin/budget-scenarios",
     "borda",
-    5773,
+    5779,
     null
    ],
    [
     "exato",
     "/api/fin/budgets",
     "borda",
-    5769,
+    5775,
     null
    ],
    [
     "exato",
     "/api/fin/cashflow-snapshots",
     "borda",
-    5696,
+    5702,
     null
    ],
    [
     "exato",
     "/api/fin/collection-history",
     "borda",
-    5692,
+    5698,
     null
    ],
    [
     "exato",
     "/api/fin/collection-policies",
     "borda",
-    5684,
+    5690,
     null
    ],
    [
     "exato",
     "/api/fin/collection-reminders",
     "borda",
-    5688,
+    5694,
     null
    ],
    [
     "exato",
     "/api/fin/commission-provision-history",
     "borda",
-    5802,
+    5808,
     null
    ],
    [
     "exato",
     "/api/fin/commission-provisions",
     "borda",
-    5798,
+    5804,
     null
    ],
    [
     "exato",
     "/api/fin/competence-closures",
     "borda",
-    5790,
+    5796,
     null
    ],
    [
     "exato",
     "/api/fin/conciliations",
     "borda",
-    5680,
+    5686,
     null
    ],
    [
     "exato",
     "/api/fin/cost-centers",
     "borda",
-    5640,
+    5646,
     null
    ],
    [
     "exato",
     "/api/fin/cost-imports",
     "borda",
-    5704,
+    5710,
     null
    ],
    [
     "exato",
     "/api/fin/costs",
     "borda",
-    5708,
+    5714,
     null
    ],
    [
     "exato",
     "/api/fin/expense-authorities",
     "borda",
-    5725,
+    5731,
     null
    ],
    [
     "exato",
     "/api/fin/expense-history",
     "borda",
-    5724,
+    5730,
     null
    ],
    [
     "exato",
     "/api/fin/expenses",
     "borda",
-    5720,
+    5726,
     null
    ],
    [
     "exato",
     "/api/fin/export-download",
     "borda",
-    5782,
+    5788,
     null
    ],
    [
     "exato",
     "/api/fin/export-logs",
     "borda",
-    5786,
+    5792,
     null
    ],
    [
     "exato",
     "/api/fin/exports",
     "borda",
-    5781,
+    5787,
     null
    ],
    [
     "exato",
     "/api/fin/fiscal-activity-rules",
     "borda",
-    5729,
+    5735,
     null
    ],
    [
     "exato",
     "/api/fin/fiscal-documents",
     "borda",
-    5745,
+    5751,
     null
    ],
    [
     "exato",
     "/api/fin/fiscal-history",
     "borda",
-    5733,
+    5739,
     null
    ],
    [
     "exato",
     "/api/fin/fiscal-obligations",
     "borda",
-    5741,
+    5747,
     null
    ],
    [
     "exato",
     "/api/fin/fiscal-providers",
     "borda",
-    5737,
+    5743,
     null
    ],
    [
     "exato",
     "/api/fin/gateway-charges",
     "borda",
-    5757,
+    5763,
     null
    ],
    [
     "exato",
     "/api/fin/gateway-history",
     "borda",
-    5761,
+    5767,
     null
    ],
    [
     "exato",
     "/api/fin/gateway-webhook-sign",
     "borda",
-    5765,
+    5771,
     null
    ],
    [
     "exato",
     "/api/fin/gateway-webhooks",
     "borda",
-    5753,
+    5759,
     null
    ],
    [
     "exato",
     "/api/fin/generate-recurring",
     "borda",
-    5668,
+    5674,
     null
    ],
    [
     "exato",
     "/api/fin/management-results",
     "borda",
-    5712,
+    5718,
     null
    ],
    [
     "exato",
     "/api/fin/payables",
     "borda",
-    5652,
+    5658,
     null
    ],
    [
     "exato",
     "/api/fin/payment-gateways",
     "borda",
-    5749,
+    5755,
     null
    ],
    [
     "exato",
     "/api/fin/payment-history",
     "borda",
-    5660,
+    5666,
     null
    ],
    [
     "exato",
     "/api/fin/payments",
     "borda",
-    5656,
+    5662,
     null
    ],
    [
     "exato",
     "/api/fin/receivables",
     "borda",
-    5648,
+    5654,
     null
    ],
    [
     "exato",
     "/api/fin/recurrence-rules",
     "borda",
-    5644,
+    5650,
     null
    ],
    [
     "exato",
     "/api/fin/report-versions",
     "borda",
-    5794,
+    5800,
     null
    ],
    [
     "exato",
     "/api/fin/result-history",
     "borda",
-    5716,
+    5722,
     null
    ],
    [
     "exato",
     "/api/fin/suppliers",
     "borda",
-    5636,
+    5642,
     null
    ],
    [
     "exato",
     "/api/health",
     "borda",
-    4800,
+    4806,
     null
    ],
    [
     "exato",
     "/api/health/live",
     "borda",
-    4803,
+    4809,
     null
    ],
    [
     "exato",
     "/api/health/liveness",
     "borda",
-    4804,
+    4810,
     null
    ],
    [
     "exato",
     "/api/health/readiness",
     "borda",
-    4807,
+    4813,
     null
    ],
    [
     "exato",
     "/api/health/ready",
     "borda",
-    4806,
+    4812,
     null
    ],
    [
     "exato",
     "/api/healthcheck",
     "borda",
-    4802,
+    4808,
     null
    ],
    [
     "exato",
     "/api/hr/absence-followups",
     "borda",
-    5150,
+    5156,
     null
    ],
    [
     "exato",
     "/api/hr/absence-notices",
     "borda",
-    5147,
+    5153,
     null
    ],
    [
     "exato",
     "/api/hr/absences",
     "borda",
-    4988,
+    4994,
     null
    ],
    [
     "exato",
     "/api/hr/accessibility-preferences",
     "borda",
-    5271,
+    5277,
     null
    ],
    [
     "exato",
     "/api/hr/adm-approval-history",
     "borda",
-    5830,
+    5836,
     null
    ],
    [
     "exato",
     "/api/hr/adm-approvals",
     "borda",
-    5826,
+    5832,
     null
    ],
    [
     "exato",
     "/api/hr/adm-business-configs",
     "borda",
-    5854,
+    5860,
     null
    ],
    [
     "exato",
     "/api/hr/adm-commercial-snapshots",
     "borda",
-    5810,
+    5816,
     null
    ],
    [
     "exato",
     "/api/hr/adm-expansion-analyses",
     "borda",
-    5866,
+    5872,
     null
    ],
    [
     "exato",
     "/api/hr/adm-financial-snapshots",
     "borda",
-    5818,
+    5824,
     null
    ],
    [
     "exato",
     "/api/hr/adm-goals-comparison",
     "borda",
-    5858,
+    5864,
     null
    ],
    [
     "exato",
     "/api/hr/adm-management-diary-access",
     "borda",
-    5862,
+    5868,
     null
    ],
    [
     "exato",
     "/api/hr/adm-my-day",
     "borda",
-    5806,
+    5812,
     null
    ],
    [
     "exato",
     "/api/hr/adm-operational-snapshots",
     "borda",
-    5814,
+    5820,
     null
    ],
    [
     "exato",
     "/api/hr/adm-renewal-risks",
     "borda",
-    5822,
+    5828,
     null
    ],
    [
     "exato",
     "/api/hr/adm-report-logs",
     "borda",
-    5850,
+    5856,
     null
    ],
    [
     "exato",
     "/api/hr/adm-reports",
     "borda",
-    5846,
+    5852,
     null
    ],
    [
     "exato",
     "/api/hr/adm-saved-filters",
     "borda",
-    5838,
+    5844,
     null
    ],
    [
     "exato",
     "/api/hr/adm-search-favorites",
     "borda",
-    5834,
+    5840,
     null
    ],
    [
     "exato",
     "/api/hr/adm-shortcuts",
     "borda",
-    5842,
+    5848,
     null
    ],
    [
     "exato",
     "/api/hr/admission-progress",
     "borda",
-    4942,
+    4948,
     null
    ],
    [
     "exato",
     "/api/hr/admissions",
     "borda",
-    4936,
+    4942,
     null
    ],
    [
     "prefixo",
     "/api/hr/admissions/",
     "borda",
-    4939,
+    4945,
     null
    ],
    [
     "exato",
     "/api/hr/advance-policies",
     "borda",
-    5024,
+    5030,
     null
    ],
    [
     "exato",
     "/api/hr/advance-requests",
     "borda",
-    5027,
+    5033,
     null
    ],
    [
     "exato",
     "/api/hr/ast-cftv-dossiers",
     "borda",
-    5938,
+    5944,
     null
    ],
    [
     "exato",
     "/api/hr/ast-cleaning-materials",
     "borda",
-    5942,
+    5948,
     null
    ],
    [
     "exato",
     "/api/hr/ast-deliveries",
     "borda",
-    5890,
+    5896,
     null
    ],
    [
     "exato",
     "/api/hr/ast-inventories",
     "borda",
-    5914,
+    5920,
     null
    ],
    [
     "exato",
     "/api/hr/ast-inventory-items",
     "borda",
-    5918,
+    5924,
     null
    ],
    [
     "exato",
     "/api/hr/ast-maintenance-executions",
     "borda",
-    5934,
+    5940,
     null
    ],
    [
     "exato",
     "/api/hr/ast-maintenance-plans",
     "borda",
-    5930,
+    5936,
     null
    ],
    [
     "exato",
     "/api/hr/ast-order-history",
     "borda",
-    5910,
+    5916,
     null
    ],
    [
     "exato",
     "/api/hr/ast-products",
     "borda",
-    5874,
+    5880,
     null
    ],
    [
     "exato",
     "/api/hr/ast-purchase-orders",
     "borda",
-    5902,
+    5908,
     null
    ],
    [
     "exato",
     "/api/hr/ast-quotations",
     "borda",
-    5898,
+    5904,
     null
    ],
    [
     "exato",
     "/api/hr/ast-requisition-history",
     "borda",
-    5906,
+    5912,
     null
    ],
    [
     "exato",
     "/api/hr/ast-requisitions",
     "borda",
-    5894,
+    5900,
     null
    ],
    [
     "exato",
     "/api/hr/ast-reservations",
     "borda",
-    5882,
+    5888,
     null
    ],
    [
     "exato",
     "/api/hr/ast-serialized-assets",
     "borda",
-    5886,
+    5892,
     null
    ],
    [
     "exato",
     "/api/hr/ast-service-order-evidences",
     "borda",
-    5926,
+    5932,
     null
    ],
    [
     "exato",
     "/api/hr/ast-service-orders",
     "borda",
-    5922,
+    5928,
     null
    ],
    [
     "exato",
     "/api/hr/ast-stock-movements",
     "borda",
-    5878,
+    5884,
     null
    ],
    [
     "exato",
     "/api/hr/ast-suppliers",
     "borda",
-    5870,
+    5876,
     null
    ],
    [
     "exato",
     "/api/hr/benefit-catalog",
     "borda",
-    5009,
+    5015,
     null
    ],
    [
     "exato",
     "/api/hr/benefit-conferences",
     "borda",
-    5018,
+    5024,
     null
    ],
    [
     "exato",
     "/api/hr/benefit-enrollments",
     "borda",
-    5012,
+    5018,
     null
    ],
    [
     "exato",
     "/api/hr/benefit-exports",
     "borda",
-    5021,
+    5027,
     null
    ],
    [
     "exato",
     "/api/hr/benefit-requests",
     "borda",
-    5015,
+    5021,
     null
    ],
    [
     "exato",
     "/api/hr/candidates",
     "borda",
-    4957,
+    4963,
     null
    ],
    [
     "exato",
     "/api/hr/cli-charges-v2",
     "borda",
-    5575,
+    5581,
     null
    ],
    [
     "exato",
     "/api/hr/cli-client-contacts",
     "borda",
-    5490,
+    5496,
     null
    ],
    [
     "exato",
     "/api/hr/cli-client-documents-v2",
     "borda",
-    5518,
+    5524,
     null
    ],
    [
     "exato",
     "/api/hr/cli-contact-delegate",
     "borda",
-    5498,
+    5504,
     null
    ],
    [
     "exato",
     "/api/hr/cli-contact-scopes",
     "borda",
-    5494,
+    5500,
     null
    ],
    [
     "exato",
     "/api/hr/cli-contract-items",
     "borda",
-    5502,
+    5508,
     null
    ],
    [
     "exato",
     "/api/hr/cli-contract-scopes",
     "borda",
-    5506,
+    5512,
     null
    ],
    [
     "exato",
     "/api/hr/cli-contract-vigencia",
     "borda",
-    5510,
+    5516,
     null
    ],
    [
     "exato",
     "/api/hr/cli-document-access-logs",
     "borda",
-    5532,
+    5538,
     null
    ],
    [
     "exato",
     "/api/hr/cli-document-categories",
     "borda",
-    5514,
+    5520,
     null
    ],
    [
     "exato",
     "/api/hr/cli-document-download",
     "borda",
-    5527,
+    5533,
     null
    ],
    [
     "exato",
     "/api/hr/cli-document-versions",
     "borda",
-    5523,
+    5529,
     null
    ],
    [
     "exato",
     "/api/hr/cli-email-change-requests",
     "borda",
-    5626,
+    5632,
     null
    ],
    [
     "exato",
     "/api/hr/cli-entry-points",
     "borda",
-    5482,
+    5488,
     null
    ],
    [
     "exato",
     "/api/hr/cli-old-routes",
     "borda",
-    5486,
+    5492,
     null
    ],
    [
     "exato",
     "/api/hr/cli-portal-access-requests",
     "borda",
-    5603,
+    5609,
     null
    ],
    [
     "exato",
     "/api/hr/cli-portal-mode-configs",
     "borda",
-    5599,
+    5605,
     null
    ],
    [
     "exato",
     "/api/hr/cli-renewal-communications",
     "borda",
-    5595,
+    5601,
     null
    ],
    [
     "exato",
     "/api/hr/cli-report-history-v2",
     "borda",
-    5571,
+    5577,
     null
    ],
    [
     "exato",
     "/api/hr/cli-reports-v2",
     "borda",
-    5566,
+    5572,
     null
    ],
    [
     "exato",
     "/api/hr/cli-satisfaction-action-plans",
     "borda",
-    5591,
+    5597,
     null
    ],
    [
     "exato",
     "/api/hr/cli-satisfaction-surveys",
     "borda",
-    5586,
+    5592,
     null
    ],
    [
     "exato",
     "/api/hr/cli-security-events",
     "borda",
-    5622,
+    5628,
     null
    ],
    [
     "exato",
     "/api/hr/cli-service-requests",
     "borda",
-    5581,
+    5587,
     null
    ],
    [
     "exato",
     "/api/hr/cli-sessions",
     "borda",
-    5631,
+    5637,
     null
    ],
    [
     "exato",
     "/api/hr/cli-ticket-attachments",
     "borda",
-    5545,
+    5551,
     null
    ],
    [
     "exato",
     "/api/hr/cli-ticket-history",
     "borda",
-    5549,
+    5555,
     null
    ],
    [
     "exato",
     "/api/hr/cli-ticket-messages",
     "borda",
-    5541,
+    5547,
     null
    ],
    [
     "exato",
     "/api/hr/cli-ticket-sla-pauses",
     "borda",
-    5553,
+    5559,
     null
    ],
    [
     "exato",
     "/api/hr/cli-tickets-v2",
     "borda",
-    5536,
+    5542,
     null
    ],
    [
     "exato",
     "/api/hr/cli-visit-history",
     "borda",
-    5562,
+    5568,
     null
    ],
    [
     "exato",
     "/api/hr/cli-visits",
     "borda",
-    5557,
+    5563,
     null
    ],
    [
     "exato",
     "/api/hr/communication-reads",
     "borda",
-    5213,
+    5219,
     null
    ],
    [
     "exato",
     "/api/hr/communications",
     "borda",
-    5210,
+    5216,
     null
    ],
    [
     "exato",
     "/api/hr/competence-closures",
     "borda",
-    4997,
+    5003,
     null
    ],
    [
     "exato",
     "/api/hr/competency-catalog",
     "borda",
-    5060,
+    5066,
     null
    ],
    [
     "exato",
     "/api/hr/competency-evaluations",
     "borda",
-    5069,
+    5075,
     null
    ],
    [
     "exato",
     "/api/hr/competency-requirements",
     "borda",
-    5063,
+    5069,
     null
    ],
    [
     "exato",
     "/api/hr/confidential-attachments",
     "borda",
-    5242,
+    5248,
     null
    ],
    [
     "exato",
     "/api/hr/confidential-messages",
     "borda",
-    5239,
+    5245,
     null
    ],
    [
     "exato",
     "/api/hr/confidential-policies",
     "borda",
-    5233,
+    5239,
     null
    ],
    [
     "exato",
     "/api/hr/confidential-reports",
     "borda",
-    5236,
+    5242,
     null
    ],
    [
     "exato",
     "/api/hr/course-alerts",
     "borda",
-    5204,
+    5210,
     null
    ],
    [
     "exato",
     "/api/hr/course-enrollments",
     "borda",
-    5198,
+    5204,
     null
    ],
    [
     "exato",
     "/api/hr/course-expiry-alerts",
     "borda",
-    5207,
+    5213,
     null
    ],
    [
     "exato",
     "/api/hr/course-proofs",
     "borda",
-    5201,
+    5207,
     null
    ],
    [
     "exato",
     "/api/hr/development-actions",
     "borda",
-    5114,
+    5120,
     null
    ],
    [
     "exato",
     "/api/hr/development-plans",
     "borda",
-    5111,
+    5117,
     null
    ],
    [
     "exato",
     "/api/hr/doc-availability",
     "borda",
-    5183,
+    5189,
     null
    ],
    [
     "exato",
     "/api/hr/document-submissions",
     "borda",
-    5177,
+    5183,
     null
    ],
    [
     "exato",
     "/api/hr/dossiers",
     "borda",
-    4966,
+    4972,
     null
    ],
    [
     "exato",
     "/api/hr/dp-closures",
     "borda",
-    5084,
+    5090,
     null
    ],
    [
     "exato",
     "/api/hr/dp-documents",
     "borda",
-    5090,
+    5096,
     null
    ],
    [
     "exato",
     "/api/hr/dp-exports",
     "borda",
-    5093,
+    5099,
     null
    ],
    [
     "exato",
     "/api/hr/dp-variables",
     "borda",
-    5087,
+    5093,
     null
    ],
    [
     "exato",
     "/api/hr/employee-competencies",
     "borda",
-    5066,
+    5072,
     null
    ],
    [
     "exato",
     "/api/hr/employees",
     "borda",
-    4930,
+    4936,
     null
    ],
    [
     "prefixo",
     "/api/hr/employees/",
     "borda",
-    4933,
+    4939,
     null
    ],
    [
     "exato",
     "/api/hr/evaluation-criteria",
     "borda",
-    5105,
+    5111,
     null
    ],
    [
     "exato",
     "/api/hr/evaluations",
     "borda",
-    5108,
+    5114,
     null
    ],
    [
     "exato",
     "/api/hr/ext-ai-automation-logs",
     "borda",
-    6074,
+    6080,
     null
    ],
    [
     "exato",
     "/api/hr/ext-ai-automations",
     "borda",
-    6069,
+    6075,
     null
    ],
    [
     "exato",
     "/api/hr/ext-analytics-experiments",
     "borda",
-    6033,
+    6039,
     null
    ],
    [
     "exato",
     "/api/hr/ext-bidding-documents",
     "borda",
-    5993,
+    5999,
     null
    ],
    [
     "exato",
     "/api/hr/ext-bidding-notices",
     "borda",
-    5972,
+    5978,
     null
    ],
    [
     "exato",
     "/api/hr/ext-biometry-projects",
     "borda",
-    6065,
+    6071,
     null
    ],
    [
     "exato",
     "/api/hr/ext-central-projects",
     "borda",
-    6061,
+    6067,
     null
    ],
    [
     "exato",
     "/api/hr/ext-commercial-intelligence",
     "borda",
-    6049,
+    6055,
     null
    ],
    [
     "exato",
     "/api/hr/ext-compliance-documents",
     "borda",
-    6013,
+    6019,
     null
    ],
    [
     "exato",
     "/api/hr/ext-continuity-plans",
     "borda",
-    6029,
+    6035,
     null
    ],
    [
     "exato",
     "/api/hr/ext-emergency-channels",
     "borda",
-    6053,
+    6059,
     null
    ],
    [
     "exato",
     "/api/hr/ext-emergency-tests",
     "borda",
-    6057,
+    6063,
     null
    ],
    [
     "exato",
     "/api/hr/ext-expansion-plans",
     "borda",
-    6021,
+    6027,
     null
    ],
    [
     "exato",
     "/api/hr/ext-expansion-scenarios",
     "borda",
-    6025,
+    6031,
     null
    ],
    [
     "exato",
     "/api/hr/ext-fleet-documents",
     "borda",
-    5959,
+    5965,
     null
    ],
    [
     "exato",
     "/api/hr/ext-fleet-fuel-logs",
     "borda",
-    5951,
+    5957,
     null
    ],
    [
     "exato",
     "/api/hr/ext-fleet-maintenance-logs",
     "borda",
-    5955,
+    5961,
     null
    ],
    [
     "exato",
     "/api/hr/ext-fleet-vehicles",
     "borda",
-    5946,
+    5952,
     null
    ],
    [
     "exato",
     "/api/hr/ext-knowledge-base",
     "borda",
-    6017,
+    6023,
     null
    ],
    [
     "exato",
     "/api/hr/ext-periodic-reports",
     "borda",
-    6045,
+    6051,
     null
    ],
    [
     "exato",
     "/api/hr/ext-quality-actions",
     "borda",
-    6005,
+    6011,
     null
    ],
    [
     "exato",
     "/api/hr/ext-quality-nonconformities",
     "borda",
-    6001,
+    6007,
     null
    ],
    [
     "exato",
     "/api/hr/ext-satisfaction-surveys",
     "borda",
-    6009,
+    6015,
     null
    ],
    [
     "exato",
     "/api/hr/ext-supplier-portal-quotations",
     "borda",
-    5997,
+    6003,
     null
    ],
    [
     "exato",
     "/api/hr/ext-third-parties",
     "borda",
-    5963,
+    5969,
     null
    ],
    [
     "exato",
     "/api/hr/ext-third-party-documents",
     "borda",
-    5968,
+    5974,
     null
    ],
    [
     "exato",
     "/api/hr/ext-visual-layouts",
     "borda",
-    6041,
+    6047,
     null
    ],
    [
     "exato",
     "/api/hr/ext-visual-tokens",
     "borda",
-    6037,
+    6043,
     null
    ],
    [
     "exato",
     "/api/hr/faq-access-logs",
     "borda",
-    5268,
+    5274,
     null
    ],
    [
     "exato",
     "/api/hr/faq-internal",
     "borda",
-    5263,
+    5269,
     null
    ],
    [
     "exato",
     "/api/hr/fin-aging-receivables",
     "borda",
-    5699,
+    5705,
     null
    ],
    [
     "exato",
     "/api/hr/fin-attachments",
     "borda",
-    5663,
+    5669,
     null
    ],
    [
     "exato",
     "/api/hr/fin-bank-statements",
     "borda",
-    5671,
+    5677,
     null
    ],
    [
     "exato",
     "/api/hr/fin-bank-transactions",
     "borda",
-    5675,
+    5681,
     null
    ],
    [
     "exato",
     "/api/hr/fin-budget-history",
     "borda",
-    5776,
+    5782,
     null
    ],
    [
     "exato",
     "/api/hr/fin-budget-scenarios",
     "borda",
-    5772,
+    5778,
     null
    ],
    [
     "exato",
     "/api/hr/fin-budgets",
     "borda",
-    5768,
+    5774,
     null
    ],
    [
     "exato",
     "/api/hr/fin-cashflow-snapshots",
     "borda",
-    5695,
+    5701,
     null
    ],
    [
     "exato",
     "/api/hr/fin-collection-history",
     "borda",
-    5691,
+    5697,
     null
    ],
    [
     "exato",
     "/api/hr/fin-collection-policies",
     "borda",
-    5683,
+    5689,
     null
    ],
    [
     "exato",
     "/api/hr/fin-collection-reminders",
     "borda",
-    5687,
+    5693,
     null
    ],
    [
     "exato",
     "/api/hr/fin-commission-provision-history",
     "borda",
-    5801,
+    5807,
     null
    ],
    [
     "exato",
     "/api/hr/fin-commission-provisions",
     "borda",
-    5797,
+    5803,
     null
    ],
    [
     "exato",
     "/api/hr/fin-competence-closures",
     "borda",
-    5789,
+    5795,
     null
    ],
    [
     "exato",
     "/api/hr/fin-conciliations",
     "borda",
-    5679,
+    5685,
     null
    ],
    [
     "exato",
     "/api/hr/fin-cost-centers",
     "borda",
-    5639,
+    5645,
     null
    ],
    [
     "exato",
     "/api/hr/fin-cost-imports",
     "borda",
-    5703,
+    5709,
     null
    ],
    [
     "exato",
     "/api/hr/fin-costs",
     "borda",
-    5707,
+    5713,
     null
    ],
    [
     "exato",
     "/api/hr/fin-expense-history",
     "borda",
-    5723,
+    5729,
     null
    ],
    [
     "exato",
     "/api/hr/fin-expenses",
     "borda",
-    5719,
+    5725,
     null
    ],
    [
     "exato",
     "/api/hr/fin-export-logs",
     "borda",
-    5785,
+    5791,
     null
    ],
    [
     "exato",
     "/api/hr/fin-exports",
     "borda",
-    5780,
+    5786,
     null
    ],
    [
     "exato",
     "/api/hr/fin-fiscal-activity-rules",
     "borda",
-    5728,
+    5734,
     null
    ],
    [
     "exato",
     "/api/hr/fin-fiscal-documents",
     "borda",
-    5744,
+    5750,
     null
    ],
    [
     "exato",
     "/api/hr/fin-fiscal-history",
     "borda",
-    5732,
+    5738,
     null
    ],
    [
     "exato",
     "/api/hr/fin-fiscal-obligations",
     "borda",
-    5740,
+    5746,
     null
    ],
    [
     "exato",
     "/api/hr/fin-fiscal-providers",
     "borda",
-    5736,
+    5742,
     null
    ],
    [
     "exato",
     "/api/hr/fin-gateway-charges",
     "borda",
-    5756,
+    5762,
     null
    ],
    [
     "exato",
     "/api/hr/fin-gateway-history",
     "borda",
-    5760,
+    5766,
     null
    ],
    [
     "exato",
     "/api/hr/fin-gateway-webhook-sign",
     "borda",
-    5764,
+    5770,
     null
    ],
    [
     "exato",
     "/api/hr/fin-gateway-webhooks",
     "borda",
-    5752,
+    5758,
     null
    ],
    [
     "exato",
     "/api/hr/fin-generate-recurring",
     "borda",
-    5667,
+    5673,
     null
    ],
    [
     "exato",
     "/api/hr/fin-management-results",
     "borda",
-    5711,
+    5717,
     null
    ],
    [
     "exato",
     "/api/hr/fin-payables",
     "borda",
-    5651,
+    5657,
     null
    ],
    [
     "exato",
     "/api/hr/fin-payment-gateways",
     "borda",
-    5748,
+    5754,
     null
    ],
    [
     "exato",
     "/api/hr/fin-payment-history",
     "borda",
-    5659,
+    5665,
     null
    ],
    [
     "exato",
     "/api/hr/fin-payments",
     "borda",
-    5655,
+    5661,
     null
    ],
    [
     "exato",
     "/api/hr/fin-receivables",
     "borda",
-    5647,
+    5653,
     null
    ],
    [
     "exato",
     "/api/hr/fin-recurrence-rules",
     "borda",
-    5643,
+    5649,
     null
    ],
    [
     "exato",
     "/api/hr/fin-report-versions",
     "borda",
-    5793,
+    5799,
     null
    ],
    [
     "exato",
     "/api/hr/fin-result-history",
     "borda",
-    5715,
+    5721,
     null
    ],
    [
     "exato",
     "/api/hr/fin-suppliers",
     "borda",
-    5635,
+    5641,
     null
    ],
    [
     "exato",
     "/api/hr/handover-records",
     "borda",
-    5156,
+    5162,
     null
    ],
    [
     "exato",
     "/api/hr/hour-bank",
     "borda",
-    5003,
+    5009,
     null
    ],
    [
     "exato",
     "/api/hr/hour-movements",
     "borda",
-    5006,
+    5012,
     null
    ],
    [
     "exato",
     "/api/hr/hr-attachments",
     "borda",
-    5229,
+    5235,
     null
    ],
    [
     "exato",
     "/api/hr/hr-messages",
     "borda",
-    5225,
+    5231,
     null
    ],
    [
     "exato",
     "/api/hr/hr-tickets",
     "borda",
-    5221,
+    5227,
     null
    ],
    [
     "exato",
     "/api/hr/indicator-definitions",
     "borda",
-    5126,
+    5132,
     null
    ],
    [
     "exato",
     "/api/hr/indicator-snapshots",
     "borda",
-    5129,
+    5135,
     null
    ],
    [
     "exato",
     "/api/hr/integration-errors",
     "borda",
-    5045,
+    5051,
     null
    ],
    [
     "exato",
     "/api/hr/integration-exports",
     "borda",
-    5039,
+    5045,
     null
    ],
    [
     "exato",
     "/api/hr/integration-receipts",
     "borda",
-    5042,
+    5048,
     null
    ],
    [
     "exato",
     "/api/hr/interviews",
     "borda",
-    4960,
+    4966,
     null
    ],
    [
     "exato",
     "/api/hr/journey-corrections",
     "borda",
-    5144,
+    5150,
     null
    ],
    [
     "exato",
     "/api/hr/journey-proofs",
     "borda",
-    5141,
+    5147,
     null
    ],
    [
     "exato",
     "/api/hr/my-notifications",
     "borda",
-    5218,
+    5224,
     null
    ],
    [
     "exato",
     "/api/hr/my-profile",
     "borda",
-    4946,
+    4952,
     null
    ],
    [
     "exato",
     "/api/hr/notifications-center",
     "borda",
-    5216,
+    5222,
     null
    ],
    [
     "exato",
     "/api/hr/occupational-agenda",
     "borda",
-    5033,
+    5039,
     null
    ],
    [
     "exato",
     "/api/hr/occupational-documents",
     "borda",
-    5036,
+    5042,
     null
    ],
    [
     "exato",
     "/api/hr/occupational-requirements",
     "borda",
-    5030,
+    5036,
     null
    ],
    [
     "exato",
     "/api/hr/occurrence-actions",
     "borda",
-    5165,
+    5171,
     null
    ],
    [
     "exato",
     "/api/hr/occurrence-attachments",
     "borda",
-    5162,
+    5168,
     null
    ],
    [
     "exato",
     "/api/hr/occurrences",
     "borda",
-    5159,
+    5165,
     null
    ],
    [
     "exato",
     "/api/hr/offline-conflicts",
     "borda",
-    5260,
+    5266,
     null
    ],
    [
     "exato",
     "/api/hr/offline-queue",
     "borda",
-    5257,
+    5263,
     null
    ],
    [
     "exato",
     "/api/hr/ops-allocations",
     "borda",
-    5291,
+    5297,
     null
    ],
    [
     "exato",
     "/api/hr/ops-assisted-conflicts",
     "borda",
-    5446,
+    5452,
     null
    ],
    [
     "exato",
     "/api/hr/ops-assisted-entries",
     "borda",
-    5441,
+    5447,
     null
    ],
    [
     "exato",
     "/api/hr/ops-assisted-proposals",
     "borda",
-    5436,
+    5442,
     null
    ],
    [
     "exato",
     "/api/hr/ops-checklist-instances",
     "borda",
-    5371,
+    5377,
     null
    ],
    [
     "exato",
     "/api/hr/ops-checklist-items",
     "borda",
-    5375,
+    5381,
     null
    ],
    [
     "exato",
     "/api/hr/ops-checklist-templates",
     "borda",
-    5367,
+    5373,
     null
    ],
    [
     "exato",
     "/api/hr/ops-cleaning-environments",
     "borda",
-    5450,
+    5456,
     null
    ],
    [
     "exato",
     "/api/hr/ops-cleaning-executions",
     "borda",
-    5458,
+    5464,
     null
    ],
    [
     "exato",
     "/api/hr/ops-cleaning-nonconformities",
     "borda",
-    5462,
+    5468,
     null
    ],
    [
     "exato",
     "/api/hr/ops-cleaning-routines",
     "borda",
-    5454,
+    5460,
     null
    ],
    [
     "exato",
     "/api/hr/ops-client-report-attachments",
     "borda",
-    5416,
+    5422,
     null
    ],
    [
     "exato",
     "/api/hr/ops-client-report-history",
     "borda",
-    5420,
+    5426,
     null
    ],
    [
     "exato",
     "/api/hr/ops-client-reports",
     "borda",
-    5412,
+    5418,
     null
    ],
    [
     "exato",
     "/api/hr/ops-coverage-communications",
     "borda",
-    5339,
+    5345,
     null
    ],
    [
     "exato",
     "/api/hr/ops-coverage-gaps",
     "borda",
-    5299,
+    5305,
     null
    ],
    [
     "exato",
     "/api/hr/ops-coverage-requests",
     "borda",
-    5331,
+    5337,
     null
    ],
    [
     "exato",
     "/api/hr/ops-dimensioning",
     "borda",
-    5295,
+    5301,
     null
    ],
    [
     "exato",
     "/api/hr/ops-handover-escalations",
     "borda",
-    5347,
+    5353,
     null
    ],
    [
     "exato",
     "/api/hr/ops-handovers",
     "borda",
-    5343,
+    5349,
     null
    ],
    [
     "exato",
     "/api/hr/ops-job-roles",
     "borda",
-    5275,
+    5281,
     null
    ],
    [
     "exato",
     "/api/hr/ops-key-movements",
     "borda",
-    5408,
+    5414,
     null
    ],
    [
     "exato",
     "/api/hr/ops-keys",
     "borda",
-    5404,
+    5410,
     null
    ],
    [
     "exato",
     "/api/hr/ops-metrics-definitions",
     "borda",
-    5424,
+    5430,
     null
    ],
    [
     "exato",
     "/api/hr/ops-metrics-reincidence",
     "borda",
-    5432,
+    5438,
     null
    ],
    [
     "exato",
     "/api/hr/ops-metrics-snapshots",
     "borda",
-    5428,
+    5434,
     null
    ],
    [
     "exato",
     "/api/hr/ops-monitoring-connectors",
     "borda",
-    5466,
+    5472,
     null
    ],
    [
     "exato",
     "/api/hr/ops-monitoring-escalations",
     "borda",
-    5478,
+    5484,
     null
    ],
    [
     "exato",
     "/api/hr/ops-monitoring-event-history",
     "borda",
-    5474,
+    5480,
     null
    ],
    [
     "exato",
     "/api/hr/ops-monitoring-events",
     "borda",
-    5470,
+    5476,
     null
    ],
    [
     "exato",
     "/api/hr/ops-occurrence-actions",
     "borda",
-    5359,
+    5365,
     null
    ],
    [
     "exato",
     "/api/hr/ops-occurrence-book",
     "borda",
-    5351,
+    5357,
     null
    ],
    [
     "exato",
     "/api/hr/ops-occurrence-evidences",
     "borda",
-    5355,
+    5361,
     null
    ],
    [
     "exato",
     "/api/hr/ops-occurrence-history",
     "borda",
-    5363,
+    5369,
     null
    ],
    [
     "exato",
     "/api/hr/ops-patrol-points",
     "borda",
-    5395,
+    5401,
     null
    ],
    [
     "exato",
     "/api/hr/ops-patrol-replay-logs",
     "borda",
-    5400,
+    5406,
     null
    ],
    [
     "exato",
     "/api/hr/ops-patrols",
     "borda",
-    5391,
+    5397,
     null
    ],
    [
     "exato",
     "/api/hr/ops-post-shift-needs",
     "borda",
-    5287,
+    5293,
     null
    ],
    [
     "exato",
     "/api/hr/ops-posts",
     "borda",
-    5279,
+    5285,
     null
    ],
    [
     "exato",
     "/api/hr/ops-qualifications",
     "borda",
-    5323,
+    5329,
     null
    ],
    [
     "exato",
     "/api/hr/ops-schedule-acks",
     "borda",
-    5311,
+    5317,
     null
    ],
    [
     "exato",
     "/api/hr/ops-schedule-entries",
     "borda",
-    5307,
+    5313,
     null
    ],
    [
     "exato",
     "/api/hr/ops-schedule-history",
     "borda",
-    5315,
+    5321,
     null
    ],
    [
     "exato",
     "/api/hr/ops-schedule-versions",
     "borda",
-    5303,
+    5309,
     null
    ],
    [
     "exato",
     "/api/hr/ops-shift-templates",
     "borda",
-    5283,
+    5289,
     null
    ],
    [
     "exato",
     "/api/hr/ops-substitution-candidates",
     "borda",
-    5335,
+    5341,
     null
    ],
    [
     "exato",
     "/api/hr/ops-supervision-action-plans",
     "borda",
-    5387,
+    5393,
     null
    ],
    [
     "exato",
     "/api/hr/ops-supervision-inspections",
     "borda",
-    5383,
+    5389,
     null
    ],
    [
     "exato",
     "/api/hr/ops-supervision-visits",
     "borda",
-    5379,
+    5385,
     null
    ],
    [
     "exato",
     "/api/hr/ops-validations",
     "borda",
-    5327,
+    5333,
     null
    ],
    [
     "exato",
     "/api/hr/ops-work-rules",
     "borda",
-    5319,
+    5325,
     null
    ],
    [
     "exato",
     "/api/hr/own-doc-access-logs",
     "borda",
-    5180,
+    5186,
     null
    ],
    [
     "exato",
     "/api/hr/payroll-documents",
     "borda",
-    5102,
+    5108,
     null
    ],
    [
     "exato",
     "/api/hr/payroll-imports",
     "borda",
-    5099,
+    5105,
     null
    ],
    [
     "exato",
     "/api/hr/payroll-sources",
     "borda",
-    5096,
+    5102,
     null
    ],
    [
     "exato",
     "/api/hr/post-procedures",
     "borda",
-    5168,
+    5174,
     null
    ],
    [
     "exato",
     "/api/hr/procedure-acks",
     "borda",
-    5171,
+    5177,
     null
    ],
    [
     "exato",
     "/api/hr/profile-updates",
     "borda",
-    4950,
+    4956,
     null
    ],
    [
     "exato",
     "/api/hr/pwa-configs",
     "borda",
-    5253,
+    5259,
     null
    ],
    [
     "exato",
     "/api/hr/pwa-manifest",
     "borda",
-    5244,
+    5250,
     null
    ],
    [
     "exato",
     "/api/hr/pwa-sw",
     "borda",
-    5247,
+    5253,
     null
    ],
    [
     "exato",
     "/api/hr/schedule-entries",
     "borda",
-    5138,
+    5144,
     null
    ],
    [
     "exato",
     "/api/hr/schedule-versions",
     "borda",
-    5135,
+    5141,
     null
    ],
    [
     "exato",
     "/api/hr/self-request-followups",
     "borda",
-    5189,
+    5195,
     null
    ],
    [
     "exato",
     "/api/hr/self-requests",
     "borda",
-    5186,
+    5192,
     null
    ],
    [
     "exato",
     "/api/hr/shift-assignments",
     "borda",
-    5132,
+    5138,
     null
    ],
    [
     "exato",
     "/api/hr/shift-swaps",
     "borda",
-    5153,
+    5159,
     null
    ],
    [
     "exato",
     "/api/hr/status-policies",
     "borda",
-    4979,
+    4985,
     null
    ],
    [
     "exato",
     "/api/hr/support-attachments",
     "borda",
-    5123,
+    5129,
     null
    ],
    [
     "exato",
     "/api/hr/support-contacts-ops",
     "borda",
-    5174,
+    5180,
     null
    ],
    [
     "exato",
     "/api/hr/support-messages",
     "borda",
-    5120,
+    5126,
     null
    ],
    [
     "exato",
     "/api/hr/support-tickets",
     "borda",
-    5117,
+    5123,
     null
    ],
    [
     "exato",
     "/api/hr/talent-pool",
     "borda",
-    4963,
+    4969,
     null
    ],
    [
     "exato",
     "/api/hr/termination-progress",
     "borda",
-    4976,
+    4982,
     null
    ],
    [
     "exato",
     "/api/hr/terminations",
     "borda",
-    4970,
+    4976,
     null
    ],
    [
     "prefixo",
     "/api/hr/terminations/",
     "borda",
-    4973,
+    4979,
     null
    ],
    [
     "exato",
     "/api/hr/time-corrections",
     "borda",
-    4994,
+    5000,
     null
    ],
    [
     "exato",
     "/api/hr/time-entries",
     "borda",
-    4991,
+    4997,
     null
    ],
    [
     "exato",
     "/api/hr/training-catalog",
     "borda",
-    5048,
+    5054,
     null
    ],
    [
     "exato",
     "/api/hr/training-enrollments",
     "borda",
-    5057,
+    5063,
     null
    ],
    [
     "exato",
     "/api/hr/training-requirements",
     "borda",
-    5051,
+    5057,
     null
    ],
    [
     "exato",
     "/api/hr/training-sessions",
     "borda",
-    5054,
+    5060,
     null
    ],
    [
     "exato",
     "/api/hr/uniform-catalog",
     "borda",
-    5072,
+    5078,
     null
    ],
    [
     "exato",
     "/api/hr/uniform-deliveries",
     "borda",
-    5075,
+    5081,
     null
    ],
    [
     "exato",
     "/api/hr/uniform-receipts",
     "borda",
-    5195,
+    5201,
     null
    ],
    [
     "exato",
     "/api/hr/uniform-requests",
     "borda",
-    5081,
+    5087,
     null
    ],
    [
     "exato",
     "/api/hr/uniform-returns",
     "borda",
-    5078,
+    5084,
     null
    ],
    [
     "exato",
     "/api/hr/uniform-self-requests",
     "borda",
-    5192,
+    5198,
     null
    ],
    [
     "exato",
     "/api/hr/vacancies",
     "borda",
-    4954,
+    4960,
     null
    ],
    [
     "exato",
     "/api/hr/vacation-periods",
     "borda",
-    4982,
+    4988,
     null
    ],
    [
     "exato",
     "/api/hr/vacation-requests",
     "borda",
-    4985,
+    4991,
     null
    ],
    [
     "exato",
     "/api/hr/work-rules",
     "borda",
-    5000,
+    5006,
     null
    ],
    [
     "exato",
     "/api/integrations/jobs",
     "borda",
-    4892,
+    4898,
     null
    ],
    [
     "exato",
     "/api/integrations/logs",
     "borda",
-    4895,
+    4901,
     null
    ],
    [
     "exato",
     "/api/integrations/reconciliation",
     "borda",
-    4904,
+    4910,
     null
    ],
    [
     "exato",
     "/api/integrations/webhooks",
     "borda",
-    4898,
+    4904,
     null
    ],
    [
     "exato",
     "/api/integrations/webhooks/deliveries",
     "borda",
-    4901,
+    4907,
     null
    ],
    [
@@ -9688,784 +9709,784 @@
     "exato",
     "/api/lgpd/requests",
     "borda",
-    4828,
+    4834,
     null
    ],
    [
     "prefixo",
     "/api/lgpd/requests/",
     "borda",
-    4837,
+    4843,
     null
    ],
    [
     "exato",
     "/api/maintenance/docs",
     "borda",
-    4922,
+    4928,
     null
    ],
    [
     "prefixo",
     "/api/maintenance/docs/",
     "borda",
-    4926,
+    4932,
     null
    ],
    [
     "exato",
     "/api/ops/allocations",
     "borda",
-    5292,
+    5298,
     null
    ],
    [
     "exato",
     "/api/ops/assisted-conflicts",
     "borda",
-    5447,
+    5453,
     null
    ],
    [
     "exato",
     "/api/ops/assisted-entries",
     "borda",
-    5442,
+    5448,
     null
    ],
    [
     "exato",
     "/api/ops/assisted-proposals",
     "borda",
-    5437,
+    5443,
     null
    ],
    [
     "exato",
     "/api/ops/assisted-schedule-entries",
     "borda",
-    5443,
+    5449,
     null
    ],
    [
     "exato",
     "/api/ops/assisted-schedules",
     "borda",
-    5438,
+    5444,
     null
    ],
    [
     "exato",
     "/api/ops/checklist-instances",
     "borda",
-    5372,
+    5378,
     null
    ],
    [
     "exato",
     "/api/ops/checklist-items",
     "borda",
-    5376,
+    5382,
     null
    ],
    [
     "exato",
     "/api/ops/checklist-templates",
     "borda",
-    5368,
+    5374,
     null
    ],
    [
     "exato",
     "/api/ops/cleaning-environments",
     "borda",
-    5451,
+    5457,
     null
    ],
    [
     "exato",
     "/api/ops/cleaning-executions",
     "borda",
-    5459,
+    5465,
     null
    ],
    [
     "exato",
     "/api/ops/cleaning-nonconformities",
     "borda",
-    5463,
+    5469,
     null
    ],
    [
     "exato",
     "/api/ops/cleaning-routines",
     "borda",
-    5455,
+    5461,
     null
    ],
    [
     "exato",
     "/api/ops/client-report-attachments",
     "borda",
-    5417,
+    5423,
     null
    ],
    [
     "exato",
     "/api/ops/client-report-history",
     "borda",
-    5421,
+    5427,
     null
    ],
    [
     "exato",
     "/api/ops/client-reports",
     "borda",
-    5413,
+    5419,
     null
    ],
    [
     "exato",
     "/api/ops/coverage-communications",
     "borda",
-    5340,
+    5346,
     null
    ],
    [
     "exato",
     "/api/ops/coverage-gaps",
     "borda",
-    5300,
+    5306,
     null
    ],
    [
     "exato",
     "/api/ops/coverage-requests",
     "borda",
-    5332,
+    5338,
     null
    ],
    [
     "exato",
     "/api/ops/dimensioning",
     "borda",
-    5296,
+    5302,
     null
    ],
    [
     "exato",
     "/api/ops/handover-escalations",
     "borda",
-    5348,
+    5354,
     null
    ],
    [
     "exato",
     "/api/ops/handovers",
     "borda",
-    5344,
+    5350,
     null
    ],
    [
     "exato",
     "/api/ops/job-roles",
     "borda",
-    5276,
+    5282,
     null
    ],
    [
     "exato",
     "/api/ops/key-movements",
     "borda",
-    5409,
+    5415,
     null
    ],
    [
     "exato",
     "/api/ops/keys",
     "borda",
-    5405,
+    5411,
     null
    ],
    [
     "exato",
     "/api/ops/metrics-definitions",
     "borda",
-    5425,
+    5431,
     null
    ],
    [
     "exato",
     "/api/ops/metrics-reincidence",
     "borda",
-    5433,
+    5439,
     null
    ],
    [
     "exato",
     "/api/ops/metrics-snapshots",
     "borda",
-    5429,
+    5435,
     null
    ],
    [
     "exato",
     "/api/ops/monitoring-connectors",
     "borda",
-    5467,
+    5473,
     null
    ],
    [
     "exato",
     "/api/ops/monitoring-escalations",
     "borda",
-    5479,
+    5485,
     null
    ],
    [
     "exato",
     "/api/ops/monitoring-event-history",
     "borda",
-    5475,
+    5481,
     null
    ],
    [
     "exato",
     "/api/ops/monitoring-events",
     "borda",
-    5471,
+    5477,
     null
    ],
    [
     "exato",
     "/api/ops/occurrence-actions",
     "borda",
-    5360,
+    5366,
     null
    ],
    [
     "exato",
     "/api/ops/occurrence-book",
     "borda",
-    5352,
+    5358,
     null
    ],
    [
     "exato",
     "/api/ops/occurrence-evidences",
     "borda",
-    5356,
+    5362,
     null
    ],
    [
     "exato",
     "/api/ops/occurrence-history",
     "borda",
-    5364,
+    5370,
     null
    ],
    [
     "exato",
     "/api/ops/patrol-points",
     "borda",
-    5396,
+    5402,
     null
    ],
    [
     "exato",
     "/api/ops/patrol-readings",
     "borda",
-    5397,
+    5403,
     null
    ],
    [
     "exato",
     "/api/ops/patrol-replay-logs",
     "borda",
-    5401,
+    5407,
     null
    ],
    [
     "exato",
     "/api/ops/patrols",
     "borda",
-    5392,
+    5398,
     null
    ],
    [
     "exato",
     "/api/ops/pendencies",
     "borda",
-    5983,
+    5989,
     null
    ],
    [
     "prefixo",
     "/api/ops/pendencies/",
     "borda",
-    5984,
+    5990,
     null
    ],
    [
     "exato",
     "/api/ops/post-shift-needs",
     "borda",
-    5288,
+    5294,
     null
    ],
    [
     "exato",
     "/api/ops/posts",
     "borda",
-    5280,
+    5286,
     null
    ],
    [
     "exato",
     "/api/ops/qualifications",
     "borda",
-    5324,
+    5330,
     null
    ],
    [
     "exato",
     "/api/ops/schedule-acks",
     "borda",
-    5312,
+    5318,
     null
    ],
    [
     "exato",
     "/api/ops/schedule-entries",
     "borda",
-    5308,
+    5314,
     null
    ],
    [
     "exato",
     "/api/ops/schedule-history",
     "borda",
-    5316,
+    5322,
     null
    ],
    [
     "exato",
     "/api/ops/schedule-versions",
     "borda",
-    5304,
+    5310,
     null
    ],
    [
     "exato",
     "/api/ops/shift-templates",
     "borda",
-    5284,
+    5290,
     null
    ],
    [
     "exato",
     "/api/ops/substitution-candidates",
     "borda",
-    5336,
+    5342,
     null
    ],
    [
     "exato",
     "/api/ops/supervision-action-plans",
     "borda",
-    5388,
+    5394,
     null
    ],
    [
     "exato",
     "/api/ops/supervision-inspections",
     "borda",
-    5384,
+    5390,
     null
    ],
    [
     "exato",
     "/api/ops/supervision-visits",
     "borda",
-    5380,
+    5386,
     null
    ],
    [
     "exato",
     "/api/ops/validations",
     "borda",
-    5328,
+    5334,
     null
    ],
    [
     "exato",
     "/api/ops/work-rules",
     "borda",
-    5320,
+    5326,
     null
    ],
    [
     "exato",
     "/api/origin-metrics",
     "borda",
-    6124,
+    6130,
     null
    ],
    [
     "exato",
     "/api/package-comparisons",
     "borda",
-    6122,
+    6128,
     null
    ],
    [
     "exato",
     "/api/package-rules",
     "borda",
-    6116,
+    6122,
     null
    ],
    [
     "exato",
     "/api/packages",
     "borda",
-    6119,
+    6125,
     null
    ],
    [
     "exato",
     "/api/performance-metrics",
     "borda",
-    6153,
+    6159,
     null
    ],
    [
     "exato",
     "/api/privacy",
     "borda",
-    4824,
+    4830,
     null
    ],
    [
     "exato",
     "/api/privacy/disposal/jobs",
     "borda",
-    4851,
+    4857,
     null
    ],
    [
     "prefixo",
     "/api/privacy/disposal/jobs/",
     "borda",
-    4855,
+    4861,
     null
    ],
    [
     "exato",
     "/api/privacy/disposal/logs",
     "borda",
-    4859,
+    4865,
     null
    ],
    [
     "exato",
     "/api/privacy/inventory",
     "borda",
-    4820,
+    4826,
     null
    ],
    [
     "exato",
     "/api/privacy/policies",
     "borda",
-    4823,
+    4829,
     null
    ],
    [
     "prefixo",
     "/api/privacy/policies/",
     "borda",
-    4827,
+    4833,
     null
    ],
    [
     "exato",
     "/api/privacy/requests",
     "borda",
-    4829,
+    4835,
     null
    ],
    [
     "exato",
     "/api/privacy/retention/exceptions",
     "borda",
-    4844,
+    4850,
     null
    ],
    [
     "prefixo",
     "/api/privacy/retention/exceptions/",
     "borda",
-    4847,
+    4853,
     null
    ],
    [
     "exato",
     "/api/privacy/retention/policies",
     "borda",
-    4840,
+    4846,
     null
    ],
    [
     "exato",
     "/api/pub-accessibility",
     "borda",
-    6155,
+    6161,
     null
    ],
    [
     "exato",
     "/api/pub-performance",
     "borda",
-    6152,
+    6158,
     null
    ],
    [
     "exato",
     "/api/pub-segments",
     "borda",
-    6147,
+    6153,
     null
    ],
    [
     "exato",
     "/api/pub/faq-messages",
     "borda",
-    6166,
+    6172,
     null
    ],
    [
     "exato",
     "/api/pub/faq-rules",
     "borda",
-    6159,
+    6165,
     null
    ],
    [
     "exato",
     "/api/pub/faq-sessions",
     "borda",
-    6162,
+    6168,
     null
    ],
    [
     "exato",
     "/api/pub/handoff-requests",
     "borda",
-    6169,
+    6175,
     null
    ],
    [
     "exato",
     "/api/pub/segments",
     "borda",
-    6150,
+    6156,
     null
    ],
    [
     "exato",
     "/api/public/ab-tests",
     "borda",
-    6130,
+    6136,
     null
    ],
    [
     "exato",
     "/api/public/ai/bot",
     "borda",
-    6194,
+    6203,
     null
    ],
    [
     "exato",
     "/api/public/ai/rag",
     "borda",
-    6182,
+    6191,
     null
    ],
    [
     "exato",
     "/api/public/ai/rag/feedback",
     "borda",
-    6185,
+    6194,
     null
    ],
    [
     "exato",
     "/api/public/cms",
     "borda",
-    6083,
+    6089,
     null
    ],
    [
     "exato",
     "/api/public/cms-contents",
     "borda",
-    6079,
+    6085,
     null
    ],
    [
     "exato",
     "/api/public/faq-assisted",
     "borda",
-    6161,
+    6167,
     null
    ],
    [
     "exato",
     "/api/public/lgpd",
     "borda",
-    4830,
+    4836,
     null
    ],
    [
     "exato",
     "/api/public/origin-metrics",
     "borda",
-    6125,
+    6131,
     null
    ],
    [
     "exato",
     "/api/public/packages",
     "borda",
-    6120,
+    6126,
     null
    ],
    [
     "exato",
     "/api/public/portal-access-requests",
     "borda",
-    5609,
+    5615,
     null
    ],
    [
     "exato",
     "/api/public/segments",
     "borda",
-    6149,
+    6155,
     null
    ],
    [
     "exato",
     "/api/public/theme-preferences",
     "borda",
-    6096,
+    6102,
     null
    ],
    [
     "exato",
     "/api/public/theme-previews",
     "borda",
-    6092,
+    6098,
     null
    ],
    [
     "exato",
     "/api/public/themes",
     "borda",
-    6087,
+    6093,
     null
    ],
    [
     "exato",
     "/api/pwa/manifest.json",
     "borda",
-    5243,
+    5249,
     null
    ],
    [
     "exato",
     "/api/pwa/offline",
     "borda",
-    5249,
+    5255,
     null
    ],
    [
     "exato",
     "/api/pwa/sw.js",
     "borda",
-    5246,
+    5252,
     null
    ],
    [
     "exato",
     "/api/security/incidents",
     "borda",
-    4862,
+    4868,
     null
    ],
    [
     "prefixo",
     "/api/security/incidents/",
     "borda",
-    4865,
+    4871,
     null
    ],
    [
     "exato",
     "/api/segments",
     "borda",
-    6148,
+    6154,
     null
    ],
    [
     "exato",
     "/api/seo",
     "borda",
-    6101,
+    6107,
     null
    ],
    [
     "exato",
     "/api/seo-configs",
     "borda",
-    6100,
+    6106,
     null
    ],
    [
     "exato",
     "/api/seo-redirects",
     "borda",
-    6103,
+    6109,
     null
    ],
    [
     "exato",
     "/api/seo-sitemap",
     "borda",
-    6106,
+    6112,
     null
    ],
    [
     "exato",
     "/api/seo/cms",
     "borda",
-    6084,
+    6090,
     null
    ],
    [
     "exato",
     "/api/seo/domain-verifications",
     "borda",
-    6114,
+    6120,
     null
    ],
    [
     "exato",
     "/api/service-packages",
     "borda",
-    6118,
+    6124,
     null
    ],
    [
@@ -10493,119 +10514,119 @@
     "exato",
     "/api/sitemap",
     "borda",
-    6107,
+    6113,
     null
    ],
    [
     "exato",
     "/api/theme-preferences",
     "borda",
-    6095,
+    6101,
     null
    ],
    [
     "prefixo",
     "/api/theme-previews",
     "borda",
-    6093,
+    6099,
     null
    ],
    [
     "exato",
     "/api/themes",
     "borda",
-    6086,
+    6092,
     null
    ],
    [
     "prefixo",
     "/api/themes/",
     "borda",
-    6089,
+    6095,
     null
    ],
    [
     "exato",
     "/api/themes/preview",
     "borda",
-    6091,
+    6097,
     null
    ],
    [
     "exato",
     "/api/themes/rollback",
     "borda",
-    6098,
+    6104,
     null
    ],
    [
     "exato",
     "/api/usage/alerts",
     "borda",
-    4913,
+    4919,
     null
    ],
    [
     "exato",
     "/api/usage/metrics",
     "borda",
-    4910,
+    4916,
     null
    ],
    [
     "exato",
     "/health",
     "borda",
-    4801,
+    4807,
     null
    ],
    [
     "exato",
     "/health/live",
     "borda",
-    4805,
+    4811,
     null
    ],
    [
     "exato",
     "/health/ready",
     "borda",
-    4808,
+    4814,
     null
    ],
    [
     "exato",
     "/manifest.json",
     "borda",
-    5245,
+    5251,
     null
    ],
    [
     "exato",
     "/offline.html",
     "borda",
-    5250,
+    5256,
     null
    ],
    [
     "exato",
     "/robots.txt",
     "borda",
-    6111,
+    6117,
     null
    ],
    [
     "exato",
     "/sitemap.xml",
     "borda",
-    6110,
+    6116,
     null
    ],
    [
     "exato",
     "/sw.js",
     "borda",
-    5248,
+    5254,
     null
    ]
   ]
@@ -22773,35 +22794,7 @@
   ]
  },
  "divergencias": {
-  "inalcancaveis": [
-   [
-    3038,
-    "/api/crm/management-diary/search",
-    "contractManagementDiaryApi",
-    null,
-    null,
-    null,
-    null
-   ],
-   [
-    3038,
-    "/api/crm/management-diary",
-    "contractManagementDiaryApi",
-    null,
-    null,
-    null,
-    null
-   ],
-   [
-    4600,
-    "/api/admin/ai-rag-directory-sources",
-    "aiRagDirectoryApi",
-    null,
-    null,
-    null,
-    null
-   ]
-  ],
+  "inalcancaveis": [],
   "sombreadas": [
    [
     3065,
@@ -22871,8 +22864,8 @@
  },
  "resumo": {
   "borda": {
-   "regras": 1514,
-   "exatos": 1393,
+   "regras": 1517,
+   "exatos": 1396,
    "prefixos": 121,
    "regexes": 0
   },
@@ -22888,7 +22881,7 @@
   "legado": {
    "regras": 1
   },
-  "inalcancaveis": 3,
+  "inalcancaveis": 0,
   "sombreadas": 7,
   "redundantes": 0,
   "bordaSemDespacho": 0,
