@@ -2,7 +2,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { Pool } from "pg";
 import { mkdtemp, rm, readFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { appendFileSync } from "node:fs";
+import { tmpdir, loadavg, freemem, cpus } from "node:os";
 import path from "node:path";
 import EmbeddedPostgres from "embedded-postgres";
 
@@ -24,6 +25,46 @@ const projectRoot = process.cwd();
 // subteste cai com `failureType: 'uncaughtException'` (não com asserção). O
 // listener abaixo ignora **apenas** o desligamento que este teardown provoca —
 // qualquer outro erro do pool continua estourando.
+// N8 residual (03/11): o `QA baseline` de `main` caiu neste gate em 50d2870 e 5b42ba7,
+// ambos JÁ contendo o listener acima, e o log do step não é recuperável depois.
+// Instrumentação somente de OBSERVAÇÃO, ligada apenas quando `N8_TRACE_FILE` está
+// definido (o workflow de CI define; `npm test` local não): grava JSON-lines com
+// `appendFileSync` (síncrono, sobrevive a crash) e NÃO altera o fluxo, as asserções,
+// os listeners do pool, o teardown nem os timeouts. `uncaughtExceptionMonitor`
+// observa sem suprimir a exceção (diferente de `uncaughtException`).
+const traceFile = process.env.N8_TRACE_FILE || "";
+const traceT0 = Date.now();
+function trace(event, extra = {}) {
+  if (!traceFile) return;
+  try {
+    appendFileSync(traceFile, `${JSON.stringify({ ms: Date.now() - traceT0, pid: process.pid, event, ...extra })}\n`);
+  } catch { /* observação nunca pode quebrar o gate */ }
+}
+function traceRaw(err) {
+  // embedded-postgres pode rejeitar com valor que não é Error (string, objeto, undefined).
+  try {
+    const v = typeof err === "string" ? err : JSON.stringify(err);
+    return v === undefined ? String(err) : v.slice(0, 500);
+  } catch { return String(err).slice(0, 500); }
+}
+const traceErr = err => ({
+  type: err === null ? "null" : typeof err,
+  isError: err instanceof Error,
+  code: err?.code, name: err?.name,
+  message: err instanceof Error ? String(err.message).slice(0, 500) : undefined,
+  raw: err instanceof Error ? undefined : traceRaw(err),
+  stack: String(err?.stack ?? "").split("\n").slice(0, 8).join("\n")
+});
+if (traceFile) {
+  trace("file_loaded", {
+    node: process.version, platform: process.platform, arch: process.arch,
+    cpus: cpus().length, loadavg: loadavg(), freemem_mb: Math.round(freemem() / 1048576),
+    ci: process.env.GITHUB_ACTIONS === "true", sha: process.env.GITHUB_SHA || null
+  });
+  process.on("uncaughtExceptionMonitor", (err, origin) => trace("uncaughtExceptionMonitor", { origin, ...traceErr(err) }));
+  process.on("exit", code => trace("process_exit", { code }));
+}
+
 const skipReason = process.env.RUN_DATABASE_INTEGRATION === "1"
   ? false
   : "requer RUN_DATABASE_INTEGRATION=1 (PostgreSQL embutido descartável)";
@@ -60,22 +101,47 @@ async function withDatabase(t, prefix, port, work) {
   };
   t.after(async () => {
     shuttingDown = true;
-    await pool?.end().catch(() => {});
-    await setupPool?.end().catch(() => {});
-    await pg.stop().catch(() => {});
+    trace("teardown_begin", { test: prefix, port });
+    await pool?.end().catch(err => trace("teardown_pool_end_error", { test: prefix, ...traceErr(err) }));
+    await setupPool?.end().catch(err => trace("teardown_setup_pool_end_error", { test: prefix, ...traceErr(err) }));
+    await pg.stop().catch(err => trace("teardown_pg_stop_error", { test: prefix, ...traceErr(err) }));
     await rm(root, { recursive: true, force: true });
+    trace("teardown_end", { test: prefix, port });
   });
-  await pg.initialise();
-  await pg.start();
-  const base = `postgresql://postgres:int@127.0.0.1:${port}/`;
-  setupPool = new Pool({ connectionString: `${base}postgres`, max: 1 });
-  await setupPool.query("CREATE DATABASE grupo_seg_system");
-  await setupPool.end();
-  setupPool = null;
-  pool = new Pool({ connectionString: `${base}grupo_seg_system`, max: 2 });
-  pool.on("error", onPoolError);
-  await applyMigrations(pool);
-  return work(pool);
+  let phase = "db_begin";
+  try {
+    trace("db_begin", { test: prefix, port, loadavg: loadavg() });
+    phase = "initialise";
+    await pg.initialise();
+    trace("pg_initialised", { test: prefix, port });
+    phase = "start";
+    await pg.start();
+    trace("pg_started", { test: prefix, port });
+    const base = `postgresql://postgres:int@127.0.0.1:${port}/`;
+    phase = "setup_pool";
+    setupPool = new Pool({ connectionString: `${base}postgres`, max: 1 });
+    await setupPool.query("CREATE DATABASE grupo_seg_system");
+    await setupPool.end();
+    setupPool = null;
+    phase = "pool";
+    pool = new Pool({ connectionString: `${base}grupo_seg_system`, max: 2 });
+    pool.on("error", onPoolError);
+    // Só observa: com `onPoolError` já registrado, um segundo listener não muda o
+    // comportamento do evento `error` (não há supressão adicional).
+    pool.on("error", err => trace("pool_error", { test: prefix, shuttingDown, ...traceErr(err) }));
+    phase = "migrations";
+    await applyMigrations(pool);
+    trace("migrations_applied", { test: prefix, port });
+  } catch (err) {
+    trace("setup_error", { test: prefix, port, phase, ...traceErr(err) });
+    throw err;
+  }
+  try {
+    return await work(pool);
+  } catch (err) {
+    trace("work_error", { test: prefix, ...traceErr(err) });
+    throw err;
+  }
 }
 
 describe("client security — migração 005/006 e regras (PostgreSQL embutido)", { skip: skipReason }, () => {
