@@ -69,4 +69,17 @@ jobs:
       # E5: gate que estava órfão (sem npm test, sem workflow). Usa PostgreSQL
       # embutido descartável e dados sintéticos; nenhum skip é aceito aqui.
       - name: Client security regras 005/006 (embedded PostgreSQL, synthetic)
+        env:
+          N8_TRACE_FILE: ${{ runner.temp }}/n8-client-security-trace.jsonl
         run: RUN_DATABASE_INTEGRATION=1 node --test --test-concurrency=1 tests/client-security.integration.test.mjs
+      # N8 residual: o log deste step não é recuperável após a falha. O trace
+      # (JSON-lines síncrono, só observação) é publicado também em sucesso, para dar
+      # linha de base de tempos. Não altera o resultado do gate.
+      - name: Publicar trace N8 do gate client-security
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n8-client-security-trace
+          path: ${{ runner.temp }}/n8-client-security-trace.jsonl
+          if-no-files-found: ignore
+          retention-days: 14

@@ -1,6 +1,21 @@
 # Status vigente — Grupo SEG System
 
-**Última reconciliação:** 03/11/2026 · **Base:** `5b42ba7fb1552a4b3775df372c03ac5e23062554` (`main`, merge da PR #341) · **Branch de trabalho:** `arena/f764815a-gruposegsystemseguranca` (esta sessão).
+**Última reconciliação:** 03/11/2026 · **Base:** `0739620520de686a80bf01a8420457f7f0b11461` (`main`, merge da PR #342) · **Branch de trabalho:** `arena/8670e478-gruposegsystemseguranca` (esta sessão).
+
+### Atualização corrente — N8 residual: instrumentação de observação do gate client-security (03/11/2026)
+
+**Escopo autorizado pelo dono:** instrumentar o teste no CI para capturar a causa da falha residual do step
+`Client security regras 005/006`, que derrubou o `QA baseline` de `main` em **50d2870** (run 41552861728) e
+**5b42ba7** (run 41556745663) — ambos **já contendo** o conserto N8 (`cc41939`). O log desses steps não é
+recuperável pelo sandbox; **a causa dessas duas falhas continua não explicada** (hipóteses abertas: mensagem de
+encerramento do postmaster fora do regex do listener, falha de `initdb`/`start` no runner, porta em uso, erro no corpo
+do teste). Local: 0/50 falhas (25 sem carga, 25 com carga de CPU).
+
+**O que mudou:** `tests/client-security.integration.test.mjs` grava JSON-lines síncronos (`appendFileSync`) **somente**
+quando `N8_TRACE_FILE` está definido; `ci.yml` define a variável nesse step e publica o arquivo como artifact
+`n8-client-security-trace` (`if: always()`, 14 dias). Fluxo, asserções, listener `pool.on("error", …)`, teardown e
+timeouts **não foram alterados**; não foi adicionado arquivo de teste nem teste novo. Nenhuma falha foi mascarada e
+nada foi declarado verde por esta mudança. Cabeçalho reconciliado para a base `0739620…` (guarda N1).
 
 ### Atualização corrente — fatia B: as três rotas inalcançáveis passam a borda (03/11/2026)
 
