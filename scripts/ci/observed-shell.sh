@@ -7,7 +7,10 @@ code=${PIPESTATUS[0]}
 if [ "$code" -ne 0 ]; then
   node --input-type=module - "$log" <<'JS'
 import fs from 'node:fs';
-let text = fs.readFileSync(process.argv[2], 'utf8').split('\n').slice(-90).join('\n');
+const lines = fs.readFileSync(process.argv[2], 'utf8').split('\n');
+const excerpts = [];
+for (let i = 0; i < lines.length; i++) if (/^not ok|^#?\s*(?:Error:|error:|QA_PG_FAILED|QA_PG_SUPERVISOR: (?!complete))/.test(lines[i])) excerpts.push(...lines.slice(i, i + 40));
+let text = [...excerpts.slice(0, 400), ...lines.slice(-60)].join('\n');
 text = text.replace(/https?:\/\/\S+|postgres(?:ql)?:\/\/\S+/gi, '[url redacted]')
   .replace(/((?:password|secret|token|cookie|authorization)\s*[:=]\s*)\S+/gi, '$1[redacted]');
 for (const line of text.split('\n')) console.log('::error::' + line.replaceAll('%', '%25').replaceAll('\r', '%0D'));
