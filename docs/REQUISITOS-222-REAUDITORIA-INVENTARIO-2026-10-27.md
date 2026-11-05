@@ -26,11 +26,11 @@ Um **índice reproduzível**, não um veredito:
 
 **Não foi criado workflow novo**: a guarda já roda em todos os workflows que
 executam `test:unit`. Isso evita inflar a matriz de rotas com um gate que não
-prova rota alguma. Workflows seguem **50** (o `plt-jornadas-delivery.yml` foi criado em 02/11 para tirar PLT-01/06/12 da orfandade de gate).
+prova rota alguma. Workflows são **60** na reconciliação de 04/11 (o `plt-jornadas-delivery.yml` foi criado em 02/11; a fatia 05D adicionou `ext08-delivery.yml` para executar o gate de conhecimento antes órfão; a 05E adicionou `ext11-delivery.yml` para analytics; a 05F adicionou os três gates EXT-12/13/14; a 05G adicionou `ext15-delivery.yml`; a 05H adicionou `pendencies-delivery.yml`; a 05I adicionou `l02-l03-delivery.yml`; a 05M adicionou `f03-ticket-employee-delivery.yml`; a 05N adicionou `f03-finance-lead-delivery.yml`).
 
 ### Método
 
-Uma única passada por **1.725 arquivos** de `tests/`, `.github/workflows/`,
+Uma única passada por **1.740 arquivos** de `tests/`, `.github/workflows/`,
 `docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, as auditorias de 26/10, 28/10 e
 02/11, a fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
 meta-estado, não prova de requisito, e evitam auto-referência. De cada arquivo o gerador extrai todos os IDs com

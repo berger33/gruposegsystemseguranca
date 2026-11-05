@@ -8,14 +8,13 @@
 // alterado para o teste passar. O gate herdado
 // scripts/qa-ext09-expansion-postgres.mjs continua independente e intacto.
 // Nunca usa banco do operador e sempre remove o cluster, inclusive em falha.
-import EmbeddedPostgres from 'embedded-postgres';
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { mkdtemp, rm, symlink } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import './qa-generated-files-guard.mjs';
+import { releaseSignalHandlers } from './qa-generated-files-guard.mjs';
 
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') {
   console.error('QA_PG_REFUSED: limpe DATABASE_URL, DATABASE_MIGRATION_URL e RUN_DATABASE_INTEGRATION_REMOTE antes deste gate local.');
@@ -23,6 +22,18 @@ if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.en
 }
 
 const root = path.resolve(import.meta.dirname, '..');
+// Grupo 05X: contratos originais e fronteiras de conta sob contenção POSIX.
+const supervised = process.env.QA_PG_SUPERVISED === '1' && !!process.send;
+if (process.platform !== 'win32' && !supervised) {
+  releaseSignalHandlers();
+  const { superviseLocalPg, PG_PHASE_LIMITS } = await import('./lib/qa-pg-supervisor.mjs');
+  const result = await superviseLocalPg({ entry: path.resolve(import.meta.filename),
+    args: process.argv.slice(2), limits: { ...PG_PHASE_LIMITS, migrate: 90_000, test: 900_000 } });
+  process.exit(result.code);
+}
+const { default: EmbeddedPostgres } = await import('embedded-postgres');
+const phase = name => { if (supervised) process.send({ type: 'phase', name }); };
+
 
 // Mesma compatibilidade de bibliotecas usada pelos gates anteriores da série:
 // o binário embutido procura sonames sem a versão completa.
@@ -56,7 +67,8 @@ function run(cmd, args, env) {
 
 const database = 'seg_qa_ux_expansion';
 const port = await freeLoopbackPort();
-const directory = await mkdtemp(path.join(tmpdir(), 'seg-qa-ux-expansion-pg-'));
+const directory = supervised ? process.env.QA_PG_DIRECTORY : await mkdtemp(path.join(tmpdir(), 'seg-qa-ux-expansion-pg-'));
+if (!directory) throw new Error('qa_pg_sandbox_missing');
 const password = randomBytes(24).toString('hex');
 const postgres = new EmbeddedPostgres({
   databaseDir: path.join(directory, 'data'),
@@ -73,13 +85,20 @@ const etapa = nome => console.log(`UX_EXPANSION_SETUP: ${nome}`);
 let result = 1;
 try {
   etapa('DATABASE_URL vazio confirmado; cluster temporário exclusivo solicitado');
+  phase('initialise');
   await postgres.initialise();
+  phase('start');
   await postgres.start();
-  await postgres.createDatabase(database);
+  phase('create');
+  if (supervised) {
+    const { createLocalQaDatabase } = await import('./lib/qa-pg-supervisor.mjs');
+    await createLocalQaDatabase({ port, user: 'seg_qa', password, database });
+  } else { await postgres.createDatabase(database); }
   const url = `postgresql://seg_qa:${password}@127.0.0.1:${port}/${database}`;
   console.log(`QA_PG_READY: 127.0.0.1:${port}/${database}; cluster temporário exclusivo; segredo omitido.`);
 
   etapa('cluster PostgreSQL descartável no ar');
+  phase('migrate');
   const migrated = await run(process.execPath, ['scripts/migrate-site-visual.mjs'], {
     DATABASE_MIGRATION_URL: url, DATABASE_URL: '', QA_MIGRATION_ONLY: 'true',
   });
@@ -87,6 +106,7 @@ try {
   etapa('migrações reais aplicadas (001–174, nenhuma nova nesta fatia)');
   etapa('servidor real e Chromium Playwright entregues ao teste de integração');
 
+  phase('test');
   result = await run(process.execPath, ['--test', '--test-concurrency=1',
     ...(process.env.UX_EXPANSION_TEST_PATTERN ? ['--test-name-pattern', process.env.UX_EXPANSION_TEST_PATTERN] : []),
     'tests/ux-expansion-workspace.integration.test.mjs'], {
@@ -111,12 +131,19 @@ try {
   console.error('QA_PG_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 500));
   result = 1;
 } finally {
+  phase('stop');
   try { await postgres.stop(); } catch (error) {
     console.error('QA_PG_STOP_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 300));
     result = 1;
   }
-  await rm(directory, { recursive: true, force: true });
-  console.log('QA_PG_TEMP_CLEANED: true');
-  console.log('UX_EXPANSION_SETUP: temporário limpo');
+  if (!supervised) {
+    await rm(directory, { recursive: true, force: true });
+    console.log('QA_PG_TEMP_CLEANED: true');
+    console.log('UX_EXPANSION_SETUP: temporário limpo');
+  }
+}
+if (supervised) {
+  phase('done');
+  await new Promise(resolve => process.send({ type: 'complete', code: result }, resolve));
 }
 process.exit(result);

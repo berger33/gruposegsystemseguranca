@@ -3,6 +3,10 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'scripts/qa-migrations-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
       - 'src/**'
       - 'server.mjs'
       - 'next.config.*'
@@ -24,10 +28,11 @@ permissions:
 jobs:
   finance-postgres-browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       DATABASE_URL: ''
       DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
       MAIL_HOST: ''
       OLLAMA_ENABLED: 'false'
       NEXT_TELEMETRY_DISABLED: '1'
@@ -38,6 +43,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Guardas do supervisor
+        run: node --test tests/qa-pg-supervisor.test.mjs
       - name: Migrations, replay and checksum in disposable PostgreSQL
         run: npm run test:migrations:pg
       - name: L07 real HTTP, disposable PostgreSQL and Chromium

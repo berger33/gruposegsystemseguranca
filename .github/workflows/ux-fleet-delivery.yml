@@ -17,6 +17,10 @@ on:
       - 'tests/ux-fleet-vocabulary.test.mjs'
       - 'tests/ux-fleet-workspace.integration.test.mjs'
       - 'scripts/qa-ux-fleet-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
+      - 'scripts/migrate-site-visual.mjs'
       - 'scripts/ux-evidence-capture.mjs'
       - 'package.json'
       - 'package-lock.json'
@@ -36,6 +40,8 @@ jobs:
       DATABASE_URL: ''
       DATABASE_MIGRATION_URL: ''
       RUN_DATABASE_INTEGRATION_REMOTE: ''
+      ALLOW_REMOTE_MIGRATIONS: ''
+      UX_FLEET_TEST_PATTERN: ''
       MAIL_HOST: ''
       OLLAMA_ENABLED: 'false'
       NEXT_TELEMETRY_DISABLED: '1'
@@ -46,6 +52,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - run: node --test tests/qa-pg-supervisor.test.mjs
       - run: npm run typecheck
       - run: node --test tests/ux-fleet-vocabulary.test.mjs
       # Teste herdado da família: o contrato do servidor canônico de frota

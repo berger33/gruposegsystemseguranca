@@ -1,6 +1,6 @@
 // EXT-03 — jornada de licitações exercitada por HTTP REAL contra PostgreSQL
 // REAL. Executado por scripts/qa-ext03-biddings-postgres.mjs, que sobe um
-// cluster descartável, aplica 001–149 e injeta DATABASE_URL.
+// cluster descartável, aplica 001–183 e injeta DATABASE_URL.
 //
 // Regra desta suíte: nenhum veredito vem de SQL que simule o que a API deveria
 // fazer. Todo veredito funcional vem de uma resposta HTTP do servidor de
@@ -26,6 +26,8 @@ import { spawn } from 'node:child_process';
 import { randomUUID, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import pg from 'pg';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { observeServerStartup, waitForTestServer, stopTestServer } from './helpers/server-startup.mjs';
 import { hashPassword } from '../src/lib/client-auth-core.mjs';
 
 const RUN = process.env.RUN_DATABASE_INTEGRATION === '1' && process.env.DATABASE_URL;
@@ -39,7 +41,7 @@ test('EXT-03 gate: banco real presente — skip silencioso é proibido', () => {
   assert.ok(RUN, 'o gate exige RUN_DATABASE_INTEGRATION=1 e DATABASE_URL reais; sem eles a suíte reprova em vez de pular');
 });
 
-let server, baseUrl, pool;
+let server, startup, nextDirectory, baseUrl, pool;
 let ti, rh, cookieTi, cookieRh;
 
 function todayIso(offsetDays = 0) {
@@ -48,22 +50,12 @@ function todayIso(offsetDays = 0) {
   return d.toISOString().slice(0, 10);
 }
 
-async function waitForServer(url, timeoutMs = 60_000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    try {
-      const res = await fetch(`${url}/api/admin/session`, { headers: { accept: 'application/json' } });
-      if (res.status === 401 || res.status === 200) return true;
-    } catch { /* ainda subindo */ }
-    await new Promise(r => setTimeout(r, 400));
-  }
-  throw new Error('server_did_not_start');
-}
-
 before(async () => {
   if (!RUN) return;
   const port = 3000 + Math.floor(Math.random() * 2000);
   baseUrl = `http://127.0.0.1:${port}`;
+  // O lock do Next pertence ao distDir: nunca compartilhar entre execuções.
+  nextDirectory = await mkdtemp(path.join(root, '.next-qa-ext03-'));
   server = spawn(process.execPath, ['server.mjs', '--dev'], {
     cwd: root,
     env: {
@@ -71,7 +63,7 @@ before(async () => {
       PORT: String(port),
       BIND_HOST: '127.0.0.1',
       NODE_ENV: 'development',
-      NEXT_DIST_DIR: '.next/integration-ext03',
+      NEXT_DIST_DIR: path.relative(root, nextDirectory),
       SITE_ADMIN_SESSION_SECRET: randomUUID().repeat(2),
       CLIENT_MFA_ENCRYPTION_KEY: randomBytes(32).toString('base64url'),
       SITE_ADMIN_TOKEN_MARCELO: '',
@@ -84,9 +76,9 @@ before(async () => {
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
-  server.stdout.on('data', () => {});
-  server.stderr.on('data', () => {});
-  await waitForServer(baseUrl);
+  startup = observeServerStartup(server);
+  await waitForTestServer(baseUrl, startup);
+  console.log('EXT03_SERVER_STARTUP:', JSON.stringify(startup.snapshot()));
   pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 4 });
   ti = await makeStaff('ti');
   rh = await makeStaff('rh');
@@ -96,10 +88,11 @@ before(async () => {
 
 after(async () => {
   await pool?.end().catch(() => {});
-  if (server && !server.killed) {
-    server.kill('SIGTERM');
-    await new Promise(r => setTimeout(r, 300));
-    server.kill('SIGKILL');
+  try { await stopTestServer(server, startup); } finally {
+    if (nextDirectory && (!startup || startup.ended)) {
+      await rm(nextDirectory, { recursive: true, force: true });
+      console.log('QA_EXT03_NEXT_DIST_CLEANED: true');
+    }
   }
 });
 

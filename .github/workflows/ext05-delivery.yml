@@ -3,12 +3,16 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'scripts/qa-migrations-postgres.mjs'
       - 'src/server/ext-quality-api.mjs'
       - 'src/server/ext-api.mjs'
       - 'src/app/admin/qualidade/**'
       - 'server.mjs'
       - 'tests/ext05-quality*.test.mjs'
       - 'scripts/qa-ext05-quality-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
       - 'scripts/migrate-site-visual.mjs'
       - 'scripts/qa-wave0-static.mjs'
       - 'db/migrations/**'
@@ -36,7 +40,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - name: Ledger de migrações 001-151 em PostgreSQL descartável
+      - name: Ledger de migrações 001-183 em PostgreSQL descartável
         run: npm run test:migrations:pg
       - name: Jornada EXT-05 (qualidade interna) por HTTP real contra PostgreSQL real
         run: npm run test:ext05-quality:pg

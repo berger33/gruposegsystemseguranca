@@ -18,6 +18,10 @@ on:
       - 'tests/ux-crm-vocabulary.test.mjs'
       - 'tests/ux-crm-workspace.integration.test.mjs'
       - 'scripts/qa-ux-crm-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
+      - 'scripts/migrate-site-visual.mjs'
       - 'db/migrations/**'
       - 'package*.json'
       - '.github/workflows/ux-crm-delivery.yml'
@@ -29,10 +33,12 @@ permissions:
 jobs:
   ux-crm-postgres-browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     env:
       DATABASE_URL: ''
       DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      UX_CRM_TEST_PATTERN: ''
       MAIL_HOST: ''
       OLLAMA_ENABLED: 'false'
       NEXT_TELEMETRY_DISABLED: '1'
@@ -43,6 +49,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Guardas do supervisor antes de PG
+        run: node --test tests/qa-pg-supervisor.test.mjs
       - name: Verificação de tipos
         run: npm run typecheck
       - name: Vocabulário canônico do CRM (sem PostgreSQL)

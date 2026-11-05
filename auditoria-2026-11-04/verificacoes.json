@@ -1,0 +1,480 @@
+[
+  {
+    "command": "node scripts/qa-wave0-static.mjs",
+    "exit": 0,
+    "seconds": 0.1,
+    "pass": [],
+    "fail": []
+  },
+  {
+    "command": "npm run reaudit:sec",
+    "exit": 0,
+    "seconds": 0.2,
+    "pass": [],
+    "fail": []
+  },
+  {
+    "command": "node scripts/ux-pro-00-inventory.mjs --check",
+    "exit": 0,
+    "seconds": 0.5,
+    "pass": [],
+    "fail": []
+  },
+  {
+    "command": "node scripts/ux-pro-03-ti-inventory.mjs --check",
+    "exit": 0,
+    "seconds": 1.2,
+    "pass": [],
+    "fail": []
+  },
+  {
+    "command": "node scripts/requisitos-222-inventory.mjs --check",
+    "exit": 0,
+    "seconds": 0.7,
+    "pass": [],
+    "fail": []
+  },
+  {
+    "command": "node scripts/ux-pro-10b-contrast-inventory.mjs --check",
+    "exit": 0,
+    "seconds": 0.1,
+    "pass": [],
+    "fail": []
+  },
+  {
+    "command": "node scripts/e15-route-catalog.mjs --check",
+    "exit": 0,
+    "seconds": 0.3,
+    "pass": [],
+    "fail": []
+  },
+  {
+    "command": "npm run test:pglite-schema",
+    "exit": 0,
+    "seconds": 13.3,
+    "pass": [],
+    "fail": []
+  },
+  {
+    "command": "npm --prefix academia test",
+    "exit": 0,
+    "seconds": 22.4,
+    "pass": [
+      "63"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:migrations:pg",
+    "exit": 0,
+    "seconds": 7.1,
+    "pass": [],
+    "fail": []
+  },
+  {
+    "command": "npm run test:tenant:pg",
+    "exit": 0,
+    "seconds": 11.6,
+    "pass": [
+      "25"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:staff-auth:pg",
+    "exit": 0,
+    "seconds": 20.3,
+    "pass": [
+      "21"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:client-access:pg",
+    "exit": 0,
+    "seconds": 18.8,
+    "pass": [
+      "27"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:durable-scheduler:pg",
+    "exit": 0,
+    "seconds": 13.6,
+    "pass": [
+      "11"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:l04-delivery:pg",
+    "exit": "timeout",
+    "seconds": 100.0,
+    "pass": [
+      "20"
+    ],
+    "fail": [
+      "0"
+    ],
+    "observacao": "Espera inicial de 100s expirou; processo filho continuou e log final confirmou exit 0 e limpeza. Não houve repetição.",
+    "resultado_final": "passou; exit 0 do runner registrado em log"
+  },
+  {
+    "command": "npm run test:l05-delivery:pg",
+    "exit": 0,
+    "seconds": 33.2,
+    "pass": [
+      "1"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:l06-delivery:pg",
+    "exit": 0,
+    "seconds": 81.0,
+    "pass": [
+      "9"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:l07-delivery:pg",
+    "exit": "timeout",
+    "seconds": 100.0,
+    "pass": [
+      "43"
+    ],
+    "fail": [
+      "0"
+    ],
+    "observacao": "Espera inicial de 100s expirou; processo filho continuou e log final confirmou exit 0 e limpeza. Não houve repetição.",
+    "resultado_final": "passou; exit 0 do runner registrado em log"
+  },
+  {
+    "command": "npm run test:l08-delivery:pg",
+    "exit": 0,
+    "seconds": 46.3,
+    "pass": [
+      "54"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:plt09-privacy:pg",
+    "exit": 0,
+    "seconds": 20.7,
+    "pass": [
+      "28"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:plt01-access-review-coverage:pg",
+    "exit": 0,
+    "seconds": 19.6,
+    "pass": [
+      "12"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:plt06-observability:pg",
+    "exit": 0,
+    "seconds": 20.1,
+    "pass": [
+      "24"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:plt12-incidents:pg",
+    "exit": 0,
+    "seconds": 19.4,
+    "pass": [
+      "20"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:ext02-third-parties:pg",
+    "exit": 0,
+    "seconds": 9.6,
+    "pass": [
+      "22"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:ext03-biddings:pg",
+    "exit": 1,
+    "seconds": 64.7,
+    "pass": [
+      "0"
+    ],
+    "fail": [
+      "26"
+    ]
+  },
+  {
+    "command": "npm run test:ext04-suppliers:pg",
+    "exit": 0,
+    "seconds": 17.8,
+    "pass": [
+      "28"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:ext05-quality:pg",
+    "exit": 0,
+    "seconds": 19.8,
+    "pass": [
+      "38"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:ext06-satisfaction:pg",
+    "exit": 0,
+    "seconds": 19.6,
+    "pass": [
+      "36"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:ext07-compliance:pg",
+    "exit": 0,
+    "seconds": 34.5,
+    "pass": [
+      "50"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:ext08-knowledge:pg",
+    "exit": 0,
+    "seconds": 16.2,
+    "pass": [
+      "15"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:ext09-expansion:pg",
+    "exit": 0,
+    "seconds": 16.2,
+    "pass": [
+      "16"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:ext10-continuity:pg",
+    "exit": 0,
+    "seconds": 26.1,
+    "pass": [
+      "31"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:ext11-analytics:pg",
+    "exit": 0,
+    "seconds": 8.6,
+    "pass": [
+      "18"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:ext12-visual:pg",
+    "exit": 0,
+    "seconds": 8.6,
+    "pass": [
+      "14"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:ext13-reports:pg",
+    "exit": 0,
+    "seconds": 9.0,
+    "pass": [
+      "17"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:ext14-intel:pg",
+    "exit": 0,
+    "seconds": 19.6,
+    "pass": [
+      "18"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:ext15-emergency:pg",
+    "exit": 0,
+    "seconds": 15.6,
+    "pass": [
+      "18"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:f03-lead-to-implementation:pg",
+    "exit": 0,
+    "seconds": 22.0,
+    "pass": [
+      "1"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:f03-employee-request-rh-return:pg",
+    "exit": 0,
+    "seconds": 31.4,
+    "pass": [
+      "1"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:f03-client-ticket-acceptance:pg",
+    "exit": 0,
+    "seconds": 34.0,
+    "pass": [
+      "1"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:f03-contas-baixa-relatorio:pg",
+    "exit": 0,
+    "seconds": 21.4,
+    "pass": [
+      "1"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:rag",
+    "exit": 0,
+    "seconds": 9.5,
+    "pass": [],
+    "fail": []
+  },
+  {
+    "command": "npm run test:cli-v2:pg",
+    "exit": 0,
+    "seconds": 8.3,
+    "pass": [
+      "11"
+    ],
+    "fail": [
+      "0"
+    ]
+  },
+  {
+    "command": "npm run test:backup-restore:pg:inventory",
+    "exit": 2,
+    "seconds": 0.2,
+    "pass": [],
+    "fail": []
+  },
+  {
+    "command": "npm run test:ext03-biddings:pg (repetição isolada)",
+    "exit": 0,
+    "passou": 26
+  },
+  {
+    "command": "RUN_DATABASE_INTEGRATION=1 node --test --test-concurrency=1 tests/client-security.integration.test.mjs",
+    "exit": 0,
+    "passou": 4
+  },
+  {
+    "command": "npm test",
+    "exit": 1,
+    "passou": 1518,
+    "falhou": 1,
+    "observacao": "N1 base documental divergente"
+  },
+  {
+    "command": "npm run typecheck",
+    "exit": 0
+  },
+  {
+    "command": "npm run build",
+    "exit": 0
+  },
+  {
+    "command": "npm audit --json",
+    "exit": 0,
+    "vulnerabilidades": 0
+  },
+  {
+    "command": "npm ci",
+    "exit": 0
+  }
+]

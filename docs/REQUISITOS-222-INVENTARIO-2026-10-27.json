@@ -57,7 +57,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1725,
+    "arquivosVarridos": 1740,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -6616,10 +6616,12 @@
       "pendencia_0410": "Aceite humano do operador e validação Windows/EPERM pendentes. Não há IA externa nem integrações de terceiros.",
       "classe_evidencia_atual": "gate_nomeado",
       "arquivos_gate_nomeados": [
+        ".github/workflows/ext08-delivery.yml",
         "tests/ext08-knowledge.integration.test.mjs",
         "tests/ext08-knowledge.test.mjs"
       ],
       "arquivos_gate": [
+        ".github/workflows/ext08-delivery.yml",
         ".github/workflows/ux-knowledge-delivery.yml",
         "tests/ext07-compliance.integration.test.mjs",
         "tests/ext08-knowledge.integration.test.mjs",
@@ -6648,7 +6650,7 @@
         "src/components/ui/UiWorkspace.module.css",
         "src/lib/compliance-vocabulary.mjs"
       ],
-      "ocorrencias_gate": 40,
+      "ocorrencias_gate": 41,
       "ocorrencias_documento": 48,
       "ocorrencias_codigo": 19,
       "aceite_humano": "nao_registrado",
@@ -6753,10 +6755,12 @@
       "pendencia_0410": "aceite humano, Windows/EPERM e aplicação no banco de destino; sem tráfego externo ou significância alegada",
       "classe_evidencia_atual": "gate_nomeado",
       "arquivos_gate_nomeados": [
+        ".github/workflows/ext11-delivery.yml",
         "tests/ext11-analytics.integration.test.mjs",
         "tests/ext11-analytics.test.mjs"
       ],
       "arquivos_gate": [
+        ".github/workflows/ext11-delivery.yml",
         ".github/workflows/ux-analytics-delivery.yml",
         "tests/ext11-analytics.integration.test.mjs",
         "tests/ext11-analytics.test.mjs",
@@ -6783,7 +6787,7 @@
         "src/lib/analytics-request.ts",
         "src/lib/analytics-vocabulary.mjs"
       ],
-      "ocorrencias_gate": 39,
+      "ocorrencias_gate": 40,
       "ocorrencias_documento": 22,
       "ocorrencias_codigo": 19,
       "aceite_humano": "nao_registrado",
@@ -6798,10 +6802,12 @@
       "pendencia_0410": "aceite humano, Windows/EPERM e banco de destino; publicação é registro interno, sem deploy externo/CDN/upload real",
       "classe_evidencia_atual": "gate_nomeado",
       "arquivos_gate_nomeados": [
+        ".github/workflows/ext12-delivery.yml",
         "tests/ext12-visual.integration.test.mjs",
         "tests/ext12-visual.test.mjs"
       ],
       "arquivos_gate": [
+        ".github/workflows/ext12-delivery.yml",
         "tests/ext12-visual.integration.test.mjs",
         "tests/ext12-visual.test.mjs",
         "tests/ux-analytics-vocabulary.test.mjs"
@@ -6822,7 +6828,7 @@
         "src/server/ext-advanced-api.mjs",
         "src/server/ext-visual-api.mjs"
       ],
-      "ocorrencias_gate": 26,
+      "ocorrencias_gate": 27,
       "ocorrencias_documento": 28,
       "ocorrencias_codigo": 9,
       "aceite_humano": "nao_registrado",
@@ -6837,10 +6843,12 @@
       "pendencia_0410": "aceite humano, Windows/EPERM e banco de destino; envio é registro interno autorizado, sem SMTP/arquivo/agenda automática",
       "classe_evidencia_atual": "gate_nomeado",
       "arquivos_gate_nomeados": [
+        ".github/workflows/ext13-delivery.yml",
         "tests/ext13-reports.integration.test.mjs",
         "tests/ext13-reports.test.mjs"
       ],
       "arquivos_gate": [
+        ".github/workflows/ext13-delivery.yml",
         "tests/ext13-reports.integration.test.mjs",
         "tests/ext13-reports.test.mjs"
       ],
@@ -6861,7 +6869,7 @@
         "src/server/ext-reporting-api.mjs",
         "src/server/ext-reports-api.mjs"
       ],
-      "ocorrencias_gate": 34,
+      "ocorrencias_gate": 35,
       "ocorrencias_documento": 33,
       "ocorrencias_codigo": 10,
       "aceite_humano": "nao_registrado",
@@ -6876,10 +6884,12 @@
       "pendencia_0410": "aceite humano, Windows/EPERM e banco de destino; contato é registro interno autorizado, sem e-mail/telefone/mensagem externa",
       "classe_evidencia_atual": "gate_nomeado",
       "arquivos_gate_nomeados": [
+        ".github/workflows/ext14-delivery.yml",
         "tests/ext14-intel.integration.test.mjs",
         "tests/ext14-intel.test.mjs"
       ],
       "arquivos_gate": [
+        ".github/workflows/ext14-delivery.yml",
         "tests/ext14-intel.integration.test.mjs",
         "tests/ext14-intel.test.mjs",
         "tests/ux-intel-workspace.integration.test.mjs"
@@ -6900,7 +6910,7 @@
         "src/server/ext-intel-api.mjs",
         "src/server/ext-reporting-api.mjs"
       ],
-      "ocorrencias_gate": 36,
+      "ocorrencias_gate": 37,
       "ocorrencias_documento": 24,
       "ocorrencias_codigo": 11,
       "aceite_humano": "nao_registrado",
@@ -6915,10 +6925,12 @@
       "pendencia_0410": "aceite humano, Windows/EPERM e banco de destino; sem telefonema, mensagem, central 24h ou prova externa de recebimento/atendimento",
       "classe_evidencia_atual": "gate_nomeado",
       "arquivos_gate_nomeados": [
+        ".github/workflows/ext15-delivery.yml",
         "tests/ext15-emergency.integration.test.mjs",
         "tests/ext15-emergency.test.mjs"
       ],
       "arquivos_gate": [
+        ".github/workflows/ext15-delivery.yml",
         "tests/ext15-emergency.integration.test.mjs",
         "tests/ext15-emergency.test.mjs",
         "tests/ux-emergency-workspace.integration.test.mjs"
@@ -6941,7 +6953,7 @@
         "src/server/ext-emergency-api.mjs",
         "src/server/ext-reporting-api.mjs"
       ],
-      "ocorrencias_gate": 33,
+      "ocorrencias_gate": 34,
       "ocorrencias_documento": 38,
       "ocorrencias_codigo": 11,
       "aceite_humano": "nao_registrado",

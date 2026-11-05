@@ -9,16 +9,32 @@ on:
       - 'tests/ux-bidding-*'
       - 'scripts/qa-ux-bidding-postgres.mjs'
       - '.github/workflows/ux-bidding-delivery.yml'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
+      - 'scripts/migrate-site-visual.mjs'
       - 'package*.json'
+permissions:
+  contents: read
 jobs:
   ux-bidding:
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      ALLOW_REMOTE_MIGRATIONS: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+      UX_BIDDING_TEST_PATTERN: ''
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
+      - run: node --test tests/qa-pg-supervisor.test.mjs
       - run: npm run typecheck
       - run: node --test tests/ux-bidding-vocabulary.test.mjs tests/ext03-biddings.test.mjs
       - run: npm run test:ux-bidding:pg

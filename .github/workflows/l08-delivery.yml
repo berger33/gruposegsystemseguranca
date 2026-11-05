@@ -7,8 +7,13 @@ on:
       - 'server.mjs'
       - 'next.config.*'
       - 'tests/client-*.integration.test.mjs'
+      - 'tests/client-space-fail-closed.test.mjs'
       - 'tests/l08-delivery.integration.test.mjs'
       - 'scripts/qa-l08-delivery-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
+      - 'tests/helpers/**'
       - 'scripts/migrate-site-visual.mjs'
       - 'db/migrations/**'
       - 'package*.json'
@@ -25,6 +30,7 @@ jobs:
     env:
       DATABASE_URL: ''
       DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
       MAIL_HOST: ''
       OLLAMA_ENABLED: 'false'
       NEXT_TELEMETRY_DISABLED: '1'
@@ -35,4 +41,6 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Guardas do supervisor e escopo canônico do cliente
+        run: node --test tests/qa-pg-supervisor.test.mjs tests/client-space-fail-closed.test.mjs
       - run: npm run test:l08-delivery:pg

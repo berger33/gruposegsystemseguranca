@@ -1,0 +1,50 @@
+name: F03 ticket and employee disposable delivery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'server.mjs'
+      - 'next.config.*'
+      - 'tests/f03-client-ticket-acceptance.integration.test.mjs'
+      - 'tests/f03-employee-request-rh-return.integration.test.mjs'
+      - 'tests/helpers/**'
+      - 'scripts/qa-f03-client-ticket-acceptance-postgres.mjs'
+      - 'scripts/qa-f03-employee-request-rh-return-postgres.mjs'
+      - 'scripts/local-demo-seed.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/f03-ticket-employee-delivery.yml'
+concurrency:
+  group: f03-ticket-employee-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  seeded-postgres-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Guardas do supervisor antes de criar clusters
+        run: node --test tests/qa-pg-supervisor.test.mjs
+      - name: Cliente, chamado, atendimento e aceite
+        run: npm run test:f03-client-ticket-acceptance:pg
+      - name: Funcionário, solicitação e retorno RH
+        run: npm run test:f03-employee-request-rh-return:pg

@@ -3,6 +3,10 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'scripts/qa-migrations-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
       - 'src/**'
       - 'server.mjs'
       - 'next.config.*'
@@ -26,6 +30,7 @@ jobs:
     env:
       DATABASE_URL: ''
       DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
       MAIL_HOST: ''
       OLLAMA_ENABLED: 'false'
       NEXT_TELEMETRY_DISABLED: '1'
@@ -36,6 +41,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Guardas do supervisor
+        run: node --test tests/qa-pg-supervisor.test.mjs
       - name: Migrações, replay e checksum em PostgreSQL descartável
         run: npm run test:migrations:pg
       - name: L04 HTTP, PostgreSQL descartável e Chromium

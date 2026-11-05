@@ -1,23 +1,35 @@
 #!/usr/bin/env node
-// EXT-06 — gate autoauditável da jornada interna de fornecedores.
-// Cluster PostgreSQL 17 descartável, migrações 001–152, servidor HTTP real e
-// 28 casos mínimos. Não toca banco do operador. Não prova ator externo,
+// EXT-06 — gate autoauditável da jornada de satisfação/carteira.
+// Cluster PostgreSQL 17 descartável, migrações 001–183, servidor HTTP real e
+// 35 casos mínimos. Não toca banco do operador. Não prova ator externo,
 // upload, aceite humano, bateria pesada ou homologação Windows.
 
-import EmbeddedPostgres from "embedded-postgres";
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import './qa-generated-files-guard.mjs';
+import { releaseSignalHandlers } from './qa-generated-files-guard.mjs';
 
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === "1") {
   console.error("QA_PG_REFUSED: limpe DATABASE_URL, DATABASE_MIGRATION_URL e RUN_DATABASE_INTEGRATION_REMOTE antes deste teste local.");
   process.exit(2);
 }
 const root = path.resolve(import.meta.dirname, "..");
+// Grupo 05D: mesmas jornadas/TAP; contenção POSIX antes de importar a biblioteca.
+const supervised = process.env.QA_PG_SUPERVISED === '1' && !!process.send;
+if (process.platform !== 'win32' && !supervised) {
+  releaseSignalHandlers();
+  const { superviseLocalPg, PG_PHASE_LIMITS } = await import('./lib/qa-pg-supervisor.mjs');
+  const result = await superviseLocalPg({ entry: path.resolve(import.meta.filename),
+    args: process.argv.slice(2), limits: { ...PG_PHASE_LIMITS, migrate: 90_000, test: 180_000 } });
+  if (result.cleaned) console.log('QA_EXT06_PG_TEMP_CLEANED: true');
+  process.exit(result.code);
+}
+const { default: EmbeddedPostgres } = await import('embedded-postgres');
+const phase = name => { if (supervised) process.send({ type: 'phase', name }); };
+
 const freeLoopbackPort = () => new Promise((resolve, reject) => {
   const probe = createServer(); probe.once("error", reject);
   probe.listen(0, "127.0.0.1", () => { const { port } = probe.address(); probe.close(() => resolve(port)); });
@@ -44,16 +56,27 @@ function auditTap(output) {
 }
 
 const database = "seg_qa_ext06", port = await freeLoopbackPort();
-const directory = await mkdtemp(path.join(tmpdir(), "seg-qa-ext06-pg-"));
+const directory = supervised ? process.env.QA_PG_DIRECTORY : await mkdtemp(path.join(tmpdir(), "seg-qa-ext06-pg-"));
+if (!directory) throw new Error('qa_pg_sandbox_missing');
 const password = randomBytes(24).toString("hex");
 const postgres = new EmbeddedPostgres({ databaseDir: path.join(directory, "data"), port, user: "seg_qa", password, persistent: false, postgresFlags: ["-c", "listen_addresses=127.0.0.1"], onLog: () => {}, onError: error => console.error("QA_PG_ENGINE_ERROR", String(error).replaceAll(password, "[redacted]").slice(0, 300)) });
 let result = 1;
 try {
-  await postgres.initialise(); await postgres.start(); await postgres.createDatabase(database);
+  phase('initialise');
+  await postgres.initialise();
+  phase('start');
+  await postgres.start();
+  phase('create');
+  if (supervised) {
+    const { createLocalQaDatabase } = await import('./lib/qa-pg-supervisor.mjs');
+    await createLocalQaDatabase({ port, user: 'seg_qa', password, database });
+  } else { await postgres.createDatabase(database); }
   const url = `postgresql://seg_qa:${password}@127.0.0.1:${port}/${database}`;
   console.log(`QA_PG_READY: 127.0.0.1:${port}/${database}; cluster temporário exclusivo; segredo omitido.`);
+  phase('migrate');
   const migrated = await run(process.execPath, ["scripts/migrate-site-visual.mjs"], { DATABASE_MIGRATION_URL: url, DATABASE_URL: "", QA_MIGRATION_ONLY: "true" });
   if (migrated.code !== 0) throw new Error(`migrations_failed_exit_${migrated.code}`);
+  phase('test');
   const executed = await run(process.execPath, ["--test", "--test-concurrency=1", "tests/ext06-satisfaction.integration.test.mjs"], {
     RUN_DATABASE_INTEGRATION: "1", QA_EXT06_REQUIRE_DB: "1", RUN_DATABASE_INTEGRATION_REMOTE: "",
     DATABASE_URL: url, DATABASE_MIGRATION_URL: "", QA_PGLITE_ONLY: "", ALLOW_REMOTE_MIGRATIONS: "",
@@ -67,7 +90,17 @@ try {
 } catch (error) {
   console.error("QA_PG_FAILED", String(error?.message || error).replaceAll(password, "[redacted]").slice(0, 500)); result = 1;
 } finally {
-  await postgres.stop().catch(() => {}); await rm(directory, { recursive: true, force: true }).catch(() => {});
-  console.log("QA_EXT06_PG_TEMP_CLEANED: true");
+  phase('stop');
+  if (supervised) {
+    try { await postgres.stop(); } catch { result = 1; console.error('QA_PG_STOP_FAILED: stop rejected'); }
+  } else {
+    await postgres.stop().catch(() => {});
+    await rm(directory, { recursive: true, force: true }).catch(() => {});
+    console.log('QA_EXT06_PG_TEMP_CLEANED: true');
+  }
+}
+if (supervised) {
+  phase('done');
+  await new Promise(resolve => process.send({ type: 'complete', code: result }, resolve));
 }
 process.exit(result);

@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 // TENANT-SEG-003 / PLT-AUD-003: somente cluster novo PG loopback; nunca URL de operador.
-import EmbeddedPostgres from 'embedded-postgres';
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import './qa-generated-files-guard.mjs';
+import { releaseSignalHandlers } from './qa-generated-files-guard.mjs';
 
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.ALLOW_REMOTE_MIGRATIONS === 'true' || process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') {
   console.error('QA_CLI_V2_REFUSED: unset database URLs and remote migrations before local-only QA.');
@@ -18,6 +17,19 @@ if (objectContract && process.env.CLIENT_DOCS_DIR) {
   console.error('QA_CLI_V2_REFUSED: unset CLIENT_DOCS_DIR for synthetic-object QA.');
   process.exit(2);
 }
+
+// Grupo 05A: supervisor POSIX; Windows mantém o caminho de lifecycle anterior.
+const supervised = process.env.QA_PG_SUPERVISED === '1' && !!process.send;
+if (process.platform !== 'win32' && !supervised) {
+  releaseSignalHandlers();
+  const { superviseLocalPg, PG_PHASE_LIMITS } = await import('./lib/qa-pg-supervisor.mjs');
+  const result = await superviseLocalPg({ entry: path.resolve(import.meta.filename),
+    args: process.argv.slice(2), limits: { ...PG_PHASE_LIMITS, migrate: 90_000, test: 180_000 } });
+  if (result.cleaned) console.log('QA_CLI_V2_TEMP_CLEANED: true');
+  process.exit(result.code);
+}
+const { default: EmbeddedPostgres } = await import('embedded-postgres');
+const phase = name => { if (supervised) process.send({ type: 'phase', name }); };
 
 async function freePort() {
   return new Promise((resolve, reject) => {
@@ -31,7 +43,8 @@ async function freePort() {
 }
 
 const port = await freePort();
-const directory = await mkdtemp(path.join(tmpdir(), 'seg-qa-cli-v2-pg-'));
+const directory = supervised ? process.env.QA_PG_DIRECTORY : await mkdtemp(path.join(tmpdir(), 'seg-qa-cli-v2-pg-'));
+if (!directory) throw new Error('qa_pg_sandbox_missing');
 const password = randomBytes(24).toString('hex');
 const database = 'seg_qa_cli_v2';
 const connectionString = `postgresql://seg_qa:${password}@127.0.0.1:${port}/${database}`;
@@ -58,14 +71,22 @@ async function run(args, extraEnv) {
 
 let result = 1;
 try {
+  phase('initialise');
   await postgres.initialise();
+  phase('start');
   await postgres.start();
-  await postgres.createDatabase(database);
+  phase('create');
+  if (supervised) {
+    const { createLocalQaDatabase } = await import('./lib/qa-pg-supervisor.mjs');
+    await createLocalQaDatabase({ port, user: 'seg_qa', password, database });
+  } else { await postgres.createDatabase(database); }
   console.log(`QA_CLI_V2_READY: 127.0.0.1:${port}/${database}; senha omitida; cluster novo.`);
+  phase('migrate');
   const migrated = await run(['scripts/migrate-site-visual.mjs']);
   if (migrated !== 0) throw new Error(`qa_cli_v2_migrations_failed_exit_${migrated}`);
   const migracoesNoDisco = (await readdir(path.join(cwd, 'db/migrations'))).filter(f => /^\d{3}-.*\.sql$/.test(f)).length;
   console.log(`QA_CLI_V2_MIGRATIONS: ${migracoesNoDisco}/${migracoesNoDisco} on disposable database`);
+  phase('test');
   if (objectContract) {
     result = await run(['--test', 'tests/qa-cli-v2-object-pg.integration.test.mjs'],
       { RUN_CLI_V2_OBJECT_QA: '1', QA_MIGRATION_ONLY: '' });
@@ -78,11 +99,18 @@ try {
   console.error('QA_CLI_V2_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 400));
   result = 1;
 } finally {
+  phase('stop');
   try { await postgres.stop(); } catch (error) {
     console.error('QA_PG_STOP_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 300));
     result = 1;
   }
-  await rm(directory, { recursive: true, force: true });
-  console.log('QA_CLI_V2_TEMP_CLEANED: true');
+  if (!supervised) {
+    await rm(directory, { recursive: true, force: true });
+    console.log('QA_CLI_V2_TEMP_CLEANED: true');
+  }
+}
+if (supervised) {
+  phase('done');
+  await new Promise(resolve => process.send({ type: 'complete', code: result }, resolve));
 }
 process.exit(result);

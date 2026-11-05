@@ -3,6 +3,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'scripts/qa-migrations-postgres.mjs'
       - 'src/server/ext-satisfaction-api.mjs'
       - 'src/server/ext-api.mjs'
       - 'src/app/admin/satisfacao/**'
@@ -10,6 +11,9 @@ on:
       - 'server.mjs'
       - 'tests/ext06-satisfaction*.test.mjs'
       - 'scripts/qa-ext06-satisfaction-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
       - 'scripts/migrate-site-visual.mjs'
       - 'scripts/qa-wave0-static.mjs'
       - 'db/migrations/**'
@@ -37,7 +41,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - name: Ledger de migrações 001-152 em PostgreSQL descartável
+      - name: Ledger de migrações 001-183 em PostgreSQL descartável
         run: npm run test:migrations:pg
       - name: Jornada EXT-06 (satisfação/carteira) por HTTP real contra PostgreSQL real
         run: npm run test:ext06-satisfaction:pg

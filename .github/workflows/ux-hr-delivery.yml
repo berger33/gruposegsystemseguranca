@@ -17,6 +17,10 @@ on:
       - 'tests/ux-hr-vocabulary.test.mjs'
       - 'tests/ux-hr-workspace.integration.test.mjs'
       - 'scripts/qa-ux-hr-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
+      - 'scripts/migrate-site-visual.mjs'
       - 'db/migrations/**'
       - 'package*.json'
       - '.github/workflows/ux-hr-delivery.yml'
@@ -32,6 +36,8 @@ jobs:
     env:
       DATABASE_URL: ''
       DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      UX_HR_TEST_PATTERN: ''
       MAIL_HOST: ''
       OLLAMA_ENABLED: 'false'
       NEXT_TELEMETRY_DISABLED: '1'
@@ -42,6 +48,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Guardas do supervisor antes de PG
+        run: node --test tests/qa-pg-supervisor.test.mjs
       - name: Verificação de tipos
         run: npm run typecheck
       - name: Vocabulário canônico do RH (sem PostgreSQL)

@@ -3,12 +3,17 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'scripts/qa-migrations-postgres.mjs'
       - 'src/server/ext-bidding-api.mjs'
       - 'src/app/admin/licitacoes/**'
       - 'server.mjs'
       - 'tests/ext03-biddings.test.mjs'
       - 'tests/ext03-biddings.integration.test.mjs'
+      - 'tests/helpers/server-startup.mjs'
       - 'scripts/qa-ext03-biddings-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
       - 'scripts/migrate-site-visual.mjs'
       - 'db/migrations/**'
       - 'package*.json'
@@ -35,7 +40,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - name: Ledger de migrações 001-149 em PostgreSQL descartável
+      - name: Ledger de migrações 001-183 em PostgreSQL descartável
         run: npm run test:migrations:pg
       - name: Jornada EXT-03 (licitações) por HTTP real contra PostgreSQL real
         run: npm run test:ext03-biddings:pg
