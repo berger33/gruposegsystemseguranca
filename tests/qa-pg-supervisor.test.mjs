@@ -1295,3 +1295,22 @@ test('PG supervisor: 05Y mantém CI, gates herdados, evidências e auditoria npm
     } else { assert.ok(workflow.includes("UX_PORTAL_TEST_PATTERN: ''")); assert.ok(workflow.includes("'scripts/qa-generated-files.mjs'")); }
   }
 });
+
+
+test('PG supervisor: fontconfig aponta para fontes/cache exclusivos, não /tmp/fonts herdado', options, async t => {
+  const f = await fixture(t, `
+const { readFileSync } = await import('node:fs');
+const { join } = await import('node:path');
+const assert = (await import('node:assert/strict')).default;
+assert.equal(process.env.FONTCONFIG_PATH, join(process.env.QA_PG_DIRECTORY, 'fontconfig'));
+const config = readFileSync(join(process.env.FONTCONFIG_PATH, 'fonts.conf'), 'utf8');
+assert.ok(config.includes('<dir>' + join(process.env.QA_PG_DIRECTORY, 'fonts') + '</dir>'));
+assert.ok(config.includes('<cachedir>' + join(process.env.QA_PG_DIRECTORY, 'fontcache') + '</cachedir>'));
+assert.ok(!config.includes('<dir>/tmp/fonts</dir>'));
+phase('test'); done(0);
+`);
+  const result = await f.run({ env: { ...cleanEnv, FONTCONFIG_PATH: '/inherited/not-owned' } });
+  assert.equal(result.code, 0);
+  assert.equal(result.cleaned, true);
+  await assertRemoved(f);
+});

@@ -2,7 +2,7 @@
 // O worker tem grupo próprio; somente esse grupo e o mkdtemp deste supervisor
 // podem ser encerrados/removidos. A biblioteca embutida fica fora deste processo.
 import { fork } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -58,9 +58,17 @@ export async function superviseLocalPg({ entry, args = [], env = process.env,
   process.on('SIGTERM', onTerm);
   let result;
   try {
+    // O fonts.conf distribuído por @sparticuz/chromium fixa /tmp/fonts,
+    // mas o binário e as fontes são extraídos no TMPDIR exclusivo deste worker.
+    // Não depender de resíduos de outros gates nem compartilhar cache/fontes.
+    const fontConfig = path.join(directory, 'fontconfig');
+    await mkdir(fontConfig, { mode: 0o700 });
+    const xml = value => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&apos;');
+    await writeFile(path.join(fontConfig, 'fonts.conf'),
+      `<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>${xml(path.join(directory, 'fonts'))}</dir><cachedir>${xml(path.join(directory, 'fontcache'))}</cachedir></fontconfig>`, { mode: 0o600 });
     child = fork(entry, args, {
       cwd, detached: true,
-      env: { ...env, QA_PG_SUPERVISED: '1', QA_PG_DIRECTORY: directory,
+      env: { ...env, FONTCONFIG_PATH: fontConfig, QA_PG_SUPERVISED: '1', QA_PG_DIRECTORY: directory,
         // initdb também cria arquivo temporário de senha; ele deve ficar no
         // sandbox sob nossa custódia, inclusive em timeout de initialise().
         TMPDIR: directory, TMP: directory, TEMP: directory },
