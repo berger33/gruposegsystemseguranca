@@ -5,6 +5,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+defaults:
+  run:
+    shell: bash scripts/ci/observed-shell.sh {0}
 jobs:
   focal:
     runs-on: ubuntu-latest

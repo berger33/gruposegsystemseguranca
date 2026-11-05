@@ -23,6 +23,9 @@ concurrency:
   cancel-in-progress: false
 permissions:
   contents: read
+defaults:
+  run:
+    shell: bash scripts/ci/observed-shell.sh {0}
 jobs:
   biddings-postgres:
     runs-on: ubuntu-latest

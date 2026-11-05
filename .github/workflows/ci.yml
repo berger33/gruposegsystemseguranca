@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+defaults:
+  run:
+    shell: bash scripts/ci/observed-shell.sh {0}
 jobs:
   static-and-smoke:
     runs-on: ubuntu-latest

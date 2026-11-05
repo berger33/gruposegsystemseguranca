@@ -26,6 +26,9 @@ concurrency:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash scripts/ci/observed-shell.sh {0}
 jobs:
   ux-emergency-postgres-browser:
     runs-on: ubuntu-latest
