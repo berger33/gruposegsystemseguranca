@@ -156,3 +156,49 @@ test('UX-07 vocabulário de situação: valor desconhecido passa cru, nunca é i
   assert.equal(weekdayLabel(null), 'Sem dia específico');
   assert.equal(weekdayLabel(9), '9');
 });
+
+// 05Q: executa o callback REAL da leitura inicial com respostas fora de ordem.
+// Não substitui o browser/PG; torna determinística a corrida vista sob CPU.
+async function initialReadFixture() {
+  const source = await readFile(new URL('../src/app/admin/operacao/OperacaoWorkspace.tsx', import.meta.url), 'utf8');
+  const start = source.indexOf('const load = useCallback(async () => {');
+  const end = source.indexOf('\n  }, []);', start) + '\n  }, []);'.length;
+  assert.ok(start >= 0 && end > start);
+  const { default: ts } = await import('typescript');
+  const { runInNewContext } = await import('node:vm');
+  const js = ts.transpileModule(source.slice(start, end), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  const state = { loading: false, error: null, data: [] }, calls = [];
+  const context = { initialReadRequest: { current: 0 }, useCallback: fn => fn,
+    setLoading: value => { state.loading = value; }, setError: value => { state.error = value; },
+    opsReadList: () => new Promise(resolve => calls.push(resolve)),
+  };
+  for (const setter of ['setPosts', 'setAllocations', 'setCoverages', 'setHandovers', 'setOccurrences', 'setChecklists', 'setWorkRules', 'setQualifications', 'setValidations']) context[setter] = value => state.data.push(value);
+  return { load: runInNewContext(js + '\nload', context), state, context,
+    finish: (offset, result) => { assert.ok(calls.length >= offset + 9); for (const resolve of calls.slice(offset, offset + 9)) resolve(result); } };
+}
+
+test('05Q operação: erro antigo não sobrescreve repetição mais recente bem-sucedida', async () => {
+  const f = await initialReadFixture(); const old = f.load(), current = f.load();
+  f.finish(9, { ok: true, data: 'current' }); await current;
+  f.finish(0, { ok: false, error: 'old_invalid_response' }); await old;
+  assert.equal(f.state.error, null); assert.equal(f.state.loading, false);
+  assert.equal(f.state.data.length, 9); assert.ok(f.state.data.every(value => value === 'current'));
+});
+
+test('05Q operação: sucesso antigo não vaza dados depois de negativa mais recente', async () => {
+  const f = await initialReadFixture(); const old = f.load(), current = f.load();
+  f.finish(9, { ok: false, error: 'current_forbidden' }); await current;
+  f.finish(0, { ok: true, data: 'old_protected' }); await old;
+  assert.equal(f.state.error, 'current_forbidden'); assert.equal(f.state.data.length, 0);
+});
+
+test('05Q operação: resposta antiga não encerra loading da consulta atual; cleanup invalida pendentes', async () => {
+  const f = await initialReadFixture(); const old = f.load(), current = f.load();
+  f.finish(0, { ok: false, error: 'old' }); await old;
+  assert.equal(f.state.loading, true); assert.equal(f.state.error, null);
+  f.context.initialReadRequest.current++; // mesmo contrato do cleanup de useEffect
+  f.finish(9, { ok: true, data: 'unmounted' }); await current;
+  assert.equal(f.state.data.length, 0);
+  const source = await readFile(new URL('../src/app/admin/operacao/OperacaoWorkspace.tsx', import.meta.url), 'utf8');
+  assert.match(source, /useEffect\(\(\) => \{ void load\(\); return \(\) => \{ initialReadRequest.current\+\+; \}; \}, \[load\]\)/);
+});

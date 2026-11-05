@@ -13,6 +13,9 @@ on:
       - 'tests/helpers/**'
       - 'tests/ux-client-admin-workspace.integration.test.mjs'
       - 'scripts/qa-ux-client-admin-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
       - 'scripts/migrate-site-visual.mjs'
       - 'db/migrations/**'
       - 'package*.json'
@@ -22,6 +25,9 @@ concurrency:
   cancel-in-progress: false
 permissions:
   contents: read
+defaults:
+  run:
+    shell: bash scripts/ci/observed-shell.sh {0}
 jobs:
   ux-client-admin-postgres-browser:
     runs-on: ubuntu-latest
@@ -29,6 +35,8 @@ jobs:
     env:
       DATABASE_URL: ''
       DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      UX_CLIENT_ADMIN_TEST_PATTERN: ''
       MAIL_HOST: ''
       OLLAMA_ENABLED: 'false'
       NEXT_TELEMETRY_DISABLED: '1'
@@ -39,6 +47,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Guardas do supervisor antes de PG
+        run: node --test tests/qa-pg-supervisor.test.mjs
       - name: Verificação de tipos
         run: npm run typecheck
       - name: Cadastros centrais de clientes — HTTP real, PostgreSQL descartável e Chromium

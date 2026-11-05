@@ -758,7 +758,20 @@ test('browser 07D-1: 2xx sem a lista canônica no painel inicial é falha declar
     const leiturasAntes = await page.evaluate(() => window.__uxOps07d.calls.posts || 0);
     await page.evaluate(() => { window.__uxOps07d.rules.posts.malformed = false; });
     await falha.getByRole('button', { name: 'Tentar carregar novamente' }).click();
-    await page.locator('[role="tablist"]').waitFor();
+    await page.locator('[role="tablist"]').waitFor().catch(async error => {
+      // Diagnóstico aditivo: não repete a asserção, não amplia o timeout e não
+      // registra payloads, cookies, credenciais ou conteúdo de registros.
+      const diagnostic = await page.evaluate(() => ({
+        calls: window.__uxOps07d?.calls,
+        delivered: window.__uxOps07d?.delivered,
+        malformedPosts: window.__uxOps07d?.rules.posts?.malformed,
+        states: Array.from(document.querySelectorAll('main [data-admin-content="true"] [data-ui-state]'))
+          .map(node => node.getAttribute('data-ui-state')),
+        tabs: document.querySelectorAll('[role="tablist"]').length,
+      })).catch(() => ({ diagnosticUnavailable: true }));
+      console.error('UX_OPS_07D_RETRY_DIAGNOSTIC', JSON.stringify(diagnostic));
+      throw error;
+    });
     await page.locator('section[aria-labelledby="posts-title"] table', { hasText: massa07d.postA.name }).waitFor();
     const leiturasDepois = await page.evaluate(() => window.__uxOps07d.calls.posts || 0);
     assert.ok(leiturasDepois > leiturasAntes, `a repetição relê de verdade (${leiturasAntes} → ${leiturasDepois})`);

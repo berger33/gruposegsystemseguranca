@@ -226,3 +226,47 @@ test("PLT-03: o CSS usa tokens da casa, foco visível e breakpoint em 740px", ()
   // o protótipo era `style={{…}}` em cada elemento; a tela promovida usa classe
   assert.doesNotMatch(componente, /style=\{\{/);
 });
+
+// 05Y: callback real, não implementação paralela; respostas fora de ordem.
+async function leituraFixture() {
+  const { default: ts } = await import('typescript');
+  const { runInNewContext } = await import('node:vm');
+  const source = await read('src/app/admin/ti/IntegrationsClient.tsx');
+  const start = source.indexOf('const carregar = useCallback(async (filtroAtual: Filtros) => {');
+  const end = source.indexOf('\n  }, []);', start) + '\n  }, []);'.length;
+  assert.ok(start >= 0 && end > start);
+  const js = ts.transpileModule(source.slice(start, end), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  const state = { itens: [], situacao: 'vazio', carregando: false, papel: '' }, calls = [];
+  const context = { leituraAtual: { current: 0 }, useCallback: fn => fn,
+    queryDoFiltro: estado.queryDoFiltro, classificarLista: estado.classificarLista,
+    fetch: () => new Promise((resolve, reject) => calls.push({ resolve, reject })),
+    setCarregando: value => { state.carregando = value; }, setSituacao: value => { state.situacao = value; },
+    setItens: value => { state.itens = value; }, setMensagemLista: () => {}, setPapel: value => { state.papel = value; },
+  };
+  return { carregar: runInNewContext(js + '\ncarregar', context), state, context,
+    finish: (i, status, integrations) => calls[i].resolve({ status, json: async () => ({ integrations, role: 'ti' }) }),
+    fail: i => calls[i].reject(new Error('synthetic_network')) };
+}
+
+test('05Y catálogo: resposta do filtro antigo não substitui catálogo após limpar', async () => {
+  const f = await leituraFixture(); const old = f.carregar({ provedor: 'smtp', situacao: '' });
+  const latest = f.carregar({ provedor: '', situacao: '' });
+  f.finish(1, 200, [{ id: 'smtp' }, { id: 'storage' }]); await latest;
+  f.finish(0, 200, [{ id: 'smtp' }]); await old;
+  assert.equal(f.state.itens.length, 2);
+});
+
+test('05Y catálogo: sucesso antigo não publica dados após negativa atual', async () => {
+  const f = await leituraFixture(); const old = f.carregar({}); const latest = f.carregar({});
+  f.finish(1, 403, []); await latest; f.finish(0, 200, [{ id: 'protected' }]); await old;
+  assert.equal(f.state.situacao, 'negado'); assert.equal(f.state.itens.length, 0);
+});
+
+test('05Y catálogo: erro antigo não encerra loading atual e cleanup invalida pendências', async () => {
+  const f = await leituraFixture(); const old = f.carregar({}); const latest = f.carregar({});
+  f.fail(0); await old; assert.equal(f.state.carregando, true); assert.equal(f.state.situacao, 'vazio');
+  f.context.leituraAtual.current++; f.finish(1, 200, [{ id: 'unmounted' }]); await latest;
+  assert.equal(f.state.itens.length, 0);
+  const source = await read('src/app/admin/ti/IntegrationsClient.tsx');
+  assert.match(source, /return \(\) => \{ leituraAtual.current\+\+; \}/);
+});

@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 // EXT-14 / F10 — gate focal autoauditável da inteligência comercial.
-// PostgreSQL 17 descartável, ledger 001–166, servidor HTTP real e sessões
+// PostgreSQL 17 descartável, ledger 001–183, servidor HTTP real e sessões
 // staff reais. Não usa banco remoto e não cria sugestão por SQL de negócio.
 
-import EmbeddedPostgres from "embedded-postgres";
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { releaseSignalHandlers } from './qa-generated-files-guard.mjs';
 import { snapshotGeneratedFiles, restoreGeneratedFiles } from "./qa-generated-files.mjs";
 
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === "1") {
@@ -18,6 +18,26 @@ if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.en
 }
 
 const root = path.resolve(import.meta.dirname, "..");
+// Grupo 05F: mesmas jornadas/TAP; contenção POSIX antes de importar a biblioteca.
+const supervised = process.env.QA_PG_SUPERVISED === '1' && !!process.send;
+if (process.platform !== 'win32' && !supervised) {
+  releaseSignalHandlers();
+  const { superviseLocalPg, PG_PHASE_LIMITS } = await import('./lib/qa-pg-supervisor.mjs');
+  const generatedSnapshot = await snapshotGeneratedFiles();
+  let result;
+  try {
+    result = await superviseLocalPg({ entry: path.resolve(import.meta.filename),
+      args: process.argv.slice(2), limits: { ...PG_PHASE_LIMITS, migrate: 90_000, test: 300_000 } });
+  } finally {
+    await restoreGeneratedFiles(generatedSnapshot);
+    console.log('QA_EXT14_GENERATED_FILES_RESTORED: true');
+  }
+  if (result.cleaned) console.log('QA_EXT14_PG_TEMP_CLEANED: true');
+  process.exit(result.code);
+}
+const { default: EmbeddedPostgres } = await import('embedded-postgres');
+const phase = name => { if (supervised) process.send({ type: 'phase', name }); };
+
 const freePort = () => new Promise((resolve, reject) => {
   const probe = createServer();
   probe.once("error", reject);
@@ -55,7 +75,8 @@ const auditTap = (output) => {
 };
 
 const port = await freePort();
-const directory = await mkdtemp(path.join(tmpdir(), "seg-qa-ext14-pg-"));
+const directory = supervised ? process.env.QA_PG_DIRECTORY : await mkdtemp(path.join(tmpdir(), "seg-qa-ext14-pg-"));
+if (!directory) throw new Error('qa_pg_sandbox_missing');
 const password = randomBytes(24).toString("hex");
 const postgres = new EmbeddedPostgres({
   databaseDir: path.join(directory, "data"),
@@ -74,13 +95,20 @@ try {
   // tsconfig.json. Sem restore, este gate deixava a árvore suja e a guarda E2
   // falhava na execução seguinte (falso vermelho de CI).
   generatedSnapshot = await snapshotGeneratedFiles();
+  phase('initialise');
   await postgres.initialise();
+  phase('start');
   await postgres.start();
   const database = "seg_qa_ext14";
-  await postgres.createDatabase(database);
+  phase('create');
+  if (supervised) {
+    const { createLocalQaDatabase } = await import('./lib/qa-pg-supervisor.mjs');
+    await createLocalQaDatabase({ port, user: 'seg_qa', password, database });
+  } else { await postgres.createDatabase(database); }
   const url = `postgresql://seg_qa:${password}@127.0.0.1:${port}/${database}`;
   console.log(`QA_PG_READY: PostgreSQL 17 descartável em 127.0.0.1:${port}/${database}; segredo omitido.`);
 
+  phase('migrate');
   const migrated = await run(process.execPath, ["scripts/migrate-site-visual.mjs"], {
     DATABASE_MIGRATION_URL: url,
     DATABASE_URL: "",
@@ -88,6 +116,7 @@ try {
   });
   if (migrated.code !== 0) throw new Error(`migrations_failed_exit_${migrated.code}`);
 
+  phase('test');
   const executed = await run(process.execPath, ["--test", "--test-concurrency=1", "tests/ext14-intel.integration.test.mjs"], {
     RUN_DATABASE_INTEGRATION: "1",
     QA_EXT14_REQUIRE_DB: "1",
@@ -117,12 +146,21 @@ try {
   exitCode = 1;
 } finally {
   try {
-    await postgres.stop().catch(() => {});
-    await rm(directory, { recursive: true, force: true }).catch(() => {});
-    console.log("QA_EXT14_PG_TEMP_CLEANED: true");
+    phase('stop');
+    if (supervised) {
+      try { await postgres.stop(); } catch { exitCode = 1; console.error('QA_PG_STOP_FAILED: stop rejected'); }
+    } else {
+      await postgres.stop().catch(() => {});
+      await rm(directory, { recursive: true, force: true }).catch(() => {});
+      console.log('QA_EXT14_PG_TEMP_CLEANED: true');
+    }
   } finally {
     await restoreGeneratedFiles(generatedSnapshot);
     console.log("QA_EXT14_GENERATED_FILES_RESTORED: true");
   }
+}
+if (supervised) {
+  phase('done');
+  await new Promise(resolve => process.send({ type: 'complete', code: exitCode }, resolve));
 }
 process.exit(exitCode);

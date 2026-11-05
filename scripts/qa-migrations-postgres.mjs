@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 // PLT-MIG-001: somente um cluster PostgreSQL descartável em loopback, criado aqui.
 // Nunca usa a URL de banco que veio do operador. Falhas propagam exit != 0.
-import EmbeddedPostgres from 'embedded-postgres';
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -10,15 +9,27 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import pg from 'pg';
 import { readdirSync } from 'node:fs';
-import './qa-generated-files-guard.mjs';
+import { releaseSignalHandlers } from './qa-generated-files-guard.mjs';
 // Derivado do disco: nunca mais fica defasado quando uma migração é adicionada.
 const EXPECTED_MIGRATIONS = readdirSync(new URL('../db/migrations/', import.meta.url))
   .filter(f => /^\d{3}-.*\.sql$/.test(f)).length;
 
-if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.ALLOW_REMOTE_MIGRATIONS === 'true') {
+if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.ALLOW_REMOTE_MIGRATIONS === 'true' || process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') {
   console.error('QA_MIGRATIONS_REFUSED: unset database URLs and remote migrations before using this local-only runner.');
   process.exit(2);
 }
+
+// Grupo 05G: preserva provas do gate, com contenção POSIX antes da biblioteca.
+const supervised = process.env.QA_PG_SUPERVISED === '1' && !!process.send;
+if (process.platform !== 'win32' && !supervised) {
+  releaseSignalHandlers();
+  const { superviseLocalPg, PG_PHASE_LIMITS } = await import('./lib/qa-pg-supervisor.mjs');
+  const result = await superviseLocalPg({ entry: path.resolve(import.meta.filename),
+    args: process.argv.slice(2), limits: { ...PG_PHASE_LIMITS, migrate: 90_000, test: 180_000 } });
+  process.exit(result.code);
+}
+const { default: EmbeddedPostgres } = await import('embedded-postgres');
+const phase = name => { if (supervised) process.send({ type: 'phase', name }); };
 
 function freeLoopbackPort() {
   return new Promise((resolve, reject) => {
@@ -32,7 +43,8 @@ function freeLoopbackPort() {
 }
 
 const port = await freeLoopbackPort();
-const directory = await mkdtemp(path.join(tmpdir(), 'seg-qa-migrations-pg-'));
+const directory = supervised ? process.env.QA_PG_DIRECTORY : await mkdtemp(path.join(tmpdir(), 'seg-qa-migrations-pg-'));
+if (!directory) throw new Error('qa_pg_sandbox_missing');
 const password = randomBytes(24).toString('hex');
 const database = 'seg_qa_migrations';
 const connectionString = `postgresql://seg_qa:${password}@127.0.0.1:${port}/${database}`;
@@ -42,6 +54,16 @@ const postgres = new EmbeddedPostgres({
   onLog: () => {},
   onError: error => console.error('QA_PG_ENGINE_ERROR', String(error).replaceAll(password, '[redacted]').slice(0, 300)),
 });
+
+let qaDatabaseError = false;
+const qaSqlLimits = supervised ? {
+  connectionTimeoutMillis: 10_000, query_timeout: 30_000, statement_timeout: 30_000,
+} : {};
+function createQaPool(url) {
+  const client = new pg.Pool({ connectionString: url, max: 1, ...qaSqlLimits });
+  if (supervised) client.on('error', () => { qaDatabaseError = true; });
+  return client;
+}
 
 async function runMigrator(pass, targetUrl = connectionString) {
   console.log(`QA_MIGRATIONS_PASS_${pass}: starting on disposable ${new URL(targetUrl).pathname.slice(1)}`);
@@ -63,7 +85,9 @@ async function runMigrator(pass, targetUrl = connectionString) {
 // Ensaio de reversão apenas em cópia do próprio banco QA efêmero. TEMPLATE
 // clona dentro do cluster, NÃO é pg_dump/pg_restore nem comprova RPO/RTO.
 async function verifyIsolatedCloneRestore() {
-  const admin = postgres.getPgClient('postgres', '127.0.0.1');
+  const admin = supervised ? new pg.Client({ host: '127.0.0.1', port, user: 'seg_qa', password,
+    database: 'postgres', ...qaSqlLimits }) : postgres.getPgClient('postgres', '127.0.0.1');
+  if (supervised) admin.on('error', () => { qaDatabaseError = true; });
   const cloneName = 'seg_qa_clone'; // constante; cluster foi criado nesta execução
   const cloneUrl = connectionString.replace(`/${database}`, `/${cloneName}`);
   let clone;
@@ -72,7 +96,7 @@ async function verifyIsolatedCloneRestore() {
     await admin.connect();
     adminConnected = true;
     await admin.query(`CREATE DATABASE ${cloneName} TEMPLATE ${database}`);
-    clone = new pg.Pool({ connectionString: cloneUrl, max: 1 });
+    clone = createQaPool(cloneUrl);
     const { rows: ledgerBefore } = await clone.query('SELECT filename, checksum FROM __migrations ORDER BY filename');
     const tableCount = await clone.query("SELECT count(*)::int AS count FROM pg_tables WHERE schemaname='public'");
     if (ledgerBefore.length !== EXPECTED_MIGRATIONS) throw new Error("qa_clone_incomplete_ledger");
@@ -90,7 +114,7 @@ async function verifyIsolatedCloneRestore() {
     await clone.end(); clone = undefined;
     await admin.query(`DROP DATABASE ${cloneName}`); // somente clone fechado desta execução
     await admin.query(`CREATE DATABASE ${cloneName} TEMPLATE ${database}`);
-    clone = new pg.Pool({ connectionString: cloneUrl, max: 1 });
+    clone = createQaPool(cloneUrl);
     const { rows: ledgerAfter } = await clone.query('SELECT filename, checksum FROM __migrations ORDER BY filename');
     const { rows: [restored] } = await clone.query(`SELECT
       (SELECT count(*)::int FROM data_retention_policies_legacy) AS legacy_count,
@@ -103,19 +127,27 @@ async function verifyIsolatedCloneRestore() {
     console.log(`QA_CLONE_RESTORE: ${EXPECTED_MIGRATIONS}/${EXPECTED_MIGRATIONS} checksums preserved; legacy 2->3; synthetic mutation 1->0; tables ${restored.table_count}; TEMPLATE only`);
   } finally {
     await clone?.end();
-    if (adminConnected) await admin.end();
+    if (supervised || adminConnected) await admin.end();
   }
 }
 
 let result = 1;
 let pool;
 try {
+  phase('initialise');
   await postgres.initialise();
+  phase('start');
   await postgres.start();
-  await postgres.createDatabase(database);
+  phase('create');
+  if (supervised) {
+    const { createLocalQaDatabase } = await import('./lib/qa-pg-supervisor.mjs');
+    await createLocalQaDatabase({ port, user: 'seg_qa', password, database });
+  } else { await postgres.createDatabase(database); }
   console.log(`QA_PG_READY: 127.0.0.1:${port}/${database}; senha omitida; sem banco preexistente.`);
-  pool = new pg.Pool({ connectionString, max: 1 });
+  pool = createQaPool(connectionString);
+  phase('migrate');
   const firstExit = await runMigrator(1);
+  phase('test');
   const { rows: first } = await pool.query('SELECT count(*)::int AS count FROM __migrations WHERE checksum IS NOT NULL');
   console.log(`QA_MIGRATIONS_FIRST_EXIT=${firstExit} CHECKSUMMED=${first[0].count}/${EXPECTED_MIGRATIONS}`);
   if (first[0].count >= 49) {
@@ -183,13 +215,21 @@ try {
   console.error('QA_MIGRATIONS_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 400));
   result = 1;
 } finally {
+  phase('stop');
   try { await pool?.end(); } catch { result = 1; }
   try { await postgres.stop(); } catch (error) {
     console.error('QA_PG_STOP_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 300));
     result = 1;
   }
-  await rm(directory, { recursive: true, force: true }); // somente o mkdtemp desta execução
-  console.log('QA_PG_TEMP_CLEANED: true');
+  if (!supervised) {
+    await rm(directory, { recursive: true, force: true }); // somente o mkdtemp desta execução
+    console.log('QA_PG_TEMP_CLEANED: true');
+  }
 }
 // embedded-postgres registra async-exit-hook: process.exitCode isolado pode virar 0.
+if (qaDatabaseError) result = 1;
+if (supervised) {
+  phase('done');
+  await new Promise(resolve => process.send({ type: 'complete', code: result }, resolve));
+}
 process.exit(result);

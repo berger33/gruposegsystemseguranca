@@ -1,0 +1,58 @@
+name: L02 L03 disposable delivery
+# Arquivos privados/caixa local e portal do funcionário sintéticos. Sem SMTP real.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/server/**'
+      - 'src/lib/**'
+      - 'src/components/**'
+      - 'src/app/admin/funcionarios/**'
+      - 'src/app/funcionario/**'
+      - 'server.mjs'
+      - 'next.config.*'
+      - 'tests/l02-delivery.integration.test.mjs'
+      - 'tests/l03-delivery.integration.test.mjs'
+      - 'tests/l03-security.test.mjs'
+      - 'tests/helpers/staff-login.mjs'
+      - 'scripts/qa-l02-delivery-postgres.mjs'
+      - 'scripts/qa-l03-delivery-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/l02-l03-delivery.yml'
+concurrency:
+  group: l02-l03-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash scripts/ci/observed-shell.sh {0}
+jobs:
+  l02-l03-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Guardas de segurança do funcionário e supervisor
+        run: node --test tests/l03-security.test.mjs tests/qa-pg-supervisor.test.mjs
+      - name: Arquivos privados, fila e caixa local sem SMTP
+        run: npm run test:l02-delivery:pg
+      - name: Duas identidades de funcionário e Chromium real
+        run: npm run test:l03-delivery:pg

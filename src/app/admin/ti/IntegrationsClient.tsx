@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ERROS,
   LIMITES,
@@ -47,11 +47,14 @@ export default function IntegrationsClient() {
   const [nomes, setNomes] = useState<Record<string, string>>({});
   const [errosForm, setErrosForm] = useState<Record<string, string>>({});
 
+  const leituraAtual = useRef(0);
   const carregar = useCallback(async (filtroAtual: Filtros) => {
+    const consulta = ++leituraAtual.current;
     setCarregando(true);
     try {
       const resposta = await fetch(`/api/admin/integrations${queryDoFiltro(filtroAtual)}`, { cache: "no-store" });
       const corpo = await resposta.json().catch(() => null);
+      if (consulta !== leituraAtual.current) return;
       const resultadoLista = classificarLista(resposta.status, corpo);
       setSituacao(resultadoLista.situacao);
       setItens(resultadoLista.itens);
@@ -59,15 +62,16 @@ export default function IntegrationsClient() {
       const papelDoServidor = (corpo as { role?: unknown } | null)?.role;
       if (typeof papelDoServidor === "string") setPapel(papelDoServidor);
     } catch {
+      if (consulta !== leituraAtual.current) return;
       setSituacao("falha");
       setItens([]);
       setMensagemLista("Falha de rede ao ler o catálogo. Nada foi confirmado.");
     } finally {
-      setCarregando(false);
+      if (consulta === leituraAtual.current) setCarregando(false);
     }
   }, []);
 
-  useEffect(() => { void carregar(FILTRO_INICIAL); }, [carregar]);
+  useEffect(() => { void carregar(FILTRO_INICIAL); return () => { leituraAtual.current++; }; }, [carregar]);
 
   async function aplicarFiltro(novos: Filtros) {
     const { ok, erros } = validarFiltros(novos);

@@ -9,6 +9,9 @@ on:
       - 'tests/admin-entry*'
       - 'tests/helpers/staff-login.mjs'
       - 'scripts/qa-admin-entry-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
       - 'scripts/migrate-site-visual.mjs'
       - 'db/migrations/**'
       - 'package*.json'
@@ -18,6 +21,9 @@ concurrency:
   cancel-in-progress: false
 permissions:
   contents: read
+defaults:
+  run:
+    shell: bash scripts/ci/observed-shell.sh {0}
 jobs:
   admin-entry-postgres-browser:
     runs-on: ubuntu-latest

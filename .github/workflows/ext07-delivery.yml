@@ -3,6 +3,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'scripts/qa-migrations-postgres.mjs'
       - 'db/migrations/153-ext07-compliance-journey.sql'
       - 'db/migrations/154-ext07-compliance-hardening.sql'
       - 'db/migrations/155-ext07-compliance-hardening.sql'
@@ -16,6 +17,9 @@ on:
       - 'tests/ext07-*.test.mjs'
       - 'tests/ext-compliance-scheduler.test.mjs'
       - 'scripts/qa-ext07-compliance-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
       - 'scripts/migrate-site-visual.mjs'
       - 'scripts/qa-wave0-static.mjs'
       - 'package*.json'
@@ -25,6 +29,9 @@ concurrency:
   cancel-in-progress: false
 permissions:
   contents: read
+defaults:
+  run:
+    shell: bash scripts/ci/observed-shell.sh {0}
 jobs:
   compliance-postgres:
     runs-on: ubuntu-latest
@@ -42,7 +49,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: node --test tests/ext07-compliance.test.mjs tests/ext-compliance-scheduler.test.mjs
-      - name: Ledger de migrações 001-156 em PostgreSQL descartável
+      - name: Ledger de migrações 001-183 em PostgreSQL descartável
         run: npm run test:migrations:pg
       - name: Jornada EXT-07 (compliance) por HTTP real contra PostgreSQL real
         run: npm run test:ext07-compliance:pg

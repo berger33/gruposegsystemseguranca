@@ -75,7 +75,7 @@ test('PLT: o runner protege os arquivos gerados (E19) e recusa banco do operador
     const source = await readFile(path.join(root, gate.runner), 'utf8');
     // PLT-01 usa aspas duplas, PLT-06/PLT-12 usam simples: o estilo é incidental,
     // o invariante é importar a guarda síncrona (E19) antes de subir o servidor.
-    assert.match(source, /import\s+['"]\.\/qa-generated-files-guard\.mjs['"]/,
+    assert.match(source, /import\s+(?:\{\s*releaseSignalHandlers\s*\}\s+from\s+)?['"]\.\/qa-generated-files-guard\.mjs['"]/,
       `${gate.id}: o runner precisa importar a guarda síncrona de arquivos gerados (E19)`);
     assert.match(source, /QA_PG_REFUSED/,
       `${gate.id}: o runner precisa recusar execução com DATABASE_URL definida`);

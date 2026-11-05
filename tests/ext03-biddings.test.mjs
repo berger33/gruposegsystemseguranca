@@ -1000,3 +1000,119 @@ test("EXT-03: leitura do dossiê de edital inexistente devolve 404", async () =>
   assert.equal(res.status, 404);
   assert.equal(res.payload.error, "bidding_not_found");
 });
+
+// Regressão do boot de QA; sem banco, Next ou provedor externo nestes cenários.
+async function startupFixture(t, script) {
+  const { spawn } = await import('node:child_process');
+  const { observeServerStartup, stopTestServer } = await import('./helpers/server-startup.mjs');
+  const child = spawn(process.execPath, ['-e', script], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const monitor = observeServerStartup(child);
+  t.after(() => stopTestServer(child, monitor, { graceMs: 500 }));
+  return { child, monitor };
+}
+
+test('boot QA: saída precoce falha rápido e não divulga texto arbitrário do filho', async t => {
+  const { waitForTestServer } = await import('./helpers/server-startup.mjs');
+  const { monitor } = await startupFixture(t, String.raw`process.stderr.write('password=synthetic-do-not-print\nEADDRINUSE\n'); process.exitCode=7;`);
+  const began = performance.now();
+  await assert.rejects(waitForTestServer('http://127.0.0.1:1', monitor, { timeoutMs: 5000, intervalMs: 10 }), error => {
+    assert.equal(error.code, 'server_startup_exited');
+    assert.match(error.message, /address-in-use/);
+    assert.match(error.message, /"exit_code":7/);
+    assert.doesNotMatch(error.message, /synthetic-do-not-print|password=/);
+    return true;
+  });
+  assert.ok(performance.now() - began < 4000, 'não esperar o prazo total após saída');
+});
+
+test('boot QA: lock Next é reconhecido entre chunks e a cauda não retém segredos', async () => {
+  const { EventEmitter } = await import('node:events');
+  const { observeServerStartup } = await import('./helpers/server-startup.mjs');
+  const child = new EventEmitter();
+  child.stdout = new EventEmitter(); child.stderr = new EventEmitter();
+  child.exitCode = null; child.signalCode = null;
+  const monitor = observeServerStartup(child);
+  try {
+    child.stderr.emit('data', Buffer.from('cookie=synthetic; Bearer synthetic; smtp://x:synthetic@invalid\nAnother next '));
+    child.stderr.emit('data', Buffer.from('dev server is already running in this directory.\n'));
+    for (let i = 0; i < 100; i++) child.stderr.emit('data', Buffer.from(i % 2 ? 'ENOENT\n' : 'EADDRINUSE\n'));
+    const snapshot = monitor.snapshot();
+    assert.ok(snapshot.tail.length <= 16);
+    assert.doesNotMatch(JSON.stringify(snapshot), /synthetic|cookie|Bearer|smtp:\/\//);
+    child.stderr.emit('data', Buffer.from('Another \u001b[36mnext dev\u001b[0m server is already running.'));
+    assert.ok(monitor.snapshot().tail.some(item => item.category === 'next-lock'));
+    child.emit('exit', 1, null);
+    await monitor.stopped;
+    assert.equal(monitor.snapshot().exit_code, 1);
+  } finally { monitor.dispose(); }
+  assert.equal(child.stderr.listenerCount('data'), 0);
+  assert.equal(child.listenerCount('error'), 0);
+});
+
+test('boot QA: erro de spawn é capturado sem uncaughtException nem mensagem sensível', async t => {
+  const { spawn } = await import('node:child_process');
+  const { observeServerStartup, waitForTestServer, stopTestServer } = await import('./helpers/server-startup.mjs');
+  const child = spawn('/missing-synthetic-qa-command', [], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const monitor = observeServerStartup(child);
+  t.after(() => stopTestServer(child, monitor));
+  await assert.rejects(waitForTestServer('http://127.0.0.1:1', monitor), error => {
+    assert.equal(error.code, 'server_startup_exited');
+    assert.match(error.message, /"spawn_failed":true/);
+    assert.doesNotMatch(error.message, /missing-synthetic/);
+    return true;
+  });
+});
+
+async function startupHttpServer(t, handler) {
+  const { createServer } = await import('node:http');
+  const server = createServer(handler);
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(async () => {
+    server.closeAllConnections();
+    await new Promise(resolve => server.close(resolve));
+  });
+  return `http://127.0.0.1:${server.address().port}`;
+}
+
+test('boot QA: mantém prontidão 401/200, recusa 500 e limita fetch que nunca responde', async t => {
+  const { waitForTestServer } = await import('./helpers/server-startup.mjs');
+  const { monitor } = await startupFixture(t, 'setInterval(()=>{},1000)');
+  let mode = 401;
+  const url = await startupHttpServer(t, (_req, res) => { if (mode !== 'hang') { res.writeHead(mode); res.end('synthetic'); } });
+  for (mode of [401, 200]) await waitForTestServer(url, monitor, { timeoutMs: 1000, intervalMs: 5 });
+  for (mode of [500, 'hang']) {
+    const began = performance.now();
+    await assert.rejects(waitForTestServer(url, monitor, { timeoutMs: 120, requestMs: 30, intervalMs: 5 }), { code: 'server_startup_timeout' });
+    assert.ok(performance.now() - began < 2000, 'fetch pendurado não pode vencer o prazo global');
+  }
+});
+
+test('boot QA: término com SIGTERM é aguardado antes de encerrar a limpeza', async t => {
+  const { stopTestServer } = await import('./helpers/server-startup.mjs');
+  const { child, monitor } = await startupFixture(t, 'setInterval(()=>{},1000)');
+  await stopTestServer(child, monitor, { graceMs: 500 });
+  assert.equal(monitor.ended, true);
+  assert.notEqual(child.signalCode, null);
+});
+
+test('boot QA: processo que ignora SIGTERM recebe SIGKILL mesmo com child.killed=true', { skip: process.platform === 'win32' ? 'Sem semântica POSIX de sinais no Windows; não é validação Windows' : false }, async t => {
+  const { stopTestServer } = await import('./helpers/server-startup.mjs');
+  const { child, monitor } = await startupFixture(t, `process.on('SIGTERM',()=>{}); process.stdout.write('armed'); setInterval(()=>{},1000);`);
+  await new Promise(resolve => child.stdout.once('data', resolve));
+  await stopTestServer(child, monitor, { graceMs: 50 });
+  assert.equal(child.killed, true);
+  assert.equal(child.signalCode, 'SIGKILL');
+  assert.equal(monitor.ended, true);
+});
+
+test('boot QA: integração usa distDir exclusivo e workflow acompanha o helper', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const integration = await readFile(new URL('./ext03-biddings.integration.test.mjs', import.meta.url), 'utf8');
+  const workflow = await readFile(new URL('../.github/workflows/ext03-delivery.yml', import.meta.url), 'utf8');
+  assert.match(integration, /mkdtemp\(path.join\(root, '\.next-qa-ext03-'\)\)/);
+  assert.match(integration, /NEXT_DIST_DIR: path.relative\(root, nextDirectory\)/);
+  assert.match(integration, /rm\(nextDirectory, \{ recursive: true, force: true \}\)/);
+  assert.match(integration, /await stopTestServer\(server, startup\)/);
+  assert.doesNotMatch(integration, /Math\.random\(\).*timeout|timeoutMs = 120_000/);
+  assert.match(workflow, /tests\/helpers\/server-startup.mjs/);
+});

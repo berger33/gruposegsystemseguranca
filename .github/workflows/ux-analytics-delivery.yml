@@ -17,6 +17,10 @@ on:
       - 'tests/ux-analytics-vocabulary.test.mjs'
       - 'tests/ux-analytics-workspace.integration.test.mjs'
       - 'scripts/qa-ux-analytics-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
+      - 'scripts/migrate-site-visual.mjs'
       - 'scripts/ux-evidence-capture.mjs'
       - 'package.json'
       - 'package-lock.json'
@@ -26,6 +30,9 @@ concurrency:
   cancel-in-progress: false
 permissions:
   contents: read
+defaults:
+  run:
+    shell: bash scripts/ci/observed-shell.sh {0}
 jobs:
   ux-analytics-postgres-browser:
     runs-on: ubuntu-latest
@@ -36,6 +43,8 @@ jobs:
       DATABASE_URL: ''
       DATABASE_MIGRATION_URL: ''
       RUN_DATABASE_INTEGRATION_REMOTE: ''
+      ALLOW_REMOTE_MIGRATIONS: ''
+      UX_ANALYTICS_TEST_PATTERN: ''
       MAIL_HOST: ''
       OLLAMA_ENABLED: 'false'
       NEXT_TELEMETRY_DISABLED: '1'
@@ -46,6 +55,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - run: node --test tests/qa-pg-supervisor.test.mjs
       - run: npm run typecheck
       - run: node --test tests/ux-analytics-vocabulary.test.mjs
       - run: node --test tests/ext11-analytics.test.mjs

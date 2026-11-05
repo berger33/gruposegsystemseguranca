@@ -1,0 +1,73 @@
+# Plano de execução em fatias — fechamento técnico para produção
+
+Base: auditoria de 04/11/2026, commit 0e6456e9d01b825a3bff4997f92506ac4ff1c633.
+Estado atualizado: fatias 01–04 implementadas e validadas localmente em 04/11/2026 (fatia 04: piloto POSIX, Windows preservado sem nova validação); fatia 05 em execução, grupos 05A–05X concluídos (cinquenta e quatro runners adicionais; total 55/68 em POSIX, 13 pendentes), demais fatias pendentes. Evidências em FATIA-01.md a FATIA-04.md e FATIA-05A.md a FATIA-05X.md.
+
+## Regras de execução
+
+- Preservar funcionalidades, papéis, aliases, dados e contratos existentes.
+- Uma entrega pequena por fatia, com evidência antes/depois, regressão proporcional e pendências residuais explícitas. As famílias extensas serão divididas por tela/handler.
+- Não promover inventário textual a aceite, não afrouxar testes para obter verde e não declarar integração real com mocks.
+- Trabalho local/sintético é autorizado por este plano de execução; envio externo, contratação, publicação, migração no destino e restore de dados reais exigem autorização específica e acesso apropriado.
+- Ao descobrir decisão de negócio necessária, isolar somente a parte bloqueada e continuar o trabalho independente.
+
+## Fila A — execução técnica sem decisão prévia de negócio
+
+| Ordem | Fatia | Escopo concreto | Critério de saída |
+|---|---|---|---|
+| 01 | Status e guarda N1 | Reconciliar base/branch e tornar a validação compatível com a fotografia auditada e o ciclo de merge, preservando detecção de base inválida. | Casos positivos e negativos, histórico rastreável e suíte principal verde sem ignorar a guarda. |
+| 02 | Runbook e contrato de ambiente | Conferir env por env contra runtime, corrigir SMTP/Ollama/chaves/comandos e checklist; nenhum valor real versionado. | Documentação executável em teste, nomes corretos e distinção entre requisito obrigatório e recurso opcional. |
+| 03 | Diagnóstico de inicialização EXT-03 | Guardar cauda limitada e sanitizada de stdout/stderr, capturar saída precoce do filho e investigar falha antes de mudar prazo. | Erro informativo sem segredo; repetição isolada e sob carga com resultados registrados. |
+| 04 | Ciclo de vida PostgreSQL de QA — piloto | Reproduzir cluster que não inicia/morre antes de stop; implementar prazo e limpeza segura em utilitário compatível e um runner piloto. | Falha rápida com exit não zero e ausência de órfãos; timeout não pode virar sucesso. |
+| 05 | Ciclo de vida PostgreSQL — adoção | Migrar runners em grupos pequenos, mantendo particularidades e guardas local-only; tratar limpeza e falhas de spawn. | Regressão por grupo, testes negativos e rastreio dos runners ainda não migrados. |
+| 06 | CI e equivalência de cobertura | Mapear scripts→arquivos→cenários→workflows; ligar só jornadas realmente órfãs, adicionar limites proporcionais e diagnóstico sempre que aplicável. | Mapa reproduzível; nenhum skip silencioso nem teste obrigatório removido; não confundir ausência literal com orfandade. |
+| 07 | Transporte da fila administrativa | Conectar configuração MAIL_* já existente à fila, com transporte injetável e captura local, sem envio externo. | Testes de envio capturado, configuração ausente/inválida, retry, falha e prevenção de reenvio indevido; não afetar lead/portal. |
+| 08 | Testes de segurança por escopo existente | Catalogar handlers/downloads e ampliar negativos A/B, sessões revogadas, 401/403, conta/unidade/contrato. Não inventar nova matriz CLI-02. | Matriz de cobertura ligada a testes; defeitos reproduzidos corrigidos preservando regra vigente; decisões separadas. |
+| 09 | Ciclo staff→cliente | Exercitar criar/revisar/aprovar/publicar/ler/revogar nos recursos CLI-05…08 e corrigir lacunas demonstradas no contrato vigente. | Fluxo completo com cliente correto e indevido, banco e UI; sem declarar aceite humano. |
+| 10 | Portal: estados e teclado | Subfatias por página, incluindo assistente/continuidade/segurança/portal; testar falha, vazio, negativa, releitura e teclado. | Evidência de navegador por página, sem apagar dados válidos na falha transitória nem mantê-los após negativa de autorização. |
+| 11 | CRM/comercial/contratos | Subfatias por superfície: CRM, comercial, carteira, expansão e contratos; tratar somente lacunas reproduzidas. | Estados reais de rede e navegação registrados, ações/contratos preservados. |
+| 12 | Financeiro/administrativo | Estados, foco, datas, repetição e acessibilidade sob regras já aprovadas; não ampliar C11. | Jornadas atuais preservadas e evidências por tela/papel. |
+| 13 | RH e funcionário | Subfatias: solicitações/documentos, ponto/comprovante, comunicados/escala/cursos; simular rede e geolocalização de modo controlado. | Hash/comprovante e estados testados no contrato atual; sem afirmar HERE/dispositivo/eSocial real nem abrir borda RH. |
+| 14 | Acessibilidade técnica | Foco, nomes acessíveis, formulários, teclado, zoom, responsividade e contraste mensurável; fundos complexos exigem revisão contextual. | Defeitos corrigidos com testes/capturas; checklist explícito do que ainda exige leitor de tela/UAT. |
+| 15 | RAG independente de fornecedor | Testar isolamento de fontes por perfil, permissão, indisponibilidade, timeout e fallback; corrigir defeitos do caminho existente. | Cenários dos cinco perfis com provedor controlado, sem declarar qualidade ou entrega de modelo real. |
+| 16 | Reauditoria técnica das 14 famílias/222 IDs | Trabalhar em lotes por família após gates confiáveis; verificar implementação, teste e lacuna real de cada ID. Criar gates faltantes quando houver contrato definido. | Evidência atual por ID; classes distintas: implementado/testado/bloqueado/aceite pendente. Ausência de gate não é automaticamente ausência de código. |
+| 17 | Pré-validação operacional | Implementar/reforçar verificação de configuração, compatibilidade de migrações, diretórios privados, segredos presentes e healthchecks, sem exibir valores. | Modo somente leitura; mensagens acionáveis; não alterar destino nem substituir teste de restore. |
+| 18 | Ensaio de recuperação sintética | Verificar possibilidade de disponibilizar pg_dump/pg_restore 17 no ambiente permitido; executar variantes existentes de DB+arquivos+assinatura/inventário e corrigir defeitos reproduzidos. | Restore sintético comprovado ou impedimento técnico registrado. Não instalar versão incompatível para obter verde; não é executor de produção. |
+| 19 | Distribuição e rotas | Reforçar avisos/versionamento/manifests e regressão de paridade borda/dispatcher; preservar pacotes e aliases existentes. | Artefatos identificáveis e rotas verificadas. Remoção de pacotes/mudança de política de releases fica para decisão. Não fazer refatoração ampla do monólito. |
+| 20 | Fechamento técnico | Rodar bateria consolidada, revisar regressões e publicar quadro final de pendências por responsável. | Nenhum vermelho omitido, evidência reproduzível, distinção clara entre pronto técnico e produção autorizada. |
+
+Dependências principais: 01–03 primeiro; 04 antes de 05; 06 incorpora 05; 07 e 08 podem avançar independentemente; 09 depende dos contratos vigentes de 08; 10–14 em subfatias; 16 consolida 08–15; 20 é final. A fatia 18 pode ficar bloqueada pela disponibilidade das ferramentas no ambiente, sem bloquear o resto.
+
+## Fila B — posso desenvolver, mas preciso primeiro de decisão delimitada
+
+| Item | Parte técnica que posso executar | Decisão/acesso necessário |
+|---|---|---|
+| Backup de produção | Executor, consistência DB+arquivos, criptografia, catálogo, verificação, agendamento e restore seguro, em subfatias após desenho aprovado. | Quem opera; escopo/bytes; destino e credenciais por canal seguro; custódia/KMS; retenção; RPO/RTO; autorização para execução/restore real. API permanece fail-closed até cumprir gates. |
+| CLI-02 | Aplicar e testar matriz papel×ação×escopo aprovada, sem ampliar permissões implícitas. | Regras de negócio aprovadas para papéis/conta/unidade/contrato. |
+| Fiscal/pagamento/WhatsApp/eSocial/CFTV/biometria e EXT-16/17 | Adaptadores e testes de sandbox com idempotência, validação de retorno e observabilidade. | Escopo, fornecedor/API/contrato, base legal e autorização de testes externos. |
+| IA real | Conectar/validar o provedor aprovado, recursos e comportamento no ambiente alvo. | Modelo/provedor, máquina/recursos, disponibilidade e critérios de qualidade do negócio. Não declarar todos os AI-01…10 encerrados pelo simples uso de mocks. |
+| Academia | SSO ou contas próprias, persistência, integração com sistema e mídia em fatias compatíveis. | Modelo de autenticação; liberação do módulo; públicos/papel supervisor; conteúdo validado; estratégia de mídia e armazenamento. Não publicar uma solução arbitrária. |
+| Retenção/LGPD | Execução controlada e auditada de política aprovada, incluindo exceções e impedimentos. | Base legal, prazos, categorias, responsável e aprovação jurídica; descarte real exige autorização. |
+| D7/C11/legado RH | Implementar apenas alteração delimitada aprovada. | Decisão de escopo. Não reabrir o console esgotado nem ampliar RH/financeiro por iniciativa técnica. |
+| Hospedagem/deploy | Configuração compatível, observabilidade, migração ensaiada e implantação assistida. | Host/domínio, orçamento, acesso seguro, responsável operacional e autorização explícita de publicação. |
+
+## O que continuará realmente com o proprietário e Marcelo
+
+- Decisões de negócio/acesso e responsáveis por área; aprovação da matriz de permissões.
+- Escolha/contratação de serviços e infraestrutura; disponibilização segura de acessos, nunca em chat ou Git.
+- Aprovação de conteúdo, identidade institucional, procedimentos internos e política LGPD, com os profissionais competentes quando necessário.
+- Aprovação de RPO/RTO, retenção, custódia de chaves e responsável por backup.
+- Operação/validação no Windows e dispositivos de campo quando não acessíveis ao agente. Posso preparar roteiros e diagnóstico e corrigir os defeitos encontrados.
+- Aceite humano dos fluxos reais e autorização escrita para produção. Posso preparar e acompanhar UAT, mas não assinar em nome dos usuários.
+
+Fornecedor, limitação de ambiente, revisão especializada ou acesso a hardware podem continuar sendo dependências externas: não devem ser artificialmente atribuídos ao proprietário/Marcelo nem declarados resolvidos por documentação.
+
+## Protocolo de cada entrega
+
+1. Declarar a fatia e critérios; conferir estado atual antes de editar.
+2. Reproduzir/inventariar o que será tocado; preservar o que já funciona.
+3. Implementar e testar positivo/negativo/regressão proporcional.
+4. Informar arquivos, comandos, resultados e resíduo. Atualizar quadro apenas com evidência.
+5. Continuar para a próxima fatia independente; parar somente a parte que precise de decisão explícita.
+
+**Próxima execução recomendada:** fatia 05Y — UX continuidade cliente e portal, preservando gates herdados/estados/permissões e medindo contratos/tempos antes de definir limites, sem confundir adoção com aceite operacional ou fechamento client-security/N8. Registrar e tratar isolamento de gerados antes de afirmar concorrência global de gates no mesmo checkout. A fatia 05 não está encerrada; matriz em ADOCAO-POSTGRES.csv. Este plano organiza e delimita a autorização técnica; não autoriza envio real, gastos, deploy ou alterações destrutivas.

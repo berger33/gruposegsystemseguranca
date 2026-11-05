@@ -4,14 +4,13 @@
 // HTTP + Chromium real. O piso TAP impede que casos sejam removidos/saltados
 // silenciosamente: node:test sair 0 não basta.
 
-import EmbeddedPostgres from 'embedded-postgres';
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import './qa-generated-files-guard.mjs';
+import { releaseSignalHandlers } from './qa-generated-files-guard.mjs';
 
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') {
   console.error('QA_PG_REFUSED: DATABASE_URL, DATABASE_MIGRATION_URL e banco remoto são proibidos neste gate local.');
@@ -19,6 +18,18 @@ if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.en
 }
 
 const root = path.resolve(import.meta.dirname, '..');
+// Grupo 05Y: isolamento de conta e contratos originais sob contenção POSIX.
+const supervised = process.env.QA_PG_SUPERVISED === '1' && !!process.send;
+if (process.platform !== 'win32' && !supervised) {
+  releaseSignalHandlers();
+  const { superviseLocalPg, PG_PHASE_LIMITS } = await import('./lib/qa-pg-supervisor.mjs');
+  const result = await superviseLocalPg({ entry: path.resolve(import.meta.filename),
+    args: process.argv.slice(2), limits: { ...PG_PHASE_LIMITS, migrate: 90_000, test: 900_000 } });
+  process.exit(result.code);
+}
+const { default: EmbeddedPostgres } = await import('embedded-postgres');
+const phase = name => { if (supervised) process.send({ type: 'phase', name }); };
+
 const MINIMO = 10;
 
 function freePort() {
@@ -62,7 +73,8 @@ function auditTap(output) {
 }
 
 const port = await freePort();
-const directory = await mkdtemp(path.join(tmpdir(), 'seg-qa-ux-continuity-client-pg-'));
+const directory = supervised ? process.env.QA_PG_DIRECTORY : await mkdtemp(path.join(tmpdir(), 'seg-qa-ux-continuity-client-pg-'));
+if (!directory) throw new Error('qa_pg_sandbox_missing');
 const password = randomBytes(24).toString('hex');
 const postgres = new EmbeddedPostgres({
   databaseDir: path.join(directory, 'data'),
@@ -77,13 +89,20 @@ const postgres = new EmbeddedPostgres({
 
 let exitCode = 1;
 try {
+  phase('initialise');
   await postgres.initialise();
+  phase('start');
   await postgres.start();
   const database = 'seg_qa_ux_continuity_client';
-  await postgres.createDatabase(database);
+  phase('create');
+  if (supervised) {
+    const { createLocalQaDatabase } = await import('./lib/qa-pg-supervisor.mjs');
+    await createLocalQaDatabase({ port, user: 'seg_qa', password, database });
+  } else { await postgres.createDatabase(database); }
   const url = `postgresql://seg_qa:${password}@127.0.0.1:${port}/${database}`;
   console.log(`QA_PG_READY: PostgreSQL 17 descartável em 127.0.0.1:${port}/${database}; segredo omitido.`);
 
+  phase('migrate');
   const migrated = await run(process.execPath, ['scripts/migrate-site-visual.mjs'], {
     DATABASE_MIGRATION_URL: url,
     DATABASE_URL: '',
@@ -91,6 +110,7 @@ try {
   });
   if (migrated.code !== 0) throw new Error(`migrations_failed_exit_${migrated.code}`);
 
+  phase('test');
   const executed = await run(process.execPath, ['--test', '--test-concurrency=1', 'tests/ux-continuity-client-portal.integration.test.mjs'], {
     RUN_DATABASE_INTEGRATION: '1',
     QA_UX_CONTINUITY_CLIENT_REQUIRE_DB: '1',
@@ -116,9 +136,21 @@ try {
   console.error('QA_PG_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 700));
   exitCode = 1;
 } finally {
-  await postgres.stop().catch(() => {});
-  await rm(directory, { recursive: true, force: true }).catch(() => {});
-  console.log('QA_UX_CONTINUITY_CLIENT_PG_TEMP_CLEANED: true');
+  phase('stop');
+  try { await postgres.stop(); } catch (error) {
+    if (supervised) {
+      console.error('QA_PG_STOP_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 300));
+      exitCode = 1;
+    }
+  }
+  if (!supervised) {
+    await rm(directory, { recursive: true, force: true }).catch(() => {});
+    console.log('QA_UX_CONTINUITY_CLIENT_PG_TEMP_CLEANED: true');
+  }
 }
 
+if (supervised) {
+  phase('done');
+  await new Promise(resolve => process.send({ type: 'complete', code: exitCode }, resolve));
+}
 process.exit(exitCode);

@@ -1,17 +1,48 @@
 name: UX-10 expansao delivery
 on:
   pull_request:
-    paths: ['src/app/admin/expansao/**','src/lib/expansion-*','tests/ux-expansion-*','scripts/qa-ux-expansion-postgres.mjs','scripts/ux-evidence-capture.mjs','package.json']
+    paths:
+      - 'src/app/admin/expansao/**'
+      - 'src/lib/expansion-*'
+      - 'tests/ux-expansion-*'
+      - 'scripts/qa-ux-expansion-postgres.mjs'
+      - 'scripts/ux-evidence-capture.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/server/ext-expansion-api.mjs'
+      - 'server.mjs'
+      - 'tests/ext09-expansion*.test.mjs'
+      - 'scripts/qa-ext09-expansion-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - '.github/workflows/ux-expansion-delivery.yml'
   workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash scripts/ci/observed-shell.sh {0}
 jobs:
   focal:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      ALLOW_REMOTE_MIGRATIONS: ''
+      UX_EXPANSION_TEST_PATTERN: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
+      - run: node --test tests/qa-pg-supervisor.test.mjs
       - run: npm run typecheck
       - run: node --test tests/ux-expansion-vocabulary.test.mjs tests/ext09-expansion.test.mjs
       - run: npm run test:ext09-expansion:pg

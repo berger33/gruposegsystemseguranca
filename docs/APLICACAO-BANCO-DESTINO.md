@@ -1,28 +1,33 @@
-# Aplicação em banco de destino — procedimento do operador (pós PR #119)
+# Aplicação em banco de destino — procedimento do operador
 
-Procedimento para aplicar as migrações **001–156** no banco PostgreSQL de destino e ativar a execução agendada da avaliação temporal do EXT-07, incluindo o acompanhamento inicial do ledger `ext_compliance_evaluation_runs`.
+**Revisão de contrato: 04/11/2026 (fatia 02). Produção NO-GO.** A referência original pós PR #119 é histórica; o procedimento abaixo acompanha o migrador atual. Execução no destino exige autorização, identificação do banco, ensaio de clone e backup prévio recuperável. Este documento não comprova execução real. Ver também [gate de produção](PRODUCAO-GATE.md).
+
+Procedimento para aplicar as migrações **001–183** no banco PostgreSQL de destino e ativar a execução agendada da avaliação temporal do EXT-07, incluindo o acompanhamento inicial do ledger `ext_compliance_evaluation_runs`.
 
 | Item | Valor |
 |---|---|
-| Base de referência | `main` com o merge da PR #119 (`70ee202cb5a2a5aa9849584005a7e9c90261f7e0`) ou posterior |
-| Migrações | 001–156; **nenhuma nova** neste procedimento; próxima livre: 157 |
+| Base de referência | `0e6456e9d01b825a3bff4997f92506ac4ff1c633` (main, merge #348); confirmar revisão aprovada antes de operar |
+| Migrações | 001–183; **nenhuma migração criada** por esta revisão documental; próxima livre: 184 |
 | Decisões do proprietário (2026-10-04) | Intervalo **3600 s** (1 h) e identidade declarada = conta staff **TI** ativa |
-| Estado | Fluxo completo **ensaiado ponta a ponta** em cluster PostgreSQL 17.9 descartável (32 verificações verdes; relatório em `ENTREGA-RELATORIO-2026-10-04-APLICACAO-BANCO-DESTINO.md`). A execução no banco real é ação do operador, nesta máquina, com estes passos |
+| Estado | Ensaio original 001–156 em cluster descartável (32 verificações, relatório `ENTREGA-RELATORIO-2026-10-04-APLICACAO-BANCO-DESTINO.md`); auditoria de 04/11 validou 001–183 em QA. Nenhuma dessas evidências é execução no destino |
 | Pendências que permanecem | Aceite humano e validação formal em Windows |
 
 ## Pré-requisitos
 
 - **Node.js 22 LTS** e npm (`node --version`).
 - **Docker** (no Windows: Docker Desktop com WSL2) para o PostgreSQL 17 do `infra/postgres/compose.yaml`.
-- Código na versão correta: `git fetch origin && git switch main && git pull`, conferindo `git log --oneline -1` ≥ `70ee202`.
+- Código na revisão aprovada: conferir `git status --short` e `git log --oneline -1` antes de operar. Não trocar de branch nem sobrescrever trabalho local automaticamente; SHA não tem comparação numérica de versão.
 - Dependências instaladas: `npm ci`.
 
 ## Etapa 1 — Banco de destino no ar
 
 1. Copie o exemplo de ambiente:
    ```bash
-   cp .env.example .env.local          # bash (Linux/macOS/Git Bash)
-   Copy-Item .env.example .env.local   # PowerShell (Windows)
+   cp -n .env.example .env.local      # somente se ainda não existir (bash/Linux)
+   ```
+   No PowerShell, sem sobrescrever arquivo existente:
+   ```powershell
+   if (!(Test-Path .env.local)) { Copy-Item .env.example .env.local }
    ```
 2. Gere uma senha hexadecimal forte e cole **nos dois lugares** (`POSTGRES_PASSWORD` e dentro de `DATABASE_URL`; hex não precisa de URL-encoding):
    ```bash
@@ -31,6 +36,7 @@ Procedimento para aplicar as migrações **001–156** no banco PostgreSQL de de
 3. Gere os segredos de sessão/MFA e preencha (fora do repositório, nunca pelo chat):
    ```bash
    node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"   # SITE_ADMIN_SESSION_SECRET
+   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"   # EMPLOYEE_SESSION_SECRET (outro valor)
    node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"   # CLIENT_MFA_ENCRYPTION_KEY
    ```
 4. Suba o banco (a porta fica vinculada apenas a `127.0.0.1`):
@@ -39,7 +45,7 @@ Procedimento para aplicar as migrações **001–156** no banco PostgreSQL de de
    ```
    Aguarde o healthcheck ficar `healthy` (`docker compose --env-file .env.local -f infra/postgres/compose.yaml ps`).
 
-## Etapa 2 — Aplicar as migrações 001–156
+## Etapa 2 — Aplicar as migrações 001–183
 
 ```bash
 npm run db:migrate
@@ -47,12 +53,12 @@ npm run db:migrate
 
 Esperado (primeira aplicação em banco vazio):
 
-- 156 linhas `Applied: 001-...` até `Applied: 156-ext07-scheduled-evaluation.sql`;
-- linha final `Migration ledger verified: 001–156 (PostgreSQL only)`.
+- 183 linhas `Applied: 001-...` até `Applied: 183-plt-audit-actions-check-widening.sql`;
+- linha final `Migration ledger verified: 001–183 (PostgreSQL only)`.
 
 Propriedades do migrador que importam aqui:
 
-- **Idempotente com integridade**: cada arquivo é aplicado em transação própria com lock advisory e registrado em `__migrations` com checksum sha256. Re-executar imprime 156× `Already applied: ...` e não reaplica nada; checksum divergente aborta.
+- **Idempotente com integridade**: cada arquivo é aplicado em transação própria com lock advisory e registrado em `__migrations` com checksum sha256. Re-executar imprime 183× `Already applied: ...` e não reaplica nada; checksum divergente aborta.
 - **Recusa banco remoto**: o migrador conecta somente em `localhost`/`127.0.0.1`/`[::1]` a menos que `ALLOW_REMOTE_MIGRATIONS=true` seja definido separadamente. **Mantenha isso como está** — aplicação remota é decisão explícita, não conveniência.
 
 ## Etapa 3 — Verificações pós-aplicação
@@ -98,7 +104,7 @@ EXT07_EVALUATE_INTERVAL_SECONDS=3600
 EXT07_EVALUATE_IDENTITY=<UUID da etapa 4>
 ```
 
-Reinicie o servidor (`npm run start` — o `server.mjs` carrega o `.env.local`). O log de boot deve conter:
+Reinicie o servidor (`npm run start`, com build prévio e configuração aprovada; `server.mjs` usa `@next/env`, que inclui `.env.local` fora de teste). O log de boot deve conter:
 
 ```
 [ext07-scheduler] ativado: avaliação temporal a cada 3600s; execuções registradas em ext_compliance_evaluation_runs
@@ -238,6 +244,6 @@ SELECT count(*) FROM ext_compliance_events
 
 - **Nunca** aponte `DATABASE_URL`/`DATABASE_MIGRATION_URL` de aplicação para banco de produção a partir de ambiente de teste; gates e ensaios usam clusters descartáveis e **recusam** URLs herdadas.
 - Não defina `ALLOW_REMOTE_MIGRATIONS=true` por conveniência — migração remota é decisão separada e explícita.
-- Migrações 001–156 são intocáveis; correções futuras entram como migração nova aditiva (a partir de 157).
+- Migrações 001–183 existentes são preservadas; correções futuras entram como migração nova aditiva (próxima livre nesta revisão: 184).
 - Segredos (senhas, chaves) ficam **fora do repositório** e **nunca pelo chat**.
 - O agendador não é ator externo nem integração regulatória: é um timer local que age em nome da identidade staff declarada. A referência documental do EXT-07 permanece declarada e privada (sem upload/bytes/checksum/aceite humano inventado).

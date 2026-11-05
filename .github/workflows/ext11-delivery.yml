@@ -1,0 +1,49 @@
+name: EXT-11 analytics delivery
+# Gate descartável de jornada; não é aceite humano nem homologação de produção.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/server/ext-analytics-api.mjs'
+      - 'src/server/ext-advanced-api.mjs'
+      - 'src/app/admin/analytics/**'
+      - 'server.mjs'
+      - 'tests/ext11-analytics*.test.mjs'
+      - 'scripts/qa-ext11-analytics-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - 'db/migrations/**'
+      - 'package*.json'
+      - '.github/workflows/ext11-delivery.yml'
+concurrency:
+  group: ext11-delivery-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash scripts/ci/observed-shell.sh {0}
+jobs:
+  analytics-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Contratos unitários da base de analytics e do supervisor
+        run: node --test tests/ext11-analytics.test.mjs tests/qa-pg-supervisor.test.mjs
+      - name: Jornada de analytics por HTTP real contra PostgreSQL descartável
+        run: npm run test:ext11-analytics:pg

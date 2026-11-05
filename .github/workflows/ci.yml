@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+defaults:
+  run:
+    shell: bash scripts/ci/observed-shell.sh {0}
 jobs:
   static-and-smoke:
     runs-on: ubuntu-latest
@@ -57,6 +60,8 @@ jobs:
         run: npm run test:rag
       - name: Tenant A/B HTTP integration (temporary localhost PostgreSQL, migrations 001-007 + 097-098)
         run: npm run test:tenant:pg
+      - name: PostgreSQL supervisor fault gates (temporary local clusters, expected failures)
+        run: npm run test:pg-supervisor:pg
       - name: QA-HOM-008 persistent synthetic restart (isolated localhost PostgreSQL)
         run: npm run test:demo-local:pg
       - name: CLI-09 portal charges and v2 document aliases (isolated localhost PostgreSQL)

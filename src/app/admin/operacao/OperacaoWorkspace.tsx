@@ -396,7 +396,11 @@ export default function OperacaoWorkspace() {
   // escolhida antes é descartada em vez de sobrescrever o calendário atual.
   const detailRequest = useRef(0);
 
+  // 05Q: StrictMode/repetição podem sobrepor leituras. Só a consulta atual
+  // pode publicar dados, falha ou fim de loading; respostas antigas são inertes.
+  const initialReadRequest = useRef(0);
   const load = useCallback(async () => {
+    const requestId = ++initialReadRequest.current;
     setLoading(true);
     setError(null);
     const [postData, allocData, covData, handData, occData, checkData, ruleData, qualData, validationData] = await Promise.all([
@@ -410,6 +414,7 @@ export default function OperacaoWorkspace() {
       opsReadList<Qualification>("/api/ops/qualifications", "qualifications"),
       opsReadList<ScheduleValidation>("/api/ops/validations?is_valid=false", "validations"),
     ]);
+    if (initialReadRequest.current !== requestId) return;
     // O painel inicial depende de todos os nove: sem qualquer um deles não há
     // número honesto a mostrar, e a tela diz exatamente qual falhou.
     const failed = [postData, allocData, covData, handData, occData, checkData, ruleData, qualData, validationData].find(r => !r.ok);
@@ -430,7 +435,7 @@ export default function OperacaoWorkspace() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(); return () => { initialReadRequest.current++; }; }, [load]);
 
   const loadStructure = useCallback(async () => {
     setStructureLoading(true);

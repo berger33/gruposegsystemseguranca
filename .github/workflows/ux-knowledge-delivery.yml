@@ -12,6 +12,10 @@ on:
       - 'tests/ux-knowledge-vocabulary.test.mjs'
       - 'tests/ux-knowledge-workspace.integration.test.mjs'
       - 'scripts/qa-ux-knowledge-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
+      - 'scripts/migrate-site-visual.mjs'
       - 'scripts/ux-evidence-capture.mjs'
       - 'docs/UX-07-CONHECIMENTO-2026-10-06.md'
       - 'package.json'
@@ -22,6 +26,9 @@ concurrency:
   cancel-in-progress: false
 permissions:
   contents: read
+defaults:
+  run:
+    shell: bash scripts/ci/observed-shell.sh {0}
 jobs:
   ux-knowledge-postgres-browser:
     runs-on: ubuntu-latest
@@ -30,6 +37,7 @@ jobs:
       DATABASE_URL: ''
       DATABASE_MIGRATION_URL: ''
       RUN_DATABASE_INTEGRATION_REMOTE: ''
+      ALLOW_REMOTE_MIGRATIONS: ''
       MAIL_HOST: ''
       OLLAMA_ENABLED: 'false'
       NEXT_TELEMETRY_DISABLED: '1'
@@ -40,6 +48,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - run: node --test tests/qa-pg-supervisor.test.mjs
       - run: npm run typecheck
       - run: node --test tests/ux-knowledge-vocabulary.test.mjs
       - run: node --test tests/ext08-knowledge.test.mjs
