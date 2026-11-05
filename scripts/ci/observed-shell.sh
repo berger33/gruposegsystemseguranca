@@ -13,7 +13,7 @@ for (let i = 0; i < lines.length; i++) if (/^not ok|^#?\s*(?:Error:|error:|QA_PG
 let text = [...excerpts.slice(0, 400), ...lines.slice(-60)].join('\n');
 text = text.replace(/https?:\/\/\S+|postgres(?:ql)?:\/\/\S+/gi, '[url redacted]')
   .replace(/((?:password|secret|token|cookie|authorization)\s*[:=]\s*)\S+/gi, '$1[redacted]');
-for (const line of text.split('\n')) console.log('::error::' + line.replaceAll('%', '%25').replaceAll('\r', '%0D'));
+console.log('::error::' + text.slice(0, 50000).replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A'));
 JS
 fi
 rm -f "$log"
