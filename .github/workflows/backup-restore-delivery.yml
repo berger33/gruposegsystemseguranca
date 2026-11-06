@@ -58,6 +58,8 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
+      - name: Verify local PostgreSQL supervisor contracts
+        run: node --test tests/qa-pg-supervisor.test.mjs
       - name: Install and verify PostgreSQL 17 client tools
         shell: bash
         run: |

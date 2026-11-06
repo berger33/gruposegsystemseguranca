@@ -31,6 +31,21 @@ async function assertRemoved(f) {
   await assert.rejects(access(metadata.directory), { code: 'ENOENT' });
 }
 
+// Um descendente órfão já morto pode permanecer zumbi até ser recolhido pelo init.
+async function assertNotActive(pid) {
+  if (process.platform === 'linux') {
+    try {
+      const status = await readFile(`/proc/${pid}/status`, 'utf8');
+      assert.match(status, /^State:\s+Z\s/m, `processo ${pid} ainda ativo`);
+      return;
+    } catch (error) {
+      if (error.code === 'ENOENT') return;
+      throw error;
+    }
+  }
+  assert.throws(() => process.kill(pid, 0), { code: 'ESRCH' });
+}
+
 test('PG supervisor: recusa URL herdada antes de criar worker ou sandbox', options, async () => {
   for (const key of ['DATABASE_URL', 'DATABASE_MIGRATION_URL', 'RUN_DATABASE_INTEGRATION_REMOTE']) {
     const result = await superviseLocalPg({ entry: 'not-used', env: { ...cleanEnv, [key]: key.includes('URL') ? 'postgresql://synthetic.invalid/not-used' : '1' } });
@@ -1284,6 +1299,7 @@ test('PG supervisor: 05Y mantém CI, gates herdados, evidências e auditoria npm
       assert.ok(workflow.includes(step)); assert.ok(workflow.indexOf(step) < workflow.indexOf(gate));
     }
     for (const variable of ['DATABASE_URL','DATABASE_MIGRATION_URL','RUN_DATABASE_INTEGRATION_REMOTE','ALLOW_REMOTE_MIGRATIONS','MAIL_HOST']) assert.ok(workflow.includes(`${variable}: ''`));
+    assert.match(workflow, /shell: bash scripts\/ci\/observed-shell\.sh \{0\}/);
     assert.match(workflow,/contents: read/); if (name !== 'portal') assert.match(workflow,/workflow_dispatch:/);
     assert.ok(workflow.includes(`timeout-minutes: ${minutes}`)); if (name !== 'portal') assert.ok(workflow.includes('npm audit --audit-level=moderate'));
     if (name === 'continuity-client') {
@@ -1292,8 +1308,139 @@ test('PG supervisor: 05Y mantém CI, gates herdados, evidências e auditoria npm
       assert.ok(workflow.includes('tests/ux-continuity-client-portal-vocabulary.test.mjs'));
       assert.ok(workflow.includes('UX_CONTINUITY_CLIENT_EVIDENCE_DIR=docs/ux-11-continuidade-cliente-evidencias'));
       assert.ok(workflow.includes('npm run ux:evidence -- --stage=ux-11-continuidade-cliente'));
-    } else { assert.ok(workflow.includes("UX_PORTAL_TEST_PATTERN: ''")); assert.ok(workflow.includes("'scripts/qa-generated-files.mjs'")); }
+    } else {
+      assert.ok(workflow.includes("UX_PORTAL_TEST_PATTERN: ''"));
+      assert.ok(workflow.includes("'scripts/qa-generated-files.mjs'"));
+      assert.ok(workflow.includes('tests/ux-pro-03-ti-integrations-catalogo-ui.test.mjs'));
+    }
   }
+});
+
+test('PG supervisor: 05Y continuidade do cliente falha fechado de verdade quando exigido sem banco', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { runInNewContext } = await import('node:vm');
+  const source = await readFile(new URL('../scripts/qa-ux-continuity-client-postgres.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('const MINIMO ='); const end = source.indexOf('const port =', start);
+  const audit = runInNewContext(source.slice(start, end) + '\nauditTap');
+  const suitePath = path.resolve(import.meta.dirname, 'ux-continuity-client-portal.integration.test.mjs');
+  const childEnv = { ...cleanEnv, RUN_DATABASE_INTEGRATION: '', QA_UX_CONTINUITY_CLIENT_REQUIRE_DB: '1' };
+  delete childEnv.NODE_TEST_CONTEXT;
+  const run = spawnSync(process.execPath, ['--test', '--test-concurrency=1', suitePath], {
+    env: childEnv,
+    encoding: 'utf8',
+    timeout: 20_000,
+  });
+  assert.notEqual(run.status, 0, 'QA_UX_CONTINUITY_CLIENT_REQUIRE_DB=1 sem banco precisa falhar fechado');
+  const tapOut = `${run.stdout || ''}\n${run.stderr || ''}`;
+  const audited = audit(tapOut);
+  assert.ok(audited.fail >= 1, 'a guarda real de banco precisa reprovar no TAP');
+  assert.ok(audited.skipped >= 8, 'os casos dependentes de banco ficam marcados como pulados sem cluster');
+  assert.ok(audited.problems.some(item => item.includes('falha(s)')), audited.problems.join('; '));
+  assert.ok(audited.problems.some(item => item.includes('pulado(s)')), audited.problems.join('; '));
+  assert.ok(audited.problems.some(item => item.includes('mínimo 10')), audited.problems.join('; '));
+});
+
+test('PG supervisor: 05Y restauração de arquivos gerados sobrevive a SIGTERM e timeout nos dois mecanismos sem mascarar saída', options, async t => {
+  const { copyFile, mkdir } = await import('node:fs/promises');
+  const { snapshotGeneratedFiles, restoreGeneratedFiles } = await import('../scripts/qa-generated-files.mjs');
+  const fakeRoot = await mkdtemp(path.join(tmpdir(), 'seg-pg-05y-gen-'));
+  t.after(() => rm(fakeRoot, { recursive: true, force: true }));
+  await mkdir(path.join(fakeRoot, 'scripts'), { recursive: true });
+  await copyFile(new URL('../scripts/qa-generated-files-guard.mjs', import.meta.url), path.join(fakeRoot, 'scripts', 'qa-generated-files-guard.mjs'));
+  const originalNextEnv = '/// <reference types="next" />\n';
+  const originalTsconfig = '{"compilerOptions":{"strict":true},"include":["next-env.d.ts"]}\n';
+  await writeFile(path.join(fakeRoot, 'next-env.d.ts'), originalNextEnv, 'utf8');
+  await writeFile(path.join(fakeRoot, 'tsconfig.json'), originalTsconfig, 'utf8');
+
+  // 1) Mecanismo do portal (snapshotGeneratedFiles / restoreGeneratedFiles no finally do pai) sob timeout de fase test
+  const workerTimeout = path.join(fakeRoot, 'worker-timeout.mjs');
+  await writeFile(workerTimeout, `import {writeFileSync} from 'node:fs';
+import {spawn} from 'node:child_process';
+const child = spawn(process.execPath, ['-e', 'setInterval(()=>{},1000)'], { stdio: 'ignore' });
+writeFileSync(${JSON.stringify(path.join(fakeRoot, 'meta-timeout.json'))}, JSON.stringify({ directory: process.env.QA_PG_DIRECTORY, pid: process.pid, childPid: child.pid }));
+writeFileSync(${JSON.stringify(path.join(fakeRoot, 'next-env.d.ts'))}, '// mutado por .next/integration-ux-portal\\n');
+writeFileSync(${JSON.stringify(path.join(fakeRoot, 'tsconfig.json'))}, '{"include":[".next/integration-ux-portal/types/**/*.ts"]}\\n');
+${protocol}
+phase('test'); setInterval(()=>{},1000);`);
+  const snap = await snapshotGeneratedFiles(fakeRoot);
+  let timeoutRes;
+  try {
+    timeoutRes = await superviseLocalPg({ entry: workerTimeout, env: cleanEnv, limits: { ...limits, test: 120 }, graceMs: 150, log: () => {} });
+  } finally {
+    await restoreGeneratedFiles(snap, fakeRoot);
+  }
+  const metaTimeout = JSON.parse(await readFile(path.join(fakeRoot, 'meta-timeout.json'), 'utf8'));
+  assert.equal(timeoutRes.code, 1);
+  assert.equal(timeoutRes.reason, 'timeout-test');
+  assert.equal(timeoutRes.cleaned, true);
+  await assert.rejects(access(metaTimeout.directory), { code: 'ENOENT' });
+  await assertNotActive(metaTimeout.pid);
+  await assertNotActive(metaTimeout.childPid);
+  assert.equal(await readFile(path.join(fakeRoot, 'next-env.d.ts'), 'utf8'), originalNextEnv);
+  assert.equal(await readFile(path.join(fakeRoot, 'tsconfig.json'), 'utf8'), originalTsconfig);
+
+  // 2) Mecanismo de continuidade do cliente (releaseSignalHandlers + guard exit no pai) sob SIGTERM real
+  const workerTerm = path.join(fakeRoot, 'worker-term.mjs');
+  await writeFile(workerTerm, `import {writeFileSync} from 'node:fs';
+import {spawn} from 'node:child_process';
+const child = spawn(process.execPath, ['-e', 'setInterval(()=>{},1000)'], { stdio: 'ignore' });
+writeFileSync(${JSON.stringify(path.join(fakeRoot, 'meta-term.json'))}, JSON.stringify({ directory: process.env.QA_PG_DIRECTORY, pid: process.pid, childPid: child.pid }));
+writeFileSync(${JSON.stringify(path.join(fakeRoot, 'next-env.d.ts'))}, '// mutado por .next/integration-ux-continuity-client\\n');
+writeFileSync(${JSON.stringify(path.join(fakeRoot, 'tsconfig.json'))}, '{"include":[".next/integration-ux-continuity-client/types/**/*.ts"]}\\n');
+${protocol}
+phase('test'); console.log('QA_05Y_WORKER_ARMED'); setInterval(()=>{},1000);`);
+  const parentDriver = path.join(fakeRoot, 'scripts', 'driver-05y.mjs');
+  await writeFile(parentDriver, `import { releaseSignalHandlers } from './qa-generated-files-guard.mjs';
+import { superviseLocalPg } from ${JSON.stringify(new URL('../scripts/lib/qa-pg-supervisor.mjs', import.meta.url).href)};
+releaseSignalHandlers();
+const result = await superviseLocalPg({ entry: ${JSON.stringify(workerTerm)}, graceMs: 150 });
+process.exit(result.code);`);
+  const parent = spawn(process.execPath, [parentDriver], { env: cleanEnv, stdio: ['ignore', 'pipe', 'pipe'] });
+  let out = '', signalled = false;
+  parent.stdout.on('data', chunk => {
+    out += chunk;
+    if (!signalled && out.includes('QA_05Y_WORKER_ARMED')) { signalled = true; parent.kill('SIGTERM'); }
+  });
+  parent.stderr.resume();
+  const watchdog = setTimeout(() => parent.kill('SIGKILL'), 8_000);
+  let exitCode;
+  try { [exitCode] = await once(parent, 'exit'); } finally { clearTimeout(watchdog); }
+  const metaTerm = JSON.parse(await readFile(path.join(fakeRoot, 'meta-term.json'), 'utf8'));
+  assert.equal(exitCode, 143);
+  assert.match(out, /QA_PG_TEMP_CLEANED: true/);
+  await assert.rejects(access(metaTerm.directory), { code: 'ENOENT' });
+  await assertNotActive(metaTerm.pid);
+  await assertNotActive(metaTerm.childPid);
+  assert.equal(await readFile(path.join(fakeRoot, 'next-env.d.ts'), 'utf8'), originalNextEnv);
+  assert.equal(await readFile(path.join(fakeRoot, 'tsconfig.json'), 'utf8'), originalTsconfig);
+});
+
+test('PG supervisor: 05Y wrapper observed-shell preserva exit code original e redige segredos em falha', options, async t => {
+  const { spawnSync } = await import('node:child_process');
+  const dir = await mkdtemp(path.join(tmpdir(), 'seg-observed-shell-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const wrapper = path.resolve(import.meta.dirname, '..', 'scripts', 'ci', 'observed-shell.sh');
+
+  const okScript = path.join(dir, 'ok.sh');
+  await writeFile(okScript, 'echo "PASSO_OK"\nexit 0\n', 'utf8');
+  const okRun = spawnSync('bash', [wrapper, okScript], { encoding: 'utf8', timeout: 10_000 });
+  assert.equal(okRun.status, 0);
+  assert.match(okRun.stdout, /PASSO_OK/);
+  assert.doesNotMatch(okRun.stdout, /::error::/);
+
+  const failScript = path.join(dir, 'fail.sh');
+  await writeFile(failScript, [
+    'echo "QA_PG_FAILED: postgresql://seg_qa:segredoMuitoForte123@127.0.0.1:5432/seg_qa_ux_portal"',
+    'echo "password=senhaSecreta456 token: tokenSecreto789"',
+    'exit 2',
+  ].join('\n') + '\n', 'utf8');
+  const failRun = spawnSync('bash', [wrapper, failScript], { encoding: 'utf8', timeout: 10_000 });
+  assert.equal(failRun.status, 2, 'observed-shell deve preservar o exit code original sem mascarar');
+  const errorLine = (failRun.stdout || '').split('\n').find(line => line.startsWith('::error::')) || '';
+  assert.ok(errorLine.length > 0, 'observed-shell deve emitir anotação ::error:: quando o comando falha');
+  assert.match(errorLine, /QA_PG_FAILED/);
+  assert.match(errorLine, /\[url redacted\]/);
+  assert.doesNotMatch(errorLine, /segredoMuitoForte123|senhaSecreta456|tokenSecreto789/);
 });
 
 
@@ -1313,4 +1460,448 @@ phase('test'); done(0);
   assert.equal(result.code, 0);
   assert.equal(result.cleaned, true);
   await assertRemoved(f);
+});
+
+test('PG supervisor: 05Z recusa banco herdado antes do worker e preserva contrato emergencial', options, async () => {
+  const { spawnSync } = await import('node:child_process');
+  const runner = path.resolve(import.meta.dirname, '../scripts/qa-ux-emergency-postgres.mjs');
+  for (const key of ['DATABASE_URL', 'DATABASE_MIGRATION_URL', 'RUN_DATABASE_INTEGRATION_REMOTE']) {
+    const child = spawnSync(process.execPath, [runner], { env: { ...cleanEnv, [key]: key.includes('URL') ? 'postgresql://synthetic.invalid/not-used' : '1' }, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(child.status, 2, key);
+    assert.match(child.stderr, /QA_PG_REFUSED/);
+    assert.doesNotMatch(child.stdout, /QA_PG_READY|QA_PG_TEMP_CLEANED/);
+  }
+  const source = await readFile(runner, 'utf8');
+  assert.ok(source.indexOf('await superviseLocalPg(') < source.indexOf("await import('embedded-postgres')"));
+  assert.match(source, /process.platform !== 'win32'/);
+  assert.match(source, /migrate: 90_000, test: 900_000/);
+  assert.match(source, /finally \{\s*await restoreGeneratedFiles\(generatedSnapshot\)/);
+  assert.match(source, /await createLocalQaDatabase\(/);
+  assert.match(source, /if \(!supervised\) \{\s*await rm\(directory/);
+  assert.match(source, /type: 'complete', code: result/);
+  assert.match(source, /minimumCases: pattern \? 0 : 21/);
+  assert.match(source, /UX_EMERGENCY_TEST_PATTERN/);
+  assert.match(source, /UX_EMERGENCY_UI_TIMEOUT/);
+  assert.match(source, /UX_EMERGENCY_EVIDENCE_DIR/);
+  const body = source.slice(source.indexOf('let result = 1;'));
+  let previous = -1;
+  for (const phase of ['initialise', 'start', 'create', 'migrate', 'test', 'stop', 'done']) {
+    const index = body.indexOf(`phase('${phase}')`);
+    assert.ok(index > previous, phase); previous = index;
+  }
+  const workflow = await readFile(new URL('../.github/workflows/ux-emergency-delivery.yml', import.meta.url), 'utf8');
+  for (const file of ['scripts/lib/qa-pg-supervisor.mjs','scripts/qa-generated-files-guard.mjs','scripts/qa-generated-files.mjs','scripts/migrate-site-visual.mjs','tests/qa-pg-supervisor.test.mjs']) assert.ok(workflow.includes(`'${file}'`), file);
+  assert.match(workflow, /shell: bash scripts\/ci\/observed-shell\.sh \{0\}/);
+  assert.match(workflow, /UX_EMERGENCY_TEST_PATTERN: ''/);
+  assert.ok(workflow.indexOf('node --test tests/qa-pg-supervisor.test.mjs') < workflow.indexOf('npm run test:ux-emergency:pg'));
+});
+
+test('PG supervisor: 05Z auditor TAP real recusa falta, falha, parcial, skip e todo inclusive com filtro', async () => {
+  const { runInNewContext } = await import('node:vm');
+  const source = await readFile(new URL('../scripts/qa-ux-emergency-postgres.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('function auditTap('), end = source.indexOf('const database =', start);
+  const audit = runInNewContext(source.slice(start, end) + '\nauditTap');
+  const tap = (pass = 21, fail = 0, skip = 0, todo = 0) => `# pass ${pass}\n# fail ${fail}\n# skipped ${skip}\n# todo ${todo}\n`;
+  assert.equal(audit(tap(), { minimumCases: 21 }).problems.length, 0);
+  for (const output of ['', '# fail 0\n', tap(20), tap(21, 1), tap(21, 0, 1), tap(21, 0, 0, 1)]) assert.ok(audit(output, { minimumCases: 21 }).problems.length > 0);
+  assert.equal(audit(tap(1), { minimumCases: 0 }).problems.length, 0);
+  assert.ok(audit(tap(1, 0, 20), { minimumCases: 0 }).problems.length > 0, 'pattern mantém a rejeição herdada de skip');
+});
+
+test('PG supervisor: 05AA recusa banco herdado e mantém protocolo do scheduler', options, async () => {
+  const { spawnSync } = await import('node:child_process');
+  const runner = path.resolve(import.meta.dirname, '../scripts/qa-durable-scheduler-postgres.mjs');
+  for (const key of ['DATABASE_URL', 'DATABASE_MIGRATION_URL', 'RUN_DATABASE_INTEGRATION_REMOTE']) {
+    const run = spawnSync(process.execPath, [runner], { env: { ...cleanEnv, [key]: key.includes('URL') ? 'postgresql://synthetic.invalid/not-used' : '1' }, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(run.status, 2, key); assert.match(run.stderr, /QA_PG_REFUSED/);
+    assert.doesNotMatch(run.stdout, /QA_PG_READY|QA_PG_TEMP_CLEANED/);
+  }
+  const source = await readFile(runner, 'utf8');
+  assert.ok(source.indexOf('await superviseLocalPg(') < source.indexOf("await import('embedded-postgres')"));
+  assert.match(source, /process.platform !== 'win32'/); assert.match(source, /releaseSignalHandlers\(\)/);
+  assert.match(source, /migrate: 90_000, test: 300_000/); assert.match(source, /await createLocalQaDatabase\(/);
+  assert.match(source, /if \(supervised\) \{\s*try \{ await postgres.stop\(\); \} catch \{ result = 1;/);
+  assert.match(source, /QA_E16_PG_TEMP_CLEANED/); assert.match(source, /QA_E16_REQUIRE_DB: "1"/);
+  assert.match(source, /type: 'complete', code: result/); assert.doesNotMatch(source, /--test-name-pattern/);
+  const body = source.slice(source.indexOf('let result = 1;')); let previous = -1;
+  for (const phase of ['initialise','start','create','migrate','test','stop','done']) {
+    const index = body.indexOf(`phase('${phase}')`); assert.ok(index > previous, phase); previous = index;
+  }
+  const ci = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  assert.match(ci, /shell: bash scripts\/ci\/observed-shell\.sh \{0\}/);
+  assert.ok(ci.indexOf('npm test') < ci.indexOf('npm run test:durable-scheduler:pg'));
+  assert.ok(ci.indexOf('npm run test:pg-supervisor:pg') < ci.indexOf('npm run test:durable-scheduler:pg'));
+});
+
+test('PG supervisor: 05AA executa auditor real e comprova guarda sem banco', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { runInNewContext } = await import('node:vm');
+  const source = await readFile(new URL('../scripts/qa-durable-scheduler-postgres.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('function auditTap('), end = source.indexOf('const database =', start);
+  const audit = runInNewContext(`const MINIMUM_CASES = 9;\n${source.slice(start, end)}\nauditTap`);
+  const tap = (pass=9, fail=0, skip=0, todo=0) => `# pass ${pass}\n# fail ${fail}\n# skipped ${skip}\n# todo ${todo}\n`;
+  assert.equal(audit(tap()).problems.length, 0);
+  for (const out of ['', '# fail 0\n', tap(8), tap(9,1), tap(9,0,1), tap(9,0,0,1)]) assert.ok(audit(out).problems.length > 0);
+  const env = { ...cleanEnv, RUN_DATABASE_INTEGRATION: '', QA_E16_REQUIRE_DB: '1' }; delete env.NODE_TEST_CONTEXT;
+  const run = spawnSync(process.execPath, ['--test', '--test-concurrency=1', path.resolve(import.meta.dirname, 'e16-durable-scheduler.integration.test.mjs')], { env, encoding: 'utf8', timeout: 20_000 });
+  assert.equal(run.status, 1);
+  const actual = audit(`${run.stdout || ''}\n${run.stderr || ''}`);
+  assert.ok(actual.fail >= 1); assert.ok(actual.skipped >= 1); assert.ok(actual.problems.length >= 3);
+});
+
+test('PG supervisor: 05AB recusa banco herdado e preserva o runner de operação', options, async () => {
+  const { spawnSync } = await import('node:child_process');
+  const runner = path.resolve(import.meta.dirname, '../scripts/qa-ux-pro-07d2-postgres.mjs');
+  for (const key of ['DATABASE_URL', 'DATABASE_MIGRATION_URL', 'RUN_DATABASE_INTEGRATION_REMOTE']) {
+    const run = spawnSync(process.execPath, [runner], { env: { ...cleanEnv, [key]: key.includes('URL') ? 'postgresql://synthetic.invalid/not-used' : '1' }, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(run.status, 2, key); assert.match(run.stderr, /QA_PG_REFUSED/);
+    assert.doesNotMatch(run.stdout, /QA_PG_READY|QA_PG_TEMP_CLEANED/);
+  }
+  const source = await readFile(runner, 'utf8');
+  assert.ok(source.indexOf('await superviseLocalPg(') < source.indexOf("await import('embedded-postgres')"));
+  assert.match(source, /process.platform !== 'win32'/); assert.match(source, /releaseSignalHandlers\(\)/);
+  assert.match(source, /migrate: 90_000, test: 900_000/); assert.match(source, /await createLocalQaDatabase\(/);
+  assert.match(source, /finally \{\s*await restoreGeneratedFiles\(generatedSnapshot\)/);
+  assert.match(source, /if \(result.cleaned\) console.log\('UX_OPS_07D2_SETUP: temporário limpo'\)/);
+  assert.match(source, /type: 'complete', code: result/); assert.match(source, /const MINIMUM_CASES = 27/);
+  assert.match(source, /--max-old-space-size=1024/); assert.doesNotMatch(source, /--test-name-pattern/);
+  const body = source.slice(source.indexOf('let result = 1;')); let previous = -1;
+  for (const phase of ['initialise','start','create','migrate','test','stop','done']) {
+    const index = body.indexOf(`phase('${phase}')`); assert.ok(index > previous, phase); previous = index;
+  }
+  const ci = await readFile(new URL('../.github/workflows/ux-pro-07d2-delivery.yml', import.meta.url), 'utf8');
+  for (const file of ['scripts/lib/qa-pg-supervisor.mjs','scripts/qa-generated-files-guard.mjs','scripts/qa-generated-files.mjs','scripts/migrate-site-visual.mjs','tests/qa-pg-supervisor.test.mjs']) assert.ok(ci.includes(`'${file}'`), file);
+  assert.match(ci, /shell: bash scripts\/ci\/observed-shell\.sh \{0\}/);
+  assert.ok(ci.indexOf('node --test tests/qa-pg-supervisor.test.mjs') < ci.indexOf('node scripts/qa-ux-pro-07d2-postgres.mjs'));
+});
+
+test('PG supervisor: 05AB auditor TAP real rejeita parciais, diretivas e suíte sem banco', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { runInNewContext } = await import('node:vm');
+  const source = await readFile(new URL('../scripts/qa-ux-pro-07d2-postgres.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('const MINIMUM_CASES ='), end = source.indexOf('const database =', start);
+  const audit = runInNewContext(`${source.slice(start, end)}\nauditTap`);
+  const tap = (pass=27, fail=0, skip=0, todo=0, total=pass) => `# tests ${total}\n# pass ${pass}\n# fail ${fail}\n# skipped ${skip}\n# todo ${todo}\n`;
+  assert.equal(audit(tap()).problems.length, 0);
+  for (const out of ['', '# fail 0\n', tap(26), tap(27,1), tap(27,0,1), tap(27,0,0,1), tap(27,0,0,0,28), `not ok 1 - teste\n${tap()}`, `ok 1 - teste # SKIP\n${tap()}`, `ok 1 - teste # TODO\n${tap()}`]) assert.ok(audit(out).problems.length > 0);
+  const env = { ...cleanEnv, RUN_DATABASE_INTEGRATION: '' }; delete env.NODE_TEST_CONTEXT;
+  const run = spawnSync(process.execPath, ['--test', '--test-concurrency=1', path.resolve(import.meta.dirname, 'ux-ops-workspace.integration.test.mjs')], { env, encoding: 'utf8', timeout: 20_000 });
+  assert.equal(run.status, 0, 'node:test isoladamente pode sair zero com skips');
+  const actual = audit(`${run.stdout || ''}\n${run.stderr || ''}`);
+  assert.ok(actual.skipped > 0); assert.ok(actual.problems.length > 0, 'o auditor deve reprovar a execução incompleta real');
+});
+
+test('PG supervisor: 05AC recusa banco herdado e preserva o runner financeiro', options, async () => {
+  const { spawnSync } = await import('node:child_process');
+  const runner = path.resolve(import.meta.dirname, '../scripts/qa-ux-pro-07e1-postgres.mjs');
+  for (const key of ['DATABASE_URL', 'DATABASE_MIGRATION_URL', 'RUN_DATABASE_INTEGRATION_REMOTE']) {
+    const run = spawnSync(process.execPath, [runner], { env: { ...cleanEnv, [key]: key.includes('URL') ? 'postgresql://synthetic.invalid/not-used' : '1' }, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(run.status, 2, key); assert.match(run.stderr, /QA_PG_REFUSED/);
+    assert.doesNotMatch(run.stdout, /QA_PG_READY|QA_PG_TEMP_CLEANED/);
+  }
+  const source = await readFile(runner, 'utf8');
+  assert.ok(source.indexOf('await superviseLocalPg(') < source.indexOf("await import('embedded-postgres')"));
+  assert.match(source, /process.platform !== 'win32'/); assert.match(source, /releaseSignalHandlers\(\)/);
+  assert.match(source, /migrate: 90_000, test: 1_200_000/); assert.match(source, /await createLocalQaDatabase\(/);
+  assert.match(source, /finally \{\s*await restoreGeneratedFiles\(generatedSnapshot\)/);
+  assert.match(source, /if \(result.cleaned\) console.log\('UX_FIN_07E1_SETUP: temporário limpo'\)/);
+  assert.match(source, /type: 'complete', code: result/); assert.match(source, /const MINIMUM_CASES = 22/);
+  assert.match(source, /--max-old-space-size=1024/); assert.match(source, /UX_FINANCE_EVIDENCE_DIR/);
+  assert.doesNotMatch(source, /--test-name-pattern/);
+  const body = source.slice(source.indexOf('let result = 1;')); let previous = -1;
+  for (const phase of ['initialise','start','create','migrate','test','stop','done']) {
+    const index = body.indexOf(`phase('${phase}')`); assert.ok(index > previous, phase); previous = index;
+  }
+  const ci = await readFile(new URL('../.github/workflows/ux-pro-07e1-delivery.yml', import.meta.url), 'utf8');
+  for (const file of ['scripts/lib/qa-pg-supervisor.mjs','scripts/qa-generated-files-guard.mjs','scripts/qa-generated-files.mjs','scripts/migrate-site-visual.mjs','tests/qa-pg-supervisor.test.mjs']) assert.ok(ci.includes(`'${file}'`), file);
+  assert.match(ci, /shell: bash scripts\/ci\/observed-shell\.sh \{0\}/);
+  assert.ok(ci.indexOf('node --test tests/qa-pg-supervisor.test.mjs') < ci.indexOf('node scripts/qa-ux-pro-07e1-postgres.mjs'));
+});
+
+test('PG supervisor: 05AC auditor TAP real rejeita parciais, diretivas e suíte sem banco', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { runInNewContext } = await import('node:vm');
+  const source = await readFile(new URL('../scripts/qa-ux-pro-07e1-postgres.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('const MINIMUM_CASES ='), end = source.indexOf('const database =', start);
+  const audit = runInNewContext(`${source.slice(start, end)}\nauditTap`);
+  const tap = (pass=22, fail=0, skip=0, todo=0, total=pass) => `# tests ${total}\n# pass ${pass}\n# fail ${fail}\n# skipped ${skip}\n# todo ${todo}\n`;
+  assert.equal(audit(tap()).problems.length, 0);
+  for (const out of ['', '# fail 0\n', tap(21), tap(22,1), tap(22,0,1), tap(22,0,0,1), tap(22,0,0,0,23), `not ok 1 - teste\n${tap()}`, `ok 1 - teste # SKIP\n${tap()}`, `ok 1 - teste # TODO\n${tap()}`]) assert.ok(audit(out).problems.length > 0);
+  const env = { ...cleanEnv, RUN_DATABASE_INTEGRATION: '', UX_FINANCE_EVIDENCE_DIR: '' }; delete env.NODE_TEST_CONTEXT;
+  const run = spawnSync(process.execPath, ['--test', '--test-concurrency=1', path.resolve(import.meta.dirname, 'ux-finance-workspace.integration.test.mjs')], { env, encoding: 'utf8', timeout: 20_000 });
+  assert.equal(run.status, 0, 'node:test isoladamente pode sair zero com skips');
+  const actual = audit(`${run.stdout || ''}\n${run.stderr || ''}`);
+  assert.ok(actual.skipped > 0); assert.ok(actual.problems.length > 0, 'o auditor deve reprovar a execução incompleta real');
+});
+
+test('PG supervisor: 05AD recusa banco herdado e preserva o runner financeiro', options, async () => {
+  const { spawnSync } = await import('node:child_process');
+  const runner = path.resolve(import.meta.dirname, '../scripts/qa-ux-pro-07e2-postgres.mjs');
+  for (const key of ['DATABASE_URL', 'DATABASE_MIGRATION_URL', 'RUN_DATABASE_INTEGRATION_REMOTE']) {
+    const run = spawnSync(process.execPath, [runner], { env: { ...cleanEnv, [key]: key.includes('URL') ? 'postgresql://synthetic.invalid/not-used' : '1' }, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(run.status, 2, key); assert.match(run.stderr, /QA_PG_REFUSED/);
+    assert.doesNotMatch(run.stdout, /QA_PG_READY|QA_PG_TEMP_CLEANED/);
+  }
+  const source = await readFile(runner, 'utf8');
+  assert.ok(source.indexOf('await superviseLocalPg(') < source.indexOf("await import('embedded-postgres')"));
+  assert.match(source, /process.platform !== 'win32'/); assert.match(source, /releaseSignalHandlers\(\)/);
+  assert.match(source, /migrate: 90_000, test: 1_200_000/); assert.match(source, /await createLocalQaDatabase\(/);
+  assert.match(source, /finally \{\s*await restoreGeneratedFiles\(generatedSnapshot\)/);
+  assert.match(source, /if \(result.cleaned\) console.log\('UX_FIN_07E2_SETUP: temporário limpo'\)/);
+  assert.match(source, /type: 'complete', code: result/); assert.match(source, /const MINIMUM_CASES = 34/);
+  assert.match(source, /--max-old-space-size=1024/); assert.match(source, /UX_FINANCE_EVIDENCE_DIR/);
+  assert.doesNotMatch(source, /--test-name-pattern/);
+  const body = source.slice(source.indexOf('let result = 1;')); let previous = -1;
+  for (const phase of ['initialise','start','create','migrate','test','stop','done']) {
+    const index = body.indexOf(`phase('${phase}')`); assert.ok(index > previous, phase); previous = index;
+  }
+  const ci = await readFile(new URL('../.github/workflows/ux-pro-07e2-delivery.yml', import.meta.url), 'utf8');
+  for (const file of ['scripts/lib/qa-pg-supervisor.mjs','scripts/qa-generated-files-guard.mjs','scripts/qa-generated-files.mjs','scripts/migrate-site-visual.mjs','tests/qa-pg-supervisor.test.mjs']) assert.ok(ci.includes(`'${file}'`), file);
+  assert.match(ci, /shell: bash scripts\/ci\/observed-shell\.sh \{0\}/);
+  assert.ok(ci.indexOf('node --test tests/qa-pg-supervisor.test.mjs') < ci.indexOf('node scripts/qa-ux-pro-07e2-postgres.mjs'));
+});
+
+test('PG supervisor: 05AD auditor TAP real rejeita parciais, diretivas e suíte sem banco', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { runInNewContext } = await import('node:vm');
+  const source = await readFile(new URL('../scripts/qa-ux-pro-07e2-postgres.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('const MINIMUM_CASES ='), end = source.indexOf('const database =', start);
+  const audit = runInNewContext(`${source.slice(start, end)}\nauditTap`);
+  const tap = (pass=34, fail=0, skip=0, todo=0, total=pass) => `# tests ${total}\n# pass ${pass}\n# fail ${fail}\n# skipped ${skip}\n# todo ${todo}\n`;
+  assert.equal(audit(tap()).problems.length, 0);
+  for (const out of ['', '# fail 0\n', tap(33), tap(34,1), tap(34,0,1), tap(34,0,0,1), tap(34,0,0,0,35), `not ok 1 - teste\n${tap()}`, `ok 1 - teste # SKIP\n${tap()}`, `ok 1 - teste # TODO\n${tap()}`]) assert.ok(audit(out).problems.length > 0);
+  const env = { ...cleanEnv, RUN_DATABASE_INTEGRATION: '', UX_FINANCE_EVIDENCE_DIR: '' }; delete env.NODE_TEST_CONTEXT;
+  const run = spawnSync(process.execPath, ['--test', '--test-concurrency=1', path.resolve(import.meta.dirname, 'ux-finance-workspace.integration.test.mjs')], { env, encoding: 'utf8', timeout: 20_000 });
+  assert.equal(run.status, 0, 'node:test isoladamente pode sair zero com skips');
+  const actual = audit(`${run.stdout || ''}\n${run.stderr || ''}`);
+  assert.ok(actual.skipped > 0); assert.ok(actual.problems.length > 0, 'o auditor deve reprovar a execução incompleta real');
+});
+
+test('PG supervisor: 05AE recusa banco herdado e preserva o runner financeiro', options, async () => {
+  const { spawnSync } = await import('node:child_process');
+  const runner = path.resolve(import.meta.dirname, '../scripts/qa-ux-pro-07e2-alvo-postgres.mjs');
+  for (const key of ['DATABASE_URL', 'DATABASE_MIGRATION_URL', 'RUN_DATABASE_INTEGRATION_REMOTE']) {
+    const run = spawnSync(process.execPath, [runner], { env: { ...cleanEnv, [key]: key.includes('URL') ? 'postgresql://synthetic.invalid/not-used' : '1' }, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(run.status, 2, key); assert.match(run.stderr, /QA_PG_REFUSED/);
+    assert.doesNotMatch(run.stdout, /QA_PG_READY|QA_PG_TEMP_CLEANED/);
+  }
+  const source = await readFile(runner, 'utf8');
+  assert.ok(source.indexOf('await superviseLocalPg(') < source.indexOf("await import('embedded-postgres')"));
+  assert.match(source, /process.platform !== 'win32'/); assert.match(source, /releaseSignalHandlers\(\)/);
+  assert.match(source, /migrate: 90_000, test: 1_200_000/); assert.match(source, /await createLocalQaDatabase\(/);
+  assert.match(source, /finally \{\s*await restoreGeneratedFiles\(generatedSnapshot\)/);
+  assert.match(source, /if \(result.cleaned\) console.log\('UX_FIN_07E2_ALVO_SETUP: temporário limpo'\)/);
+  assert.match(source, /type: 'complete', code: result/); assert.match(source, /const MINIMUM_CASES = 46/);
+  assert.match(source, /--max-old-space-size=1024/); assert.match(source, /UX_FINANCE_EVIDENCE_DIR/);
+  assert.doesNotMatch(source, /--test-name-pattern/);
+  const body = source.slice(source.indexOf('let result = 1;')); let previous = -1;
+  for (const phase of ['initialise','start','create','migrate','test','stop','done']) {
+    const index = body.indexOf(`phase('${phase}')`); assert.ok(index > previous, phase); previous = index;
+  }
+  const ci = await readFile(new URL('../.github/workflows/ux-pro-07e2-alvo-delivery.yml', import.meta.url), 'utf8');
+  for (const file of ['scripts/lib/qa-pg-supervisor.mjs','scripts/qa-generated-files-guard.mjs','scripts/qa-generated-files.mjs','scripts/migrate-site-visual.mjs','tests/qa-pg-supervisor.test.mjs']) assert.ok(ci.includes(`'${file}'`), file);
+  assert.match(ci, /shell: bash scripts\/ci\/observed-shell\.sh \{0\}/);
+  assert.ok(ci.indexOf('node --test tests/qa-pg-supervisor.test.mjs') < ci.indexOf('node scripts/qa-ux-pro-07e2-alvo-postgres.mjs'));
+});
+
+test('PG supervisor: 05AE auditor TAP real rejeita parciais, diretivas e suíte sem banco', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { runInNewContext } = await import('node:vm');
+  const source = await readFile(new URL('../scripts/qa-ux-pro-07e2-alvo-postgres.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('const MINIMUM_CASES ='), end = source.indexOf('const database =', start);
+  const audit = runInNewContext(`${source.slice(start, end)}\nauditTap`);
+  const tap = (pass=46, fail=0, skip=0, todo=0, total=pass) => `# tests ${total}\n# pass ${pass}\n# fail ${fail}\n# skipped ${skip}\n# todo ${todo}\n`;
+  assert.equal(audit(tap()).problems.length, 0);
+  for (const out of ['', '# fail 0\n', tap(45), tap(46,1), tap(46,0,1), tap(46,0,0,1), tap(46,0,0,0,47), `not ok 1 - teste\n${tap()}`, `ok 1 - teste # SKIP\n${tap()}`, `ok 1 - teste # TODO\n${tap()}`]) assert.ok(audit(out).problems.length > 0);
+  const env = { ...cleanEnv, RUN_DATABASE_INTEGRATION: '', UX_FINANCE_EVIDENCE_DIR: '' }; delete env.NODE_TEST_CONTEXT;
+  const run = spawnSync(process.execPath, ['--test', '--test-concurrency=1', path.resolve(import.meta.dirname, 'ux-finance-workspace.integration.test.mjs')], { env, encoding: 'utf8', timeout: 20_000 });
+  assert.equal(run.status, 0, 'node:test isoladamente pode sair zero com skips');
+  const actual = audit(`${run.stdout || ''}\n${run.stderr || ''}`);
+  assert.ok(actual.skipped > 0); assert.ok(actual.problems.length > 0, 'o auditor deve reprovar a execução incompleta real');
+});
+
+test('PG supervisor: 05AF recusa banco herdado e preserva o runner financeiro', options, async () => {
+  const { spawnSync } = await import('node:child_process');
+  const runner = path.resolve(import.meta.dirname, '../scripts/qa-ux-pro-07f1-postgres.mjs');
+  for (const key of ['DATABASE_URL', 'DATABASE_MIGRATION_URL', 'RUN_DATABASE_INTEGRATION_REMOTE']) {
+    const run = spawnSync(process.execPath, [runner], { env: { ...cleanEnv, [key]: key.includes('URL') ? 'postgresql://synthetic.invalid/not-used' : '1' }, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(run.status, 2, key); assert.match(run.stderr, /QA_PG_REFUSED/);
+    assert.doesNotMatch(run.stdout, /QA_PG_READY|QA_PG_TEMP_CLEANED/);
+  }
+  const source = await readFile(runner, 'utf8');
+  assert.ok(source.indexOf('await superviseLocalPg(') < source.indexOf("await import('embedded-postgres')"));
+  assert.match(source, /process.platform !== 'win32'/); assert.match(source, /releaseSignalHandlers\(\)/);
+  assert.match(source, /migrate: 90_000, test: 1_200_000/); assert.match(source, /await createLocalQaDatabase\(/);
+  assert.match(source, /finally \{\s*await restoreGeneratedFiles\(generatedSnapshot\)/);
+  assert.match(source, /if \(result.cleaned\) console.log\('UX_FIN_07F1_SETUP: temporário limpo'\)/);
+  assert.match(source, /type: 'complete', code: result/); assert.match(source, /const MINIMUM_CASES = 44/);
+  assert.match(source, /--max-old-space-size=1024/); assert.match(source, /UX_FINANCE_EVIDENCE_DIR/);
+  assert.doesNotMatch(source, /--test-name-pattern/);
+  const body = source.slice(source.indexOf('let result = 1;')); let previous = -1;
+  for (const phase of ['initialise','start','create','migrate','test','stop','done']) {
+    const index = body.indexOf(`phase('${phase}')`); assert.ok(index > previous, phase); previous = index;
+  }
+  const ci = await readFile(new URL('../.github/workflows/ux-pro-07f1-delivery.yml', import.meta.url), 'utf8');
+  for (const file of ['scripts/lib/qa-pg-supervisor.mjs','scripts/qa-generated-files-guard.mjs','scripts/qa-generated-files.mjs','scripts/migrate-site-visual.mjs','tests/qa-pg-supervisor.test.mjs']) assert.ok(ci.includes(`'${file}'`), file);
+  assert.match(ci, /shell: bash scripts\/ci\/observed-shell\.sh \{0\}/);
+  assert.ok(ci.includes('node --test tests/ux-finance-dates.test.mjs'));
+  assert.ok(ci.indexOf('node --test tests/qa-pg-supervisor.test.mjs') < ci.indexOf('node scripts/qa-ux-pro-07f1-postgres.mjs'));
+});
+
+test('PG supervisor: 05AF auditor TAP real rejeita parciais, diretivas e suíte sem banco', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { runInNewContext } = await import('node:vm');
+  const source = await readFile(new URL('../scripts/qa-ux-pro-07f1-postgres.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('const MINIMUM_CASES ='), end = source.indexOf('const database =', start);
+  const audit = runInNewContext(`${source.slice(start, end)}\nauditTap`);
+  const tap = (pass=44, fail=0, skip=0, todo=0, total=pass) => `# tests ${total}\n# pass ${pass}\n# fail ${fail}\n# skipped ${skip}\n# todo ${todo}\n`;
+  assert.equal(audit(tap()).problems.length, 0);
+  for (const out of ['', '# fail 0\n', tap(43), tap(44,1), tap(44,0,1), tap(44,0,0,1), tap(44,0,0,0,45), `not ok 1 - teste\n${tap()}`, `ok 1 - teste # SKIP\n${tap()}`, `ok 1 - teste # TODO\n${tap()}`]) assert.ok(audit(out).problems.length > 0);
+  const env = { ...cleanEnv, RUN_DATABASE_INTEGRATION: '', UX_FINANCE_EVIDENCE_DIR: '' }; delete env.NODE_TEST_CONTEXT;
+  const run = spawnSync(process.execPath, ['--test', '--test-concurrency=1', path.resolve(import.meta.dirname, 'ux-finance-workspace.integration.test.mjs')], { env, encoding: 'utf8', timeout: 20_000 });
+  assert.equal(run.status, 0, 'node:test isoladamente pode sair zero com skips');
+  const actual = audit(`${run.stdout || ''}\n${run.stderr || ''}`);
+  assert.ok(actual.skipped > 0); assert.ok(actual.problems.length > 0, 'o auditor deve reprovar a execução incompleta real');
+});
+
+test('PG supervisor: 05AG recusa banco herdado e preserva gate RAG', options, async () => {
+  const { spawnSync } = await import('node:child_process');
+  const runner = path.resolve(import.meta.dirname, '../scripts/qa-ai-rag-widget-postgres.mjs');
+  for (const key of ['DATABASE_URL', 'DATABASE_MIGRATION_URL', 'RUN_DATABASE_INTEGRATION_REMOTE']) {
+    const run = spawnSync(process.execPath, [runner], { env: { ...cleanEnv, [key]: key.includes('URL') ? 'postgresql://synthetic.invalid/not-used' : '1' }, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(run.status, 2, key); assert.match(run.stderr, /QA_PG_REFUSED/);
+    assert.doesNotMatch(run.stdout, /QA_PG_READY|QA_FECH01_RAG_WIDGET_PG_TEMP_CLEANED/);
+  }
+  const source = await readFile(runner, 'utf8');
+  assert.ok(source.indexOf('await superviseLocalPg(') < source.indexOf("await import('embedded-postgres')"));
+  assert.match(source, /process.platform !== 'win32'/); assert.match(source, /releaseSignalHandlers\(\)/);
+  assert.match(source, /migrate: 90_000, test: 1_200_000/); assert.match(source, /await createLocalQaDatabase\(/);
+  assert.match(source, /finally \{\s*await restoreGeneratedFiles\(generatedSnapshot\)/);
+  assert.match(source, /if \(result.cleaned\) console.log\('QA_FECH01_RAG_WIDGET_PG_TEMP_CLEANED: true'\)/);
+  assert.match(source, /type: 'complete', code: exitCode/); assert.match(source, /const MINIMO = 20/);
+  assert.match(source, /--max-old-space-size=1536/); assert.match(source, /FECH01_TEST_PATTERN/);
+  assert.match(source, /QA_AI_RAG_WIDGET_REQUIRE_DB: '1'/);
+  assert.match(source, /if \(supervised\) \{\s*try \{ await postgres.stop\(\); \} catch \(error\)/);
+  const body = source.slice(source.indexOf('let exitCode = 1;')); let previous = -1;
+  for (const phase of ['initialise','start','create','migrate','test','stop','done']) {
+    const index = body.indexOf(`phase('${phase}')`); assert.ok(index > previous, phase); previous = index;
+  }
+  const ci = await readFile(new URL('../.github/workflows/fech-01-rag-widget-delivery.yml', import.meta.url), 'utf8');
+  for (const file of ['scripts/lib/qa-pg-supervisor.mjs','scripts/qa-generated-files-guard.mjs','scripts/qa-generated-files.mjs','scripts/migrate-site-visual.mjs','tests/qa-pg-supervisor.test.mjs']) assert.ok(ci.includes(`'${file}'`), file);
+  assert.match(ci, /shell: bash scripts\/ci\/observed-shell\.sh \{0\}/);
+  for (const command of ['npm run typecheck','tests/rag-widget-contract.test.mjs tests/ai-rag-real-scope.test.mjs','npm run build','npm run test:rag','npm run test:ai-rag-widget:pg','npm audit --audit-level=moderate']) assert.ok(ci.includes(command), command);
+  assert.ok(ci.indexOf('node --test tests/qa-pg-supervisor.test.mjs') < ci.indexOf('npm run test:ai-rag-widget:pg'));
+});
+
+test('PG supervisor: 05AG auditor TAP herdado e guarda real de banco obrigatório', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { runInNewContext } = await import('node:vm');
+  const source = await readFile(new URL('../scripts/qa-ai-rag-widget-postgres.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('function auditTap(output)'), end = source.indexOf('const port =', start);
+  const audit = runInNewContext(`const MINIMO = 20;\n${source.slice(start, end)}\nauditTap`);
+  const tap = (pass=20, fail=0, skip=0, todo=0) => `# tests ${pass}\n# pass ${pass}\n# fail ${fail}\n# skipped ${skip}\n# todo ${todo}\n`;
+  assert.equal(audit(tap()).problems.length, 0);
+  for (const out of ['', '# fail 0\n', tap(19), tap(20,1), tap(20,0,1), tap(20,0,0,1)]) assert.ok(audit(out).problems.length > 0);
+  // Contrato legado: não exige presença de contadores skipped/todo ou total nem analisa diretivas diretamente.
+  assert.equal(audit('# pass 20\n# fail 0\n').problems.length, 0);
+  const env = { ...cleanEnv, RUN_DATABASE_INTEGRATION: '', QA_AI_RAG_WIDGET_REQUIRE_DB: '1', FECH01_EVIDENCE_DIR: '' }; delete env.NODE_TEST_CONTEXT;
+  const run = spawnSync(process.execPath, ['--test', '--test-concurrency=1', path.resolve(import.meta.dirname, 'ai-rag-widget.integration.test.mjs')], { env, encoding: 'utf8', timeout: 20_000 });
+  assert.equal(run.status, 1); assert.match(`${run.stdout || ''}\n${run.stderr || ''}`, /not ok/);
+  assert.ok(audit(`${run.stdout || ''}\n${run.stderr || ''}`).problems.length > 0);
+});
+
+test('PG supervisor: 05AH recusa banco herdado e mantém contrato das rotas públicas', options, async () => {
+  const { spawnSync } = await import('node:child_process');
+  const runner = path.resolve(import.meta.dirname, '../scripts/qa-ux-public-routes-postgres.mjs');
+  for (const key of ['DATABASE_URL', 'DATABASE_MIGRATION_URL', 'RUN_DATABASE_INTEGRATION_REMOTE']) {
+    const run = spawnSync(process.execPath, [runner], { env: { ...cleanEnv, [key]: key.includes('URL') ? 'postgresql://synthetic.invalid/not-used' : '1' }, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(run.status, 2, key); assert.match(run.stderr, /QA_PUBLIC_PG_REFUSED/);
+    assert.doesNotMatch(run.stdout, /QA_PUBLIC_PG_READY|QA_PUBLIC_PG_TEMP_CLEANED/);
+  }
+  const source = await readFile(runner, 'utf8');
+  assert.ok(source.indexOf('await superviseLocalPg(') < source.indexOf("await import('embedded-postgres')"));
+  assert.match(source, /process.platform !== 'win32'/); assert.match(source, /releaseSignalHandlers\(\)/);
+  assert.match(source, /migrate: 90_000, test: 1_500_000/); assert.match(source, /await createLocalQaDatabase\(/);
+  assert.match(source, /finally \{\s*await restoreGeneratedFiles\(generatedSnapshot\)/);
+  assert.match(source, /if \(result.cleaned\) console.log\('QA_PUBLIC_PG_TEMP_CLEANED: true'\)/);
+  assert.match(source, /initdbFlags: \['--encoding=UTF8'\]/); assert.match(source, /UX_PUBLIC_TEST_PATTERN/);
+  assert.match(source, /RUN_DATABASE_INTEGRATION: '1'/); assert.match(source, /type: 'complete', code: result/);
+  const body = source.slice(source.indexOf('let result = 1;')); let previous = -1;
+  for (const phase of ['initialise','start','create','migrate','test','stop','done']) {
+    const index = body.indexOf(`phase('${phase}')`); assert.ok(index > previous, phase); previous = index;
+  }
+  const cases = [
+    ['ux-public-routes-delivery.yml','E6 grupo 1','tests/ux-public-routes-gate.test.mjs'],
+    ['ux-public-routes-group2-delivery.yml','E6 grupo 2','tests/ux-public-routes-group2-gate.test.mjs'],
+    ['ux-public-routes-group3-delivery.yml','E6 grupo 3','tests/ux-public-routes-group3-gate.test.mjs'],
+    ['ux-layout-previews-a11y-delivery.yml','UX-PRO-10B previas','tests/ux-pro-10b-previas-medicoes.test.mjs'],
+  ];
+  for (const [name, pattern, guard] of cases) {
+    const ci = await readFile(new URL(`../.github/workflows/${name}`, import.meta.url), 'utf8');
+    for (const file of ['scripts/lib/qa-pg-supervisor.mjs','scripts/qa-generated-files-guard.mjs','scripts/qa-generated-files.mjs','scripts/migrate-site-visual.mjs','tests/qa-pg-supervisor.test.mjs']) assert.ok(ci.includes(`'${file}'`), `${name} ${file}`);
+    assert.match(ci, /shell: bash scripts\/ci\/observed-shell\.sh \{0\}/);
+    assert.ok(ci.includes(`UX_PUBLIC_TEST_PATTERN: '${pattern}'`)); assert.ok(ci.includes(guard));
+    assert.ok(ci.includes('npm audit --audit-level=moderate')); assert.ok(ci.includes('npm run typecheck'));
+    assert.ok(ci.indexOf('node --test tests/qa-pg-supervisor.test.mjs') < ci.indexOf('node scripts/qa-ux-public-routes-postgres.mjs'));
+    if (name.startsWith('ux-layout-')) {
+      const gate = ci.indexOf('node scripts/qa-ux-public-routes-postgres.mjs');
+      assert.ok(ci.indexOf('node --test tests/ux-pro-10b-previas-medicoes.test.mjs', gate) > gate);
+      assert.ok(ci.indexOf('node scripts/ux-pro-10b-contrast-inventory.mjs --check', gate) > gate);
+    }
+  }
+});
+
+test('PG supervisor: Node 22 relata sucesso de arquivo mesmo sem cenário selecionado', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const env = { ...cleanEnv, RUN_DATABASE_INTEGRATION: '' }; delete env.NODE_TEST_CONTEXT;
+  const run = spawnSync(process.execPath, ['--test', '--test-concurrency=1', '--test-name-pattern', 'qa_pattern_sem_casos_05ah_993', path.resolve(import.meta.dirname, 'ux-public-routes.integration.test.mjs')], { env, encoding: 'utf8', timeout: 20_000 });
+  assert.equal(run.status, 0);
+  // Node 22 reports the file itself as one passing test when no named case matches.
+  assert.match(run.stdout, /# tests 1\b/);
+  assert.doesNotMatch(run.stdout, /(?:http|browser) E6 grupo|browser UX-PRO-10B previas/);
+  const source = await readFile(new URL('../scripts/qa-ux-public-routes-postgres.mjs', import.meta.url), 'utf8');
+  assert.match(source, /auditPublicTap\(probe.output/); assert.match(source, /auditPublicTap\(execution.output/);
+});
+
+test('PG supervisor: 05AI backup recusa alvos externos e conserva variantes, custódia e fases', options, async () => {
+  const { spawnSync } = await import('node:child_process');
+  const runner = path.resolve(import.meta.dirname, '../scripts/qa-backup-restore-postgres.mjs');
+  const env = { ...cleanEnv, ALLOW_REMOTE_MIGRATIONS: '', CLIENT_DOCS_DIR: '', QA_RESTORE_INCLUDE_SYNTHETIC_FILE: '', QA_RESTORE_SEPARATE_CLUSTERS: '' };
+  delete env.NODE_TEST_CONTEXT;
+  for (const [key, value] of [['DATABASE_URL','postgresql://synthetic.invalid/not-used'], ['DATABASE_MIGRATION_URL','postgresql://synthetic.invalid/not-used'], ['RUN_DATABASE_INTEGRATION_REMOTE','1'], ['ALLOW_REMOTE_MIGRATIONS','true']]) {
+    const run = spawnSync(process.execPath, [runner], { env: { ...env, [key]: value }, encoding: 'utf8', timeout: 10_000 });
+    assert.equal(run.status, 2, key); assert.match(run.stderr, /QA_RESTORE_REFUSED/);
+    assert.doesNotMatch(run.stdout, /QA_RESTORE_READY|QA_PG_TEMP_CLEANED/);
+  }
+  const source = await readFile(runner, 'utf8');
+  assert.ok(source.indexOf('await superviseLocalPg(') < source.indexOf("await import('embedded-postgres')"));
+  assert.ok(source.indexOf('await superviseLocalPg(') < source.indexOf('await command(dumpBin,'));
+  assert.match(source, /process.platform !== 'win32'/); assert.match(source, /releaseSignalHandlers\(\)/);
+  assert.match(source, /initialise: 120_000,\s*start: 60_000, create: 30_000, migrate: 90_000, test: 900_000, stop: 30_000/);
+  assert.match(source, /supervised \? process.env.QA_PG_DIRECTORY : await mkdtemp/);
+  assert.equal((source.match(/mkdtemp\(path.join\(supervised \? directory : tmpdir\(\), 'seg-qa-cli-contract-'\)\)/g) || []).length, 2);
+  assert.match(source, /supervised \? \[\] : \[directory\]/);
+  assert.match(source, /if \(outcome.cleaned\) console.log\('QA_RESTORE_TEMP_CLEANED: true/);
+  assert.match(source, /finally \{\s*await restoreGeneratedFiles\(generatedSnapshot\)/);
+  assert.equal((source.match(/await createLocalQaDatabase\(/g) || []).length, 2);
+  assert.match(source, /if \(supervised && separateClusters\) await restorePostgres.initialise\(\)/);
+  assert.match(source, /if \(supervised && separateClusters\) await restorePostgres.start\(\)/);
+  const body = source.slice(source.indexOf('let sourcePool, restoredPool')); let previous = -1;
+  for (const phase of ['initialise','start','create','migrate','test','stop','done']) {
+    const index = body.indexOf(`phase('${phase}')`); assert.ok(index > previous, phase); previous = index;
+  }
+  const ci = await readFile(new URL('../.github/workflows/backup-restore-delivery.yml', import.meta.url), 'utf8');
+  assert.ok(ci.indexOf('node --test tests/qa-pg-supervisor.test.mjs') < ci.indexOf('npm run "$gate"'));
+  for (const suffix of ['', ':clusters', ':files', ':http', ':signed', ':inventory', ':cli-objects', ':cli-partial']) assert.ok(ci.includes(`test:backup-restore:pg${suffix}`), suffix);
+  assert.match(ci, /if \[ "\$result" -ne 0 \]/); assert.match(ci, /exit "\$failed"/);
+});
+
+test('PG supervisor: 05AI preflight de binários inválidos mantém exit 2 e limpa sandbox', options, async () => {
+  const { spawnSync } = await import('node:child_process');
+  const env = { ...cleanEnv, ALLOW_REMOTE_MIGRATIONS: '', CLIENT_DOCS_DIR: '', QA_RESTORE_INCLUDE_SYNTHETIC_FILE: '', QA_RESTORE_SEPARATE_CLUSTERS: '', QA_PG_DUMP_BIN: '/nonexistent/qa-pg-dump-17', QA_PG_RESTORE_BIN: '/nonexistent/qa-pg-restore-17' };
+  delete env.NODE_TEST_CONTEXT;
+  const run = spawnSync(process.execPath, [path.resolve(import.meta.dirname, '../scripts/qa-backup-restore-postgres.mjs')], { env, encoding: 'utf8', timeout: 20_000 });
+  assert.equal(run.status, 2, run.stderr); assert.match(run.stderr, /QA_RESTORE_CLIENT_MISSING_OR_INCOMPATIBLE/);
+  assert.match(run.stdout, /QA_PG_SUPERVISOR: worker-failed; phase=boot; exit=2/);
+  assert.match(run.stdout, /QA_RESTORE_TEMP_CLEANED: true/); assert.doesNotMatch(run.stdout, /QA_RESTORE_READY/);
 });
