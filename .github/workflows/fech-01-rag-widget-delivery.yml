@@ -16,6 +16,11 @@ on:
       - 'tests/rag-widget-contract.test.mjs'
       - 'tests/ai-rag-widget.integration.test.mjs'
       - 'scripts/qa-ai-rag-widget-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'scripts/qa-generated-files.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
       - 'docs/FECH-01-*.md'
       - 'docs/fech-01-assistentes-evidencias/**'
       - 'package*.json'
@@ -36,6 +41,9 @@ jobs:
     env:
       DATABASE_URL: ''
       DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      ALLOW_REMOTE_MIGRATIONS: ''
+      FECH01_TEST_PATTERN: ''
       MAIL_HOST: ''
       NEXT_TELEMETRY_DISABLED: '1'
     steps:
@@ -45,6 +53,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Supervisor PostgreSQL descartável
+        run: node --test tests/qa-pg-supervisor.test.mjs
       - run: npm run typecheck
       # Contrato puro (sem HTTP/banco) e contrato do servidor com pool simulado
       # e provedor determinístico identificado como stub — não é Ollama real.

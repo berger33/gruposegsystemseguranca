@@ -29,6 +29,13 @@ on:
       - 'scripts/ux-evidence-text-contrast.mjs'
       - 'scripts/ux-pro-10b-contrast-inventory.mjs'
       - 'scripts/qa-ux-public-routes-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/lib/qa-public-tap-audit.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'scripts/qa-generated-files.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
+      - 'tests/qa-public-tap-audit.test.mjs'
       - 'tests/ux-public-routes.integration.test.mjs'
       - 'tests/ux-pro-10b-previas-medicoes.test.mjs'
       - 'tests/ux-pro-10b-contrast-inventory.test.mjs'
@@ -51,11 +58,22 @@ jobs:
   focal:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      ALLOW_REMOTE_MIGRATIONS: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
+      - name: Supervisor PostgreSQL descartável
+        run: node --test tests/qa-pg-supervisor.test.mjs
+      - name: Auditor TAP das rotas públicas
+        run: node --test tests/qa-public-tap-audit.test.mjs
       - run: npm audit --audit-level=moderate
       - run: npm run typecheck
       - name: Guarda estrutural da fatia

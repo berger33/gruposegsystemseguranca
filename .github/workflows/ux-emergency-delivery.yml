@@ -13,6 +13,11 @@ on:
       - 'tests/ext15-emergency.integration.test.mjs'
       - 'tests/ext15-emergency.test.mjs'
       - 'scripts/qa-ux-emergency-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'scripts/qa-generated-files.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
       - 'scripts/ux-pro-00-inventory.mjs'
       - 'db/migrations/**'
       - 'package*.json'
@@ -35,6 +40,13 @@ jobs:
     timeout-minutes: 40
     env:
       NEXT_TELEMETRY_DISABLED: 1
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      ALLOW_REMOTE_MIGRATIONS: ''
+      OLLAMA_ENABLED: 'false'
+      MAIL_HOST: ''
+      UX_EMERGENCY_TEST_PATTERN: ''
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -42,6 +54,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Supervisor PostgreSQL descartável
+        run: node --test tests/qa-pg-supervisor.test.mjs
       - name: TypeScript
         run: npm run typecheck
       - name: Apoio emergencial — HTTP real, PostgreSQL descartável e Chromium

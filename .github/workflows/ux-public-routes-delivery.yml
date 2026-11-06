@@ -15,6 +15,13 @@ on:
       - 'tests/ux-public-routes.integration.test.mjs'
       - 'tests/ux-public-routes-gate.test.mjs'
       - 'scripts/qa-ux-public-routes-postgres.mjs'
+      - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/lib/qa-public-tap-audit.mjs'
+      - 'scripts/qa-generated-files-guard.mjs'
+      - 'scripts/qa-generated-files.mjs'
+      - 'scripts/migrate-site-visual.mjs'
+      - 'tests/qa-pg-supervisor.test.mjs'
+      - 'tests/qa-public-tap-audit.test.mjs'
       - 'docs/UX-PRO-00-INVENTARIO-ROTAS-2026-10-13.csv'
       - 'docs/UX-PRO-00-MATRIZ-COBERTURA-2026-10-13.csv'
       - 'package.json'
@@ -29,11 +36,22 @@ jobs:
   focal:
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    env:
+      DATABASE_URL: ''
+      DATABASE_MIGRATION_URL: ''
+      RUN_DATABASE_INTEGRATION_REMOTE: ''
+      ALLOW_REMOTE_MIGRATIONS: ''
+      MAIL_HOST: ''
+      OLLAMA_ENABLED: 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
+      - name: Supervisor PostgreSQL descartável
+        run: node --test tests/qa-pg-supervisor.test.mjs
+      - name: Auditor TAP das rotas públicas
+        run: node --test tests/qa-public-tap-audit.test.mjs
       - run: npm audit --audit-level=moderate
       - run: npm run typecheck
       - name: Guarda estatica do gate e da normalizacao do parametro

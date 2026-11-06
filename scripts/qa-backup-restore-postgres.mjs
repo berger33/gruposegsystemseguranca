@@ -2,7 +2,6 @@
 // PLT-MIG-001 / PLT-BAK-001: pg_dump/pg_restore em bancos novos QA.
 // QA_RESTORE_SEPARATE_CLUSTERS=1 usa dois clusters efêmeros em loopback.
 // Nunca aceita URL de operador ou banco externo.
-import EmbeddedPostgres from 'embedded-postgres';
 import pg from 'pg';
 import { spawn } from 'node:child_process';
 import { createHash, generateKeyPairSync, randomBytes, randomUUID } from 'node:crypto';
@@ -16,7 +15,8 @@ import { inventoryQaFileCoverage } from './qa-backup-coverage-inventory.mjs';
 import { prepareQaCliV2Transfer, createQaCliV2UnreferencedFixture, inventoryQaCliV2Objects,
   injectQaCliV2CoTamper, restoreQaCliV2Transfer } from './qa-cli-v2-transfer.mjs';
 import { verifyRestoredDocumentHttp } from './qa-restored-document-http.mjs';
-import './qa-generated-files-guard.mjs';
+import { snapshotGeneratedFiles, restoreGeneratedFiles } from './qa-generated-files.mjs';
+import { releaseSignalHandlers } from './qa-generated-files-guard.mjs';
 
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.ALLOW_REMOTE_MIGRATIONS === 'true' ||
     process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') {
@@ -61,6 +61,34 @@ if ((includeCliObjects && (!verifyHttpDownload || !verifySignature || !includeSy
   process.exit(2);
 }
 
+const separateClusters = process.env.QA_RESTORE_SEPARATE_CLUSTERS === '1';
+if (includeSyntheticFile && !separateClusters) {
+  console.error('QA_RESTORE_REFUSED: synthetic file bundle requires two isolated clusters.');
+  process.exit(2);
+}
+
+// 05AI: todo o ensaio, inclusive o preflight dos clientes, fica sob prazo.
+// Os clusters, arquivo e diretórios CLI ficam dentro do TMPDIR do supervisor.
+const supervised = process.env.QA_PG_SUPERVISED === '1' && !!process.send;
+if (process.platform !== 'win32' && !supervised) {
+  releaseSignalHandlers();
+  const { superviseLocalPg, PG_PHASE_LIMITS } = await import('./lib/qa-pg-supervisor.mjs');
+  const generatedSnapshot = await snapshotGeneratedFiles();
+  let outcome;
+  try {
+    outcome = await superviseLocalPg({ entry: path.resolve(import.meta.filename),
+      args: process.argv.slice(2), limits: { ...PG_PHASE_LIMITS, initialise: 120_000,
+        start: 60_000, create: 30_000, migrate: 90_000, test: 900_000, stop: 30_000 } });
+  } finally {
+    await restoreGeneratedFiles(generatedSnapshot);
+    console.log('QA_RESTORE_GENERATED_FILES_RESTORED: true');
+  }
+  if (outcome.cleaned) console.log('QA_RESTORE_TEMP_CLEANED: true (cluster(s), archive and synthetic data)');
+  process.exit(outcome.code);
+}
+const { default: EmbeddedPostgres } = await import('embedded-postgres');
+const phase = name => { if (supervised) process.send({ type: 'phase', name }); };
+
 // PGHOST/PGSERVICE/PGOPTIONS/PGDATABASE/PGPASSFILE e afins nunca são herdados
 // por filhos. Cada utilitário recebe host, porta, usuário e DB explícitos.
 const cleanEnv = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/^PG/i.test(k) &&
@@ -96,17 +124,13 @@ async function freePort() {
     server.listen(0, '127.0.0.1', () => { const port = server.address().port; server.close(() => resolve(port)); });
   });
 }
-const separateClusters = process.env.QA_RESTORE_SEPARATE_CLUSTERS === '1';
-if (includeSyntheticFile && !separateClusters) {
-  console.error('QA_RESTORE_REFUSED: synthetic file bundle requires two isolated clusters.');
-  process.exit(2);
-}
 const port = await freePort();
 let restorePort = port;
 if (separateClusters) {
   do { restorePort = await freePort(); } while (restorePort === port);
 }
-const directory = await mkdtemp(path.join(tmpdir(), 'seg-qa-backup-pg-'));
+const directory = supervised ? process.env.QA_PG_DIRECTORY : await mkdtemp(path.join(tmpdir(), 'seg-qa-backup-pg-'));
+if (!directory) throw new Error('qa_pg_sandbox_missing');
 const archive = path.join(directory, 'synthetic-only.dump');
 // Diretórios próprios da execução: nunca ler CLIENT_DOCS_DIR ou um path de operador.
 const sourceDocs = path.join(directory, 'source-private-docs');
@@ -173,16 +197,29 @@ async function snapshot(pool, idA, idB, docA, docB, legacyDocId = null, expected
 }
 let sourcePool, restoredPool, cliSourceRoot, cliDestRoot, result = 1, poolHadError = false;
 try {
+  phase('initialise');
   await postgres.initialise();
+  if (supervised && separateClusters) await restorePostgres.initialise();
+  phase('start');
   await postgres.start();
-  await postgres.createDatabase(source);
-  if (separateClusters) {
-    await restorePostgres.initialise();
-    await restorePostgres.start();
-  }
-  await restorePostgres.createDatabase(destination); // base NOVA, não clone TEMPLATE
+  if (supervised && separateClusters) await restorePostgres.start();
+  phase('create');
+  if (supervised) {
+    const { createLocalQaDatabase } = await import('./lib/qa-pg-supervisor.mjs');
+    await createLocalQaDatabase({ port, user: 'seg_qa', password, database: source });
+    await createLocalQaDatabase({ port: restorePort, user: 'seg_qa', password: restorePassword, database: destination });
+  } else {
+    await postgres.createDatabase(source);
+    if (separateClusters) {
+      await restorePostgres.initialise();
+      await restorePostgres.start();
+    }
+    await restorePostgres.createDatabase(destination);
+  } // base NOVA, não clone TEMPLATE
   console.log(`QA_RESTORE_READY: PostgreSQL 17.9 loopback ${port}/${restorePort}; ${separateClusters ? 'two independent clusters' : 'two DBs in one cluster'}; no operator URL.`);
+  phase('migrate');
   await migrate(source);
+  phase('test');
   sourcePool = new pg.Pool({ connectionString: connection(source), max: 1 });
   // pg.Pool emite erro assíncrono ao parar o cluster com conexão idle; sem
   // listener, o processo aborta antes do finally remover os dois diretórios.
@@ -205,8 +242,8 @@ try {
   }
   let cliFixture;
   if (includeCliObjects) {
-    cliSourceRoot = await mkdtemp(path.join(tmpdir(), 'seg-qa-cli-contract-'));
-    cliDestRoot = await mkdtemp(path.join(tmpdir(), 'seg-qa-cli-contract-'));
+    cliSourceRoot = await mkdtemp(path.join(supervised ? directory : tmpdir(), 'seg-qa-cli-contract-'));
+    cliDestRoot = await mkdtemp(path.join(supervised ? directory : tmpdir(), 'seg-qa-cli-contract-'));
     cliFixture = await prepareQaCliV2Transfer({ pool: sourcePool, sourceRoot: cliSourceRoot,
       bundleDir: fileBundle, trustDir, docA, docB, accountA, accountB, identityA, identityB });
     if (injectCliPartial) {
@@ -396,6 +433,7 @@ try {
 } catch (error) {
   console.error('QA_RESTORE_FAILED', redact(error?.message || error).slice(0, 350));
 } finally {
+  phase('stop');
   try { await restoredPool?.end(); await sourcePool?.end(); } catch { result = 1; }
   if (separateClusters) {
     try { await restorePostgres.stop(); } catch (error) {
@@ -407,13 +445,18 @@ try {
     console.error('QA_RESTORE_STOP_FAILED', redact(error?.message || error).slice(0, 250));
     result = 1;
   }
-  const cleanups = await Promise.allSettled([directory, cliSourceRoot, cliDestRoot].filter(Boolean)
+  // Em POSIX supervisionado, somente o pai remove o sandbox completo.
+  const cleanups = await Promise.allSettled([...(supervised ? [] : [directory]), cliSourceRoot, cliDestRoot].filter(Boolean)
     .map(root => rm(root, { recursive: true, force: true })));
   if (cleanups.some(item => item.status === 'rejected')) {
     result = 1;
     console.error('QA_RESTORE_TEMP_CLEANED: false (QA directories require inspection)');
-  } else {
+  } else if (!supervised) {
     console.log('QA_RESTORE_TEMP_CLEANED: true (cluster(s), archive and synthetic data)');
   }
+}
+if (supervised) {
+  phase('done');
+  await new Promise(resolve => process.send({ type: 'complete', code: result }, resolve));
 }
 process.exit(result);
