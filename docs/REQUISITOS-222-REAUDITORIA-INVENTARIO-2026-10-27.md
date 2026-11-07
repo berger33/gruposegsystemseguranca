@@ -30,7 +30,7 @@ prova rota alguma. Workflows são **60** na reconciliação de 04/11 (o `plt-jor
 
 ### Método
 
-Uma única passada por **1.742 arquivos** após a fatia 06A (antes, 1.740) de `tests/`, `.github/workflows/`,
+Uma única passada por **1.747 arquivos** após a fatia 06B (1.742 após a 06A; 1.740 antes dela) de `tests/`, `.github/workflows/`,
 `docs/`, `src/` e `scripts/`. `STATUS-VIGENTE.md`, as auditorias de 26/10, 28/10 e
 02/11, a fotografia de 04/10 e os artefatos desta fatia são **excluídos** — são
 meta-estado, não prova de requisito, e evitam auto-referência. De cada arquivo o gerador extrai todos os IDs com

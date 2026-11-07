@@ -57,7 +57,7 @@
     ],
     "aceiteHumanoRegistrado": 0,
     "reauditoriasIntegraisExecutadas": 0,
-    "arquivosVarridos": 1742,
+    "arquivosVarridos": 1747,
     "limitacoes": [
       "\"mencionado em gate\" NÃO é prova de jornada nem de aceite",
       "a fotografia de 04/10 é histórica e não foi revalidada por papel",
@@ -3884,6 +3884,7 @@
       "classe_evidencia_atual": "mencionado_em_gate",
       "arquivos_gate_nomeados": [],
       "arquivos_gate": [
+        ".github/workflows/ci.yml",
         "tests/qa-cli-v2-local-provider.test.mjs",
         "tests/qa-cli-v2-object-pg.integration.test.mjs"
       ],
@@ -3899,13 +3900,14 @@
       ],
       "arquivos_codigo": [
         "scripts/qa-cli-v2-local-provider.mjs",
+        "scripts/qa-cli-v2-postgres.mjs",
         "scripts/qa-cli-v2-transfer.mjs",
         "src/app/admin/ti/CliClient.tsx",
         "src/server/cli-api.mjs"
       ],
-      "ocorrencias_gate": 6,
+      "ocorrencias_gate": 7,
       "ocorrencias_documento": 16,
-      "ocorrencias_codigo": 5,
+      "ocorrencias_codigo": 6,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
@@ -4073,6 +4075,7 @@
         "docs/PROMPT-CONTINUACAO-L08-CLI14.md"
       ],
       "arquivos_codigo": [
+        "scripts/qa-cli-v2-postgres.mjs",
         "scripts/qa-l08-delivery-postgres.mjs",
         "scripts/ux-pro-03-ti-inventory.mjs",
         "src/app/admin/ti/CliFinanceClient.module.css",
@@ -4081,7 +4084,7 @@
       ],
       "ocorrencias_gate": 6,
       "ocorrencias_documento": 19,
-      "ocorrencias_codigo": 8,
+      "ocorrencias_codigo": 10,
       "aceite_humano": "nao_registrado",
       "reauditoria_integral": "nao_executada"
     },
