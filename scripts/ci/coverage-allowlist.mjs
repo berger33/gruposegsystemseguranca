@@ -46,18 +46,6 @@ export const ALLOWLIST = [
 export const TAP_AUDIT_ALLOWLIST = [
   // Ordem 2 — família L pendente
   {
-    alvo: 'scripts/qa-l02-delivery-postgres.mjs',
-    tipo: 'runner',
-    ordem: '02-familia-l-f01',
-    motivo: 'runner L02 herdado usa `stdio: inherit` sem auditar resumo TAP (`skip`/`fail`/`todo`/piso). Migrar para `qa-tap-summary.mjs` com piso medido na fatia 06C.',
-  },
-  {
-    alvo: 'scripts/qa-l03-delivery-postgres.mjs',
-    tipo: 'runner',
-    ordem: '02-familia-l-f01',
-    motivo: 'runner L03 herdado usa `stdio: inherit` sem auditar resumo TAP (`skip`/`fail`/`todo`/piso). Migrar para `qa-tap-summary.mjs` com piso medido na fatia 06C.',
-  },
-  {
     alvo: 'scripts/qa-l04-delivery-postgres.mjs',
     tipo: 'runner',
     ordem: '02-familia-l-f01',

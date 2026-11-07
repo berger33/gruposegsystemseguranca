@@ -18,6 +18,7 @@ on:
       - 'scripts/qa-l02-delivery-postgres.mjs'
       - 'scripts/qa-l03-delivery-postgres.mjs'
       - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/lib/qa-tap-summary.mjs'
       - 'scripts/qa-generated-files-guard.mjs'
       - 'tests/qa-pg-supervisor.test.mjs'
       - 'scripts/migrate-site-visual.mjs'

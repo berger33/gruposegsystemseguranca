@@ -23,17 +23,17 @@ Classes de `auditoria_tap`:
 | Jobs com comando | 60 |
 | Passos com comando | 237 |
 | Comandos mapeados | 244 |
-| Comandos com auditoria TAP (`auditado_tap`) | 46 |
-| Comandos sem auditoria TAP (`sem_auditoria_tap`) | 32 |
+| Comandos com auditoria TAP (`auditado_tap`) | 48 |
+| Comandos sem auditoria TAP (`sem_auditoria_tap`) | 30 |
 | Comandos `node --test` diretos (`node_test_direto`) | 94 |
 | Comandos sem TAP aplicável (`nao_aplicavel`) | 72 |
 | Scripts npm no manifest | 113 |
 | Scripts de gate (`test:*`/`qa:*`/`reaudit:*`) | 90 |
 | Scripts npm alcançados | 82 |
 | Runners alcançados | 79 de 116 arquivos |
-| Runners alcançados com auditoria TAP | 37 |
-| Runners alcançados sem auditoria TAP | 31 |
-| Resíduos `sem_auditoria_tap` declarados | 32 |
+| Runners alcançados com auditoria TAP | 39 |
+| Runners alcançados sem auditoria TAP | 29 |
+| Resíduos `sem_auditoria_tap` declarados | 30 |
 | Arquivos de teste alcançados | 250 de 251 |
 | Casos declarados nos arquivos de teste | 2676 |
 
@@ -59,7 +59,7 @@ Classes de `auditoria_tap`:
 | `f03-finance-lead-delivery.yml` | 3 | 2 | 2 | 3 |
 | `f03-ticket-employee-delivery.yml` | 3 | 2 | 2 | 3 |
 | `fech-01-rag-widget-delivery.yml` | 6 | 4 | 0 | 5 |
-| `l02-l03-delivery.yml` | 3 | 2 | 2 | 4 |
+| `l02-l03-delivery.yml` | 3 | 2 | 0 | 4 |
 | `l04-delivery.yml` | 3 | 2 | 1 | 2 |
 | `l05-delivery.yml` | 3 | 2 | 1 | 2 |
 | `l06-delivery.yml` | 3 | 2 | 1 | 2 |
@@ -110,8 +110,6 @@ Nenhuma. Todo gate declarado tem caminho de execução, nenhum gate novo está s
 
 | Ordem | Alvo | Tipo | Motivo |
 |---|---|---|---|
-| `02-familia-l-f01` | `scripts/qa-l02-delivery-postgres.mjs` | runner | runner L02 herdado usa `stdio: inherit` sem auditar resumo TAP (`skip`/`fail`/`todo`/piso). Migrar para `qa-tap-summary.mjs` com piso medido na fatia 06C. |
-| `02-familia-l-f01` | `scripts/qa-l03-delivery-postgres.mjs` | runner | runner L03 herdado usa `stdio: inherit` sem auditar resumo TAP (`skip`/`fail`/`todo`/piso). Migrar para `qa-tap-summary.mjs` com piso medido na fatia 06C. |
 | `02-familia-l-f01` | `scripts/qa-l04-delivery-postgres.mjs` | runner | runner L04 herdado usa `stdio: inherit` sem auditar resumo TAP (`skip`/`fail`/`todo`/piso). Migrar para `qa-tap-summary.mjs` com piso medido na fatia 06C. |
 | `02-familia-l-f01` | `scripts/qa-l05-delivery-postgres.mjs` | runner | runner L05 herdado usa `stdio: inherit` sem auditar resumo TAP (`skip`/`fail`/`todo`/piso). Migrar para `qa-tap-summary.mjs` com piso medido na fatia 06C. |
 | `02-familia-l-f01` | `scripts/qa-l06-delivery-postgres.mjs` | runner | runner L06 herdado usa `stdio: inherit` sem auditar resumo TAP (`skip`/`fail`/`todo`/piso). Migrar para `qa-tap-summary.mjs` com piso medido na fatia 06C. |
