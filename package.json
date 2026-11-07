@@ -105,7 +105,7 @@
     "test:ux-continuity:pg": "node scripts/qa-ux-continuity-postgres.mjs",
     "test:ux-continuity-client:pg": "node scripts/qa-ux-continuity-client-postgres.mjs",
     "test:ux-pro-09e-pu4": "node --test tests/ux-pro-09e-pu4.test.mjs",
-    "test:ux-pro-09e-pu4:browser": "UX_PU4_REQUIRE_BROWSER=1 node --test tests/ux-pro-09e-pu4.test.mjs",
+    "test:ux-pro-09e-pu4:browser": "UX_PU4_REQUIRE_BROWSER=1 node scripts/qa-ux-pro-09e-pu4-browser.mjs tests/ux-pro-09e-pu4.test.mjs",
     "test:ux-pro-09e-pu6": "node --test tests/ux-pro-09e-pu6.test.mjs",
     "test:ux-pro-04-reports": "node --test tests/ux-pro-04-relatorios-ui.test.mjs",
     "qa:ux-pro-04-reports-browser": "node scripts/ux-pro-04-relatorios-browser-evidence.mjs",

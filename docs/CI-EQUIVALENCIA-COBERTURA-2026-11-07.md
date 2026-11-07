@@ -23,17 +23,17 @@ Classes de `auditoria_tap`:
 | Jobs com comando | 60 |
 | Passos com comando | 237 |
 | Comandos mapeados | 244 |
-| Comandos com auditoria TAP (`auditado_tap`) | 44 |
-| Comandos sem auditoria TAP (`sem_auditoria_tap`) | 34 |
+| Comandos com auditoria TAP (`auditado_tap`) | 46 |
+| Comandos sem auditoria TAP (`sem_auditoria_tap`) | 32 |
 | Comandos `node --test` diretos (`node_test_direto`) | 94 |
 | Comandos sem TAP aplicável (`nao_aplicavel`) | 72 |
 | Scripts npm no manifest | 113 |
 | Scripts de gate (`test:*`/`qa:*`/`reaudit:*`) | 90 |
 | Scripts npm alcançados | 82 |
-| Runners alcançados | 78 de 115 arquivos |
-| Runners alcançados com auditoria TAP | 35 |
-| Runners alcançados sem auditoria TAP | 32 |
-| Resíduos `sem_auditoria_tap` declarados | 34 |
+| Runners alcançados | 79 de 116 arquivos |
+| Runners alcançados com auditoria TAP | 37 |
+| Runners alcançados sem auditoria TAP | 31 |
+| Resíduos `sem_auditoria_tap` declarados | 32 |
 | Arquivos de teste alcançados | 250 de 251 |
 | Casos declarados nos arquivos de teste | 2676 |
 
@@ -41,9 +41,9 @@ Classes de `auditoria_tap`:
 
 | Workflow | Comandos | Gates/runners | Sem auditoria TAP | Arquivos de teste |
 |---|---:|---:|---:|---:|
-| `admin-entry-delivery.yml` | 1 | 1 | 1 | 1 |
+| `admin-entry-delivery.yml` | 1 | 1 | 0 | 1 |
 | `backup-restore-delivery.yml` | 9 | 8 | 0 | 1 |
-| `ci.yml` | 20 | 17 | 2 | 21 |
+| `ci.yml` | 20 | 17 | 1 | 21 |
 | `ext02-delivery.yml` | 2 | 2 | 0 | 1 |
 | `ext03-delivery.yml` | 2 | 2 | 0 | 1 |
 | `ext04-delivery.yml` | 2 | 2 | 0 | 1 |
@@ -110,8 +110,6 @@ Nenhuma. Todo gate declarado tem caminho de execução, nenhum gate novo está s
 
 | Ordem | Alvo | Tipo | Motivo |
 |---|---|---|---|
-| `01-ci-yml` | `test:ux-pro-09e-pu4:browser` | script | gate de navegador do `ci.yml` invoca `node --test` direto sem auditar resumo TAP; se a guarda de ambiente for removida ou um caso virar `t.skip`, `node:test` sai 0. Migrar na fatia 06C lote 1. |
-| `02-familia-l-f01` | `scripts/qa-admin-entry-postgres.mjs` | runner | runner F01 herdado propaga apenas exit code (`stdio: inherit`) no passo `node --test`; arquivo todo `skip` sairia 0. Migrar para `qa-tap-summary.mjs` com piso medido na fatia 06C. |
 | `02-familia-l-f01` | `scripts/qa-l02-delivery-postgres.mjs` | runner | runner L02 herdado usa `stdio: inherit` sem auditar resumo TAP (`skip`/`fail`/`todo`/piso). Migrar para `qa-tap-summary.mjs` com piso medido na fatia 06C. |
 | `02-familia-l-f01` | `scripts/qa-l03-delivery-postgres.mjs` | runner | runner L03 herdado usa `stdio: inherit` sem auditar resumo TAP (`skip`/`fail`/`todo`/piso). Migrar para `qa-tap-summary.mjs` com piso medido na fatia 06C. |
 | `02-familia-l-f01` | `scripts/qa-l04-delivery-postgres.mjs` | runner | runner L04 herdado usa `stdio: inherit` sem auditar resumo TAP (`skip`/`fail`/`todo`/piso). Migrar para `qa-tap-summary.mjs` com piso medido na fatia 06C. |

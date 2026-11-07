@@ -44,20 +44,7 @@ export const ALLOWLIST = [
  *      `motivo` substantivo — nunca silêncio.
  */
 export const TAP_AUDIT_ALLOWLIST = [
-  // Ordem 1 — gates executados em `ci.yml`
-  {
-    alvo: 'test:ux-pro-09e-pu4:browser',
-    tipo: 'script',
-    ordem: '01-ci-yml',
-    motivo: 'gate de navegador do `ci.yml` invoca `node --test` direto sem auditar resumo TAP; se a guarda de ambiente for removida ou um caso virar `t.skip`, `node:test` sai 0. Migrar na fatia 06C lote 1.',
-  },
-  // Ordem 2 — entrada administrativa (F01) e família L (`L02..L08`)
-  {
-    alvo: 'scripts/qa-admin-entry-postgres.mjs',
-    tipo: 'runner',
-    ordem: '02-familia-l-f01',
-    motivo: 'runner F01 herdado propaga apenas exit code (`stdio: inherit`) no passo `node --test`; arquivo todo `skip` sairia 0. Migrar para `qa-tap-summary.mjs` com piso medido na fatia 06C.',
-  },
+  // Ordem 2 — família L pendente
   {
     alvo: 'scripts/qa-l02-delivery-postgres.mjs',
     tipo: 'runner',
