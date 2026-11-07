@@ -6,8 +6,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  ALLOWLIST, CSV_FILE, REPORT_FILE, buildCoverageMap, declaredCases, extractCommands,
-  parseWorkflow, renderCsv, renderReport, runnerInfo,
+  ALLOWLIST, CSV_FILE, REPORT_FILE, TAP_AUDIT_ALLOWLIST, buildCoverageMap, declaredCases,
+  extractCommands, parseWorkflow, renderCsv, renderReport, runnerInfo,
 } from '../scripts/qa-ci-coverage-map.mjs';
 
 // Fatia 06B — guarda do MAPA de equivalência de cobertura da CI.
@@ -107,9 +107,27 @@ test('06B: contagem de casos é de declarações `test(` e o piso TAP vem do run
   ].join('\n');
   assert.equal(declaredCases(source), 3, 'skip conta como declaração, não como execução garantida');
 
-  const runner = 'const MINIMUM_CASES = 21;\nspawn(node, ["--test", "tests/staff.integration.test.mjs"]);';
-  assert.deepEqual(runnerInfo(runner), { tests: ['tests/staff.integration.test.mjs'], floor: 21 });
-  assert.deepEqual(runnerInfo('console.log("sem gate")'), { tests: [], floor: null });
+  const runner = [
+    "import { assertTapSummary, collectTap } from './lib/qa-tap-summary.mjs';",
+    'const MINIMUM_CASES = 21;',
+    'const child = spawn(node, ["--test", "tests/staff.integration.test.mjs"], { stdio: ["ignore", "pipe", "pipe"] });',
+    'const out = await collectTap(child);',
+    'if (!assertTapSummary(out.output, { minimum: MINIMUM_CASES, label: "staff" }).ok) process.exit(1);',
+  ].join('\n');
+  assert.deepEqual(runnerInfo(runner), {
+    tests: ['tests/staff.integration.test.mjs'],
+    floor: 21,
+    tapAudit: 'auditado_tap',
+    tapMode: 'qa-tap-summary',
+    executesNodeTest: true,
+  });
+  assert.deepEqual(runnerInfo('console.log("sem gate")'), {
+    tests: [],
+    floor: null,
+    tapAudit: 'nao_aplicavel',
+    tapMode: null,
+    executesNodeTest: false,
+  });
 });
 
 async function fixture(t) {
@@ -133,7 +151,12 @@ async function fixture(t) {
   await write('tests/a.test.mjs', "test('a', () => {});\n");
   await write('tests/b.test.mjs', "test('b', () => {});\n");
   await write('tests/livre.test.mjs', "test('livre', () => {});\n");
-  await write('scripts/qa-runner.mjs', 'const MINIMUM_CASES = 1;\nspawn("node", ["--test", "tests/a.test.mjs"]);\n');
+  await write('scripts/qa-runner.mjs', [
+    "import { assertTapSummary, collectTap } from './lib/qa-tap-summary.mjs';",
+    'const child = spawn("node", ["--test", "tests/a.test.mjs"], { stdio: ["ignore", "pipe", "pipe"] });',
+    'const out = await collectTap(child);',
+    'if (!assertTapSummary(out.output, { minimum: 1, label: "fixture" }).ok) process.exit(1);',
+  ].join('\n'));
   await write('.github/workflows/ci.yml', [
     'jobs:',
     '  base:',
@@ -201,7 +224,10 @@ test('06B: o mapa versionado confere com o repositório e não há gate nem test
   assert.equal(map.failures.dangling.length, 0, 'comando de workflow apontando para alvo inexistente');
   assert.equal(map.failures.unresolved.length, 0, 'indireção que o parser não resolveu');
   assert.equal(map.failures.orphanRunners.length, 0, `runner de gate sem workflow: ${map.failures.orphanRunners.join(', ')}`);
-  assert.equal(map.failures.staleAllowlist.length, 0, 'allowlist com entrada já coberta');
+  assert.equal(map.failures.semAuditoriaTap.length, 0,
+    `gate sem auditoria TAP fora da lista de resíduos: ${map.failures.semAuditoriaTap.map((item) => item.alvo).join(', ')}`);
+  assert.equal(map.failures.invalidAllowlist.length, 0, 'entrada inválida na allowlist de resíduos TAP');
+  assert.equal(map.failures.staleAllowlist.length, 0, 'allowlist com entrada já coberta ou já auditada');
   assert.equal(map.failures.orphanScripts.length, 0,
     `gate sem workflow: ${map.failures.orphanScripts.map((item) => item.name).join(', ')}`);
   assert.equal(map.counts.workflows, 60, 'o mapa precisa ver os 60 workflows versionados');
@@ -259,4 +285,172 @@ test('06B: auditor TAP dos gates reaproveitados recusa skip, falha, todo e resum
     'resumo duplicado não pode passar');
   assert.ok(auditTapSummary('# tests 1\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n', { minimum: 1 })
     .problems.includes('sem_cenario_nomeado'), 'contar só o nome do arquivo não é cenário');
+});
+
+test('06C: detector estático distingue exit-code-only, MINIMUM_CASES, minimum: condicional e comentários', () => {
+  // 1) Runner só com exit code (`stdio: 'inherit'`): sem auditoria TAP.
+  const exitOnly = [
+    'const child = spawn(process.execPath, ["--test", "tests/l02-delivery.integration.test.mjs"], { stdio: "inherit" });',
+    'child.once("exit", (code) => process.exit(code ?? 1));',
+  ].join('\n');
+  assert.deepEqual(runnerInfo(exitOnly), {
+    tests: ['tests/l02-delivery.integration.test.mjs'],
+    floor: null,
+    tapAudit: 'sem_auditoria_tap',
+    tapMode: null,
+    executesNodeTest: true,
+  });
+
+  // 2) `MINIMUM_CASES` sozinho sem auditar resumo TAP NÃO é prova; com captura
+  //    e auditor completo dos contadores vira `auditado_tap`.
+  const fakeMinimumCases = [
+    'const MINIMUM_CASES = 14;',
+    'spawn(process.execPath, ["--test", "tests/admin-entry.integration.test.mjs"], { stdio: "inherit" });',
+  ].join('\n');
+  assert.equal(runnerInfo(fakeMinimumCases).tapAudit, 'sem_auditoria_tap');
+  assert.equal(runnerInfo(fakeMinimumCases).floor, 14);
+
+  const inlineMinimumCases = [
+    'const MINIMUM_CASES = 14;',
+    'const child = spawn(process.execPath, ["--test", "tests/admin-entry.integration.test.mjs"], { stdio: ["ignore", "pipe", "pipe"] });',
+    'const pass = number("pass"); const fail = number("fail"); const skipped = number("skipped"); const todo = number("todo");',
+    'if (fail || skipped || todo || pass < MINIMUM_CASES) result = 1;',
+  ].join('\n');
+  assert.deepEqual(runnerInfo(inlineMinimumCases), {
+    tests: ['tests/admin-entry.integration.test.mjs'],
+    floor: 14,
+    tapAudit: 'auditado_tap',
+    tapMode: 'inline-tap',
+    executesNodeTest: true,
+  });
+
+  // 3) `minimum:` condicional conta pelo MENOR valor; se admitir 0 ou ignorar `.ok`, reprova.
+  const conditionalMinimum = [
+    "import { assertTapSummary, collectTap } from './lib/qa-tap-summary.mjs';",
+    'const child = spawn(process.execPath, ["--test", flag ? "tests/a.mjs" : "tests/b.mjs"], { stdio: ["ignore", "pipe", "pipe"] });',
+    'const journey = await collectTap(child);',
+    'if (!assertTapSummary(journey.output, { minimum: flag ? 27 : 25, label: "TENANT" }).ok) process.exit(1);',
+  ].join('\n');
+  assert.equal(runnerInfo(conditionalMinimum).tapAudit, 'auditado_tap');
+  assert.equal(runnerInfo(conditionalMinimum).floor, 25, 'piso condicional conta pelo menor valor');
+
+  const uncheckedTapResult = [
+    "import { assertTapSummary, collectTap } from './lib/qa-tap-summary.mjs';",
+    'const child = spawn(process.execPath, ["--test", "tests/a.mjs"], { stdio: ["ignore", "pipe", "pipe"] });',
+    'const journey = await collectTap(child);',
+    'const tap = assertTapSummary(journey.output, { minimum: 5, label: "BUG" });',
+    'process.exit(journey.code === 0 && tap ? 0 : 1);',
+  ].join('\n');
+  assert.equal(runnerInfo(uncheckedTapResult).tapAudit, 'sem_auditoria_tap',
+    'assertTapSummary retorna { ok, tests }: tratar o objeto como booleano nunca reprova');
+
+  const zeroBranchMinimum = [
+    "import { assertTapSummary, collectTap } from './lib/qa-tap-summary.mjs';",
+    'const child = spawn(process.execPath, ["--test", "tests/a.mjs"], { stdio: ["ignore", "pipe", "pipe"] });',
+    'const journey = await collectTap(child);',
+    'if (!assertTapSummary(journey.output, { minimum: pattern ? 0 : 21, label: "UX" }).ok) process.exit(1);',
+  ].join('\n');
+  assert.equal(runnerInfo(zeroBranchMinimum).floor, 0);
+  assert.equal(runnerInfo(zeroBranchMinimum).tapAudit, 'sem_auditoria_tap',
+    'caminho condicional com piso 0 deixa brecha para zero cenários executados');
+
+  // 4) Falso positivo medido na 06B: comentário em runner não executa teste nem
+  //    satisfaz auditoria TAP.
+  const commentedOut = [
+    "// import { assertTapSummary, collectTap } from './lib/qa-tap-summary.mjs';",
+    '// spawn(process.execPath, ["--test", "tests/fantasma.integration.test.mjs"]);',
+    '/* assertTapSummary(out, { minimum: 99, label: "falso" }); tests/outro.mjs */',
+    'spawn(process.execPath, ["--test", "tests/real.integration.test.mjs"], { stdio: "inherit" });',
+  ].join('\n');
+  assert.deepEqual(runnerInfo(commentedOut).tests, ['tests/real.integration.test.mjs'],
+    'teste citado apenas em comentário não entra como jornada executada');
+  assert.equal(runnerInfo(commentedOut).tapAudit, 'sem_auditoria_tap');
+  assert.equal(runnerInfo(commentedOut).floor, null);
+});
+
+test('06C: gate novo sem auditoria TAP reprova; resíduo legado exige ordem/motivo e vira obsoleto ao migrar', async (t) => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'seg-ci-map-06c-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const write = async (relative, content) => {
+    await mkdir(path.dirname(path.join(directory, relative)), { recursive: true });
+    await writeFile(path.join(directory, relative), content);
+  };
+  await write('package.json', JSON.stringify({
+    scripts: {
+      'test:legado:pg': 'node scripts/qa-legado-postgres.mjs',
+      'test:auditado:pg': 'node scripts/qa-auditado-postgres.mjs',
+    },
+  }, null, 2));
+  await write('tests/legado.integration.test.mjs', "test('legado', () => {});\n");
+  await write('tests/auditado.integration.test.mjs', "test('auditado', () => {});\n");
+  await write('scripts/qa-legado-postgres.mjs',
+    'spawn(process.execPath, ["--test", "tests/legado.integration.test.mjs"], { stdio: "inherit" });\n');
+  await write('scripts/qa-auditado-postgres.mjs', [
+    "import { assertTapSummary, collectTap } from './lib/qa-tap-summary.mjs';",
+    'const child = spawn(process.execPath, ["--test", "tests/auditado.integration.test.mjs"], { stdio: ["ignore", "pipe", "pipe"] });',
+    'const out = await collectTap(child);',
+    'if (!assertTapSummary(out.output, { minimum: 1, label: "auditado" }).ok) process.exit(1);',
+  ].join('\n'));
+  await write('.github/workflows/ci.yml', [
+    'jobs:',
+    '  gate:',
+    '    steps:',
+    '      - run: npm run test:legado:pg',
+    '      - run: npm run test:auditado:pg',
+  ].join('\n'));
+
+  // Sem allowlist de resíduo TAP: o gate sem auditoria reprova na hora.
+  const failing = await buildCoverageMap({ root: directory, allowlist: [], tapAllowlist: [] });
+  assert.deepEqual(failing.failures.semAuditoriaTap.map((item) => item.alvo), ['scripts/qa-legado-postgres.mjs']);
+  assert.match(renderCsv(failing), /"test:legado:pg","direct","tests\/legado\.integration\.test\.mjs","1","sem_auditoria_tap",""/);
+  assert.match(renderCsv(failing), /"test:auditado:pg","direct","tests\/auditado\.integration\.test\.mjs","1","auditado_tap","1"/);
+
+  // Entrada sem ordem ou com motivo curto demais também reprova.
+  const invalid = await buildCoverageMap({
+    root: directory,
+    allowlist: [],
+    tapAllowlist: [{ alvo: 'scripts/qa-legado-postgres.mjs', tipo: 'runner', ordem: '', motivo: 'curto' }],
+  });
+  assert.deepEqual(invalid.failures.invalidAllowlist, ['scripts/qa-legado-postgres.mjs']);
+
+  // Com motivo e ordem declarados: não fica em silêncio (aparece no CSV/relatório), mas libera o check.
+  const declared = await buildCoverageMap({
+    root: directory,
+    allowlist: [],
+    tapAllowlist: [{
+      alvo: 'scripts/qa-legado-postgres.mjs',
+      tipo: 'runner',
+      ordem: '01-familia-l',
+      motivo: 'runner legado só com exit code; migrar para assertTapSummary no lote 1.',
+    }],
+  });
+  assert.deepEqual(declared.failures.semAuditoriaTap, []);
+  assert.deepEqual(declared.failures.staleAllowlist, []);
+  assert.match(renderReport(declared), /Resíduos declarados sem auditoria TAP/);
+  assert.match(renderReport(declared), /01-familia-l/);
+
+  // Se o runner já é `auditado_tap` e permanece na allowlist: reprova como obsoleto.
+  const stale = await buildCoverageMap({
+    root: directory,
+    allowlist: [],
+    tapAllowlist: [
+      {
+        alvo: 'scripts/qa-legado-postgres.mjs',
+        tipo: 'runner',
+        ordem: '01-familia-l',
+        motivo: 'runner legado só com exit code; migrar para assertTapSummary no lote 1.',
+      },
+      {
+        alvo: 'scripts/qa-auditado-postgres.mjs',
+        tipo: 'runner',
+        ordem: '01-familia-l',
+        motivo: 'já migrado: não pode ficar estacionado na allowlist.',
+      },
+    ],
+  });
+  assert.deepEqual(stale.failures.staleAllowlist, ['scripts/qa-auditado-postgres.mjs']);
+  assert.ok(Array.isArray(TAP_AUDIT_ALLOWLIST));
+  for (const entry of TAP_AUDIT_ALLOWLIST) {
+    assert.ok(entry.ordem && entry.motivo.length >= 20, `resíduo TAP mal declarado: ${entry.alvo}`);
+  }
 });
