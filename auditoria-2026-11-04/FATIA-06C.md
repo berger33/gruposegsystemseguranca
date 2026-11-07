@@ -100,6 +100,13 @@ Em todos os quatro lotes foi executada prova negativa **real** em subprocesso `n
   - `node scripts/ux-pro-03-ti-inventory.mjs --check`: **OK**.
 - Checagem final de higiene: `next-env.d.ts` e `tsconfig.json` nos hashes canônicos, sem sandboxes `/tmp/seg-qa-*` / `/tmp/seg-pg-*` nem processos descendentes órfãos.
 
+### 4.1. Verificação remota na PR #352 e classificação de intermitência (commit `fc2a1f4`)
+
+Na primeira rodada remota da PR **#352** (`head_sha` `fc2a1f47cf5f83b05596e4ba094f736c8e31cf4c`, árvore de código idêntica em todos os runs):
+
+- **Todos os 56 workflows de `pull_request` fecharam `pass` na primeira tentativa** (`gh pr checks 352`), incluindo o `QA baseline` (`static-and-smoke`, run `42424886916`, `3m29s`), `backup-restore-postgres` (run `42424886898`, `2m34s`) e todos os gates migrados nesta fatia (`admin-entry-postgres-browser` run `42424887081` `1m34s`; `l02-l03-postgres` run `42424887056` `1m22s`; `crm-postgres-browser` L04 run `42424887115` `2m46s`; `contracts-postgres-browser` L05 run `42424887141` `1m15s`; `operations-postgres-browser` L06 run `42424887120` `1m50s`; `finance-postgres-browser` L07 run `42424887114` `3m14s`; `client-portal-postgres-browser` L08 run `42424887028` `1m20s`).
+- **Ocorrência de intermitência classificada com prova (mesmo código `fc2a1f4`):** o `QA baseline` disparado pelo evento `push` na branch (run `42424842907`) aprovou os passos #1..#24 (incluindo `npm test`, `qa:ci-map:check` e o novo `test:ux-pro-09e-pu4:browser`) e falhou **apenas** no passo #25 `Client security regras 005/006 (embedded PostgreSQL, synthetic)` em **3 s** (`23:24:20Z → 23:24:23Z`), publicando o artifact `n8-client-security-trace` (`id: 13595038126`, `953 B`, `sha256:a44df4eb29f60ba91a2fe81156f53e065b441aff748a70ae8e182125ea104d3b`; download direto do ZIP bloqueado pelo allowlist de egress da sandbox). Trinta e oito segundos depois, no **mesmíssimo commit `fc2a1f4`**, o run irmão `42424886916` (`pull_request`) executou o mesmo passo #25 em **3 s** (`23:24:58Z → 23:25:01Z`) com `conclusion: success`. Classificação: ocorrência intermitente do **N8 residual** já aberto (mesma assinatura de 3–4 s observada nos runs `41552861728`, `41556745663` e `42416131441`), não causada pelas mudanças da 06C e **não encerrada**. Como o GitHub App desta sandbox não possui `actions:write` (`HTTP 403` em `/rerun`), este registro documental em `FATIA-06C.md` + `STATUS-VIGENTE.md` aciona nova rodada completa sem alterar nenhum arquivo de código.
+
 ---
 
 ## 5. Resíduos declarados para a fatia 06D e limites de honestidade
