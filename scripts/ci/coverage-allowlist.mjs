@@ -44,25 +44,6 @@ export const ALLOWLIST = [
  *      `motivo` substantivo — nunca silêncio.
  */
 export const TAP_AUDIT_ALLOWLIST = [
-  // Ordem 2 — família L pendente
-  {
-    alvo: 'scripts/qa-l06-delivery-postgres.mjs',
-    tipo: 'runner',
-    ordem: '02-familia-l-f01',
-    motivo: 'runner L06 herdado usa `stdio: inherit` sem auditar resumo TAP (`skip`/`fail`/`todo`/piso). Migrar para `qa-tap-summary.mjs` com piso medido na fatia 06C.',
-  },
-  {
-    alvo: 'scripts/qa-l07-delivery-postgres.mjs',
-    tipo: 'runner',
-    ordem: '02-familia-l-f01',
-    motivo: 'runner L07 herdado usa `stdio: inherit` sem auditar resumo TAP (`skip`/`fail`/`todo`/piso). Migrar para `qa-tap-summary.mjs` com piso medido na fatia 06C.',
-  },
-  {
-    alvo: 'scripts/qa-l08-delivery-postgres.mjs',
-    tipo: 'runner',
-    ordem: '02-familia-l-f01',
-    motivo: 'runner L08 herdado usa `stdio: inherit` sem auditar resumo TAP (`skip`/`fail`/`todo`/piso). Migrar para `qa-tap-summary.mjs` com piso medido na fatia 06C.',
-  },
   // Ordem 3 — fluxos ponta a ponta F03
   {
     alvo: 'scripts/qa-f03-client-ticket-acceptance-postgres.mjs',

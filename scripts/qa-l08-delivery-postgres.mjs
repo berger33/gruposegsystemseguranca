@@ -10,6 +10,7 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { releaseSignalHandlers } from './qa-generated-files-guard.mjs';
+import { assertTapSummary, collectTap } from './lib/qa-tap-summary.mjs';
 
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === "1") {
   console.error("QA_PG_REFUSED: clear DATABASE_URL, DATABASE_MIGRATION_URL and RUN_DATABASE_INTEGRATION_REMOTE.");
@@ -42,10 +43,18 @@ const freePort = () => new Promise((resolve, reject) => {
   const server = createServer(); server.once("error", reject);
   server.listen(0, "127.0.0.1", () => { const { port } = server.address(); server.close(() => resolve(port)); });
 });
-const run = (command, args, env) => new Promise((resolve, reject) => {
-  const child = spawn(command, args, { cwd: root, env: { ...process.env, ...env }, stdio: "inherit" });
-  child.once("error", reject); child.once("exit", code => resolve(code ?? 1));
-});
+const run = async (command, args, env, tap) => {
+  if (tap) {
+    const child = spawn(command, args, { cwd: root, env: { ...process.env, ...env }, stdio: ["ignore", "pipe", "pipe"] });
+    const journey = await collectTap(child);
+    const tapResult = assertTapSummary(journey.output, { minimum: tap.minimum, truncated: journey.truncated, label: tap.label });
+    return journey.code === 0 && tapResult.ok ? 0 : (journey.code || 1);
+  }
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { cwd: root, env: { ...process.env, ...env }, stdio: "inherit" });
+    child.once("error", reject); child.once("exit", code => resolve(code ?? 1));
+  });
+};
 const database = "seg_qa_l08";
 const port = await freePort();
 const directory = supervised ? process.env.QA_PG_DIRECTORY : await mkdtemp(path.join(tmpdir(), "seg-qa-l08-pg-"));
@@ -70,7 +79,7 @@ try {
   phase('test');
   result = await run(process.execPath, ["--test", "--test-concurrency=1", "tests/l08-delivery.integration.test.mjs"], {
     RUN_DATABASE_INTEGRATION: "1", DATABASE_URL: databaseUrl, DATABASE_MIGRATION_URL: "", RUN_DATABASE_INTEGRATION_REMOTE: "", QA_PGLITE_ONLY: "", ALLOW_REMOTE_MIGRATIONS: "", OLLAMA_ENABLED: "false", MAIL_HOST: "", NEXT_TELEMETRY_DISABLED: "1", CLIENT_DOCS_DIR: path.join(directory, "private-documents"), AWS_EXECUTION_ENV: "AWS_Lambda_nodejs22.x",
-  });
+  }, { minimum: 54, label: "L08 delivery" });
   console.log(`L08_DELIVERY_TEST_EXIT: ${result}`);
 } catch (error) { console.error("QA_L08_PG_FAILED", String(error?.message || error).replaceAll(password, "[redacted]").slice(0, 500)); result = 1; }
 finally { phase('stop');
