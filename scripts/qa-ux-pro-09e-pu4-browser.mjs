@@ -3,6 +3,7 @@
 // com UX_PU4_REQUIRE_BROWSER=1 e audita o resumo TAP (piso medido = 5, 0 skip,
 // 0 falha, 0 todo). Qualquer skip silencioso reprova mesmo que o processo saia 0.
 
+import './qa-generated-files-guard.mjs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { assertTapSummary, collectTap } from './lib/qa-tap-summary.mjs';
