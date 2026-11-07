@@ -10,7 +10,7 @@ Ligados os gates que restavam da lista histórica de 03/10: `test:staff-auth:pg`
 
 **Provas locais:** mapa 244 comandos, 250/251 arquivos alcançados, 0 pendência e deriva do versionado detectada de fato após editar runner; staff-auth **21/21** (13,6 s), tenant **25/25**, client-access **27/27**, CLI-09 **11/11**, objeto CLI-04 **1/1**, todos com `QA_TAP_OK` e limpeza confirmada; 09E-7 **4/4** (era 3/4); prova negativa real do auditor com o TAP all-skip de `lead-flow` (exit 0, recusado como `skipped`). Focal do mapa **10/10**, `npm test` **1646/1646**, typecheck/build, SEC 35/35, wave0 5/5; inventário 222 regenerado (**1.747** arquivos varridos, era 1.742). Detalhes em `auditoria-2026-11-04/FATIA-06B.md`.
 
-A fatia 06 avança com o recorte 06B; a fatia 05 continua **67/68**, E6 administrativo pendente por OOM. As mudanças 05Y–05AI, 06A e 06B compõem esta entrega; consulte a PR para a situação de publicação e checks remotos. Windows, UAT, backup real e aceite não comprovados. Client-security/N8 e N9 seguem abertos; produção **NO-GO**.
+A fatia 06 avança com o recorte 06B; a fatia 05 continua **67/68**, E6 administrativo pendente por OOM. As mudanças 05Y–05AI, 06A e 06B estão na PR **#351**; o `QA baseline` executou **success** no run `42412725190` com **24 passos verdes**, incluindo os quatro desta fatia (mapa, L01, client-access e objeto CLI-04). Os demais workflows da PR não foram lidos no fechamento. Windows, UAT, backup real e aceite não comprovados. Client-security/N8 e N9 seguem abertos; produção **NO-GO**.
 
 ### Atualização anterior — plano de fechamento, fatia 06A: filtros das rotas públicas
 

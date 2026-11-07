@@ -1,6 +1,6 @@
 # Fatia 06B — mapa de equivalência de cobertura e fechamento dos gates órfãos
 
-**Data:** 07/11/2026. **Base:** `d2674a25297e1081fc698d98504635907a4068fe` (`main`, merge da PR #350). **Branch:** `arena/a7c6389f-gruposegsystemseguranca`. Nenhum commit, push, PR, deploy, dado real, serviço externo ou execução remota nesta sessão. A fatia 05 continua **67/68** (E6 administrativo bloqueado por OOM). Produção **NO-GO**.
+**Data:** 07/11/2026. **Base:** `d2674a25297e1081fc698d98504635907a4068fe` (`main`, merge da PR #350). **Branch:** `arena/a7c6389f-gruposegsystemseguranca`. Publicado na PR **#351**. Nenhum deploy, dado real ou serviço externo: o único uso de rede é o próprio CI do repositório (resultado no §3). A fatia 05 continua **67/68** (E6 administrativo bloqueado por OOM). Produção **NO-GO**.
 
 ## 1. Inventário antes da mudança
 
@@ -85,6 +85,10 @@ Quatro passos novos, todos aditivos: `qa:ci-map:check` (antes do SEC), `test:sta
 
 `npm test` **1646/1646**, 0 falhas/skip/todo (medido depois de reconciliar o ledger e o relatório do inventário — as duas únicas falhas da primeira execução eram essas contagens documentais, não jornada); focal do mapa 10/10; typecheck e build exit 0; SEC **35/35** âncoras; `qa-wave0-static` **5/5**; inventários `--check` regenerados (222: **1.747** arquivos varridos, era 1.742; rotas inalteradas).
 
+### Execução remota observada (PR #351)
+
+`QA baseline` (`ci.yml`) **success** no run `42412725190`: **24 passos verdes**, incluindo os quatro acrescentados nesta fatia — `CI coverage equivalence map` (passo 6), `L01 staff identity, session and MFA` (17), `Client access end to end` (19) e `CLI-04 synthetic object contract` (23). Os demais 59 workflows estavam em execução no fechamento desta leitura; o resultado deles **não** é reivindicado aqui.
+
 ## 4. Limites e resíduos
 
 - O mapa **não executa nada**: comando presente no workflow não é comando aprovado, e o CI remoto não foi observado.
@@ -96,4 +100,4 @@ Quatro passos novos, todos aditivos: `qa:ci-map:check` (antes do SEC), `test:sta
 - `tests/lead-flow.integration.test.mjs` permanece residual declarado: exige `DATABASE_URL` do operador e `RUN_DATABASE_INTEGRATION=1`; a jornada lead→implantação é exercitada por `test:f03-lead-to-implementation:pg` em cluster descartável. Não é cobertura presumida.
 - Os dois runners de captura de evidência (`ux-pro-04` relatórios e pendências) continuam manuais: geram PNG/JSON sem veredito de jornada.
 - Windows (o caminho que **produziu** os `resumo.json` com `\`) não foi executado nesta sessão; a correção foi medida apenas em POSIX, com o manifesto de 112 PNGs conferido byte a byte.
-- CI remoto, UAT, leitor de tela, WCAG integral, operação real e aceite humano **não** foram verificados. Client-security/N8 e N9 seguem abertos; produção permanece **NO-GO**.
+- O CI remoto foi observado apenas no `QA baseline` desta PR; os outros 59 workflows não foram lidos no fechamento. UAT, leitor de tela, WCAG integral, operação real e aceite humano **não** foram verificados. Client-security/N8 e N9 seguem abertos; produção permanece **NO-GO**.
