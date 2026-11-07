@@ -10,6 +10,7 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { releaseSignalHandlers } from './qa-generated-files-guard.mjs';
+import { assertTapSummary, collectTap } from './lib/qa-tap-summary.mjs';
 
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') {
   console.error('QA_PG_REFUSED: limpe DATABASE_URL, DATABASE_MIGRATION_URL e RUN_DATABASE_INTEGRATION_REMOTE antes deste teste local.');
@@ -49,6 +50,15 @@ function run(cmd, args, env) {
   });
 }
 
+// Fatia 06B: a jornada precisa de auditoria do resumo TAP. Sem ela, um arquivo
+// inteiro marcado como `skip` (opt-in não satisfeito) sai com código 0 e o
+// gate apareceria verde sem executar cenário algum. A saída continua integral
+// no log; a cópia é só para recusar skip/falha/todo/contagem inconsistente.
+async function runTest(cmd, args, env) {
+  const child = spawn(cmd, args, { cwd: root, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
+  return collectTap(child);
+}
+
 const database = 'seg_qa_staff_auth';
 const port = await freeLoopbackPort();
 const directory = supervised ? process.env.QA_PG_DIRECTORY : await mkdtemp(path.join(tmpdir(), 'seg-qa-staff-auth-pg-'));
@@ -83,7 +93,7 @@ try {
   if (migrated !== 0) throw new Error(`migrations_failed_exit_${migrated}`);
 
   phase('test');
-  result = await run(process.execPath, ['--test', '--test-concurrency=1', 'tests/staff-auth.integration.test.mjs'], {
+  const journey = await runTest(process.execPath, ['--test', '--test-concurrency=1', 'tests/staff-auth.integration.test.mjs'], {
     RUN_DATABASE_INTEGRATION: '1',
     RUN_DATABASE_INTEGRATION_REMOTE: '',
     DATABASE_URL: url,
@@ -94,7 +104,11 @@ try {
     MAIL_HOST: '',
     NEXT_TELEMETRY_DISABLED: '1',
   });
+  result = journey.code;
   console.log(`STAFF_AUTH_L01_TEST_EXIT: ${result}`);
+  if (result === 0 && !assertTapSummary(journey.output, { minimum: 21, truncated: journey.truncated, label: 'L01 staff-auth' }).ok) {
+    result = 1;
+  }
 } catch (error) {
   console.error('QA_PG_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 500));
   result = 1;

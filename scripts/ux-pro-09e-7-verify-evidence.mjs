@@ -39,10 +39,27 @@ assert.deepEqual([...new Set(entries.map(entry => entry.requestedTheme))].sort()
 assert.deepEqual([...new Set(entries.map(entry => entry.viewport))].sort(),
   ['1440x900', '320x780', '390x844', '768x1024'], 'viewports medidos inesperados');
 
+// Fatia 06B: a captura de 21/10 foi feita no Windows e `resumo.json` registra os
+// caminhos com `\`. Em POSIX `path.resolve` trataria a string inteira como um
+// único nome de arquivo e a guarda de isolamento reprovaria uma evidência
+// legítima — era por isso (e não por conteúdo) que a suíte ficava vermelha.
+// O separador é normalizado ANTES de resolver; absolutos e `..` continuam
+// recusados, então a fronteira de pasta isolada não foi afrouxada.
+function evidenceFile(recorded) {
+  assert.equal(typeof recorded, 'string', 'caminho de screenshot ausente');
+  assert.ok(!path.isAbsolute(recorded) && !/^[A-Za-z]:/.test(recorded),
+    `screenshot com caminho absoluto: ${recorded}`);
+  const segments = recorded.split(/[\\/]+/).filter((segment) => segment !== '' && segment !== '.');
+  assert.ok(segments.length > 0, `screenshot sem nome de arquivo: ${recorded}`);
+  assert.ok(!segments.includes('..'), `screenshot com escape de diretório: ${recorded}`);
+  const absolute = path.resolve(root, ...segments);
+  assert.ok(absolute.startsWith(`${evidenceRoot}${path.sep}`), `screenshot fora da pasta isolada: ${recorded}`);
+  return absolute;
+}
+
 const files = [];
 for (const entry of entries) {
-  const absolute = path.resolve(root, entry.screenshot);
-  assert.ok(absolute.startsWith(`${evidenceRoot}${path.sep}`), `screenshot fora da pasta isolada: ${entry.screenshot}`);
+  const absolute = evidenceFile(entry.screenshot);
   const bytes = readFileSync(absolute);
   assert.ok(bytes.length >= 24 && bytes.subarray(1, 4).toString('ascii') === 'PNG', `PNG inválido: ${entry.screenshot}`);
   files.push({

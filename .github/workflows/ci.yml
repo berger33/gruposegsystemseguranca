@@ -31,6 +31,13 @@ jobs:
         run: npm ci
       - name: Check tree, migrations and CI gates
         run: node scripts/qa-wave0-static.mjs
+      # Fatia 06B: mapa reproduzível de cobertura. Reprova se um gate voltar a
+      # ficar órfão (script existir e nenhum workflow chamar), se um comando
+      # apontar para runner/arquivo inexistente, se a indireção não for
+      # resolvida ou se o CSV/relatório versionado ficar velho. Custo: leitura
+      # de package.json + 60 workflows, sem banco, sem navegador.
+      - name: CI coverage equivalence map (no orphan gate, no silent drift)
+        run: npm run qa:ci-map:check
       - name: SEC technical re-audit map (anchors + recorded evidence, no human acceptance)
         run: npm run reaudit:sec
       - name: Audit dependencies (moderate and above block)
@@ -58,14 +65,33 @@ jobs:
         run: npm run build
       - name: RAG integration in isolated CI workspace (PGlite, schema real)
         run: npm run test:rag
+      # Fatia 06B: `test:staff-auth:pg` (L01 — identidade, sessão, MFA e
+      # revogação por HTTP real) existia desde 04/10 e não era chamado por
+      # workflow algum; a falha convivia com a `main` verde porque ninguém
+      # executava o gate. Cluster 17 descartável, 21 casos, piso TAP auditado.
+      - name: L01 staff identity, session and MFA (embedded PostgreSQL, synthetic)
+        timeout-minutes: 10
+        run: npm run test:staff-auth:pg
       - name: Tenant A/B HTTP integration (temporary localhost PostgreSQL, migrations 001-007 + 097-098)
         run: npm run test:tenant:pg
+      # Fatia 06B: variante `--client-access` do mesmo runner de tenant exercita
+      # a jornada do cliente (login individual, escopo de conta) e também não
+      # tinha workflow. É outro recorte de jornada, não repetição do anterior.
+      - name: Client access end to end (embedded PostgreSQL, synthetic)
+        timeout-minutes: 10
+        run: npm run test:client-access:pg
       - name: PostgreSQL supervisor fault gates (temporary local clusters, expected failures)
         run: npm run test:pg-supervisor:pg
       - name: QA-HOM-008 persistent synthetic restart (isolated localhost PostgreSQL)
         run: npm run test:demo-local:pg
       - name: CLI-09 portal charges and v2 document aliases (isolated localhost PostgreSQL)
         run: npm run test:cli-v2:pg
+      # Fatia 06B: contrato sintético de objeto (bytes v1/v2, recusa cruzada de
+      # conta, chave ausente/corrompida) numa segunda execução do runner, com
+      # `QA_CLI_V2_OBJECT_CONTRACT=1`. Sem workflow até aqui; cluster próprio.
+      - name: CLI-04 synthetic object contract (embedded PostgreSQL, ephemeral key)
+        timeout-minutes: 10
+        run: npm run test:cli-v2:pg:objects
       # E16: retomada do worker durável (kill real, lease, exactly-once) em
       # PostgreSQL descartável. O gate PGlite não prova contenção entre
       # processos — a sessão única do PGlite não tem com quem competir.

@@ -8,6 +8,7 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { releaseSignalHandlers } from './qa-generated-files-guard.mjs';
+import { assertTapSummary, collectTap } from './lib/qa-tap-summary.mjs';
 
 const clientAccess = process.argv.length === 3 && process.argv[2] === '--client-access';
 if ((process.argv.length > 2 && !clientAccess) || process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') {
@@ -72,6 +73,9 @@ try {
   } else { await postgres.createDatabase(database); }
   console.log(`QA_PG_READY: 127.0.0.1:${port}/${database}; cluster temporário exclusivo; segredo omitido.`);
   phase('test');
+  // Fatia 06B: os dois recortes (escopo de conta e acesso do cliente) passam a
+  // auditar o resumo TAP. Antes, `stdio: 'inherit'` propagava só o exit code e
+  // um arquivo todo marcado `skip` sairia com código 0 sem provar jornada.
   const child = spawn(process.execPath, ['--test', '--test-concurrency=1', clientAccess ? 'tests/client-access.integration.test.mjs' : 'tests/client-space.integration.test.mjs'], {
     cwd: path.resolve(import.meta.dirname, '..'),
     env: {
@@ -81,13 +85,20 @@ try {
       DATABASE_MIGRATION_URL: '', QA_PGLITE_ONLY: '', ALLOW_REMOTE_MIGRATIONS: '',
       OLLAMA_ENABLED: 'false', MAIL_HOST: '', NEXT_TELEMETRY_DISABLED: '1',
     },
-    stdio: 'inherit',
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
-  result = await new Promise((resolve, reject) => {
-    child.once('error', reject);
-    child.once('exit', code => resolve(code ?? 1));
-  });
+  const journey = await collectTap(child);
+  result = journey.code;
   console.log(`${clientAccess ? 'CLIENT_ACCESS_PG' : 'TENANT_SEG_001'}_TEST_EXIT: ${result}`);
+  // Pisos medidos nesta fatia: 25 no escopo de conta (client-space) e 27 no
+  // acesso do cliente, contando subtestes como o Node 22 reporta.
+  if (result === 0 && !assertTapSummary(journey.output, {
+    minimum: clientAccess ? 27 : 25,
+    truncated: journey.truncated,
+    label: clientAccess ? 'CLIENT_ACCESS' : 'TENANT_SEG_001',
+  }).ok) {
+    result = 1;
+  }
 } catch (error) {
   console.error('QA_PG_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 500));
   result = 1;
