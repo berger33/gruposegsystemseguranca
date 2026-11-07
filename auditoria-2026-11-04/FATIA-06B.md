@@ -85,6 +85,10 @@ Quatro passos novos, todos aditivos: `qa:ci-map:check` (antes do SEC), `test:sta
 
 `npm test` **1646/1646**, 0 falhas/skip/todo (medido depois de reconciliar o ledger e o relatório do inventário — as duas únicas falhas da primeira execução eram essas contagens documentais, não jornada); focal do mapa 10/10; typecheck e build exit 0; SEC **35/35** âncoras; `qa-wave0-static` **5/5**; inventários `--check` regenerados (222: **1.747** arquivos varridos, era 1.742; rotas inalteradas).
 
+### Flake observado no gate RAG/widget (não é regressão desta fatia)
+
+O workflow `fech-01-rag-widget-delivery.yml` reprovou uma vez na PR (#351): run `42413237737`, step `npm run test:ai-rag-widget:pg`. O mesmo workflow, no **mesmo caminho de código**, havia passado no run anterior `42412725093` (20:47) e a diferença entre os dois commits é **documentação** (`FATIA-06B.md`/`STATUS-VIGENTE.md`), sem tocar runner, tela, migração ou fixture do widget. Repetido localmente: **28/28**, `FECH01_RAG_WIDGET_TAP_SUMMARY pass=28 fail=0 skipped=0`, gerados restaurados e cluster limpo. Classificação: **falha intermitente**, coerente com o SIGSEGV de Chromium já registrado na 05AG (duas ocorrências na primeira execução supervisionada, integral verde na repetição). Nada foi afrouxado, nenhum timeout aumentado e nenhum caso pulado; a reexecução passa pelo mesmo comando.
+
 ### Execução remota observada (PR #351)
 
 `QA baseline` (`ci.yml`) **success** no run `42412725190`: **24 passos verdes**, incluindo os quatro acrescentados nesta fatia — `CI coverage equivalence map` (passo 6), `L01 staff identity, session and MFA` (17), `Client access end to end` (19) e `CLI-04 synthetic object contract` (23). Os demais 59 workflows estavam em execução no fechamento desta leitura; o resultado deles **não** é reivindicado aqui.
