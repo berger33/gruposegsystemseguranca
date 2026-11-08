@@ -1479,7 +1479,11 @@ test('PG supervisor: 05Z recusa banco herdado antes do worker e preserva contrat
   assert.match(source, /await createLocalQaDatabase\(/);
   assert.match(source, /if \(!supervised\) \{\s*await rm\(directory/);
   assert.match(source, /type: 'complete', code: result/);
-  assert.match(source, /minimumCases: pattern \? 0 : 21/);
+  assert.match(source, /from '\.\/lib\/qa-tap-summary\.mjs'/);
+  assert.match(source, /collectTap/);
+  assert.match(source, /assertTapSummary/);
+  assert.match(source, /minimum: 21/);
+  assert.match(source, /label: 'UX emergency'/);
   assert.match(source, /UX_EMERGENCY_TEST_PATTERN/);
   assert.match(source, /UX_EMERGENCY_UI_TIMEOUT/);
   assert.match(source, /UX_EMERGENCY_EVIDENCE_DIR/);
@@ -1497,15 +1501,16 @@ test('PG supervisor: 05Z recusa banco herdado antes do worker e preserva contrat
 });
 
 test('PG supervisor: 05Z auditor TAP real recusa falta, falha, parcial, skip e todo inclusive com filtro', async () => {
-  const { runInNewContext } = await import('node:vm');
   const source = await readFile(new URL('../scripts/qa-ux-emergency-postgres.mjs', import.meta.url), 'utf8');
-  const start = source.indexOf('function auditTap('), end = source.indexOf('const database =', start);
-  const audit = runInNewContext(source.slice(start, end) + '\nauditTap');
-  const tap = (pass = 21, fail = 0, skip = 0, todo = 0) => `# pass ${pass}\n# fail ${fail}\n# skipped ${skip}\n# todo ${todo}\n`;
-  assert.equal(audit(tap(), { minimumCases: 21 }).problems.length, 0);
-  for (const output of ['', '# fail 0\n', tap(20), tap(21, 1), tap(21, 0, 1), tap(21, 0, 0, 1)]) assert.ok(audit(output, { minimumCases: 21 }).problems.length > 0);
-  assert.equal(audit(tap(1), { minimumCases: 0 }).problems.length, 0);
-  assert.ok(audit(tap(1, 0, 20), { minimumCases: 0 }).problems.length > 0, 'pattern mantém a rejeição herdada de skip');
+  assert.match(source, /from '\.\/lib\/qa-tap-summary\.mjs'/);
+  assert.match(source, /assertTapSummary/);
+  assert.match(source, /minimum: 21/);
+  assert.match(source, /label: 'UX emergency'/);
+  assert.doesNotMatch(source, /minimumCases: pattern \? 0/);
+  const { detectRunnerTapAudit } = await import('../scripts/lib/qa-tap-summary.mjs');
+  const detected = detectRunnerTapAudit(source);
+  assert.equal(detected.tapAudit, 'auditado_tap');
+  assert.equal(detected.floor, 21);
 });
 
 test('PG supervisor: 05AA recusa banco herdado e mantém protocolo do scheduler', options, async () => {

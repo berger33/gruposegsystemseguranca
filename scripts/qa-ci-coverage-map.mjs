@@ -43,9 +43,10 @@ import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ALLOWLIST } from './ci/coverage-allowlist.mjs';
+import { ALLOWLIST, TAP_AUDIT_ALLOWLIST } from './ci/coverage-allowlist.mjs';
+import { detectRunnerTapAudit, stripRunnerComments } from './lib/qa-tap-summary.mjs';
 
-export { ALLOWLIST };
+export { ALLOWLIST, TAP_AUDIT_ALLOWLIST };
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -107,13 +108,14 @@ export function extractCommands(text) {
       const files = testCall[1]
         .split(/\s+/)
         .filter((token) => token && !token.startsWith('-') && token.endsWith('.mjs'));
-      commands.push({ kind: 'node-test', target: files.join(' ') || '(sem arquivo nomeado)', files, via: 'direct' });
+      commands.push({ kind: 'node-test', target: files.join(' ') || '(sem arquivo nomeado)', files, via: 'direct', usesNodeTest: true });
     } else {
-      // `node tests/x.mjs` sem `--test` também executa o arquivo com o runner do
+      // `node tests/x.mjs` sem `--test` também executa o arquivo com o runtime do
       // Node (é a forma usada por `test:rag`); ignorar isso marcaria a jornada
-      // como órfã só porque a bandeira não apareceu na linha.
+      // como órfã só porque a bandeira não apareceu na linha, mas NÃO usa o
+      // runner `node:test` nem emite resumo TAP.
       const direct = line.match(/\bnode\s+(?:--?[A-Za-z0-9=:._/-]+\s+)*(tests\/[A-Za-z0-9._/-]+\.mjs)/);
-      if (direct) commands.push({ kind: 'node-test', target: direct[1], files: [direct[1]], via: 'direct' });
+      if (direct) commands.push({ kind: 'node-test', target: direct[1], files: [direct[1]], via: 'direct', usesNodeTest: false });
     }
     for (const match of line.matchAll(/\bnode\s+(?:--?[A-Za-z0-9=:._/-]+\s+)*(scripts\/[A-Za-z0-9._/-]+\.mjs)/g)) {
       commands.push({ kind: 'runner', target: match[1], via: 'direct' });
@@ -197,36 +199,33 @@ export function parseWorkflow(source, file = '(memory)') {
   return { file, jobs };
 }
 
-/** Metadados de runner: arquivos de teste citados e piso TAP auditado. */
+/** Metadados de runner: arquivos de teste citados e auditoria/piso TAP. */
 export function runnerInfo(source) {
-  // Comentário não executa nada: citar `tests/x.mjs` numa explicação não pode
-  // virar "este runner roda essa jornada" (falso positivo medido na fatia).
-  // Blocos `/* */` e linhas iniciadas por `//` são removidos antes da leitura;
-  // caminhos montados por template string continuam fora do alcance — declarado
-  // nos limites do relatório.
-  const code = source
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .split('\n')
-    .filter((line) => !/^\s*\/\//.test(line))
-    .join('\n');
+  // Comentário não executa nada: citar `tests/x.mjs` ou `assertTapSummary` numa
+  // explicação não pode virar prova de execução nem auditoria TAP (falso
+  // positivo medido na 06B). A detecção de auditoria e piso vem de
+  // `scripts/lib/qa-tap-summary.mjs`, sem executar processo algum.
+  const code = stripRunnerComments(source);
   const tests = [...new Set([...code.matchAll(TEST_FILE_REF)].map((match) => match[0]))];
-  // Dois formatos de piso no repositório: `MINIMUM_CASES = n` (auditor TAP das
-  // rotas públicas) e `minimum: n` / `minimum: cond ? a : b` (gates auditados na
-  // 06B). Piso condicional é reportado pelo MENOR valor: o mapa não escolhe
-  // caminho por conta própria.
-  const floors = [...code.matchAll(/MINIMUM_CASES\s*=\s*(\d+)/g)].map((match) => Number(match[1]));
-  for (const match of code.matchAll(/minimum:\s*([^,)\n]{1,120})/g)) {
-    for (const value of match[1].matchAll(/\b(\d+)\b/g)) floors.push(Number(value[1]));
-  }
-  const floor = floors.length ? Math.min(...floors) : null;
-  return { tests, floor };
+  const tap = detectRunnerTapAudit(source);
+  return {
+    tests,
+    floor: tap.floor,
+    tapAudit: tap.tapAudit,
+    tapMode: tap.mode,
+    executesNodeTest: tap.executesNodeTest,
+  };
 }
 
 /**
  * Constrói o mapa. `root` é injetável para que o teste focal rode contra um
  * repositório descartável em vez de depender da árvore real.
  */
-export async function buildCoverageMap({ root = ROOT, allowlist = ALLOWLIST } = {}) {
+export async function buildCoverageMap({
+  root = ROOT,
+  allowlist = root === ROOT ? ALLOWLIST : [],
+  tapAllowlist = root === ROOT ? TAP_AUDIT_ALLOWLIST : [],
+} = {}) {
   const read = (relative) => readFile(path.join(root, relative), 'utf8');
   const exists = (relative) => existsSync(path.join(root, relative));
   const pkg = JSON.parse(await read('package.json'));
@@ -251,6 +250,12 @@ export async function buildCoverageMap({ root = ROOT, allowlist = ALLOWLIST } = 
     if (danglingKeys.has(key)) return;
     danglingKeys.add(key);
     dangling.push({ origin, kind, target });
+  };
+  const unauditedTargets = new Map();
+  const addUnaudited = (alvo, tipo, origin) => {
+    const current = unauditedTargets.get(alvo) ?? { alvo, tipo, origins: new Set() };
+    current.origins.add(origin);
+    unauditedTargets.set(alvo, current);
   };
   const unresolved = [];
   const rows = [];
@@ -303,6 +308,22 @@ export async function buildCoverageMap({ root = ROOT, allowlist = ALLOWLIST } = 
   }
 
   const executed = [];
+  const resolveNpmCommands = (startName) => {
+    const leaves = [];
+    const seen = new Set();
+    const queue = [startName];
+    while (queue.length) {
+      const current = queue.shift();
+      if (seen.has(current) || !Object.hasOwn(scripts, current)) continue;
+      seen.add(current);
+      for (const inner of extractCommands(scripts[current])) {
+        if (inner.kind === 'npm') queue.push(inner.target);
+        else leaves.push(inner);
+      }
+    }
+    return leaves;
+  };
+
   for (const file of workflowFiles) {
     const workflow = parseWorkflow(await read(`.github/workflows/${file}`), file);
     // Workflow sem `jobs:` legível é falha fechada: o mapa não pode "não achar"
@@ -311,15 +332,17 @@ export async function buildCoverageMap({ root = ROOT, allowlist = ALLOWLIST } = 
     for (const job of workflow.jobs) {
       for (const [stepIndex, step] of job.steps.entries()) {
         for (const command of step.commands) {
+          const stepLabel = step.name || `passo ${stepIndex + 1}`;
           const row = {
             workflow: file,
             job: job.name,
-            step: step.name || `passo ${stepIndex + 1}`,
+            step: stepLabel,
             kind: command.kind,
             target: command.target,
             via: command.via,
             files: [],
             cases: 0,
+            tapAudit: 'nao_aplicavel',
             floor: null,
           };
           if (command.kind === 'npm') {
@@ -330,7 +353,40 @@ export async function buildCoverageMap({ root = ROOT, allowlist = ALLOWLIST } = 
                 if (inner.kind === 'node-test') row.files.push(...inner.files);
                 if (inner.kind === 'runner') {
                   const meta = await runnerMeta(inner.target);
-                  if (meta) { row.files.push(...meta.tests); if (meta.floor) row.floor = Math.max(row.floor ?? 0, meta.floor); }
+                  if (meta) row.files.push(...meta.tests);
+                }
+              }
+              const leaves = resolveNpmCommands(command.target);
+              const runnerLeaves = leaves.filter((leaf) => leaf.kind === 'runner');
+              const nodeTestLeaves = leaves.filter((leaf) => leaf.kind === 'node-test');
+              if (runnerLeaves.length > 0) {
+                const metas = [];
+                for (const leaf of runnerLeaves) {
+                  const meta = await runnerMeta(leaf.target);
+                  if (meta) metas.push({ target: leaf.target, meta });
+                }
+                const floors = metas.map((entry) => entry.meta.floor).filter((value) => value !== null);
+                if (floors.length > 0) row.floor = Math.min(...floors);
+                const unauditedRunners = metas.filter((entry) => entry.meta.tapAudit === 'sem_auditoria_tap');
+                if (unauditedRunners.length > 0) {
+                  row.tapAudit = 'sem_auditoria_tap';
+                  for (const entry of unauditedRunners) {
+                    addUnaudited(entry.target, 'runner', `${file}#${command.target}`);
+                  }
+                } else if (metas.some((entry) => entry.meta.tapAudit === 'auditado_tap')) {
+                  row.tapAudit = 'auditado_tap';
+                }
+              } else if (nodeTestLeaves.length > 0) {
+                const usesRunner = nodeTestLeaves.some((leaf) => leaf.usesNodeTest !== false);
+                if (!usesRunner) {
+                  row.tapAudit = 'nao_aplicavel';
+                } else if (command.target === 'test' || command.target === 'test:unit') {
+                  row.tapAudit = 'node_test_direto';
+                } else if (GATE_SCRIPT.test(command.target) && !isLocalScript(command.target)) {
+                  row.tapAudit = 'sem_auditoria_tap';
+                  addUnaudited(command.target, 'script', `${file}#${command.target}`);
+                } else {
+                  row.tapAudit = 'node_test_direto';
                 }
               }
             }
@@ -340,11 +396,30 @@ export async function buildCoverageMap({ root = ROOT, allowlist = ALLOWLIST } = 
               else reachable.tests.add(test);
             }
             row.files.push(...command.files);
+            if (command.usesNodeTest === false) {
+              row.tapAudit = 'nao_aplicavel';
+            } else {
+              const integrationFiles = command.files.filter((test) => test.endsWith('.integration.test.mjs'));
+              if (integrationFiles.length > 0) {
+                row.tapAudit = 'sem_auditoria_tap';
+                for (const test of integrationFiles) addUnaudited(test, 'teste', `${file} › ${stepLabel}`);
+              } else {
+                row.tapAudit = 'node_test_direto';
+              }
+            }
           } else if (command.kind === 'runner') {
             const meta = await visitRunner(command.target, `.github/workflows/${file}`);
-            if (meta) { row.files.push(...meta.tests); row.floor = meta.floor; }
+            if (meta) {
+              row.files.push(...meta.tests);
+              row.floor = meta.floor;
+              row.tapAudit = meta.tapAudit;
+              if (meta.tapAudit === 'sem_auditoria_tap') {
+                addUnaudited(command.target, 'runner', `${file} › ${stepLabel}`);
+              }
+            }
           } else if (command.kind === 'unresolved') {
-            unresolved.push({ origin: `.github/workflows/${file} › ${step.name || 'passo'}`, command: command.target });
+            row.tapAudit = 'sem_auditoria_tap';
+            unresolved.push({ origin: `.github/workflows/${file} › ${stepLabel}`, command: command.target });
           }
           row.files = [...new Set(row.files)];
           for (const file2 of row.files) row.cases += (await testMeta(file2)) ?? 0;
@@ -379,6 +454,8 @@ export async function buildCoverageMap({ root = ROOT, allowlist = ALLOWLIST } = 
   const orphanScripts = [];
   const aliasScripts = [];
   const staleAllowlist = [];
+  const invalidAllowlist = [];
+  const semAuditoriaTap = [];
   for (const name of gateScripts) {
     if (reachable.npm.has(name)) continue;
     const targets = { tests: new Set(), runners: new Set() };
@@ -413,6 +490,32 @@ export async function buildCoverageMap({ root = ROOT, allowlist = ALLOWLIST } = 
     if (coveredNow) staleAllowlist.push(entry.alvo);
   }
 
+  // Fatia 06C: auditoria explícita do resumo TAP por comando de gate.
+  // Qualquer gate novo ou recém-ligado em `sem_auditoria_tap` reprova. Os
+  // legados só passam enquanto declarados em `tapAllowlist` com `ordem` e
+  // `motivo`, e viram `staleAllowlist` no instante em que são migrados.
+  const validTapAllowed = new Map();
+  for (const entry of tapAllowlist) {
+    const valid = entry
+      && typeof entry.alvo === 'string' && entry.alvo.trim().length > 0
+      && ['runner', 'script', 'teste'].includes(entry.tipo)
+      && typeof entry.ordem === 'string' && entry.ordem.trim().length > 0
+      && typeof entry.motivo === 'string' && entry.motivo.trim().length >= 20
+      && !validTapAllowed.has(entry.alvo);
+    if (!valid) invalidAllowlist.push(entry?.alvo || '(entrada sem alvo)');
+    else validTapAllowed.set(entry.alvo, entry);
+  }
+  for (const [alvo, item] of [...unauditedTargets.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    const allowedEntry = validTapAllowed.get(alvo);
+    if (!allowedEntry || allowedEntry.tipo !== item.tipo) {
+      semAuditoriaTap.push({ alvo, tipo: item.tipo, origins: [...item.origins].sort() });
+    }
+  }
+  for (const [alvo, entry] of validTapAllowed.entries()) {
+    const item = unauditedTargets.get(alvo);
+    if (!item || item.tipo !== entry.tipo) staleAllowlist.push(alvo);
+  }
+
   const orphanTests = testFiles.filter((file) => !reachable.tests.has(file) && !allowed.has(file));
   // Runner só é órfão se for DECLARADO como gate por algum script `test:*`/`qa:*`
   // e nenhum workflow o executar. `scripts/qa-*.mjs` sem essa declaração é
@@ -445,19 +548,27 @@ export async function buildCoverageMap({ root = ROOT, allowlist = ALLOWLIST } = 
     && ![...declaredRunners].includes(file)
     && !allowed.has(file));
 
+  const reachableRunnerMetas = await Promise.all([...reachable.runners].map((runner) => runnerMeta(runner)));
   const counts = {
     workflows: workflowFiles.length,
     jobs: executed.length ? new Set(executed.map((row) => `${row.workflow}#${row.job}`)).size : 0,
     steps: new Set(executed.map((row) => `${row.workflow}#${row.job}#${row.step}`)).size,
     commands: executed.length,
+    commandsAuditadoTap: executed.filter((row) => row.tapAudit === 'auditado_tap').length,
+    commandsSemAuditoriaTap: executed.filter((row) => row.tapAudit === 'sem_auditoria_tap').length,
+    commandsNodeTestDireto: executed.filter((row) => row.tapAudit === 'node_test_direto').length,
+    commandsNaoAplicavel: executed.filter((row) => row.tapAudit === 'nao_aplicavel').length,
     npmScripts: Object.keys(scripts).length,
     gateScripts: gateScripts.length,
     runners: scriptFiles.length,
     tests: testFiles.length,
     reachableScripts: reachable.npm.size,
     reachableRunners: reachable.runners.size,
+    runnersAuditadoTap: reachableRunnerMetas.filter((meta) => meta?.tapAudit === 'auditado_tap').length,
+    runnersSemAuditoriaTap: reachableRunnerMetas.filter((meta) => meta?.tapAudit === 'sem_auditoria_tap').length,
     reachableTests: reachable.tests.size,
     declaredCases: testFiles.reduce((total, file) => total + (testCaseCache.get(file) ?? 0), 0),
+    tapAllowlistEntries: tapAllowlist.length,
     filesScanned: (await readdir(path.join(root, '.github', 'workflows'))).length,
   };
 
@@ -467,20 +578,32 @@ export async function buildCoverageMap({ root = ROOT, allowlist = ALLOWLIST } = 
     orphanScripts,
     orphanTests,
     orphanRunners,
+    semAuditoriaTap,
+    invalidAllowlist,
     staleAllowlist,
   };
-  return { rows, counts, failures, aliasScripts, reachable, allowlist, foraDoMapa, declaredGateScripts: [...declaredNpm] };
+  return {
+    rows,
+    counts,
+    failures,
+    aliasScripts,
+    reachable,
+    allowlist,
+    tapAllowlist,
+    foraDoMapa,
+    declaredGateScripts: [...declaredNpm],
+  };
 }
 
 const csvCell = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`;
 
 export function renderCsv(map) {
-  const header = ['workflow', 'job', 'passo', 'tipo', 'alvo', 'via', 'arquivos', 'casos_declarados', 'piso_tap'];
+  const header = ['workflow', 'job', 'passo', 'tipo', 'alvo', 'via', 'arquivos', 'casos_declarados', 'auditoria_tap', 'piso_tap'];
   const lines = [header.map(csvCell).join(',')];
   for (const row of map.rows) {
     lines.push([
       row.workflow, row.job, row.step, row.kind, row.target, row.via,
-      row.files.join(' '), row.cases, row.floor ?? '',
+      row.files.join(' '), row.cases, row.tapAudit, row.floor ?? '',
     ].map(csvCell).join(','));
   }
   return `${lines.join('\n')}\n`;
@@ -490,22 +613,30 @@ export function renderReport(map) {
   const { counts, failures } = map;
   const byWorkflow = new Map();
   for (const row of map.rows) {
-    const entry = byWorkflow.get(row.workflow) ?? { commands: 0, gates: 0, tests: new Set() };
+    const entry = byWorkflow.get(row.workflow) ?? { commands: 0, gates: 0, semAuditoriaTap: 0, tests: new Set() };
     entry.commands += 1;
     if (row.kind === 'npm' || row.kind === 'runner') entry.gates += 1;
+    if (row.tapAudit === 'sem_auditoria_tap') entry.semAuditoriaTap += 1;
     row.files.forEach((file) => entry.tests.add(file));
     byWorkflow.set(row.workflow, entry);
   }
   const lines = [];
-  lines.push('# Equivalência de cobertura da CI — mapa reproduzível (fatia 06B)');
+  lines.push('# Equivalência de cobertura da CI — mapa reproduzível (fatias 06B/06C)');
   lines.push('');
   lines.push('**Gerado por:** `node scripts/qa-ci-coverage-map.mjs` · **Data da reconciliação:** 07/11/2026 · **Não é aceite humano, não é UAT e não substitui o TAP de nenhum gate.**');
   lines.push('');
   lines.push('## Como ler');
   lines.push('');
-  lines.push('Cada linha do CSV é um comando realmente executado por um passo de workflow: `tipo` diz se é `npm` (script do `package.json`), `node-test` (arquivos nomeados direto no passo) ou `runner` (`node scripts/*.mjs`). A coluna `arquivos` lista os testes alcançados por aquele comando, `casos_declarados` soma as declarações `test(` desses arquivos e `piso_tap` mostra o piso que o runner audita (`MINIMUM_CASES` ou `minimum: …`), quando existe — piso condicional aparece pelo menor valor, porque o mapa não escolhe caminho por conta própria.');
+  lines.push('Cada linha do CSV é um comando realmente executado por um passo de workflow: `tipo` diz se é `npm` (script do `package.json`), `node-test` (arquivos nomeados direto no passo) ou `runner` (`node scripts/*.mjs`). A coluna `arquivos` lista os testes alcançados por aquele comando, `casos_declarados` soma as declarações `test(` desses arquivos, `auditoria_tap` classifica estaticamente se o resumo TAP é auditado e `piso_tap` mostra o piso numérico exigido pelo runner (`MINIMUM_CASES`, `MINIMO`, `minimum:` ou `pass < n`), quando existe — piso condicional aparece pelo menor valor, porque o mapa não escolhe caminho por conta própria.');
   lines.push('');
-  lines.push('`casos_declarados` é limite superior do que o arquivo declara, **não** prova de execução: um filtro de nome executado por um runner reduz o que roda, e quem mede isso é o TAP auditado na fatia 06A.');
+  lines.push('Classes de `auditoria_tap`:');
+  lines.push('');
+  lines.push('- `auditado_tap`: runner captura a saída (`collectTap` ou `pipe`), audita o resumo TAP (`skip`/`fail`/`todo` recusados) e exige piso numérico positivo (`>= 1`);');
+  lines.push('- `sem_auditoria_tap`: runner de jornada, gate npm dedicado ou jornada `.integration.test.mjs` que executa `node --test` sem auditar o resumo TAP (ou admite caminho condicional com piso `< 1`) — arquivo todo `skip` sairia com código `0`. Gate novo ou recém-ligado nesta classe **reprova** o mapa; os resíduos legados ficam declarados em `scripts/ci/coverage-allowlist.mjs` com motivo e ordem de migração, e viram `staleAllowlist` assim que migrados;');
+  lines.push('- `node_test_direto`: execução direta de `node --test` sobre testes unitários/estáticos (`*.test.mjs`, inclusive `npm test` → `test:unit`), cujo código de saída falha em `not ok` mas não audita `skip`/`todo` nem piso;');
+  lines.push('- `nao_aplicavel`: comandos que não usam `node:test`/TAP (`tsc`, `next build`, `qa-migrations-postgres.mjs` em SQL/clone, `qa-backup-restore-postgres.mjs`, `qa-pglite-schema.mjs`, `test:rag` sem `--test`, guardas estáticas e inventários).');
+  lines.push('');
+  lines.push('`casos_declarados` é limite superior do que o arquivo declara, **não** prova de execução: um filtro de nome executado por um runner reduz o que roda, e quem mede isso é o TAP auditado em cada gate.');
   lines.push('');
   lines.push('## Contagens');
   lines.push('');
@@ -515,19 +646,26 @@ export function renderReport(map) {
   lines.push(`| Jobs com comando | ${counts.jobs} |`);
   lines.push(`| Passos com comando | ${counts.steps} |`);
   lines.push(`| Comandos mapeados | ${counts.commands} |`);
+  lines.push(`| Comandos com auditoria TAP (\`auditado_tap\`) | ${counts.commandsAuditadoTap} |`);
+  lines.push(`| Comandos sem auditoria TAP (\`sem_auditoria_tap\`) | ${counts.commandsSemAuditoriaTap} |`);
+  lines.push(`| Comandos \`node --test\` diretos (\`node_test_direto\`) | ${counts.commandsNodeTestDireto} |`);
+  lines.push(`| Comandos sem TAP aplicável (\`nao_aplicavel\`) | ${counts.commandsNaoAplicavel} |`);
   lines.push(`| Scripts npm no manifest | ${counts.npmScripts} |`);
   lines.push(`| Scripts de gate (\`test:*\`/\`qa:*\`/\`reaudit:*\`) | ${counts.gateScripts} |`);
   lines.push(`| Scripts npm alcançados | ${counts.reachableScripts} |`);
-  lines.push(`| Runners alcançados | ${counts.reachableRunners} de ${counts.runners} arquivos `.trimEnd() + ' |');
+  lines.push(`| Runners alcançados | ${counts.reachableRunners} de ${counts.runners} arquivos |`);
+  lines.push(`| Runners alcançados com auditoria TAP | ${counts.runnersAuditadoTap} |`);
+  lines.push(`| Runners alcançados sem auditoria TAP | ${counts.runnersSemAuditoriaTap} |`);
+  lines.push(`| Resíduos \`sem_auditoria_tap\` declarados | ${counts.tapAllowlistEntries} |`);
   lines.push(`| Arquivos de teste alcançados | ${counts.reachableTests} de ${counts.tests} |`);
   lines.push(`| Casos declarados nos arquivos de teste | ${counts.declaredCases} |`);
   lines.push('');
   lines.push('## Por workflow');
   lines.push('');
-  lines.push('| Workflow | Comandos | Gates/runners | Arquivos de teste |');
-  lines.push('|---|---:|---:|---:|');
+  lines.push('| Workflow | Comandos | Gates/runners | Sem auditoria TAP | Arquivos de teste |');
+  lines.push('|---|---:|---:|---:|---:|');
   for (const [file, entry] of [...byWorkflow.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
-    lines.push(`| \`${file}\` | ${entry.commands} | ${entry.gates} | ${entry.tests.size} |`);
+    lines.push(`| \`${file}\` | ${entry.commands} | ${entry.gates} | ${entry.semAuditoriaTap} | ${entry.tests.size} |`);
   }
   lines.push('');
   lines.push('## Pendências que reprovam o mapa');
@@ -538,9 +676,26 @@ export function renderReport(map) {
   for (const item of failures.orphanScripts) pending.push(`gate órfão sem workflow: \`${item.name}\``);
   for (const item of failures.orphanTests) pending.push(`arquivo de teste inalcançável: \`${item}\``);
   for (const item of failures.orphanRunners) pending.push(`runner inalcançável: \`${item}\``);
-  for (const item of failures.staleAllowlist) pending.push(`allowlist obsoleta (já alcançado): \`${item}\``);
-  if (pending.length === 0) lines.push('Nenhuma. Todo gate declarado tem caminho de execução e todo arquivo de teste é alcançado ou está na allowlist com motivo.');
+  for (const item of failures.semAuditoriaTap) pending.push(`gate sem auditoria TAP fora da lista de resíduos (${item.tipo}): \`${item.alvo}\` (${item.origins.join(', ')})`);
+  for (const item of failures.invalidAllowlist) pending.push(`entrada de allowlist inválida (sem motivo/ordem ou duplicada): \`${item}\``);
+  for (const item of failures.staleAllowlist) pending.push(`allowlist obsoleta (já coberto ou já auditado): \`${item}\``);
+  if (pending.length === 0) lines.push('Nenhuma. Todo gate declarado tem caminho de execução, nenhum gate novo está sem auditoria TAP em silêncio e todo resíduo está declarado com motivo.');
   else for (const entry of pending) lines.push(`- ${entry}`);
+  lines.push('');
+  lines.push('## Resíduos declarados sem auditoria TAP (ordem de migração)');
+  lines.push('');
+  if (!map.tapAllowlist || map.tapAllowlist.length === 0) {
+    lines.push('Nenhum.');
+  } else {
+    lines.push('| Ordem | Alvo | Tipo | Motivo |');
+    lines.push('|---|---|---|---|');
+    const sortedTap = [...map.tapAllowlist].sort((a, b) => (
+      String(a.ordem).localeCompare(String(b.ordem)) || String(a.alvo).localeCompare(String(b.alvo))
+    ));
+    for (const entry of sortedTap) {
+      lines.push(`| \`${entry.ordem}\` | \`${entry.alvo}\` | ${entry.tipo} | ${entry.motivo} |`);
+    }
+  }
   lines.push('');
   lines.push('## Allowlist declarada (sem execução automática)');
   lines.push('');

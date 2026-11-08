@@ -9,6 +9,7 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { releaseSignalHandlers } from './qa-generated-files-guard.mjs';
+import { assertTapSummary, collectTap } from './lib/qa-tap-summary.mjs';
 
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') {
   console.error('QA_PG_REFUSED: limpe DATABASE_URL, DATABASE_MIGRATION_URL e RUN_DATABASE_INTEGRATION_REMOTE.');
@@ -48,7 +49,13 @@ async function freePort() {
   });
 }
 
-function run(args, env) {
+async function run(args, env, tap) {
+  if (tap) {
+    const child = spawn(process.execPath, args, { cwd: root, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const journey = await collectTap(child);
+    const tapResult = assertTapSummary(journey.output, { minimum: tap.minimum, truncated: journey.truncated, label: tap.label });
+    return journey.code === 0 && tapResult.ok ? 0 : (journey.code || 1);
+  }
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, args, { cwd: root, env: { ...process.env, ...env }, stdio: 'inherit' });
     child.once('error', reject);
@@ -106,7 +113,7 @@ try {
     NEXT_TELEMETRY_DISABLED: '1',
     NODE_OPTIONS: [process.env.NODE_OPTIONS, '--max-old-space-size=1024'].filter(Boolean).join(' '),
     AWS_EXECUTION_ENV: 'AWS_Lambda_nodejs22.x',
-  });
+  }, { minimum: 11, label: 'UX knowledge' });
   console.log(`UX_KNOWLEDGE_TEST_EXIT: ${result}`);
 } catch (error) {
   console.error('QA_PG_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 500));

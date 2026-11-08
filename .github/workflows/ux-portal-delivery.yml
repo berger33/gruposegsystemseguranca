@@ -19,6 +19,7 @@ on:
       - 'tests/ux-portal-workspace.integration.test.mjs'
       - 'scripts/qa-ux-portal-postgres.mjs'
       - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/lib/qa-tap-summary.mjs'
       - 'scripts/qa-generated-files-guard.mjs'
       - 'scripts/qa-generated-files.mjs'
       - 'tests/qa-pg-supervisor.test.mjs'

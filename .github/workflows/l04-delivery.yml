@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/qa-migrations-postgres.mjs'
       - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/lib/qa-tap-summary.mjs'
       - 'scripts/qa-generated-files-guard.mjs'
       - 'tests/qa-pg-supervisor.test.mjs'
       - 'src/**'

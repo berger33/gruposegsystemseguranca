@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { snapshotGeneratedFiles, restoreGeneratedFiles } from './qa-generated-files.mjs';
 import { releaseSignalHandlers } from './qa-generated-files-guard.mjs';
+import { assertTapSummary, collectTap } from './lib/qa-tap-summary.mjs';
 
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') {
   console.error('QA_PG_REFUSED: limpe DATABASE_URL, DATABASE_MIGRATION_URL e RUN_DATABASE_INTEGRATION_REMOTE antes deste teste local.');
@@ -62,7 +63,13 @@ async function freeLoopbackPort() {
   });
 }
 
-function run(cmd, args, env) {
+async function run(cmd, args, env, tap) {
+  if (tap) {
+    const child = spawn(cmd, args, { cwd: root, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const journey = await collectTap(child);
+    const tapResult = assertTapSummary(journey.output, { minimum: tap.minimum, truncated: journey.truncated, label: tap.label });
+    return journey.code === 0 && tapResult.ok ? 0 : (journey.code || 1);
+  }
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, { cwd: root, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
     let output = '';
@@ -73,24 +80,7 @@ function run(cmd, args, env) {
   });
 }
 
-/** Audita o resumo TAP: nenhum caso pode ser pulado, marcado todo ou falhar. */
-function auditTap(output, { minimumCases }) {
-  const value = label => {
-    const match = output.match(new RegExp(`^# ${label} (\\d+)$`, 'm'));
-    return match ? Number(match[1]) : null;
-  };
-  const pass = value('pass');
-  const fail = value('fail');
-  const skipped = value('skipped');
-  const todo = value('todo');
-  const problems = [];
-  if (pass === null || fail === null) problems.push('resumo TAP ausente');
-  if (fail) problems.push(`${fail} falha(s)`);
-  if (skipped) problems.push(`${skipped} caso(s) pulado(s)`);
-  if (todo) problems.push(`${todo} caso(s) todo`);
-  if (minimumCases && pass !== null && pass < minimumCases) problems.push(`apenas ${pass} casos aprovados; mínimo ${minimumCases}`);
-  return { pass, fail, skipped, todo, problems };
-}
+// TAP audit now via qa-tap-summary.mjs (migrated 06D, piso 21)
 
 const database = 'seg_qa_ux_emergency';
 const port = await freeLoopbackPort();
@@ -131,11 +121,10 @@ try {
   if (migrated.code !== 0) throw new Error(`migrations_failed_exit_${migrated.code}`);
 
   phase('test');
-  const pattern = process.env.UX_EMERGENCY_TEST_PATTERN;
-  const executed = await run(process.execPath, [
+  result = await run(process.execPath, [
     '--test',
     '--test-concurrency=1',
-    ...(pattern ? ['--test-name-pattern', pattern] : []),
+    ...(process.env.UX_EMERGENCY_TEST_PATTERN ? ['--test-name-pattern', process.env.UX_EMERGENCY_TEST_PATTERN] : []),
     'tests/ux-emergency-workspace.integration.test.mjs',
   ], {
     RUN_DATABASE_INTEGRATION: '1',
@@ -151,14 +140,7 @@ try {
     LD_LIBRARY_PATH: process.env.LD_LIBRARY_PATH,
     UX_EMERGENCY_EVIDENCE_DIR: process.env.UX_EMERGENCY_EVIDENCE_DIR || '',
     UX_EMERGENCY_UI_TIMEOUT: process.env.UX_EMERGENCY_UI_TIMEOUT || '',
-  });
-  result = executed.code;
-  const summary = auditTap(executed.output, { minimumCases: pattern ? 0 : 21 });
-  console.log(`UX_EMERGENCY_TAP_SUMMARY: pass=${summary.pass} fail=${summary.fail} skipped=${summary.skipped} todo=${summary.todo}`);
-  if (summary.problems.length) {
-    console.error(`UX_EMERGENCY_GATE_REJECTED: ${summary.problems.join('; ')}`);
-    result = 1;
-  }
+  }, { minimum: 21, label: 'UX emergency' });
   console.log(`UX_EMERGENCY_TEST_EXIT: ${result}`);
 } catch (error) {
   console.error('QA_PG_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 500));

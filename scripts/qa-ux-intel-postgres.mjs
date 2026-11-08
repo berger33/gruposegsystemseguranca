@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { snapshotGeneratedFiles, restoreGeneratedFiles } from './qa-generated-files.mjs';
 import { releaseSignalHandlers } from './qa-generated-files-guard.mjs';
+import { assertTapSummary, collectTap } from './lib/qa-tap-summary.mjs';
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') { console.error('QA_PG_REFUSED: banco do operador ou remoto definido.'); process.exit(2); }
 const root = path.resolve(import.meta.dirname, '..');
 // Grupo 05W: resultado e jornadas originais sob contenção POSIX.
@@ -38,7 +39,15 @@ const dir = supervised ? process.env.QA_PG_DIRECTORY : await mkdtemp(path.join(t
 if (!dir) throw new Error('qa_pg_sandbox_missing');
 const password = randomBytes(24).toString('hex'); const database = 'seg_qa_ux_intel';
 const pg = new EmbeddedPostgres({ databaseDir: path.join(dir, 'data'), port, user: 'seg_qa', password, persistent: false, postgresFlags: ['-c', 'listen_addresses=127.0.0.1'], onLog: () => {}, onError: e => console.error('QA_PG_ENGINE_ERROR', String(e).replaceAll(password, '[redacted]').slice(0, 300)) });
-const run = (args, env) => new Promise((resolve, reject) => { const child = spawn(process.execPath, args, { cwd: root, env: { ...process.env, ...env }, stdio: 'inherit' }); child.once('error', reject); child.once('exit', code => resolve(code ?? 1)); });
+const run = async (args, env, tap) => {
+  if (tap) {
+    const child = spawn(process.execPath, args, { cwd: root, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const journey = await collectTap(child);
+    const tapResult = assertTapSummary(journey.output, { minimum: tap.minimum, truncated: journey.truncated, label: tap.label });
+    return journey.code === 0 && tapResult.ok ? 0 : (journey.code || 1);
+  }
+  return new Promise((resolve, reject) => { const child = spawn(process.execPath, args, { cwd: root, env: { ...process.env, ...env }, stdio: 'inherit' }); child.once('error', reject); child.once('exit', code => resolve(code ?? 1)); });
+};
 let result = 1;
 try {
   phase('initialise');
@@ -56,7 +65,7 @@ try {
   const migrated = await run(['scripts/migrate-site-visual.mjs'], { DATABASE_MIGRATION_URL: url, DATABASE_URL: '', QA_MIGRATION_ONLY: 'true' });
   if (migrated !== 0) throw new Error(`migrations_failed_exit_${migrated}`);
   phase('test');
-  result = await run(['--test', '--test-concurrency=1', 'tests/ext14-intel.integration.test.mjs'], { RUN_DATABASE_INTEGRATION: '1', QA_EXT14_REQUIRE_DB: '1', DATABASE_URL: url, DATABASE_MIGRATION_URL: '', RUN_DATABASE_INTEGRATION_REMOTE: '', QA_PGLITE_ONLY: '', ALLOW_REMOTE_MIGRATIONS: '', OLLAMA_ENABLED: 'false', MAIL_HOST: '', NEXT_TELEMETRY_DISABLED: '1', AWS_EXECUTION_ENV: 'AWS_Lambda_nodejs22.x' });
+  result = await run(['--test', '--test-concurrency=1', 'tests/ext14-intel.integration.test.mjs'], { RUN_DATABASE_INTEGRATION: '1', QA_EXT14_REQUIRE_DB: '1', DATABASE_URL: url, DATABASE_MIGRATION_URL: '', RUN_DATABASE_INTEGRATION_REMOTE: '', QA_PGLITE_ONLY: '', ALLOW_REMOTE_MIGRATIONS: '', OLLAMA_ENABLED: 'false', MAIL_HOST: '', NEXT_TELEMETRY_DISABLED: '1', AWS_EXECUTION_ENV: 'AWS_Lambda_nodejs22.x' }, { minimum: 18, label: 'UX intel' });
 } catch (error) { console.error('QA_PG_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 600)); result = 1; }
 finally {
   phase('stop');

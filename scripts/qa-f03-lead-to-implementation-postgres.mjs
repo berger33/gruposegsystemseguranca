@@ -10,6 +10,7 @@ import path from 'node:path';
 import pg from 'pg';
 import { seedFreshDemo } from './local-demo-seed.mjs';
 import { releaseSignalHandlers } from './qa-generated-files-guard.mjs';
+import { assertTapSummary, collectTap } from './lib/qa-tap-summary.mjs';
 
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') {
   console.error('QA_F03_REFUSED: DATABASE_URL, DATABASE_MIGRATION_URL e banco remoto são proibidos neste gate.');
@@ -40,11 +41,19 @@ const freePort = () => new Promise((resolve, reject) => {
     probe.close(() => resolve(port));
   });
 });
-const run = (command, args, env, options = {}) => new Promise((resolve, reject) => {
-  const child = spawn(command, args, { cwd: root, env: { ...process.env, ...env }, stdio: options.stdio || 'inherit' });
-  child.once('error', reject);
-  child.once('exit', code => resolve(code ?? 1));
-});
+const run = async (command, args, env, tap) => {
+  if (tap) {
+    const child = spawn(command, args, { cwd: root, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const journey = await collectTap(child);
+    const tapResult = assertTapSummary(journey.output, { minimum: tap.minimum, truncated: journey.truncated, label: tap.label });
+    return journey.code === 0 && tapResult.ok ? 0 : (journey.code || 1);
+  }
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { cwd: root, env: { ...process.env, ...env }, stdio: 'inherit' });
+    child.once('error', reject);
+    child.once('exit', code => resolve(code ?? 1));
+  });
+};
 const waitForHealth = async (url, child) => {
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
@@ -155,7 +164,7 @@ try {
     RUN_DATABASE_INTEGRATION: '1',
     F03_BASE_URL: baseUrl,
     F03_CREDENTIALS_FILE: credentialsFile,
-  });
+  }, { minimum: 2, label: 'F03 lead-to-implementation' });
   console.log(`F03_LEAD_TO_IMPLEMENTATION_TEST_EXIT: ${result}`);
 } catch (error) {
   console.error('QA_F03_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 800));

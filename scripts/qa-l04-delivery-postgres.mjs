@@ -10,6 +10,7 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { releaseSignalHandlers } from './qa-generated-files-guard.mjs';
+import { assertTapSummary, collectTap } from './lib/qa-tap-summary.mjs';
 
 if (process.env.DATABASE_URL || process.env.DATABASE_MIGRATION_URL || process.env.RUN_DATABASE_INTEGRATION_REMOTE === '1') {
   console.error('QA_PG_REFUSED: limpe DATABASE_URL, DATABASE_MIGRATION_URL e RUN_DATABASE_INTEGRATION_REMOTE antes deste teste local.');
@@ -39,7 +40,17 @@ async function freePort() {
     });
   });
 }
-function run(command, args, env) {
+async function run(command, args, env, tap) {
+  if (tap) {
+    const child = spawn(command, args, { cwd: root, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const journey = await collectTap(child);
+    const tapResult = assertTapSummary(journey.output, {
+      minimum: tap.minimum,
+      truncated: journey.truncated,
+      label: tap.label,
+    });
+    return journey.code === 0 && tapResult.ok ? 0 : (journey.code || 1);
+  }
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { cwd: root, env: { ...process.env, ...env }, stdio: 'inherit' });
     child.once('error', reject);
@@ -87,7 +98,7 @@ try {
     // @sparticuz/chromium inclui as bibliotecas AL2023 necessárias ao gate de
     // interface; a flag apenas seleciona esse pacote local, sem usar AWS.
     AWS_EXECUTION_ENV: 'AWS_Lambda_nodejs22.x',
-  });
+  }, { minimum: 20, label: 'L04 delivery' });
   console.log(`L04_DELIVERY_TEST_EXIT: ${result}`);
 } catch (error) {
   console.error('QA_L04_PG_FAILED', String(error?.message || error).replaceAll(password, '[redacted]').slice(0, 500));
