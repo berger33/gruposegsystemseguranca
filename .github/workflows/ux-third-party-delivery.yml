@@ -20,6 +20,7 @@ on:
       - 'scripts/qa-ext02-third-parties-postgres.mjs'
       - 'scripts/qa-ux-third-party-postgres.mjs'
       - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/lib/qa-tap-summary.mjs'
       - 'scripts/qa-generated-files-guard.mjs'
       - 'tests/qa-pg-supervisor.test.mjs'
       - 'scripts/migrate-site-visual.mjs'

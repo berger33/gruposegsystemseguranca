@@ -33,7 +33,7 @@ export const ALLOWLIST = [
 ];
 
 /**
- * Fatia 06C — resíduos legados de comandos de gate que ainda executam `node --test`
+ * Fatia 06D — resíduos legados de comandos de gate que ainda executam `node --test`
  * sem auditoria completa do resumo TAP (`sem_auditoria_tap`).
  *
  * Regra de falha do mapa:
@@ -42,148 +42,12 @@ export const ALLOWLIST = [
  *      alcançado) vira `staleAllowlist` e reprova até ser removida;
  *   3. toda entrada exige `alvo`, `tipo`, `ordem` (lote/ordem de migração) e
  *      `motivo` substantivo — nunca silêncio.
+ *
+ * Após 06D, restam apenas 2 resíduos: o agregador de evidência e o gate N8
+ * sob observação aberta (client-security). Todos os 23 gates F03+UX migrados
+ * nesta fatia com pisos medidos foram removidos da allowlist.
  */
 export const TAP_AUDIT_ALLOWLIST = [
-  // Ordem 3 — fluxos ponta a ponta F03
-  {
-    alvo: 'scripts/qa-f03-client-ticket-acceptance-postgres.mjs',
-    tipo: 'runner',
-    ordem: '03-familia-f03',
-    motivo: 'runner F03 (chamado→atendimento→aceite) usa `options.stdio || inherit` sem capturar nem auditar resumo TAP. Migrar com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-f03-contas-baixa-relatorio-postgres.mjs',
-    tipo: 'runner',
-    ordem: '03-familia-f03',
-    motivo: 'runner F03 (contas→baixa→relatório) usa `options.stdio || inherit` sem capturar nem auditar resumo TAP. Migrar com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-f03-employee-request-rh-return-postgres.mjs',
-    tipo: 'runner',
-    ordem: '03-familia-f03',
-    motivo: 'runner F03 (solicitação colaborador→retorno RH) usa `options.stdio || inherit` sem capturar nem auditar resumo TAP. Migrar com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-f03-lead-to-implementation-postgres.mjs',
-    tipo: 'runner',
-    ordem: '03-familia-f03',
-    motivo: 'runner F03 (lead→implantação) usa `options.stdio || inherit` sem capturar nem auditar resumo TAP. Migrar com piso medido.',
-  },
-  // Ordem 4 — gates UX em PostgreSQL descartável + Chromium
-  {
-    alvo: 'scripts/qa-ux-emergency-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'auditor inline usa `minimumCases: pattern ? 0 : 21`; pelo menor valor condicional (`0`), o caminho filtrado não garante piso mínimo positivo (`>= 1`).',
-  },
-  {
-    alvo: 'scripts/qa-ux-adm-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX administrativo usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-ux-analytics-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX analytics usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-ux-asset-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX patrimônio/ativos usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-ux-bidding-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX licitações usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-ux-client-admin-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX administração de clientes usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-ux-compliance-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX compliance usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-ux-contract-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX contratos usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-ux-crm-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX CRM usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-ux-expansion-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX expansão usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-ux-finance-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX financeiro usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-ux-fleet-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX frota usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-ux-hr-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX RH usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-ux-intel-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX inteligência comercial usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-ux-knowledge-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX base de conhecimento usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-ux-portal-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX portal/TI console usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-ux-quality-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX qualidade usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-ux-satisfaction-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX satisfação usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
-  {
-    alvo: 'scripts/qa-ux-third-party-postgres.mjs',
-    tipo: 'runner',
-    ordem: '04-familia-ux',
-    motivo: 'runner UX terceiros usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido.',
-  },
   // Ordem 5 — relatório agregador e gate sob observação aberta N8
   {
     alvo: 'scripts/qa-evidence-report.mjs',

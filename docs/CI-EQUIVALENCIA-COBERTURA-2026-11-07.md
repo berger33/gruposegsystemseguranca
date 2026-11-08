@@ -23,17 +23,17 @@ Classes de `auditoria_tap`:
 | Jobs com comando | 60 |
 | Passos com comando | 237 |
 | Comandos mapeados | 244 |
-| Comandos com auditoria TAP (`auditado_tap`) | 53 |
-| Comandos sem auditoria TAP (`sem_auditoria_tap`) | 25 |
+| Comandos com auditoria TAP (`auditado_tap`) | 76 |
+| Comandos sem auditoria TAP (`sem_auditoria_tap`) | 2 |
 | Comandos `node --test` diretos (`node_test_direto`) | 94 |
 | Comandos sem TAP aplicável (`nao_aplicavel`) | 72 |
 | Scripts npm no manifest | 113 |
 | Scripts de gate (`test:*`/`qa:*`/`reaudit:*`) | 90 |
 | Scripts npm alcançados | 82 |
 | Runners alcançados | 79 de 116 arquivos |
-| Runners alcançados com auditoria TAP | 44 |
-| Runners alcançados sem auditoria TAP | 24 |
-| Resíduos `sem_auditoria_tap` declarados | 25 |
+| Runners alcançados com auditoria TAP | 67 |
+| Runners alcançados sem auditoria TAP | 1 |
+| Resíduos `sem_auditoria_tap` declarados | 2 |
 | Arquivos de teste alcançados | 250 de 251 |
 | Casos declarados nos arquivos de teste | 2676 |
 
@@ -56,8 +56,8 @@ Classes de `auditoria_tap`:
 | `ext13-delivery.yml` | 2 | 1 | 0 | 3 |
 | `ext14-delivery.yml` | 2 | 1 | 0 | 3 |
 | `ext15-delivery.yml` | 2 | 1 | 0 | 3 |
-| `f03-finance-lead-delivery.yml` | 3 | 2 | 2 | 3 |
-| `f03-ticket-employee-delivery.yml` | 3 | 2 | 2 | 3 |
+| `f03-finance-lead-delivery.yml` | 3 | 2 | 0 | 3 |
+| `f03-ticket-employee-delivery.yml` | 3 | 2 | 0 | 3 |
 | `fech-01-rag-widget-delivery.yml` | 6 | 4 | 0 | 5 |
 | `l02-l03-delivery.yml` | 3 | 2 | 0 | 4 |
 | `l04-delivery.yml` | 3 | 2 | 0 | 2 |
@@ -68,26 +68,26 @@ Classes de `auditoria_tap`:
 | `pendencies-delivery.yml` | 2 | 1 | 0 | 3 |
 | `plat01-dispatch.yml` | 2 | 2 | 1 | 6 |
 | `plt-jornadas-delivery.yml` | 4 | 4 | 0 | 4 |
-| `ux-adm-delivery.yml` | 4 | 2 | 1 | 3 |
-| `ux-analytics-delivery.yml` | 5 | 2 | 1 | 4 |
-| `ux-asset-delivery.yml` | 3 | 2 | 1 | 2 |
-| `ux-bidding-delivery.yml` | 4 | 2 | 1 | 4 |
-| `ux-client-admin-delivery.yml` | 3 | 2 | 1 | 2 |
-| `ux-compliance-delivery.yml` | 5 | 2 | 1 | 5 |
+| `ux-adm-delivery.yml` | 4 | 2 | 0 | 3 |
+| `ux-analytics-delivery.yml` | 5 | 2 | 0 | 4 |
+| `ux-asset-delivery.yml` | 3 | 2 | 0 | 2 |
+| `ux-bidding-delivery.yml` | 4 | 2 | 0 | 4 |
+| `ux-client-admin-delivery.yml` | 3 | 2 | 0 | 2 |
+| `ux-compliance-delivery.yml` | 5 | 2 | 0 | 5 |
 | `ux-continuity-client-delivery.yml` | 7 | 5 | 0 | 7 |
 | `ux-continuity-delivery.yml` | 6 | 4 | 0 | 6 |
-| `ux-contract-delivery.yml` | 4 | 2 | 1 | 3 |
-| `ux-crm-delivery.yml` | 4 | 2 | 1 | 3 |
-| `ux-emergency-delivery.yml` | 3 | 2 | 1 | 2 |
-| `ux-expansion-delivery.yml` | 5 | 3 | 1 | 5 |
-| `ux-finance-delivery.yml` | 4 | 2 | 1 | 3 |
-| `ux-fleet-delivery.yml` | 5 | 2 | 1 | 4 |
-| `ux-hr-delivery.yml` | 4 | 2 | 1 | 3 |
-| `ux-intel-delivery.yml` | 4 | 2 | 1 | 3 |
-| `ux-knowledge-delivery.yml` | 5 | 2 | 1 | 4 |
+| `ux-contract-delivery.yml` | 4 | 2 | 0 | 3 |
+| `ux-crm-delivery.yml` | 4 | 2 | 0 | 3 |
+| `ux-emergency-delivery.yml` | 3 | 2 | 0 | 2 |
+| `ux-expansion-delivery.yml` | 5 | 3 | 0 | 5 |
+| `ux-finance-delivery.yml` | 4 | 2 | 0 | 3 |
+| `ux-fleet-delivery.yml` | 5 | 2 | 0 | 4 |
+| `ux-hr-delivery.yml` | 4 | 2 | 0 | 3 |
+| `ux-intel-delivery.yml` | 4 | 2 | 0 | 3 |
+| `ux-knowledge-delivery.yml` | 5 | 2 | 0 | 4 |
 | `ux-layout-previews-a11y-delivery.yml` | 9 | 4 | 0 | 5 |
 | `ux-ops-delivery.yml` | 4 | 2 | 0 | 3 |
-| `ux-portal-delivery.yml` | 5 | 2 | 1 | 4 |
+| `ux-portal-delivery.yml` | 5 | 2 | 0 | 4 |
 | `ux-pro-07d2-delivery.yml` | 3 | 2 | 0 | 2 |
 | `ux-pro-07e1-delivery.yml` | 3 | 2 | 0 | 2 |
 | `ux-pro-07e2-alvo-delivery.yml` | 3 | 2 | 0 | 2 |
@@ -97,10 +97,10 @@ Classes de `auditoria_tap`:
 | `ux-public-routes-delivery.yml` | 6 | 3 | 0 | 4 |
 | `ux-public-routes-group2-delivery.yml` | 6 | 3 | 0 | 4 |
 | `ux-public-routes-group3-delivery.yml` | 6 | 3 | 0 | 5 |
-| `ux-quality-delivery.yml` | 5 | 2 | 1 | 4 |
-| `ux-satisfaction-delivery.yml` | 5 | 2 | 1 | 5 |
+| `ux-quality-delivery.yml` | 5 | 2 | 0 | 4 |
+| `ux-satisfaction-delivery.yml` | 5 | 2 | 0 | 5 |
 | `ux-supplier-delivery.yml` | 5 | 3 | 0 | 5 |
-| `ux-third-party-delivery.yml` | 6 | 3 | 1 | 5 |
+| `ux-third-party-delivery.yml` | 6 | 3 | 0 | 5 |
 
 ## Pendências que reprovam o mapa
 
@@ -110,29 +110,6 @@ Nenhuma. Todo gate declarado tem caminho de execução, nenhum gate novo está s
 
 | Ordem | Alvo | Tipo | Motivo |
 |---|---|---|---|
-| `03-familia-f03` | `scripts/qa-f03-client-ticket-acceptance-postgres.mjs` | runner | runner F03 (chamado→atendimento→aceite) usa `options.stdio || inherit` sem capturar nem auditar resumo TAP. Migrar com piso medido. |
-| `03-familia-f03` | `scripts/qa-f03-contas-baixa-relatorio-postgres.mjs` | runner | runner F03 (contas→baixa→relatório) usa `options.stdio || inherit` sem capturar nem auditar resumo TAP. Migrar com piso medido. |
-| `03-familia-f03` | `scripts/qa-f03-employee-request-rh-return-postgres.mjs` | runner | runner F03 (solicitação colaborador→retorno RH) usa `options.stdio || inherit` sem capturar nem auditar resumo TAP. Migrar com piso medido. |
-| `03-familia-f03` | `scripts/qa-f03-lead-to-implementation-postgres.mjs` | runner | runner F03 (lead→implantação) usa `options.stdio || inherit` sem capturar nem auditar resumo TAP. Migrar com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-adm-postgres.mjs` | runner | runner UX administrativo usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-analytics-postgres.mjs` | runner | runner UX analytics usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-asset-postgres.mjs` | runner | runner UX patrimônio/ativos usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-bidding-postgres.mjs` | runner | runner UX licitações usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-client-admin-postgres.mjs` | runner | runner UX administração de clientes usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-compliance-postgres.mjs` | runner | runner UX compliance usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-contract-postgres.mjs` | runner | runner UX contratos usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-crm-postgres.mjs` | runner | runner UX CRM usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-emergency-postgres.mjs` | runner | auditor inline usa `minimumCases: pattern ? 0 : 21`; pelo menor valor condicional (`0`), o caminho filtrado não garante piso mínimo positivo (`>= 1`). |
-| `04-familia-ux` | `scripts/qa-ux-expansion-postgres.mjs` | runner | runner UX expansão usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-finance-postgres.mjs` | runner | runner UX financeiro usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-fleet-postgres.mjs` | runner | runner UX frota usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-hr-postgres.mjs` | runner | runner UX RH usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-intel-postgres.mjs` | runner | runner UX inteligência comercial usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-knowledge-postgres.mjs` | runner | runner UX base de conhecimento usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-portal-postgres.mjs` | runner | runner UX portal/TI console usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-quality-postgres.mjs` | runner | runner UX qualidade usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-satisfaction-postgres.mjs` | runner | runner UX satisfação usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
-| `04-familia-ux` | `scripts/qa-ux-third-party-postgres.mjs` | runner | runner UX terceiros usa `stdio: inherit` e propaga apenas exit code sem auditar resumo TAP. Migrar por lote com piso medido. |
 | `05-agregadores-e-n8` | `scripts/qa-evidence-report.mjs` | runner | gerador de PDF de evidência (`plat01-dispatch.yml`) extrai TAP quando presente, mas `tapLimpo` aceita ausência de `# tests` e não impõe piso numérico por passo. |
 | `05-agregadores-e-n8` | `tests/client-security.integration.test.mjs` | teste | executado direto com `node --test` no `ci.yml` (possui `skipReason` por `RUN_DATABASE_INTEGRATION`), sem runner auditor; mantido sem edição de harness para não perturbar a observação síncrona N8 em aberto. |
 

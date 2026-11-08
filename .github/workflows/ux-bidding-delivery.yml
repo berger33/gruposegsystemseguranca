@@ -10,6 +10,7 @@ on:
       - 'scripts/qa-ux-bidding-postgres.mjs'
       - '.github/workflows/ux-bidding-delivery.yml'
       - 'scripts/lib/qa-pg-supervisor.mjs'
+      - 'scripts/lib/qa-tap-summary.mjs'
       - 'scripts/qa-generated-files-guard.mjs'
       - 'tests/qa-pg-supervisor.test.mjs'
       - 'scripts/migrate-site-visual.mjs'
